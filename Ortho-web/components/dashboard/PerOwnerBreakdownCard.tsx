@@ -1,0 +1,180 @@
+'use client'
+
+import { useMemo, useState } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { useApp } from '@/lib/store'
+import { Card, SectionLabel } from '@/components/ui'
+import { paletteFor } from '@/lib/categories'
+import { effectiveSplits, shortDate } from '@/lib/format'
+import type { Transaction, User } from '@/lib/types'
+import { longLabel, type DashboardRange, type Interval } from './range'
+
+const MAX_ROWS = 25
+
+export function PerOwnerBreakdownCard({
+  range,
+  interval,
+}: {
+  range: DashboardRange
+  interval: Interval
+}) {
+  const { householdMembers, spentBy, currentUserId, transactions, formatMoney, locale } =
+    useApp()
+  const [expanded, setExpanded] = useState<string | null>(null)
+
+  const inRange = (date: string) => {
+    const t = new Date(date).getTime()
+    return t >= interval.start.getTime() && t < interval.end.getTime()
+  }
+
+  const entries = useMemo(
+    () =>
+      householdMembers
+        .map((user) => ({
+          user,
+          cents: spentBy(user.id, interval.start, interval.end),
+        }))
+        .sort((a, b) => b.cents - a.cents),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [householdMembers, interval.start, interval.end]
+  )
+
+  const maxCents = Math.max(1, ...entries.map((e) => e.cents))
+
+  return (
+    <Card className="p-5">
+      <SectionLabel right={longLabel(range)}>Per owner</SectionLabel>
+
+      {entries.length === 0 ? (
+        <p className="py-2 text-[13px] text-text-3">No household members yet.</p>
+      ) : (
+        <div className="mt-3 flex flex-col gap-3.5">
+          {entries.map((entry) => {
+            const isOpen = expanded === entry.user.id
+            const palette = paletteFor(entry.user.color_key)
+            const fraction = entry.cents / maxCents
+            return (
+              <div key={entry.user.id} className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setExpanded(isOpen ? null : entry.user.id)}
+                  className="flex flex-col gap-1 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-[15px] font-medium text-text">
+                      {entry.user.name}
+                    </span>
+                    {entry.user.id === currentUserId && (
+                      <span className="text-xs text-text-3">(you)</span>
+                    )}
+                    <span className="ml-auto text-[15px] font-semibold tabular-nums text-text">
+                      {formatMoney(entry.cents)}
+                    </span>
+                    <ChevronDown
+                      size={14}
+                      className="text-text-3 transition-transform"
+                      style={{ transform: isOpen ? 'rotate(180deg)' : undefined }}
+                    />
+                  </div>
+                  <div
+                    className="h-2 w-full overflow-hidden rounded-full"
+                    style={{ background: 'rgba(0,0,0,0.05)' }}
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `max(8px, ${fraction * 100}%)`,
+                        background: palette.bg,
+                      }}
+                    />
+                  </div>
+                </button>
+                {isOpen && (
+                  <ExpandedShares
+                    user={entry.user}
+                    transactions={transactions}
+                    inRange={inRange}
+                    formatMoney={formatMoney}
+                    locale={locale}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function ExpandedShares({
+  user,
+  transactions,
+  inRange,
+  formatMoney,
+  locale,
+}: {
+  user: User
+  transactions: Transaction[]
+  inRange: (date: string) => boolean
+  formatMoney: (cents: number) => string
+  locale: string
+}) {
+  // Participated expenses in range (transactions newest-first from store),
+  // with this user's split-weighted share.
+  const shares = transactions
+    .filter(
+      (t) => t.kind === 'expense' && inRange(t.date) && t.owner_ids.includes(user.id)
+    )
+    .map((tx) => {
+      const splits = effectiveSplits(tx)
+      const pct = splits[user.id] ?? 0
+      return { tx, share: Math.round((tx.amount_cents * pct) / 100), pct }
+    })
+
+  const shown = shares.slice(0, MAX_ROWS)
+  const remaining = Math.max(0, shares.length - shown.length)
+
+  if (shares.length === 0) {
+    return <p className="py-2 pl-1 text-[13px] text-text-3">No expenses in this period.</p>
+  }
+
+  const pctLabel = (pct: number) =>
+    Number.isInteger(pct) ? `${pct}%` : `${pct.toFixed(1)}%`
+
+  return (
+    <div className="pl-1">
+      {shown.map((item, i) => (
+        <div key={item.tx.id}>
+          {i > 0 && <div className="h-px bg-hairline" />}
+          <div className="flex items-center gap-2.5 py-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="truncate text-sm font-medium text-text">
+                  {item.tx.merchant}
+                </span>
+                {item.tx.owner_ids.length > 1 && (
+                  <span
+                    className="rounded-full px-1.5 py-px text-[10px] font-semibold text-text-2"
+                    style={{ background: 'rgba(0,0,0,0.06)' }}
+                  >
+                    {pctLabel(item.pct)}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-text-3">
+                {shortDate(new Date(item.tx.date), locale)}
+              </p>
+            </div>
+            <span className="text-sm font-semibold tabular-nums text-text">
+              {formatMoney(item.share)}
+            </span>
+          </div>
+        </div>
+      ))}
+      {remaining > 0 && (
+        <p className="pt-2.5 text-center text-xs text-text-3">+{remaining} more</p>
+      )}
+    </div>
+  )
+}

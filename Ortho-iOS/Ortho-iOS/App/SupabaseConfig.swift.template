@@ -1,0 +1,18 @@
+// Template for SupabaseConfig.swift.
+//
+// 1. Copy this file to SupabaseConfig.swift (drop the .template suffix).
+// 2. Fill in the values from your Supabase project — Project Settings → API.
+// 3. The real SupabaseConfig.swift is gitignored, so it stays out of the
+//    public repo. The .template extension keeps Xcode from compiling
+//    this file.
+//
+// The publishable / anon key is safe in a client binary; data access is
+// enforced by Postgres Row-Level Security, not by key secrecy. NEVER put
+// the service-role / secret key in any file in this project.
+
+import Foundation
+
+enum SupabaseConfig {
+    static let projectURL = URL(string: "https://YOUR-PROJECT-REF.supabase.co")!
+    static let publishableKey = "sb_publishable_..."
+}

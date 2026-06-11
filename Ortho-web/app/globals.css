@@ -1,0 +1,421 @@
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap');
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+:root {
+  /* Core semantic tokens — light mode */
+  --bg: rgb(247, 245, 240);
+  --surface: rgb(255, 255, 255);
+  --text: rgb(26, 24, 21);
+  --text-2: rgba(26, 24, 21, 0.55);
+  --text-3: rgba(26, 24, 21, 0.35);
+  --accent: rgb(140, 122, 92);
+  --positive: rgb(94, 126, 91);
+  --destructive: rgb(174, 81, 74);
+  --hairline: rgba(26, 24, 21, 0.07);
+
+  /* Household palette — light */
+  --peach-bg: rgb(250, 224, 206);
+  --peach-fg: rgb(160, 80, 40);
+  --slate-bg: rgb(210, 218, 230);
+  --slate-fg: rgb(50, 70, 100);
+  --sage-bg: rgb(200, 220, 200);
+  --sage-fg: rgb(40, 90, 40);
+  --terracotta-bg: rgb(240, 210, 195);
+  --terracotta-fg: rgb(150, 60, 40);
+  --mauve-bg: rgb(225, 210, 230);
+  --mauve-fg: rgb(100, 60, 120);
+  --sand-bg: rgb(240, 230, 205);
+  --sand-fg: rgb(120, 90, 40);
+
+  /* Desktop handoff tokens — theme-swapped */
+  --surface-2: #f1eee7;
+  --chip-bg: rgba(26, 24, 21, 0.05);
+  --chip-text: rgba(26, 24, 21, 0.62);
+
+  /* Owner identity + category tints + pay dots — brand fixtures, NOT theme-swapped */
+  --owner-maya-bg: #f2d4bd;
+  --owner-maya-fg: #7a4a2b;
+  --owner-jordan-bg: #c8d4e2;
+  --owner-jordan-fg: #3b4f6a;
+  --owner-joint-bg: #cfddd0;
+  --owner-joint-fg: #3f5a45;
+  --cat-coffee: rgb(203, 165, 132);
+  --cat-groceries: rgb(156, 178, 144);
+  --cat-dining: rgb(212, 152, 124);
+  --cat-subs: rgb(168, 168, 184);
+  --cat-fuel: rgb(184, 156, 168);
+  --cat-rent: rgb(144, 162, 178);
+  --cat-health: rgb(204, 144, 144);
+  --cat-income: rgb(144, 184, 156);
+  --cat-transit: rgb(180, 168, 144);
+  --cat-utilities: rgb(192, 176, 128);
+  --pay-ach: #7d9a7c;
+
+  /* Motion + elevation */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --duration-fast: 120ms;
+  --duration-mid: 150ms;
+  --shadow-sheet: 0 20px 60px rgba(0, 0, 0, 0.18);
+
+  font-family: 'Lato', sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Core semantic tokens — dark mode */
+    --bg: rgb(14, 14, 12);
+    --surface: rgb(26, 25, 22);
+    --text: rgb(237, 235, 230);
+    --text-2: rgba(237, 235, 230, 0.55);
+    --text-3: rgba(237, 235, 230, 0.35);
+    --accent: rgb(160, 142, 112);
+    --positive: rgb(114, 150, 111);
+    --destructive: rgb(200, 105, 98);
+    --hairline: rgba(237, 235, 230, 0.08);
+
+    /* Household palette — dark */
+    --peach-bg: rgb(80, 40, 20);
+    --peach-fg: rgb(250, 180, 140);
+    --slate-bg: rgb(30, 45, 65);
+    --slate-fg: rgb(160, 185, 220);
+    --sage-bg: rgb(25, 55, 25);
+    --sage-fg: rgb(150, 200, 150);
+    --terracotta-bg: rgb(75, 30, 20);
+    --terracotta-fg: rgb(230, 150, 120);
+    --mauve-bg: rgb(55, 30, 65);
+    --mauve-fg: rgb(195, 155, 220);
+    --sand-bg: rgb(60, 45, 20);
+    --sand-fg: rgb(210, 180, 120);
+
+    --surface-2: #23211d;
+    --chip-bg: rgba(255, 255, 255, 0.07);
+    --chip-text: rgba(242, 239, 232, 0.72);
+  }
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Lato', sans-serif;
+}
+
+/* ---- Desktop interaction states (tokens only) ---- */
+
+/* Visible keyboard focus ring — sand accent, per the design system. */
+:where(a, button, [role='button'], input, select, textarea, [tabindex]):focus-visible {
+  outline: 1.5px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Reusable hover/active surface lift for interactive rows, cards, nav items. */
+.ortho-interactive {
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+@media (hover: hover) {
+  .ortho-interactive:hover {
+    background-color: color-mix(in srgb, var(--text) 4%, transparent);
+  }
+}
+.ortho-interactive:active {
+  background-color: color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+/* Respect reduced-motion: drop the 150ms transitions to instant. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =========================================================================
+   Desktop web chrome (ow-*) — ported from the design handoff prototype.
+   Used by the ≥1024px desktop views (Dashboard, Transactions, Housing).
+   ========================================================================= */
+
+/* The app <main> already provides page padding; this only centers + caps. */
+.ow-page-inner {
+  margin: 0 auto;
+  width: 100%;
+}
+
+.ow-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(12, 1fr);
+  align-items: stretch;
+}
+.ow-s5 { grid-column: span 5; }
+.ow-s6 { grid-column: span 6; }
+.ow-s7 { grid-column: span 7; }
+.ow-s12 { grid-column: span 12; }
+
+.ow-card {
+  background: var(--surface);
+  border-radius: var(--radius-card, 14px);
+  overflow: hidden;
+}
+:root[data-appearance='dark'] .ow-card,
+.ow-card.is-dark {
+  border: 0.5px solid var(--hairline);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-appearance='light']) .ow-card {
+    border: 0.5px solid var(--hairline);
+  }
+}
+
+.ow-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  color: inherit;
+}
+.ow-chip-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--chip-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--duration-mid) var(--ease-out);
+}
+.ow-chip-btn:hover { background: var(--surface-2); }
+
+.ow-quiet-link {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-3);
+  letter-spacing: -0.1px;
+  padding: 0;
+  transition: color var(--duration-mid) var(--ease-out);
+}
+.ow-quiet-link:hover { color: var(--text); }
+
+.ow-nav-item {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.1px;
+  color: var(--text-3);
+  text-align: left;
+  transition:
+    background var(--duration-mid) var(--ease-out),
+    color var(--duration-mid) var(--ease-out);
+}
+.ow-nav-item:hover { background: var(--chip-bg); color: var(--text-2); }
+.ow-nav-item.is-active { background: var(--surface-2); color: var(--text); }
+
+.ow-search {
+  width: 100%;
+  height: 38px;
+  padding: 0 14px 0 34px;
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+  background: var(--chip-bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: -0.1px;
+  outline: none;
+  transition: border-color var(--duration-mid) var(--ease-out);
+}
+.ow-search:focus { border-color: var(--accent); }
+.ow-search::placeholder { color: var(--text-3); }
+
+.ow-amount-input {
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  font-variant-numeric: tabular-nums;
+  padding: 0;
+  min-width: 2ch;
+  max-width: 280px;
+}
+.ow-row-input {
+  border: 0;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  color: var(--text);
+  text-align: right;
+}
+
+.ow-tab-row {
+  display: grid;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 16px;
+  width: 100%;
+}
+.ow-tab-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--bg);
+  padding-top: 6px;
+  padding-bottom: 8px;
+  border-bottom: 0.5px solid var(--hairline);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.ow-tab-tr {
+  min-height: 54px;
+  text-align: left;
+  border-radius: 10px;
+  border-bottom: 0.5px solid var(--hairline);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.ow-tab-tr:hover { background: var(--chip-bg); }
+.ow-tab-tr.is-selected { background: var(--surface-2); }
+
+.ow-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 440px;
+  max-width: 90vw;
+  background: var(--bg);
+  border-left: 0.5px solid var(--hairline);
+  box-shadow: var(--shadow-sheet);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  animation: owDrawerIn 160ms var(--ease-out);
+}
+@keyframes owDrawerIn {
+  from { transform: translateX(28px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+/* Dim + lock the background behind the slide-out panel. Sits just under it. */
+.ow-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(0, 0, 0, 0.18);
+  animation: owScrimIn 160ms var(--ease-out);
+}
+:root[data-appearance='dark'] .ow-drawer-scrim {
+  background: rgba(0, 0, 0, 0.45);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-appearance='light']) .ow-drawer-scrim {
+    background: rgba(0, 0, 0, 0.45);
+  }
+}
+@keyframes owScrimIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ow-drawer-scrim { animation: none; }
+}
+
+.ow-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+:root[data-appearance='dark'] .ow-scrim {
+  background: rgba(0, 0, 0, 0.45);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-appearance='light']) .ow-scrim {
+    background: rgba(0, 0, 0, 0.45);
+  }
+}
+.ow-modal {
+  width: 480px;
+  max-width: calc(100vw - 48px);
+  max-height: 88vh;
+  background: var(--bg);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sheet);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+:root[data-appearance='dark'] .ow-modal {
+  border: 0.5px solid var(--hairline);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-appearance='light']) .ow-modal {
+    border: 0.5px solid var(--hairline);
+  }
+}
+
+.ow-cap {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 4px;
+}
+
+.ow-insight-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 24px;
+  font-size: 14px;
+  letter-spacing: -0.1px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.ow-insight-tile {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ow-drawer { animation: none; }
+}

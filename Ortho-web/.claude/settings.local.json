@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(run)",
+      "Bash(sed 's/$/  = [set]/')",
+      "Bash(npm ci *)",
+      "Bash(curl -s -o /tmp/claude/ortho_root.html -w \"%{http_code}\" -L http://localhost:3000/ --max-time 20)",
+      "Read(//tmp/claude/**)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "linear"
+  ]
+}

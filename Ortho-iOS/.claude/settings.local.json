@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(xcodebuild -project Ortho-iOS.xcodeproj -scheme Ortho-iOS -destination 'generic/platform=iOS Simulator' -configuration Debug build)",
+      "WebFetch(domain:github.com)",
+      "Bash(brew install *)",
+      "Bash(supabase init *)",
+      "Bash(mv __TRACKED_VAR__/sb-extract/supabase /opt/homebrew/bin/supabase)",
+      "Bash(mv __TRACKED_VAR__/sb-extract/supabase-go /opt/homebrew/bin/supabase-go)",
+      "Bash(rm -rf __TRACKED_VAR__/sb-extract __TRACKED_VAR__/supabase.tar.gz)",
+      "Bash(supabase --version)",
+      "Bash(supabase inspect *)",
+      "Bash(specify init *)",
+      "Bash(specify --version)",
+      "Bash(specify check *)",
+      "Bash(gh release *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(xcrun devicectl *)",
+      "Read(//Users/ayazuddin/Library/Developer/Xcode/DerivedData/Ortho-iOS-erjtzcmmipgqzmahlimawvgjksxh/Build/Products/Debug-iphoneos/Ortho-iOS.app/**)",
+      "Bash(plutil -p /Users/ayazuddin/Library/Developer/Xcode/DerivedData/Ortho-iOS-erjtzcmmipgqzmahlimawvgjksxh/Build/Products/Debug-iphoneos/Ortho-iOS.app/bn.lproj/Localizable.strings)",
+      "Bash(plutil -p /Users/ayazuddin/Library/Developer/Xcode/DerivedData/Ortho-iOS-erjtzcmmipgqzmahlimawvgjksxh/Build/Products/Debug-iphoneos/Ortho-iOS.app/en.lproj/Localizable.strings)",
+      "Bash(/opt/homebrew/bin/supabase db *)",
+      "Skill(run)",
+      "Bash(xcrun simctl *)",
+      "Bash(security find-identity *)",
+      "Read(//Users/ayazuddin/.appstoreconnect/**)",
+      "Read(//Users/ayazuddin/**)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "linear"
+  ]
+}

@@ -1,0 +1,329 @@
+'use client'
+
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useApp } from '@/lib/store'
+import { groupByDay, dayLabel, expenseTotal, mediumDate } from '@/lib/format'
+import { categoryMeta } from '@/lib/categories'
+import type { Transaction } from '@/lib/types'
+import { Avatar } from '@/components/ui'
+import { TxFormContent } from './TxForm'
+import {
+  WebPageHeader,
+  WebSearchInput,
+  ChipIconButton,
+  PlusGlyph,
+  CatTile,
+  SourceDot,
+} from './kit'
+
+const TX_COLS = '1.7fr 1fr 1.2fr 0.9fr'
+
+function TxDetailRow({ label, children, first = false }: { label: string; children: ReactNode; first?: boolean }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '13px 20px',
+        minHeight: 50,
+        borderTop: first ? 'none' : '0.5px solid var(--hairline)',
+      }}
+    >
+      <div style={{ flex: '0 0 110px', fontSize: 14, color: 'var(--text-2)', letterSpacing: '-0.1px' }}>{label}</div>
+      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 500, letterSpacing: '-0.2px', color: 'var(--text)' }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+/** Read-only detail content shown inside the shared slide-out panel. */
+function TxDetailContent({
+  tx,
+  onClose,
+  onEdit,
+  onDelete,
+}: {
+  tx: Transaction
+  onClose: () => void
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const { formatMoney, ownersDisplay, locale } = useApp()
+  const isIncome = tx.kind === 'income'
+  const meta = categoryMeta(tx.category)
+  const owners = ownersDisplay(tx)
+  const date = new Date(tx.date)
+
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 0' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-2)' }}>
+          Transaction
+        </div>
+        <button className="ow-btn ow-chip-btn" aria-label="Close" onClick={onClose} style={{ width: 28, height: 28 }}>
+          <svg width="11" height="11" viewBox="0 0 12 12">
+            <path d="M2 2l8 8M10 2l-8 8" stroke="var(--text-2)" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+
+      <div style={{ padding: '20px 20px 22px', textAlign: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+          <CatTile category={tx.category} size={52} />
+        </div>
+        <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.3px' }}>{tx.merchant}</div>
+        <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>
+          {meta.label} · {mediumDate(date, locale)}
+        </div>
+        <div style={{ fontSize: 32, fontWeight: 700, letterSpacing: '-0.6px', marginTop: 14, fontVariantNumeric: 'tabular-nums', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
+          {formatMoney(tx.amount_cents, { leadingPlus: isIncome })}
+        </div>
+      </div>
+
+      <div className="ow-card" style={{ margin: '0 16px' }}>
+        <TxDetailRow label="Owner" first>
+          <Avatar user={owners.avatarUser} size={22} />
+          <span>{owners.label}</span>
+        </TxDetailRow>
+        <TxDetailRow label={isIncome ? 'Deposit to' : 'Paid with'}>
+          <SourceDot size={8} />
+          <span>{tx.source}</span>
+        </TxDetailRow>
+        <TxDetailRow label="Date">
+          <span style={{ fontVariantNumeric: 'tabular-nums' }}>{mediumDate(date, locale)}</span>
+        </TxDetailRow>
+      </div>
+
+      <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px 18px', borderTop: '0.5px solid var(--hairline)' }}>
+        <button className="ow-btn" onClick={onEdit} style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent)', letterSpacing: '-0.1px', padding: '4px 0' }}>
+          Edit transaction
+        </button>
+        <button className="ow-btn ow-quiet-link" onClick={onDelete}>
+          Delete
+        </button>
+      </div>
+    </>
+  )
+}
+
+function TxRow({
+  tx,
+  selected,
+  onClick,
+}: {
+  tx: Transaction
+  selected: boolean
+  onClick: () => void
+}) {
+  const { formatMoney, ownersDisplay } = useApp()
+  const isIncome = tx.kind === 'income'
+  const owners = ownersDisplay(tx)
+  return (
+    <button
+      className={'ow-btn ow-tab-row ow-tab-tr' + (selected ? ' is-selected' : '')}
+      style={{ gridTemplateColumns: TX_COLS }}
+      onClick={onClick}
+      aria-current={selected ? 'true' : undefined}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+        <CatTile category={tx.category} size={30} />
+        <span style={{ fontSize: 14.5, fontWeight: 500, letterSpacing: '-0.15px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {tx.merchant}
+        </span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        <Avatar user={owners.avatarUser} size={20} />
+        <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {owners.label}
+        </span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        <SourceDot />
+        <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {tx.source}
+        </span>
+      </div>
+      <div style={{ fontSize: 14.5, fontWeight: 600, textAlign: 'right', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px', whiteSpace: 'nowrap', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
+        {formatMoney(tx.amount_cents, { leadingPlus: isIncome })}
+      </div>
+    </button>
+  )
+}
+
+export function TransactionsDesktop() {
+  const { transactions, formatMoney, resolveUser, deleteTransaction, locale } = useApp()
+  const [query, setQuery] = useState('')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
+
+  const selected = selectedId ? transactions.find((t) => t.id === selectedId) ?? null : null
+  const panelOpen = addOpen || !!selected
+
+  // Close / revert the panel on the selected tx being deleted.
+  useEffect(() => {
+    if (selectedId && !selected) {
+      setSelectedId(null)
+      setEditing(false)
+    }
+  }, [selectedId, selected])
+
+  const closePanel = () => {
+    setAddOpen(false)
+    setEditing(false)
+    setSelectedId(null)
+  }
+
+  // Lock background scroll while the panel is open. Reserve the scrollbar width
+  // (padding-right) so hiding the scrollbar doesn't shift the table sideways.
+  useEffect(() => {
+    if (!panelOpen) return
+    const main = document.querySelector('main') as HTMLElement | null
+    if (!main) return
+    const sbw = main.offsetWidth - main.clientWidth
+    const prevOverflow = main.style.overflow
+    const prevPad = main.style.paddingRight
+    main.style.overflow = 'hidden'
+    if (sbw > 0) main.style.paddingRight = `${sbw}px`
+    return () => {
+      main.style.overflow = prevOverflow
+      main.style.paddingRight = prevPad
+    }
+  }, [panelOpen])
+
+  // Esc steps back: new → close, edit → detail, detail → close.
+  useEffect(() => {
+    if (!panelOpen) return
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (addOpen) setAddOpen(false)
+      else if (editing) setEditing(false)
+      else setSelectedId(null)
+    }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [panelOpen, addOpen, editing])
+
+  const openNew = () => {
+    setSelectedId(null)
+    setEditing(false)
+    setAddOpen(true)
+  }
+  const selectRow = (id: string) => {
+    setAddOpen(false)
+    setEditing(false)
+    setSelectedId(id === selectedId ? null : id)
+  }
+
+  const q = query.trim().toLowerCase()
+  const groups = useMemo(() => {
+    return groupByDay(transactions)
+      .map((g) => ({
+        day: g.day,
+        items: g.items.filter((tx) => {
+          if (!q) return true
+          if (tx.merchant.toLowerCase().includes(q)) return true
+          if (tx.source.toLowerCase().includes(q)) return true
+          if (tx.category.toLowerCase().includes(q)) return true
+          return tx.owner_ids.some((id) => resolveUser(id).name.toLowerCase().includes(q))
+        }),
+      }))
+      .filter((g) => g.items.length > 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transactions, q])
+
+  return (
+    <div
+      className="ow-page-inner"
+      style={{
+        // Narrower than the dashboard since the ledger has only four columns —
+        // keeps short merchant names from floating in a wide empty gap.
+        // The detail/form panel overlays on top, so the table never shifts.
+        maxWidth: 860,
+      }}
+    >
+      <WebPageHeader
+        title="Transactions"
+        actions={
+          <>
+            <div style={{ width: 260 }}>
+              <WebSearchInput value={query} onChange={setQuery} placeholder="Search transactions" />
+            </div>
+            <ChipIconButton label="Add transaction" onClick={openNew}>
+              <PlusGlyph />
+            </ChipIconButton>
+          </>
+        }
+      />
+
+      {transactions.length === 0 ? (
+        <p style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-2)', fontSize: 14 }}>
+          No transactions yet. Add your first one.
+        </p>
+      ) : (
+        <>
+          <div className="ow-tab-row ow-tab-head" style={{ gridTemplateColumns: TX_COLS }}>
+            <div>Merchant</div>
+            <div>Owner</div>
+            <div>Source</div>
+            <div style={{ textAlign: 'right' }}>Amount</div>
+          </div>
+
+          {groups.map((g) => (
+            <div key={g.day.getTime()}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '22px 16px 8px' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-2)' }}>
+                  {dayLabel(g.day, locale)}
+                </span>
+                <span style={{ fontSize: 12, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>
+                  {formatMoney(expenseTotal(g.items))}
+                </span>
+              </div>
+              {g.items.map((tx) => (
+                <TxRow key={tx.id} tx={tx} selected={tx.id === selectedId} onClick={() => selectRow(tx.id)} />
+              ))}
+            </div>
+          ))}
+          {groups.length === 0 && (
+            <p style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
+              No matching transactions.
+            </p>
+          )}
+          <div style={{ height: 48 }} />
+        </>
+      )}
+
+      {/* One slide-out panel: New / Edit (form) and Detail share it. */}
+      {panelOpen && (
+        <div className="ow-drawer-scrim" onClick={closePanel} aria-hidden="true" />
+      )}
+      {panelOpen && (
+        <aside className="ow-drawer" aria-label="Transaction">
+          {addOpen ? (
+            <TxFormContent title="New transaction" saveLabel="Add" onDone={() => setAddOpen(false)} onCancel={() => setAddOpen(false)} />
+          ) : editing && selected ? (
+            <TxFormContent
+              title="Edit transaction"
+              saveLabel="Save"
+              editing={selected}
+              onDone={() => setEditing(false)}
+              onCancel={() => setEditing(false)}
+            />
+          ) : selected ? (
+            <TxDetailContent
+              tx={selected}
+              onClose={() => setSelectedId(null)}
+              onEdit={() => setEditing(true)}
+              onDelete={() => {
+                deleteTransaction(selected.id)
+                setSelectedId(null)
+              }}
+            />
+          ) : null}
+        </aside>
+      )}
+    </div>
+  )
+}

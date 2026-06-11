@@ -1,0 +1,148 @@
+[
+  {
+    "input": {
+      "name": "top category + over budget + spending exceeds income",
+      "referenceDate": "2026-06-15",
+      "transactions": [
+        {
+          "owner_ids": [],
+          "splits": null,
+          "scope": "shared",
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "dining",
+          "amount_cents": 40000,
+          "date": "2026-06-05",
+          "merchant": "Bistro"
+        },
+        {
+          "owner_ids": [],
+          "splits": null,
+          "scope": "shared",
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "groceries",
+          "amount_cents": 20000,
+          "date": "2026-06-07",
+          "merchant": "Whole Foods"
+        },
+        {
+          "owner_ids": [],
+          "splits": null,
+          "scope": "shared",
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "income",
+          "category": "income",
+          "amount_cents": 30000,
+          "date": "2026-06-03",
+          "merchant": "Payroll"
+        }
+      ],
+      "budgets": [
+        {
+          "id": "b",
+          "household_id": "h",
+          "category": "dining",
+          "monthly_limit_cents": 30000
+        }
+      ],
+      "properties": []
+    },
+    "expected": [
+      {
+        "id": "cashflow-deficit-2026-06",
+        "severity": "critical",
+        "category": null,
+        "magnitude_cents": 30000
+      },
+      {
+        "id": "budget-over-dining-2026-06",
+        "severity": "critical",
+        "category": "dining",
+        "magnitude_cents": 10000
+      },
+      {
+        "id": "top-category-dining-2026-06",
+        "severity": "info",
+        "category": "dining",
+        "magnitude_cents": 40000
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "saving above benchmark",
+      "referenceDate": "2026-06-15",
+      "transactions": [
+        {
+          "owner_ids": [],
+          "splits": null,
+          "scope": "shared",
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "income",
+          "category": "income",
+          "amount_cents": 100000,
+          "date": "2026-06-03",
+          "merchant": "Payroll"
+        },
+        {
+          "owner_ids": [],
+          "splits": null,
+          "scope": "shared",
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "groceries",
+          "amount_cents": 40000,
+          "date": "2026-06-05",
+          "merchant": "Whole Foods"
+        }
+      ],
+      "budgets": [],
+      "properties": []
+    },
+    "expected": [
+      {
+        "id": "top-category-groceries-2026-06",
+        "severity": "info",
+        "category": "groceries",
+        "magnitude_cents": 40000
+      },
+      {
+        "id": "cashflow-savings-2026-06",
+        "severity": "positive",
+        "category": null,
+        "magnitude_cents": 60000
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "no qualifying data",
+      "referenceDate": "2026-06-15",
+      "transactions": [],
+      "budgets": [],
+      "properties": []
+    },
+    "expected": []
+  }
+]

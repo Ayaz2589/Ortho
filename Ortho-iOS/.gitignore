@@ -1,0 +1,35 @@
+# macOS
+.DS_Store
+
+# Xcode — per-user state
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad/
+
+# Xcode — build artifacts
+DerivedData/
+build/
+*.dSYM
+*.dSYM.zip
+*.ipa
+
+# Swift Package Manager
+.swiftpm/
+.build/
+
+# Secrets — gitignored config; copy SupabaseConfig.swift.template to fill in
+Ortho-iOS/App/SupabaseConfig.swift
+
+# Environment files (general — never commit)
+.env
+.env.local
+*.pem
+*.p8
+*.p12
+build-device/
+temp/
+
+# Personal financial data consumed by the DEBUG-only LegacyImporter
+# (see Ortho-iOS/Services/LegacyImporter.swift). The bundled JSON
+# carries real transactions and must never leave the device.
+Ortho-iOS/Resources/legacy-import.json

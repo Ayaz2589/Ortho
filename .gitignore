@@ -1,0 +1,23 @@
+# Ortho monorepo — root ignores.
+# The app subdirectories keep their own .gitignore files (Ortho-web/.gitignore,
+# Ortho-iOS/.gitignore, supabase/.gitignore); git honors those too. This file
+# covers root-level and cross-cutting concerns only.
+
+# OS cruft
+.DS_Store
+**/.DS_Store
+
+# Local scratch / screenshots
+temp/
+
+# Pre-monorepo git histories — preserved locally, NOT tracked.
+# Recover with e.g.:  git --git-dir=.history-backup/ortho-web.git log
+.history-backup/
+
+# Local agent settings (keep skills + .specify tracked; ignore machine-local prefs)
+.claude/settings.local.json
+
+# Safety nets (the app subdirs also ignore these via their own .gitignore)
+**/node_modules/
+Ortho-web/.next/
+Ortho-web/tsconfig.tsbuildinfo

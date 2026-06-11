@@ -1,0 +1,278 @@
+[
+  {
+    "input": {
+      "name": "standard 30yr",
+      "purchasePriceCents": 130000000,
+      "originalLoanCents": 30000000,
+      "annualRatePercent": 4.63,
+      "termYears": 30,
+      "closingDate": "2022-04-22",
+      "asOf": "2026-06-15"
+    },
+    "expected": {
+      "monthlyPaymentCents": 154332,
+      "currentPrincipalBalanceCents": 27923352,
+      "currentEquityCents": 102076648,
+      "equityFraction": 0.7852049846153846,
+      "maturityDate": "2052-04-22",
+      "yearsRemaining": 25,
+      "amortization12": [
+        {
+          "principalCents": 46594,
+          "interestCents": 107738
+        },
+        {
+          "principalCents": 46774,
+          "interestCents": 107558
+        },
+        {
+          "principalCents": 46955,
+          "interestCents": 107377
+        },
+        {
+          "principalCents": 47136,
+          "interestCents": 107196
+        },
+        {
+          "principalCents": 47318,
+          "interestCents": 107014
+        },
+        {
+          "principalCents": 47500,
+          "interestCents": 106832
+        },
+        {
+          "principalCents": 47684,
+          "interestCents": 106648
+        },
+        {
+          "principalCents": 47867,
+          "interestCents": 106465
+        },
+        {
+          "principalCents": 48052,
+          "interestCents": 106280
+        },
+        {
+          "principalCents": 48238,
+          "interestCents": 106094
+        },
+        {
+          "principalCents": 48424,
+          "interestCents": 105908
+        },
+        {
+          "principalCents": 48611,
+          "interestCents": 105721
+        }
+      ]
+    }
+  },
+  {
+    "input": {
+      "name": "zero interest 10yr",
+      "purchasePriceCents": 15000000,
+      "originalLoanCents": 12000000,
+      "annualRatePercent": 0,
+      "termYears": 10,
+      "closingDate": "2024-01-10",
+      "asOf": "2026-01-10"
+    },
+    "expected": {
+      "monthlyPaymentCents": 100000,
+      "currentPrincipalBalanceCents": 9600000,
+      "currentEquityCents": 5400000,
+      "equityFraction": 0.36,
+      "maturityDate": "2034-01-10",
+      "yearsRemaining": 8,
+      "amortization12": [
+        {
+          "principalCents": 100000,
+          "interestCents": 0
+        },
+        {
+          "principalCents": 100000,
+          "interestCents": 0
+        },
+        {
+          "principalCents": 100000,
+          "interestCents": 0
+        },
+        {
+          "principalCents": 100000,
+          "interestCents": 0
+        },
+        {
+          "principalCents": 100000,
+          "interestCents": 0
+        },
+        {
+          "principalCents": 100000,
+          "interestCents": 0
+        },
+        {
+          "principalCents": 100000,
+          "interestCents": 0
+        },
+        {
+          "principalCents": 100000,
+          "interestCents": 0
+        },
+        {
+          "principalCents": 100000,
+          "interestCents": 0
+        },
+        {
+          "principalCents": 100000,
+          "interestCents": 0
+        },
+        {
+          "principalCents": 100000,
+          "interestCents": 0
+        },
+        {
+          "principalCents": 100000,
+          "interestCents": 0
+        }
+      ]
+    }
+  },
+  {
+    "input": {
+      "name": "asOf before closing day-of-month",
+      "purchasePriceCents": 60000000,
+      "originalLoanCents": 50000000,
+      "annualRatePercent": 6,
+      "termYears": 30,
+      "closingDate": "2023-08-20",
+      "asOf": "2025-03-10"
+    },
+    "expected": {
+      "monthlyPaymentCents": 299775,
+      "currentPrincipalBalanceCents": 49064937,
+      "currentEquityCents": 10935063,
+      "equityFraction": 0.18225105,
+      "maturityDate": "2053-08-20",
+      "yearsRemaining": 28,
+      "amortization12": [
+        {
+          "principalCents": 54450,
+          "interestCents": 245325
+        },
+        {
+          "principalCents": 54723,
+          "interestCents": 245052
+        },
+        {
+          "principalCents": 54996,
+          "interestCents": 244779
+        },
+        {
+          "principalCents": 55271,
+          "interestCents": 244504
+        },
+        {
+          "principalCents": 55548,
+          "interestCents": 244227
+        },
+        {
+          "principalCents": 55825,
+          "interestCents": 243950
+        },
+        {
+          "principalCents": 56104,
+          "interestCents": 243671
+        },
+        {
+          "principalCents": 56385,
+          "interestCents": 243390
+        },
+        {
+          "principalCents": 56667,
+          "interestCents": 243108
+        },
+        {
+          "principalCents": 56950,
+          "interestCents": 242825
+        },
+        {
+          "principalCents": 57235,
+          "interestCents": 242540
+        },
+        {
+          "principalCents": 57521,
+          "interestCents": 242254
+        }
+      ]
+    }
+  },
+  {
+    "input": {
+      "name": "maturity / years-remaining",
+      "purchasePriceCents": 40000000,
+      "originalLoanCents": 32000000,
+      "annualRatePercent": 5.25,
+      "termYears": 15,
+      "closingDate": "2020-02-01",
+      "asOf": "2026-06-15"
+    },
+    "expected": {
+      "monthlyPaymentCents": 257241,
+      "currentPrincipalBalanceCents": 21456645,
+      "currentEquityCents": 18543355,
+      "equityFraction": 0.463583875,
+      "maturityDate": "2035-02-01",
+      "yearsRemaining": 8,
+      "amortization12": [
+        {
+          "principalCents": 163368,
+          "interestCents": 93873
+        },
+        {
+          "principalCents": 164083,
+          "interestCents": 93158
+        },
+        {
+          "principalCents": 164801,
+          "interestCents": 92440
+        },
+        {
+          "principalCents": 165522,
+          "interestCents": 91719
+        },
+        {
+          "principalCents": 166246,
+          "interestCents": 90995
+        },
+        {
+          "principalCents": 166973,
+          "interestCents": 90268
+        },
+        {
+          "principalCents": 167704,
+          "interestCents": 89537
+        },
+        {
+          "principalCents": 168437,
+          "interestCents": 88804
+        },
+        {
+          "principalCents": 169174,
+          "interestCents": 88067
+        },
+        {
+          "principalCents": 169915,
+          "interestCents": 87326
+        },
+        {
+          "principalCents": 170658,
+          "interestCents": 86583
+        },
+        {
+          "principalCents": 171405,
+          "interestCents": 85836
+        }
+      ]
+    }
+  }
+]
