@@ -45,7 +45,7 @@ shared/
     ├── mortgage.json        # canonical mortgage cases (pinned asOf)
     └── insights.json        # canonical insight scenarios (pinned referenceDate)
 
-Ortho-web/
+web/
 ├── lib/finance/mortgage.ts          # parity fix: calendar month/year counting
 ├── lib/api/aggregates.ts            # NEW: thin RPC wrapper (additive)
 ├── test/mortgage.parity.test.ts     # NEW: Vitest vs mortgage.json
@@ -53,8 +53,8 @@ Ortho-web/
 ├── vitest.config.ts                 # NEW
 └── package.json                     # + vitest devDep, "test" script
 
-Ortho-iOS/
-└── Ortho-iOSTests/
+iOS/
+└── iOS/Ortho-iOSTests/
     ├── MortgageParityTests.swift     # NEW (add target in Xcode)
     └── InsightParityTests.swift      # NEW
 

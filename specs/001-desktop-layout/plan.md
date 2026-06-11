@@ -25,7 +25,7 @@ layout + navigation + interaction states only.
 
 **Target Platform**: Modern browsers, 360px → 3440px+ viewports
 
-**Project Type**: Web app (single Next.js app at `Ortho-web/`)
+**Project Type**: Web app (single Next.js app at `web/`)
 
 **Performance Goals**: 60fps layout; no layout thrash on resize; CSS-driven breakpoints (no JS reflow) except a single media-query hook for master–detail behavior
 
@@ -63,10 +63,10 @@ specs/001-desktop-layout/
 └── tasks.md       # /speckit-tasks output
 ```
 
-### Source Code (repository root: `Ortho-web/`)
+### Source Code (repository root: `web/`)
 
 ```text
-Ortho-web/
+web/
 ├── app/
 │   ├── globals.css                 # + focus-visible ring, reduced-motion, hover helpers
 │   └── (app)/

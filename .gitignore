@@ -1,6 +1,6 @@
 # Ortho monorepo — root ignores.
-# The app subdirectories keep their own .gitignore files (Ortho-web/.gitignore,
-# Ortho-iOS/.gitignore, supabase/.gitignore); git honors those too. This file
+# The app subdirectories keep their own .gitignore files (web/.gitignore,
+# iOS/.gitignore, supabase/.gitignore); git honors those too. This file
 # covers root-level and cross-cutting concerns only.
 
 # OS cruft
@@ -19,5 +19,9 @@ temp/
 
 # Safety nets (the app subdirs also ignore these via their own .gitignore)
 **/node_modules/
-Ortho-web/.next/
-Ortho-web/tsconfig.tsbuildinfo
+web/.next/
+web/tsconfig.tsbuildinfo
+
+# Stray dir recreated by a dev server still running in the pre-rename path.
+# Stop that server and restart from web/.
+Ortho-web/

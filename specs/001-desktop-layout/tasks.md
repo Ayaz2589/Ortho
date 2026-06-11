@@ -5,7 +5,7 @@
 **Tests**: No automated UI suite in repo; verification is `tsc --noEmit` + manual
 responsive review. No test tasks generated.
 
-**Repository root for paths**: `Ortho-web/`
+**Repository root for paths**: `web/`
 
 ## Format: `[ID] [P?] [Story] Description`
 

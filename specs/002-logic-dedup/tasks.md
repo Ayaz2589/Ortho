@@ -10,7 +10,7 @@ here; XCTest + SQL are delivered for the maintainer.
 - [ ] T001 [US2] Make TS mortgage calendar-accurate: add day-aware
   `monthsElapsed`, use it in `currentPrincipalBalanceCents`/`equity`/
   `upcomingAmortization`; make `yearsRemaining` calendar-accurate. File:
-  `Ortho-web/lib/finance/mortgage.ts`.
+  `web/lib/finance/mortgage.ts`.
 
 ## Phase 2: Shared vectors (US2, US3)
 
@@ -30,8 +30,8 @@ here; XCTest + SQL are delivered for the maintainer.
 
 ## Phase 4: iOS suite (US2, US3) — delivered, run on macOS
 
-- [ ] T009 [US2] `Ortho-iOSTests/MortgageParityTests.swift` vs `mortgage.json`.
-- [ ] T010 [US3] `Ortho-iOSTests/InsightParityTests.swift` vs `insights.json`.
+- [ ] T009 [US2] `iOS/Ortho-iOSTests/MortgageParityTests.swift` vs `mortgage.json`.
+- [ ] T010 [US3] `iOS/Ortho-iOSTests/InsightParityTests.swift` vs `insights.json`.
 - [ ] T011 README note: add the test target + bundle the vectors in Xcode.
 
 ## Phase 5: Postgres aggregations (US1) — delivered, applied by maintainer
@@ -39,7 +39,7 @@ here; XCTest + SQL are delivered for the maintainer.
 - [ ] T012 [US1] `supabase/migrations/20260611_aggregates.sql` — owner_spend,
   category_totals, month_summary, daily_expense RPCs (security definer, member
   check), matching TS semantics.
-- [ ] T013 [US1] `Ortho-web/lib/api/aggregates.ts` — additive RPC wrapper.
+- [ ] T013 [US1] `web/lib/api/aggregates.ts` — additive RPC wrapper.
 - [ ] T014 Document apply + cut-over (migration header + README).
 
 ## Phase 6: Verify

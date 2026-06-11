@@ -27,7 +27,7 @@ The expected values are produced from the (parity-corrected) TypeScript
 implementation, which mirrors the Swift one exactly:
 
 ```bash
-cd Ortho-web && npm run gen:vectors   # writes ../shared/test-vectors/*.json
+cd web && npm run gen:vectors   # writes ../shared/test-vectors/*.json
 ```
 
 Regenerate only when the *intended* behavior changes — and when you do, run both
@@ -35,8 +35,8 @@ suites so any Swift↔TS divergence surfaces.
 
 ## Running the suites
 
-- **Web**: `cd Ortho-web && npm test` (Vitest — `test/*.parity.test.ts`).
-- **iOS**: add `Ortho-iOSTests/{MortgageParityTests,InsightParityTests}.swift` to
+- **Web**: `cd web && npm test` (Vitest — `test/*.parity.test.ts`).
+- **iOS**: add `iOS/Ortho-iOSTests/{MortgageParityTests,InsightParityTests}.swift` to
   an XCTest target and add these two JSON files to that target's
   "Copy Bundle Resources", then run the tests in Xcode. (XCTest can't be built
   off macOS, so the iOS suite ships ready-to-run rather than pre-run.)
