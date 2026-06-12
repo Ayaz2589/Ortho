@@ -82,7 +82,7 @@ export function useTxForm({ editing, copying }: { editing?: Transaction | null; 
   const availableOwners = scope === 'personal' ? personalParticipants : householdMembers
   const sources = isIncome ? INCOME_SOURCES : expenseSources
   const cents = parseMoney(amount, currency, r)
-  const canSave = !!cents && cents > 0 && merchant.trim() !== '' && (scope === 'personal' || owners.length > 0)
+  const canSave = !!cents && cents > 0 && merchant.trim() !== '' && owners.length > 0
 
   function setDir(d: TransactionKind) {
     setDirection(d)
@@ -127,7 +127,9 @@ export function useTxForm({ editing, copying }: { editing?: Transaction | null; 
       created_by: editing?.created_by ?? currentUserId,
       created_at: editing?.created_at ?? new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      owner_ids: scope === 'personal' ? [currentUserId] : owners,
+      // Personal transactions may be split with local (device-only) users —
+      // mirrors iOS. owners is pruned to valid participants per scope.
+      owner_ids: owners,
       splits: null,
     }
     if (editing) updateTransaction(tx)
@@ -168,6 +170,9 @@ export type TxFormApi = ReturnType<typeof useTxForm>
 /** The shared field stack (amount hero, toggles, rows) used by both the modal and the drawer. */
 export function TxFormFields({ form }: { form: TxFormApi }) {
   const { currency, isIncome } = form
+  // Show the owner/participant picker for shared scope (household members) and
+  // for personal scope when there are local users to split with (you + locals).
+  const showOwners = form.scope === 'shared' || form.availableOwners.length > 1
   return (
     <>
       {/* Amount hero */}
@@ -213,7 +218,7 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
 
       {/* Owner + source + date */}
       <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-        {form.scope === 'shared' && (
+        {showOwners && (
           <Row label="Owner" first>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
               {form.availableOwners.map((u) => {
@@ -233,7 +238,7 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
             </div>
           </Row>
         )}
-        <Row label={isIncome ? 'Deposit to' : 'Paid with'} first={form.scope === 'personal'}>
+        <Row label={isIncome ? 'Deposit to' : 'Paid with'} first={!showOwners}>
           {form.sources.length === 0 ? (
             <span style={{ color: 'var(--text-3)' }}>No cards yet</span>
           ) : (
