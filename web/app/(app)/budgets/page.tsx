@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/ui'
 import { ReadingColumn } from '@/components/layout'
 import { SPEND_CATEGORIES, CATEGORIES } from '@/lib/categories'
 import type { TransactionCategory } from '@/lib/types'
-import { EditBudgetModal } from '@/components/budgets/EditBudgetModal'
+import { BudgetDrawer } from '@/components/budgets/BudgetDrawer'
 
 export default function BudgetsPage() {
   const { budgets, formatMoney } = useApp()
@@ -67,9 +67,7 @@ export default function BudgetsPage() {
         and you&apos;ll see progress and alerts when you&apos;re close to or over the limit.
       </p>
 
-      {editing && (
-        <EditBudgetModal open={!!editing} onClose={() => setEditing(null)} category={editing} />
-      )}
+      <BudgetDrawer category={editing} onClose={() => setEditing(null)} />
     </ReadingColumn>
   )
 }
