@@ -12,10 +12,11 @@ export default defineConfig({
     environment: 'node',
     include: ['test/**/*.test.ts', 'test/**/*.test.tsx'],
     setupFiles: ['./test/setup.ts'],
-    // The `forks` pool's worker startup races under parallel jsdom init in this
-    // sandbox ("Timeout waiting for worker to respond"); the `threads` pool starts
-    // workers faster and runs the jsdom suites in parallel reliably.
-    pool: 'threads',
+    // Parallel jsdom worker startup races under load in this sandbox ("Timeout
+    // waiting for worker to respond"). Running files sequentially uses a single
+    // worker, eliminating the race and keeping the suite deterministic. The suite
+    // is small, so the wall-clock cost is acceptable.
+    fileParallelism: false,
     testTimeout: 20000,
     hookTimeout: 20000,
     coverage: {
