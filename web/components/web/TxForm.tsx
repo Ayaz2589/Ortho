@@ -5,7 +5,7 @@ import { useApp } from '@/lib/store'
 import { SPEND_CATEGORIES, categoryMeta } from '@/lib/categories'
 import { currencySymbol, fractionDigits } from '@/lib/finance/currency'
 import { groupByDay, dayLabel } from '@/lib/format'
-import { parseMoney } from '@/components/inputs'
+import { parseMoney, DatePicker } from '@/components/inputs'
 import { Avatar } from '@/components/ui'
 import type { Transaction, TransactionCategory, TransactionScope, TransactionKind } from '@/lib/types'
 import { Seg, CatTile, SourceDot } from './kit'
@@ -247,7 +247,7 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
           )}
         </Row>
         <Row label="Date">
-          <input type="date" value={form.date} onChange={(e) => form.setDate(e.target.value)} style={{ ...selectStyle(), fontVariantNumeric: 'tabular-nums' }} />
+          <DatePicker value={form.date} onChange={form.setDate} ariaLabel="Transaction date" />
         </Row>
       </div>
 

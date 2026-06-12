@@ -10,7 +10,7 @@ import {
   SectionLabel,
   PrimaryButton,
 } from '@/components/ui'
-import { TextInput, MoneyInput, parseMoney } from '@/components/inputs'
+import { TextInput, MoneyInput, parseMoney, DatePicker } from '@/components/inputs'
 import { fractionDigits } from '@/lib/finance/currency'
 import type {
   Property,
@@ -301,12 +301,7 @@ export function AddPropertyModal({
                 </div>
               </FieldRow>
               <FieldRow label="Closing date">
-                <input
-                  type="date"
-                  value={closing}
-                  onChange={(e) => setClosing(e.target.value)}
-                  className="bg-transparent text-right text-[15px] text-text outline-none"
-                />
+                <DatePicker value={closing} onChange={setClosing} ariaLabel="Closing date" />
               </FieldRow>
               <FieldRow label="Auto-pay">
                 <TextInput
@@ -383,20 +378,10 @@ export function AddPropertyModal({
                 <MoneyInput value={rent} onChange={setRent} placeholder="0" />
               </FieldRow>
               <FieldRow label="Lease start">
-                <input
-                  type="date"
-                  value={leaseStart}
-                  onChange={(e) => setLeaseStart(e.target.value)}
-                  className="bg-transparent text-right text-[15px] text-text outline-none"
-                />
+                <DatePicker value={leaseStart} onChange={setLeaseStart} ariaLabel="Lease start" />
               </FieldRow>
               <FieldRow label="Lease end">
-                <input
-                  type="date"
-                  value={leaseEnd}
-                  onChange={(e) => setLeaseEnd(e.target.value)}
-                  className="bg-transparent text-right text-[15px] text-text outline-none"
-                />
+                <DatePicker value={leaseEnd} onChange={setLeaseEnd} ariaLabel="Lease end" />
               </FieldRow>
               <FieldRow label="Security deposit">
                 <MoneyInput value={deposit} onChange={setDeposit} placeholder="Optional" />

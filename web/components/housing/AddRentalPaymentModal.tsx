@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useApp } from '@/lib/store'
 import { Modal, FormGroup, FieldRow, PrimaryButton } from '@/components/ui'
-import { TextInput, MoneyInput, parseMoney } from '@/components/inputs'
+import { TextInput, MoneyInput, parseMoney, DatePicker } from '@/components/inputs'
 import { fractionDigits } from '@/lib/finance/currency'
 import type { Property, RentalPayment } from '@/lib/types'
 
@@ -85,12 +85,7 @@ export function AddRentalPaymentModal({
           <MoneyInput value={amount} onChange={setAmount} autoFocus />
         </FieldRow>
         <FieldRow label="Date" labelWidth={96}>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="bg-transparent text-right text-[15px] text-text outline-none"
-          />
+          <DatePicker value={date} onChange={setDate} ariaLabel="Payment date" />
         </FieldRow>
         <FieldRow label="Note" labelWidth={96}>
           <TextInput
