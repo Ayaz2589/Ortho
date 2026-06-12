@@ -130,11 +130,13 @@ export function UserRow({
   isCurrentUser = false,
   detail,
   onRemove,
+  onClick,
 }: {
   user: User | LocalUser
   isCurrentUser?: boolean
   detail?: string
   onRemove?: () => void
+  onClick?: () => void
 }) {
   const [confirming, setConfirming] = useState(false)
 
@@ -143,6 +145,27 @@ export function UserRow({
     if (isCurrentUser) return '(you)'
     return detail
   })()
+
+  // Clickable variant: the whole row opens the member detail drawer (remove
+  // lives there), shown with a trailing chevron.
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex min-h-[60px] w-full items-center gap-3.5 px-4 py-3 text-left"
+      >
+        <Avatar user={user} size={40} />
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="truncate text-[17px] font-normal text-text">{user.name}</span>
+          {composedDetail && (
+            <span className="truncate text-[13px] text-text-2">{composedDetail}</span>
+          )}
+        </div>
+        <ChevronRight size={16} className="ml-auto shrink-0 text-text-3" />
+      </button>
+    )
+  }
 
   return (
     <div className="flex min-h-[60px] items-center gap-3.5 px-4 py-3">

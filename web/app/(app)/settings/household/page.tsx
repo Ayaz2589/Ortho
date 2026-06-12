@@ -1,14 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useApp } from '@/lib/store'
-import { PageHeader, Modal, FormGroup, FieldRow, PrimaryButton } from '@/components/ui'
+import { PageHeader } from '@/components/ui'
 import { ReadingColumn } from '@/components/layout'
-import { TextInput } from '@/components/inputs'
 import { SectionCard, UserRow, AddRow } from '@/components/settings/rows'
-import { AddUserModal } from '@/components/settings/AddUserModal'
+import { HouseholdDrawer, type HouseholdDrawerMode } from '@/components/settings/HouseholdDrawer'
 
 export default function HouseholdPage() {
   const {
@@ -18,26 +17,9 @@ export default function HouseholdPage() {
     localUsers,
     formatMoney,
     monthlySpentBy,
-    updateHouseholdName,
-    removeMember,
-    removeLocalUser,
   } = useApp()
 
-  const [renaming, setRenaming] = useState(false)
-  const [name, setName] = useState('')
-  const [addingUser, setAddingUser] = useState(false)
-
-  useEffect(() => {
-    if (renaming) setName(currentHousehold?.name ?? '')
-  }, [renaming, currentHousehold])
-
-  const saveName = () => {
-    const trimmed = name.trim()
-    if (trimmed !== '') updateHouseholdName(trimmed)
-    setRenaming(false)
-  }
-
-  const canRemoveMember = (id: string) => id !== currentUserId && householdMembers.length > 1
+  const [drawer, setDrawer] = useState<HouseholdDrawerMode>(null)
 
   return (
     <ReadingColumn>
@@ -52,7 +34,7 @@ export default function HouseholdPage() {
       <SectionCard>
         <button
           type="button"
-          onClick={() => setRenaming(true)}
+          onClick={() => setDrawer({ type: 'rename' })}
           className="flex min-h-[60px] w-full items-center gap-3 px-4 py-3 text-left"
         >
           <span className="text-[17px] font-normal text-text">Name</span>
@@ -70,15 +52,20 @@ export default function HouseholdPage() {
             user={u}
             isCurrentUser={u.id === currentUserId}
             detail={`${formatMoney(monthlySpentBy(u.id))} this month`}
-            onRemove={canRemoveMember(u.id) ? () => removeMember(u.id) : undefined}
+            onClick={() => setDrawer({ type: 'member', userId: u.id })}
           />
         ))}
 
         {localUsers.map((u) => (
-          <UserRow key={u.id} user={u} detail="Local" onRemove={() => removeLocalUser(u.id)} />
+          <UserRow
+            key={u.id}
+            user={u}
+            detail="Local"
+            onClick={() => setDrawer({ type: 'member', userId: u.id })}
+          />
         ))}
 
-        <AddRow label="Add user" onClick={() => setAddingUser(true)} />
+        <AddRow label="Add user" onClick={() => setDrawer({ type: 'add' })} />
       </SectionCard>
 
       <p className="px-1 pt-3 text-[13px] leading-relaxed text-text-3">
@@ -86,39 +73,7 @@ export default function HouseholdPage() {
         only to you. Local users stay on this device.
       </p>
 
-      <Modal
-        open={renaming}
-        onClose={() => setRenaming(false)}
-        title="Rename household"
-        right={
-          <button
-            type="button"
-            onClick={saveName}
-            disabled={name.trim() === ''}
-            className="font-normal text-accent disabled:opacity-40"
-          >
-            Save
-          </button>
-        }
-      >
-        <FormGroup>
-          <FieldRow label="Name">
-            <TextInput
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Household name"
-              autoFocus
-            />
-          </FieldRow>
-        </FormGroup>
-        <div className="mt-5">
-          <PrimaryButton onClick={saveName} disabled={name.trim() === ''}>
-            Save
-          </PrimaryButton>
-        </div>
-      </Modal>
-
-      <AddUserModal open={addingUser} onClose={() => setAddingUser(false)} />
+      <HouseholdDrawer mode={drawer} onClose={() => setDrawer(null)} />
     </ReadingColumn>
   )
 }
