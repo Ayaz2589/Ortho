@@ -1,9 +1,10 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useApp } from '@/lib/store'
 import { PageHeader } from '@/components/ui'
 import { useIsExpanded } from '@/lib/useMediaQuery'
+import { useDashboardRange } from '@/lib/useDashboardRange'
 import {
   DASHBOARD_RANGES,
   availableRanges,
@@ -27,7 +28,7 @@ export default function DashboardPage() {
   const now = useMemo(() => new Date(), [])
 
   const ranges = useMemo(() => availableRanges(transactions, now), [transactions, now])
-  const [range, setRange] = useState<DashboardRange>('thisMonth')
+  const [range, setRange] = useDashboardRange()
   const activeRange: DashboardRange = ranges.includes(range) ? range : ranges[0] ?? 'thisMonth'
   const interval = useMemo(() => rangeInterval(activeRange, now), [activeRange, now])
   const options = DASHBOARD_RANGES.filter((r) => ranges.includes(r))

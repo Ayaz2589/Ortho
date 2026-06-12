@@ -15,8 +15,6 @@ struct DashboardView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var colorScheme
 
-    @State private var range: DashboardRange = .thisMonth
-
     private var availableRanges: [DashboardRange] {
         appState.availableRanges
     }
@@ -27,7 +25,7 @@ struct DashboardView: View {
                 if availableRanges.count > 1 {
                     rangePicker
                 }
-                MonthSummaryCard(range: range)
+                MonthSummaryCard(range: appState.dashboardRange)
                 // Insights sit just below the month summary so the user
                 // first sees the headline number ("+$X this month"), then
                 // the prescriptive cards (over-budget, savings rate, top
@@ -37,9 +35,9 @@ struct DashboardView: View {
                 // Budget progress sits with the rest of this-month
                 // context. Card hides itself when no budgets are set.
                 BudgetProgressCard()
-                SpendByCategoryCard(range: range)
-                PerOwnerBreakdownCard(range: range)
-                TopMerchantsCard(range: range)
+                SpendByCategoryCard(range: appState.dashboardRange)
+                PerOwnerBreakdownCard(range: appState.dashboardRange)
+                TopMerchantsCard(range: appState.dashboardRange)
                 HousingSnapshotCard()
                 DailySpendTrendCard()
                 Color.clear.frame(height: 60)
@@ -63,8 +61,8 @@ struct DashboardView: View {
         .onChange(of: availableRanges) { _, newValue in
             // If the active range goes away (e.g. all transactions deleted
             // so only `.thisMonth` is left), fall back to a valid one.
-            if !newValue.contains(range), let fallback = newValue.first {
-                range = fallback
+            if !newValue.contains(appState.dashboardRange), let fallback = newValue.first {
+                appState.dashboardRange = fallback
             }
         }
     }
@@ -76,20 +74,20 @@ struct DashboardView: View {
         HStack(spacing: 4) {
             ForEach(availableRanges) { option in
                 Button {
-                    range = option
+                    appState.dashboardRange = option
                 } label: {
                     Text(option.shortLabel)
                         .font(.lato(size: 14, weight: .semibold))
                         .tracking(-0.1)
-                        .foregroundStyle(range == option
+                        .foregroundStyle(appState.dashboardRange == option
                                          ? AppTheme.text
                                          : AppTheme.text.opacity(0.58))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                         .background(
                             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(range == option ? AppTheme.surface : .clear)
-                                .shadow(color: range == option
+                                .fill(appState.dashboardRange == option ? AppTheme.surface : .clear)
+                                .shadow(color: appState.dashboardRange == option
                                         ? .black.opacity(0.06) : .clear,
                                         radius: 2, y: 1)
                         )
@@ -102,7 +100,7 @@ struct DashboardView: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(AppTheme.text.opacity(0.05))
         )
-        .animation(.easeOut(duration: 0.15), value: range)
+        .animation(.easeOut(duration: 0.15), value: appState.dashboardRange)
     }
 }
 

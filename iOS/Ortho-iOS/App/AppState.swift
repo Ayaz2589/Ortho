@@ -110,6 +110,13 @@ final class AppState {
         }
     }
 
+    /// User-selected dashboard time range, remembered across launches.
+    var dashboardRange: DashboardRange {
+        didSet {
+            UserDefaults.standard.set(dashboardRange.rawValue, forKey: Self.dashboardRangeKey)
+        }
+    }
+
     /// Live rates fetched from floatrates.com. Empty until first successful
     /// fetch — `rate(for:)` falls back to `Currency.fallbackRateFromUSD` in
     /// that case.
@@ -119,6 +126,7 @@ final class AppState {
     var ratesError: String?
 
     private static let currencyKey = "currency"
+    private static let dashboardRangeKey = "dashboardRange"
     private static let fxRatesKey = "fxRates"
     private static let fxRatesFetchedAtKey = "fxRatesFetchedAt"
     private static let fxStaleAfter: TimeInterval = 24 * 60 * 60
@@ -160,6 +168,11 @@ final class AppState {
         let saved = UserDefaults.standard.string(forKey: Self.currencyKey)
             .flatMap(Currency.init(rawValue:)) ?? .usd
         self.currency = saved
+
+        // Restore persisted dashboard range.
+        let savedRange = UserDefaults.standard.string(forKey: Self.dashboardRangeKey)
+            .flatMap(DashboardRange.init(rawValue:)) ?? .thisMonth
+        self.dashboardRange = savedRange
 
         // Restore cached FX rates if present.
         if let data = UserDefaults.standard.data(forKey: Self.fxRatesKey),

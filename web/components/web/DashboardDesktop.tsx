@@ -1,8 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import Link from 'next/link'
 import { useApp } from '@/lib/store'
+import { useDashboardRange } from '@/lib/useDashboardRange'
 import { categoryMeta, paletteFor } from '@/lib/categories'
 import { generateInsights } from '@/lib/finance/insights'
 import {
@@ -13,7 +14,6 @@ import {
   availableRanges,
   rangeInterval,
   DASHBOARD_RANGES,
-  type DashboardRange,
 } from '@/components/dashboard/range'
 import type { Transaction, TransactionCategory } from '@/lib/types'
 import { WebPageHeader, Seg, CardLabel, CatTile } from './kit'
@@ -57,7 +57,7 @@ export function DashboardDesktop() {
   } = useApp()
   const now = useMemo(() => new Date(), [])
   const ranges = useMemo(() => availableRanges(transactions, now), [transactions, now])
-  const [range, setRange] = useState<DashboardRange>('thisMonth')
+  const [range, setRange] = useDashboardRange()
   const activeRange = ranges.includes(range) ? range : ranges[0] ?? 'thisMonth'
   const interval = useMemo(() => rangeInterval(activeRange, now), [activeRange, now])
 
