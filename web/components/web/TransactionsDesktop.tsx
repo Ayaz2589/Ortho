@@ -177,20 +177,17 @@ export function TransactionsDesktop() {
     setSelectedId(null)
   }
 
-  // Lock background scroll while the panel is open. Reserve the scrollbar width
-  // (padding-right) so hiding the scrollbar doesn't shift the table sideways.
+  // Lock background scroll while the panel is open. `main` has `scrollbar-gutter:
+  // stable`, so the gutter stays reserved even when overflow is hidden — no need
+  // to compensate with padding (doing so would now shift the table left).
   useEffect(() => {
     if (!panelOpen) return
     const main = document.querySelector('main') as HTMLElement | null
     if (!main) return
-    const sbw = main.offsetWidth - main.clientWidth
     const prevOverflow = main.style.overflow
-    const prevPad = main.style.paddingRight
     main.style.overflow = 'hidden'
-    if (sbw > 0) main.style.paddingRight = `${sbw}px`
     return () => {
       main.style.overflow = prevOverflow
-      main.style.paddingRight = prevPad
     }
   }, [panelOpen])
 
