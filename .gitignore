@@ -17,6 +17,11 @@ temp/
 # Local agent settings (keep skills + .specify tracked; ignore machine-local prefs)
 .claude/settings.local.json
 
+# Per-session context summaries written by the clear-context skill — local
+# artifacts, not repo history. Force-add a specific one with `git add -f` if
+# you ever want to keep it.
+.claude/context-summaries/
+
 # Safety nets (the app subdirs also ignore these via their own .gitignore)
 **/node_modules/
 web/.next/
