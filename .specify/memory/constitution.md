@@ -43,6 +43,19 @@ focus-visible ring. Full hover/active/focus states on web. Hit targets ≥ 40px
 (≥ 44px on touch). Contrast meets AA; secondary text shades are never used for
 primary reading text. `prefers-reduced-motion` is respected.
 
+### VI. Test-Driven & Regression-Safe (NON-NEGOTIABLE)
+New behavior is developed test-first: a failing test describes the intended
+behavior before the code that satisfies it. **Money math and date logic are never
+shipped without coverage** — currency/cents conversion, splits, mortgage and
+insight math, and date grouping are pure functions and must stay locked by
+deterministic tests (golden vectors where they fit). Tests assert observable
+behavior through public contracts and accessible DOM — not private internals — so
+they survive refactors; they are deterministic and isolated (inject reference
+dates, never assert against the real clock; mock the data layer, never hit the
+network). The suite runs with one command (`npm test`) and gates merges; pure
+`lib/` business logic holds a high coverage bar. Components are tested for behavior
+and semantics, not pixels.
+
 ## Additional Constraints
 
 - **Stack**: Next.js (App Router) + React + TypeScript + Tailwind v4. Supabase
@@ -58,10 +71,12 @@ primary reading text. `prefers-reduced-motion` is respected.
 
 - Spec-driven: features flow through `/speckit-specify` → `/speckit-plan` →
   `/speckit-tasks` → `/speckit-implement`, recorded under `specs/`.
+- Test-driven (Principle VI): write the failing test first; `npm test` (in `web/`)
+  must be green and `lib/` coverage at threshold before merge.
 - Design changes are validated against the `ortho-web` skill and this
   constitution before merge.
-- Verification favors typecheck + visual review; never run a production build or
-  delete `.next/` while a shared dev server is running.
+- Verification favors typecheck + `npm test` + visual review; never run a
+  production build or delete `.next/` while a shared dev server is running.
 
 ## Governance
 
@@ -70,4 +85,7 @@ color, a heavier border, a denser layout) must be justified in the feature's
 Complexity Tracking and approved. The `ortho-web` skill is the operative,
 detailed guidance for web/desktop work and must be consulted.
 
-**Version**: 1.0.0 | **Ratified**: 2026-06-11 | **Last Amended**: 2026-06-11
+**Version**: 1.1.0 | **Ratified**: 2026-06-11 | **Last Amended**: 2026-06-12
+
+*1.1.0 (2026-06-12): added Principle VI (Test-Driven & Regression-Safe) and a
+test-driven step to the Development Workflow. MINOR — additive principle.*
