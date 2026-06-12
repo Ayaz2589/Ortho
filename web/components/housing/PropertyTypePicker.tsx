@@ -38,7 +38,7 @@ export function PropertyTypePicker({
                 <Icon size={19} />
               </span>
               <span className="flex flex-col gap-0.5">
-                <span className="text-[17px] font-semibold text-text">{meta.displayName}</span>
+                <span className="text-[17px] font-normal text-text">{meta.displayName}</span>
                 <span className="text-[13px] text-text-2">{meta.subtitle}</span>
               </span>
               <ChevronRight size={16} className="ml-auto shrink-0 text-text-3" />

@@ -21,7 +21,7 @@ export function Card({ className, children }: { className?: string; children: Re
 export function SectionLabel({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-[13px] font-semibold uppercase tracking-[0.6px] text-text-2">
+      <span className="text-[13px] font-normal uppercase tracking-[0.6px] text-text-2">
         {children}
       </span>
       {right ? <span className="text-xs text-text-3">{right}</span> : null}
@@ -40,7 +40,7 @@ export function Avatar({
   const multi = user.initial.length > 1
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full font-semibold"
+      className="flex shrink-0 items-center justify-center rounded-full font-normal"
       style={{
         width: size,
         height: size,
@@ -103,7 +103,7 @@ export function Segmented<T extends string>({
             type="button"
             onClick={() => onChange(o.value)}
             className={cn(
-              'flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors',
+              'flex-1 rounded-lg px-3 py-1.5 text-sm font-normal transition-colors',
               active ? 'text-text' : 'text-text-2'
             )}
             style={active ? { background: 'var(--surface)', boxShadow: '0 1px 2px rgba(0,0,0,0.06)' } : undefined}
@@ -158,7 +158,7 @@ export function Modal({
               </button>
             )}
           </div>
-          <h2 className="text-[15px] font-semibold text-text">{title}</h2>
+          <h2 className="text-[15px] font-normal text-text">{title}</h2>
           <div className="min-w-[60px] text-right text-[15px]">{right}</div>
         </div>
         <div className="overflow-y-auto px-4 py-4">{children}</div>
@@ -212,7 +212,7 @@ export function PrimaryButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'flex h-12 w-full items-center justify-center rounded-full text-[15px] font-semibold text-white transition-opacity disabled:opacity-40',
+        'flex h-12 w-full items-center justify-center rounded-full text-[15px] font-normal text-white transition-opacity disabled:opacity-40',
         className
       )}
       style={{ background: 'var(--text)' }}
@@ -234,7 +234,7 @@ export function PageHeader({
   return (
     <div className="mb-4 flex items-start justify-between pt-2">
       <div>
-        <h1 className="text-[32px] font-bold tracking-[-0.6px] text-text">{title}</h1>
+        <h1 className="text-[32px] font-light tracking-[-0.6px] text-text">{title}</h1>
         {subtitle ? <p className="mt-0.5 text-[13px] text-text-2">{subtitle}</p> : null}
       </div>
       {right ? <div className="flex items-center gap-2 pt-2">{right}</div> : null}
@@ -264,7 +264,7 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center gap-3 px-8 py-20 text-center">
       <div className="text-text-3">{icon}</div>
-      <h3 className="text-[17px] font-semibold text-text">{title}</h3>
+      <h3 className="text-[17px] font-normal text-text">{title}</h3>
       <p className="max-w-xs text-sm text-text-2">{body}</p>
       {action}
     </div>

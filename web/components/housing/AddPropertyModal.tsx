@@ -237,7 +237,7 @@ export function AddPropertyModal({
           type="button"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="font-semibold text-accent disabled:opacity-40"
+          className="font-normal text-accent disabled:opacity-40"
         >
           {isEditing ? 'Save' : 'Add'}
         </button>
@@ -289,7 +289,7 @@ export function AddPropertyModal({
                   <select
                     value={term}
                     onChange={(e) => setTerm(Number(e.target.value))}
-                    className="appearance-none bg-transparent pr-5 text-right text-[15px] font-medium text-text outline-none"
+                    className="appearance-none bg-transparent pr-5 text-right text-[15px] font-normal text-text outline-none"
                   >
                     {TERMS.map((t) => (
                       <option key={t} value={t}>
@@ -364,7 +364,7 @@ export function AddPropertyModal({
                 >
                   <Plus size={14} strokeWidth={2.5} />
                 </span>
-                <span className="text-[15px] font-medium">Add unit</span>
+                <span className="text-[15px] font-normal">Add unit</span>
               </button>
             </FormGroup>
           </div>

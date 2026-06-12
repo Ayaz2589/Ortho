@@ -32,9 +32,9 @@ export function LinkRow({
       href={href}
       className="flex min-h-[60px] items-center gap-3 px-4 py-3"
     >
-      <span className="text-[17px] font-medium text-text">{label}</span>
+      <span className="text-[17px] font-normal text-text">{label}</span>
       <span className="ml-auto flex items-center gap-1.5">
-        {peek != null && <span className="text-[17px] font-medium text-text-2">{peek}</span>}
+        {peek != null && <span className="text-[17px] font-normal text-text-2">{peek}</span>}
         <ChevronRight size={16} className="text-text-3" />
       </span>
     </Link>
@@ -51,20 +51,20 @@ export function CardRow({ card, onDelete }: { card: Card; onDelete: () => void }
       >
         <CreditCard size={16} />
       </span>
-      <span className="text-[17px] font-medium text-text">{card.name}</span>
+      <span className="text-[17px] font-normal text-text">{card.name}</span>
       {confirming ? (
         <span className="ml-auto flex items-center gap-2">
           <button
             type="button"
             onClick={() => setConfirming(false)}
-            className="text-[13px] font-semibold text-text-2"
+            className="text-[13px] font-normal text-text-2"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={onDelete}
-            className="text-[13px] font-semibold text-destructive"
+            className="text-[13px] font-normal text-destructive"
           >
             Delete
           </button>
@@ -111,7 +111,7 @@ export function ActionRow({
       </span>
       <span
         className={
-          'text-[17px] font-medium ' + (destructive ? 'text-destructive' : 'text-accent')
+          'text-[17px] font-normal ' + (destructive ? 'text-destructive' : 'text-accent')
         }
       >
         {label}
@@ -148,7 +148,7 @@ export function UserRow({
     <div className="flex min-h-[60px] items-center gap-3.5 px-4 py-3">
       <Avatar user={user} size={40} />
       <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate text-[17px] font-medium text-text">{user.name}</span>
+        <span className="truncate text-[17px] font-normal text-text">{user.name}</span>
         {composedDetail && (
           <span className="truncate text-[13px] text-text-2">{composedDetail}</span>
         )}
@@ -159,14 +159,14 @@ export function UserRow({
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className="text-[13px] font-semibold text-text-2"
+              className="text-[13px] font-normal text-text-2"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={onRemove}
-              className="text-[13px] font-semibold text-destructive"
+              className="text-[13px] font-normal text-destructive"
             >
               Remove
             </button>

@@ -22,7 +22,7 @@ export function WebPageHeader({
           style={{
             margin: 0,
             fontSize: 34,
-            fontWeight: 700,
+            fontWeight: 300,
             letterSpacing: '-0.6px',
             lineHeight: 1.1,
             color: 'var(--text)',
@@ -73,7 +73,7 @@ export function Seg<T extends string>({
               padding: pad,
               borderRadius: 7,
               fontSize: 13,
-              fontWeight: 500,
+              fontWeight: 400,
               letterSpacing: '-0.1px',
               background: active ? 'var(--surface)' : 'transparent',
               color: active ? 'var(--text)' : 'var(--text-2)',
@@ -117,7 +117,7 @@ export function AccentTextButton({ onClick, children }: { onClick?: () => void; 
     <button
       className="ow-btn"
       onClick={onClick}
-      style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent)', letterSpacing: '-0.1px', padding: '6px 10px', borderRadius: 8 }}
+      style={{ fontSize: 14, fontWeight: 400, color: 'var(--accent)', letterSpacing: '-0.1px', padding: '6px 10px', borderRadius: 8 }}
     >
       {children}
     </button>
@@ -138,7 +138,7 @@ export function CardLabel({
       <div
         style={{
           fontSize: 13,
-          fontWeight: 600,
+          fontWeight: 400,
           letterSpacing: '0.6px',
           textTransform: 'uppercase',
           color: 'var(--text-2)',

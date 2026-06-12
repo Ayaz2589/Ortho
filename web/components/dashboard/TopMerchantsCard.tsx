@@ -43,14 +43,14 @@ export function TopMerchantsCard({
               {idx > 0 && <div className="h-px bg-hairline" />}
               <div className="flex items-center gap-3 py-2.5">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[15px] font-medium text-text">
+                  <p className="truncate text-[15px] font-normal text-text">
                     {entry.merchant}
                   </p>
                   <p className="text-xs text-text-3">
                     {entry.count} {entry.count === 1 ? 'visit' : 'visits'}
                   </p>
                 </div>
-                <span className="text-[15px] font-semibold tabular-nums text-text">
+                <span className="text-[15px] font-normal tabular-nums text-text">
                   {formatMoney(entry.cents)}
                 </span>
               </div>

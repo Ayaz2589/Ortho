@@ -66,7 +66,7 @@ export function TransactionRow({
 
         {/* Merchant + meta */}
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[15px] font-medium text-text">{tx.merchant}</div>
+          <div className="truncate text-[15px] font-normal text-text">{tx.merchant}</div>
           <div className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-text-3">
             <span className="truncate">{display.label}</span>
             <span className="opacity-50">·</span>
@@ -77,7 +77,7 @@ export function TransactionRow({
         {/* Amount */}
         <span
           className={
-            'shrink-0 text-[15px] font-semibold tabular-nums ' +
+            'shrink-0 text-[15px] font-normal tabular-nums ' +
             (isIncome ? 'text-positive' : 'text-text')
           }
         >

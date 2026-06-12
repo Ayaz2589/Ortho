@@ -164,7 +164,7 @@ export default function TransactionsPage() {
             <button
               type="button"
               onClick={openAdd}
-              className="mt-2 rounded-full px-5 py-2.5 text-[15px] font-semibold text-accent"
+              className="mt-2 rounded-full px-5 py-2.5 text-[15px] font-normal text-accent"
               style={{ background: 'rgba(0,0,0,0.05)' }}
             >
               Add transaction
@@ -185,7 +185,7 @@ export default function TransactionsPage() {
                   aria-expanded={open}
                   className="flex items-center justify-between px-1 py-1"
                 >
-                  <span className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-[0.6px] text-text-2">
+                  <span className="flex items-center gap-1.5 text-[13px] font-normal uppercase tracking-[0.6px] text-text-2">
                     <ChevronDown
                       size={15}
                       className="text-text-3 transition-transform"
@@ -193,7 +193,7 @@ export default function TransactionsPage() {
                     />
                     {monthYearLong(m.month, locale)}
                   </span>
-                  <span className="text-[13px] font-semibold tabular-nums text-text-3">
+                  <span className="text-[13px] font-normal tabular-nums text-text-3">
                     {formatMoney(expenseTotal(monthItems))}
                   </span>
                 </button>
@@ -201,10 +201,10 @@ export default function TransactionsPage() {
                   m.days.map((g) => (
                     <Card key={g.day.getTime()} className="overflow-hidden">
                       <div className="flex items-center justify-between px-4 pb-1 pt-3">
-                        <span className="text-[13px] font-semibold uppercase tracking-[0.6px] text-text-2">
+                        <span className="text-[13px] font-normal uppercase tracking-[0.6px] text-text-2">
                           {dayLabel(g.day, locale)}
                         </span>
-                        <span className="text-[13px] font-semibold tabular-nums text-text-3">
+                        <span className="text-[13px] font-normal tabular-nums text-text-3">
                           {formatMoney(expenseTotal(g.items))}
                         </span>
                       </div>

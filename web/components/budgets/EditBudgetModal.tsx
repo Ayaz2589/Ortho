@@ -66,7 +66,7 @@ export function EditBudgetModal({
           type="button"
           onClick={handleSave}
           disabled={!canSave}
-          className="font-semibold text-accent disabled:opacity-40"
+          className="font-normal text-accent disabled:opacity-40"
         >
           Save
         </button>
@@ -93,7 +93,7 @@ export function EditBudgetModal({
         <button
           type="button"
           onClick={handleRemove}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-surface py-3.5 text-[17px] font-medium text-destructive"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-surface py-3.5 text-[17px] font-normal text-destructive"
           style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
         >
           <MinusCircle size={16} />

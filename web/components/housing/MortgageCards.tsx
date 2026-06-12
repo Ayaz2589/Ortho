@@ -31,7 +31,7 @@ function Section({ children }: { children: React.ReactNode }) {
 function Label({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-[13px] font-semibold uppercase tracking-[0.6px] text-text-2">
+      <span className="text-[13px] font-normal uppercase tracking-[0.6px] text-text-2">
         {children}
       </span>
       {right ? <span className="text-xs text-text-3">{right}</span> : null}
@@ -50,7 +50,7 @@ export function MortgagePaymentHero({ mortgage }: { mortgage: MortgageInfo }) {
     <Section>
       <div className="flex flex-col gap-1.5 p-5">
         <Label right={<House size={16} className="text-text-2" />}>Monthly payment</Label>
-        <div className="text-[36px] font-bold tracking-[-0.6px] tabular-nums text-text">
+        <div className="text-[36px] font-light tracking-[-0.6px] tabular-nums text-text">
           {formatMoney(payment)}
         </div>
         {mortgage.auto_pay_source ? (
@@ -75,10 +75,10 @@ function DetailRow({
   return (
     <div className="flex items-baseline justify-between px-4 py-3.5">
       <div className="flex flex-col gap-0.5">
-        <span className="text-[15px] font-medium text-text">{label}</span>
+        <span className="text-[15px] font-normal text-text">{label}</span>
         <span className="text-[12px] text-text-3">{sublabel}</span>
       </div>
-      <span className="text-[17px] font-semibold tabular-nums text-text">{value}</span>
+      <span className="text-[17px] font-normal tabular-nums text-text">{value}</span>
     </div>
   )
 }
@@ -137,7 +137,7 @@ export function EquityProgress({ mortgage }: { mortgage: MortgageInfo }) {
       <div className="flex flex-col gap-2.5 p-5">
         <Label>Equity</Label>
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-[28px] font-bold tracking-[-0.4px] tabular-nums text-text">
+          <span className="text-[28px] font-light tracking-[-0.4px] tabular-nums text-text">
             {formatMoney(equity)}
           </span>
           <span className="shrink-0 text-[12px] text-text-3">

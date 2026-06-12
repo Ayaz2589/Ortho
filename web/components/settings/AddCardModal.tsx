@@ -31,7 +31,7 @@ export function AddCardModal({ open, onClose }: { open: boolean; onClose: () => 
           type="button"
           onClick={handleAdd}
           disabled={!canAdd}
-          className="font-semibold text-accent disabled:opacity-40"
+          className="font-normal text-accent disabled:opacity-40"
         >
           Add
         </button>

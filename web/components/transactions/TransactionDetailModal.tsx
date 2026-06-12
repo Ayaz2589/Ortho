@@ -55,7 +55,7 @@ export function TransactionDetailModal({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="font-semibold text-accent"
+            className="font-normal text-accent"
           >
             Edit
           </button>
@@ -73,7 +73,7 @@ export function TransactionDetailModal({
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(false)}
-                  className="flex-1 rounded-full py-2.5 text-[15px] font-medium text-text"
+                  className="flex-1 rounded-full py-2.5 text-[15px] font-normal text-text"
                   style={{ background: 'rgba(0,0,0,0.05)' }}
                 >
                   Cancel
@@ -84,7 +84,7 @@ export function TransactionDetailModal({
                     deleteTransaction(tx.id)
                     onClose()
                   }}
-                  className="flex-1 rounded-full bg-destructive py-2.5 text-[15px] font-semibold text-white"
+                  className="flex-1 rounded-full bg-destructive py-2.5 text-[15px] font-normal text-white"
                 >
                   Delete
                 </button>
@@ -94,7 +94,7 @@ export function TransactionDetailModal({
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
-              className="rounded-2xl bg-surface py-3.5 text-center text-[15px] font-medium text-destructive"
+              className="rounded-2xl bg-surface py-3.5 text-center text-[15px] font-normal text-destructive"
             >
               Delete transaction
             </button>

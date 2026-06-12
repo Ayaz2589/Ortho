@@ -61,7 +61,7 @@ export function PropertyContent({ property }: { property: Property }) {
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className="flex-1 rounded-full py-3 text-[15px] font-semibold text-text-2"
+              className="flex-1 rounded-full py-3 text-[15px] font-normal text-text-2"
               style={{ background: 'rgba(0,0,0,0.05)' }}
             >
               Cancel
@@ -69,7 +69,7 @@ export function PropertyContent({ property }: { property: Property }) {
             <button
               type="button"
               onClick={() => deleteProperty(property.id)}
-              className="flex-1 rounded-full py-3 text-[15px] font-semibold text-white"
+              className="flex-1 rounded-full py-3 text-[15px] font-normal text-white"
               style={{ background: 'var(--destructive)' }}
             >
               Delete
@@ -80,7 +80,7 @@ export function PropertyContent({ property }: { property: Property }) {
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="rounded-2xl bg-surface py-3.5 text-center text-[17px] font-medium text-destructive"
+          className="rounded-2xl bg-surface py-3.5 text-center text-[17px] font-normal text-destructive"
           style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
         >
           Delete property

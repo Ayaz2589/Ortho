@@ -52,11 +52,11 @@ export function WebModal({
           <button
             className="ow-btn"
             onClick={onClose}
-            style={{ fontSize: 15, fontWeight: 500, color: 'var(--accent)', letterSpacing: '-0.2px', padding: 0, zIndex: 1 }}
+            style={{ fontSize: 15, fontWeight: 400, color: 'var(--accent)', letterSpacing: '-0.2px', padding: 0, zIndex: 1 }}
           >
             Cancel
           </button>
-          <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', fontSize: 16, fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.3px', pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', fontSize: 16, fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.3px', pointerEvents: 'none' }}>
             {title}
           </div>
           <div style={{ marginLeft: 'auto', zIndex: 1 }}>
@@ -65,7 +65,7 @@ export function WebModal({
                 className="ow-btn"
                 onClick={onSave}
                 disabled={!canSave}
-                style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.2px', padding: 0, color: canSave ? 'var(--accent)' : 'var(--text-3)', cursor: canSave ? 'pointer' : 'default' }}
+                style={{ fontSize: 15, fontWeight: 400, letterSpacing: '-0.2px', padding: 0, color: canSave ? 'var(--accent)' : 'var(--text-3)', cursor: canSave ? 'pointer' : 'default' }}
               >
                 {saveLabel}
               </button>

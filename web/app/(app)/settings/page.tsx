@@ -151,14 +151,14 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => setSigningOut(false)}
-                    className="text-[15px] font-semibold text-text-2"
+                    className="text-[15px] font-normal text-text-2"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={() => void signOut()}
-                    className="text-[15px] font-semibold text-destructive"
+                    className="text-[15px] font-normal text-destructive"
                   >
                     Sign out
                   </button>

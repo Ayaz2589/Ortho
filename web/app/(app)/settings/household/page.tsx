@@ -55,9 +55,9 @@ export default function HouseholdPage() {
           onClick={() => setRenaming(true)}
           className="flex min-h-[60px] w-full items-center gap-3 px-4 py-3 text-left"
         >
-          <span className="text-[17px] font-medium text-text">Name</span>
+          <span className="text-[17px] font-normal text-text">Name</span>
           <span className="ml-auto flex items-center gap-1.5">
-            <span className="text-[17px] font-medium text-text-2">
+            <span className="text-[17px] font-normal text-text-2">
               {currentHousehold?.name ?? 'Untitled'}
             </span>
             <ChevronRight size={16} className="text-text-3" />
@@ -95,7 +95,7 @@ export default function HouseholdPage() {
             type="button"
             onClick={saveName}
             disabled={name.trim() === ''}
-            className="font-semibold text-accent disabled:opacity-40"
+            className="font-normal text-accent disabled:opacity-40"
           >
             Save
           </button>

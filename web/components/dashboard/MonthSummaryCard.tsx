@@ -54,14 +54,14 @@ export function MonthSummaryCard({
     <Card className="p-5">
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <span className="text-[13px] font-semibold uppercase tracking-[0.6px] text-text-2">
+          <span className="text-[13px] font-normal uppercase tracking-[0.6px] text-text-2">
             {longLabel(range)}
           </span>
           <span className="text-xs text-text-3 tabular-nums">{rightCaption}</span>
         </div>
 
         <div
-          className="truncate text-[36px] font-bold tracking-[-0.6px] tabular-nums"
+          className="truncate text-[36px] font-light tracking-[-0.6px] tabular-nums"
           style={{ color: net >= 0 ? 'var(--positive)' : 'var(--text)' }}
         >
           {netDisplay}
@@ -103,7 +103,7 @@ function StatColumn({
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-xs text-text-2">{label}</span>
-      <span className="text-[15px] font-semibold tabular-nums" style={{ color: tint }}>
+      <span className="text-[15px] font-normal tabular-nums" style={{ color: tint }}>
         {amount}
       </span>
     </div>

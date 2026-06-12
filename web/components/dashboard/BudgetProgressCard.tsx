@@ -45,9 +45,9 @@ export function BudgetProgressCard() {
               <div className="flex items-baseline justify-between">
                 <div className="flex items-center gap-2">
                   <Icon size={14} style={{ color: meta.tint }} />
-                  <span className="text-sm font-medium text-text">{meta.label}</span>
+                  <span className="text-sm font-normal text-text">{meta.label}</span>
                 </div>
-                <span className="text-xs font-medium tabular-nums" style={{ color }}>
+                <span className="text-xs font-normal tabular-nums" style={{ color }}>
                   {formatMoney(row.spent)} / {formatMoney(row.budget.monthly_limit_cents)}
                 </span>
               </div>

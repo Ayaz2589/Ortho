@@ -49,10 +49,10 @@ function SignIn() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-bg px-6">
       <div className="w-full max-w-sm">
         <div className="mb-10 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-text text-2xl font-black text-bg">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-text text-2xl font-light text-bg">
             O
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-text">Ortho</h1>
+          <h1 className="text-2xl font-light tracking-tight text-text">Ortho</h1>
           <p className="mt-1 text-sm text-text-2">Household finance, in order.</p>
         </div>
 
@@ -70,7 +70,7 @@ function SignIn() {
             }}
             className="flex flex-col gap-4"
           >
-            <h2 className="text-lg font-semibold text-text">Sign in</h2>
+            <h2 className="text-lg font-normal text-text">Sign in</h2>
             <p className="-mt-2 text-sm text-text-2">
               We&apos;ll email you a code. No password, no fuss.
             </p>
@@ -98,9 +98,9 @@ function SignIn() {
             }}
             className="flex flex-col gap-4"
           >
-            <h2 className="text-lg font-semibold text-text">Enter your code</h2>
+            <h2 className="text-lg font-normal text-text">Enter your code</h2>
             <p className="-mt-2 text-sm text-text-2">
-              Sent to <span className="font-medium text-text">{pendingEmail}</span>.
+              Sent to <span className="font-normal text-text">{pendingEmail}</span>.
             </p>
             <input
               inputMode="numeric"

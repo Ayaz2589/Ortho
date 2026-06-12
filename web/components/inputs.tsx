@@ -37,7 +37,7 @@ export function MoneyInput({
   const { currency } = useApp()
   return (
     <div className="flex items-center gap-1">
-      <span className={big ? 'text-[40px] font-bold text-text-2' : 'text-[15px] text-text-2'}>
+      <span className={big ? 'text-[40px] font-light text-text-2' : 'text-[15px] text-text-2'}>
         {currencySymbol(currency)}
       </span>
       <input
@@ -48,7 +48,7 @@ export function MoneyInput({
         placeholder={placeholder ?? '0.00'}
         className={
           big
-            ? 'w-full bg-transparent text-[40px] font-bold text-text outline-none placeholder:text-text-3'
+            ? 'w-full bg-transparent text-[40px] font-light text-text outline-none placeholder:text-text-3'
             : 'w-28 bg-transparent text-right text-[15px] text-text outline-none placeholder:text-text-3'
         }
       />
@@ -222,7 +222,7 @@ export function DatePicker({
           cursor: 'pointer',
           fontFamily: 'inherit',
           fontSize: 15,
-          fontWeight: 500,
+          fontWeight: 400,
           color: selected ? 'var(--text)' : 'var(--text-3)',
           letterSpacing: '-0.2px',
           fontVariantNumeric: 'tabular-nums',
@@ -261,7 +261,7 @@ export function DatePicker({
                 >
                   <ChevronLeft size={16} style={{ color: 'var(--text-2)' }} />
                 </button>
-                <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.2px', color: 'var(--text)' }}>
+                <span style={{ fontSize: 14, fontWeight: 400, letterSpacing: '-0.2px', color: 'var(--text)' }}>
                   {monthYearLong(view, locale)}
                 </span>
                 <button
@@ -276,7 +276,7 @@ export function DatePicker({
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 2 }}>
                 {weekdays.map((w, i) => (
-                  <div key={i} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'var(--text-3)', padding: '4px 0' }}>
+                  <div key={i} style={{ textAlign: 'center', fontSize: 11, fontWeight: 400, color: 'var(--text-3)', padding: '4px 0' }}>
                     {w}
                   </div>
                 ))}
@@ -303,7 +303,7 @@ export function DatePicker({
                           justifyContent: 'center',
                           background: isSel ? 'var(--text)' : 'transparent',
                           color: isSel ? 'var(--bg)' : 'var(--text)',
-                          fontWeight: isSel || isToday ? 700 : 500,
+                          fontWeight: 400,
                           boxShadow: !isSel && isToday ? 'inset 0 0 0 1.5px var(--hairline)' : 'none',
                           transition: 'background var(--duration-fast) var(--ease-out)',
                         }}
@@ -325,7 +325,7 @@ export function DatePicker({
                 <button
                   className="ow-btn"
                   onClick={() => pick(new Date())}
-                  style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', padding: '2px 8px' }}
+                  style={{ fontSize: 13, fontWeight: 400, color: 'var(--accent)', padding: '2px 8px' }}
                 >
                   Today
                 </button>

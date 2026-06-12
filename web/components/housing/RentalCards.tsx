@@ -17,7 +17,7 @@ export function RentHero({ lease }: { lease: LeaseInfo }) {
         <HousingLabel right={<KeyRound size={16} className="text-text-2" />}>
           Monthly rent
         </HousingLabel>
-        <div className="text-[36px] font-bold tracking-[-0.6px] tabular-nums text-text">
+        <div className="text-[36px] font-light tracking-[-0.6px] tabular-nums text-text">
           {formatMoney(lease.monthly_rent_cents)}
         </div>
         <p className="text-[13px] text-text-2">{nextRentCaption(lease)}</p>
@@ -34,7 +34,7 @@ export function RenewalBanner({ lease }: { lease: LeaseInfo }) {
     >
       <CalendarClock size={18} className="shrink-0 text-accent" />
       <div className="flex flex-col gap-0.5">
-        <span className="text-[15px] font-semibold text-text">
+        <span className="text-[15px] font-normal text-text">
           Lease ends in {daysUntilEnd(lease)} days
         </span>
         <span className="text-[13px] text-text-2">Time to renew or plan a move.</span>
@@ -47,7 +47,7 @@ function LeaseRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between px-4 py-3.5">
       <span className="text-[15px] text-text-2">{label}</span>
-      <span className="text-[17px] font-medium tabular-nums text-text">{value}</span>
+      <span className="text-[17px] font-normal tabular-nums text-text">{value}</span>
     </div>
   )
 }
@@ -90,7 +90,7 @@ export function RentalPaymentsCard({ property }: { property: Property }) {
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="flex items-center gap-1 text-[13px] font-semibold text-accent"
+            className="flex items-center gap-1 text-[13px] font-normal text-accent"
           >
             <Plus size={12} strokeWidth={2.5} />
             Log payment
@@ -105,14 +105,14 @@ export function RentalPaymentsCard({ property }: { property: Property }) {
             {payments.map((payment) => (
               <div key={payment.id} className="flex min-h-[56px] items-center gap-3 px-4 py-3">
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[15px] font-medium text-text">
+                  <span className="text-[15px] font-normal text-text">
                     {mediumDate(new Date(payment.date), locale)}
                   </span>
                   {payment.note ? (
                     <span className="text-[12px] text-text-3">{payment.note}</span>
                   ) : null}
                 </div>
-                <span className="ml-auto text-[17px] font-semibold tabular-nums text-text">
+                <span className="ml-auto text-[17px] font-normal tabular-nums text-text">
                   {formatMoney(payment.amount_cents)}
                 </span>
                 <button

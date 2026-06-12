@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import localFont from 'next/font/local'
 import './globals.css'
 import { THEME_VARS } from '@/components/settings/appearance'
 
@@ -6,6 +7,19 @@ export const metadata: Metadata = {
   title: 'Ortho',
   description: 'Household finance, in order.',
 }
+
+// Self-hosted Lato — the exact .ttf files the iOS app bundles (no Google Fonts
+// CDN). Exposed as the `--font-lato` CSS variable that globals.css consumes.
+const lato = localFont({
+  src: [
+    { path: './fonts/Lato-Light.ttf', weight: '300', style: 'normal' },
+    { path: './fonts/Lato-Regular.ttf', weight: '400', style: 'normal' },
+    { path: './fonts/Lato-Bold.ttf', weight: '700', style: 'normal' },
+    { path: './fonts/Lato-Black.ttf', weight: '900', style: 'normal' },
+  ],
+  variable: '--font-lato',
+  display: 'swap',
+})
 
 /*
  * Apply the saved appearance before first paint. Runs synchronously during
@@ -26,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+    <html lang="en" className={`${lato.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
         <script dangerouslySetInnerHTML={{ __html: APPEARANCE_BOOT }} />
         {children}

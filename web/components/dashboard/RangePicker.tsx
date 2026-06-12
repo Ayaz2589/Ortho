@@ -26,7 +26,7 @@ export function RangePicker({
             type="button"
             onClick={() => onChange(o)}
             className={cn(
-              'flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors',
+              'flex-1 rounded-lg px-3 py-2 text-sm font-normal transition-colors',
               active ? 'text-text' : 'text-text-2'
             )}
             style={

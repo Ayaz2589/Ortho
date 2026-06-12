@@ -32,7 +32,7 @@ function TxDetailRow({ label, children, first = false }: { label: string; childr
       }}
     >
       <div style={{ flex: '0 0 110px', fontSize: 14, color: 'var(--text-2)', letterSpacing: '-0.1px' }}>{label}</div>
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 500, letterSpacing: '-0.2px', color: 'var(--text)' }}>
+      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 400, letterSpacing: '-0.2px', color: 'var(--text)' }}>
         {children}
       </div>
     </div>
@@ -60,7 +60,7 @@ function TxDetailContent({
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 0' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-2)' }}>
+        <div style={{ fontSize: 13, fontWeight: 400, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-2)' }}>
           Transaction
         </div>
         <button className="ow-btn ow-chip-btn" aria-label="Close" onClick={onClose} style={{ width: 28, height: 28 }}>
@@ -74,11 +74,11 @@ function TxDetailContent({
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
           <CatTile category={tx.category} size={52} />
         </div>
-        <div style={{ fontSize: 17, fontWeight: 600, letterSpacing: '-0.3px' }}>{tx.merchant}</div>
+        <div style={{ fontSize: 17, fontWeight: 400, letterSpacing: '-0.3px' }}>{tx.merchant}</div>
         <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>
           {meta.label} · {mediumDate(date, locale)}
         </div>
-        <div style={{ fontSize: 32, fontWeight: 700, letterSpacing: '-0.6px', marginTop: 14, fontVariantNumeric: 'tabular-nums', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
+        <div style={{ fontSize: 32, fontWeight: 300, letterSpacing: '-0.6px', marginTop: 14, fontVariantNumeric: 'tabular-nums', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
           {formatMoney(tx.amount_cents, { leadingPlus: isIncome })}
         </div>
       </div>
@@ -98,7 +98,7 @@ function TxDetailContent({
       </div>
 
       <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px 18px', borderTop: '0.5px solid var(--hairline)' }}>
-        <button className="ow-btn" onClick={onEdit} style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent)', letterSpacing: '-0.1px', padding: '4px 0' }}>
+        <button className="ow-btn" onClick={onEdit} style={{ fontSize: 14, fontWeight: 400, color: 'var(--accent)', letterSpacing: '-0.1px', padding: '4px 0' }}>
           Edit transaction
         </button>
         <button className="ow-btn ow-quiet-link" onClick={onDelete}>
@@ -130,7 +130,7 @@ function TxRow({
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
         <CatTile category={tx.category} size={30} />
-        <span style={{ fontSize: 14.5, fontWeight: 500, letterSpacing: '-0.15px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 14.5, fontWeight: 400, letterSpacing: '-0.15px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {tx.merchant}
         </span>
       </div>
@@ -146,7 +146,7 @@ function TxRow({
           {tx.source}
         </span>
       </div>
-      <div style={{ fontSize: 14.5, fontWeight: 600, textAlign: 'right', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px', whiteSpace: 'nowrap', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
+      <div style={{ fontSize: 14.5, fontWeight: 400, textAlign: 'right', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px', whiteSpace: 'nowrap', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
         {formatMoney(tx.amount_cents, { leadingPlus: isIncome })}
       </div>
     </button>
@@ -312,14 +312,14 @@ export function TransactionsDesktop() {
                     borderBottom: '0.5px solid var(--hairline)',
                   }}
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, letterSpacing: '-0.2px', color: 'var(--text)' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 400, letterSpacing: '-0.2px', color: 'var(--text)' }}>
                     <ChevronDown
                       size={15}
                       style={{ color: 'var(--text-3)', transition: 'transform var(--duration-mid) var(--ease-out)', transform: open ? undefined : 'rotate(-90deg)' }}
                     />
                     {monthYearLong(m.month, locale)}
                   </span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>
+                  <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>
                     {formatMoney(expenseTotal(monthItems))}
                   </span>
                 </button>
@@ -327,7 +327,7 @@ export function TransactionsDesktop() {
                   m.days.map((g) => (
                     <div key={g.day.getTime()}>
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '22px 16px 8px' }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-2)' }}>
+                        <span style={{ fontSize: 13, fontWeight: 400, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-2)' }}>
                           {dayLabel(g.day, locale)}
                         </span>
                         <span style={{ fontSize: 12, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>

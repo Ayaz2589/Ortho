@@ -47,7 +47,7 @@ const config: Config = {
         },
       },
       fontFamily: {
-        lato: ['Lato', 'sans-serif'],
+        lato: ['var(--font-lato)', 'Lato', 'sans-serif'],
       },
     },
   },

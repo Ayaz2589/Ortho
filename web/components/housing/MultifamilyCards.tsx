@@ -35,7 +35,7 @@ export function UnitsCard({ property }: { property: Property }) {
             return (
               <div key={unit.id} className="flex min-h-[56px] items-center gap-3 px-4 py-3">
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-[15px] font-medium text-text">{unit.name}</span>
+                  <span className="text-[15px] font-normal text-text">{unit.name}</span>
                   <span
                     className={
                       'text-[12px] ' + (vacant ? 'text-destructive' : 'text-text-3')
@@ -44,7 +44,7 @@ export function UnitsCard({ property }: { property: Property }) {
                     {vacant ? 'Vacant' : unit.tenant_name}
                   </span>
                 </div>
-                <span className="ml-auto text-[17px] font-semibold tabular-nums text-text">
+                <span className="ml-auto text-[17px] font-normal tabular-nums text-text">
                   {formatMoney(unit.monthly_rent_cents)}
                 </span>
               </div>
@@ -80,7 +80,7 @@ export function NetBalanceCard({ property }: { property: Property }) {
       <div className="flex flex-col gap-2.5 p-5">
         <HousingLabel>Net balance</HousingLabel>
         <span
-          className="text-[28px] font-bold tracking-[-0.4px] tabular-nums"
+          className="text-[28px] font-light tracking-[-0.4px] tabular-nums"
           style={{ color: net >= 0 ? 'var(--positive)' : 'var(--destructive)' }}
         >
           {signed}
@@ -88,13 +88,13 @@ export function NetBalanceCard({ property }: { property: Property }) {
         <div className="mt-1 flex flex-col gap-1">
           <div className="flex items-center justify-between">
             <span className="text-[13px] text-text-2">Rental income</span>
-            <span className="text-[13px] font-medium tabular-nums text-text">
+            <span className="text-[13px] font-normal tabular-nums text-text">
               {formatMoney(income)}
             </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[13px] text-text-2">Mortgage payment</span>
-            <span className="text-[13px] font-medium tabular-nums text-text">
+            <span className="text-[13px] font-normal tabular-nums text-text">
               −{formatMoney(mortgageCents)}
             </span>
           </div>

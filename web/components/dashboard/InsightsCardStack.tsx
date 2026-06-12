@@ -85,7 +85,7 @@ function InsightRow({ insight }: { insight: Insight }) {
           <Icon size={18} style={{ color }} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-semibold text-text">{insight.title}</p>
+          <p className="text-[15px] font-normal text-text">{insight.title}</p>
           <p className="mt-0.5 text-[13px] text-text-2">{insight.body}</p>
         </div>
       </div>

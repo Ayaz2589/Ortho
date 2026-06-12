@@ -61,13 +61,13 @@ export function PerOwnerBreakdownCard({
                   className="flex flex-col gap-1 text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-[15px] font-medium text-text">
+                    <span className="text-[15px] font-normal text-text">
                       {entry.user.name}
                     </span>
                     {entry.user.id === currentUserId && (
                       <span className="text-xs text-text-3">(you)</span>
                     )}
-                    <span className="ml-auto text-[15px] font-semibold tabular-nums text-text">
+                    <span className="ml-auto text-[15px] font-normal tabular-nums text-text">
                       {formatMoney(entry.cents)}
                     </span>
                     <ChevronDown
@@ -150,12 +150,12 @@ function ExpandedShares({
           <div className="flex items-center gap-2.5 py-2">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <span className="truncate text-sm font-medium text-text">
+                <span className="truncate text-sm font-normal text-text">
                   {item.tx.merchant}
                 </span>
                 {item.tx.owner_ids.length > 1 && (
                   <span
-                    className="rounded-full px-1.5 py-px text-[10px] font-semibold text-text-2"
+                    className="rounded-full px-1.5 py-px text-[10px] font-normal text-text-2"
                     style={{ background: 'rgba(0,0,0,0.06)' }}
                   >
                     {pctLabel(item.pct)}
@@ -166,7 +166,7 @@ function ExpandedShares({
                 {shortDate(new Date(item.tx.date), locale)}
               </p>
             </div>
-            <span className="text-sm font-semibold tabular-nums text-text">
+            <span className="text-sm font-normal tabular-nums text-text">
               {formatMoney(item.share)}
             </span>
           </div>

@@ -57,13 +57,13 @@ export function PropertyCard({
         <Icon size={19} />
       </span>
       <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate text-[17px] font-semibold text-text">
+        <span className="truncate text-[17px] font-normal text-text">
           {propertyTitle(property)}
         </span>
         <span className="truncate text-[13px] text-text-2">{subtitle}</span>
       </span>
       <span className="ml-auto flex shrink-0 flex-col items-end gap-0.5">
-        <span className="text-[17px] font-semibold tabular-nums text-text">
+        <span className="text-[17px] font-normal tabular-nums text-text">
           {formatMoney(amount)}
         </span>
         <span className="text-[12px] text-text-3">{caption}</span>

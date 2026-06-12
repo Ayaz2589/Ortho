@@ -177,19 +177,19 @@ export function DashboardDesktop() {
         {/* Net summary */}
         <div className="ow-card ow-s7" style={{ padding: 24 }}>
           <CardLabel>{rangeLabel}</CardLabel>
-          <div style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.7px', fontVariantNumeric: 'tabular-nums', lineHeight: 1.05, color: net >= 0 ? 'var(--positive)' : 'var(--text)' }}>
+          <div style={{ fontSize: 36, fontWeight: 300, letterSpacing: '-0.7px', fontVariantNumeric: 'tabular-nums', lineHeight: 1.05, color: net >= 0 ? 'var(--positive)' : 'var(--text)' }}>
             {formatMoney(net, { leadingPlus: net > 0 })}
           </div>
           <div style={{ display: 'flex', gap: 36, marginTop: 18 }}>
             <div>
               <div className="ow-cap">Income</div>
-              <div style={{ fontSize: 17, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'var(--positive)', letterSpacing: '-0.3px' }}>
+              <div style={{ fontSize: 17, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: 'var(--positive)', letterSpacing: '-0.3px' }}>
                 {formatMoney(income, { leadingPlus: income > 0 })}
               </div>
             </div>
             <div>
               <div className="ow-cap">Expenses</div>
-              <div style={{ fontSize: 17, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'var(--text)', letterSpacing: '-0.3px' }}>
+              <div style={{ fontSize: 17, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: 'var(--text)', letterSpacing: '-0.3px' }}>
                 {formatMoney(expenseTotalC)}
               </div>
             </div>
@@ -206,17 +206,17 @@ export function DashboardDesktop() {
               <div style={{ display: 'flex', gap: 36 }}>
                 <div>
                   <div className="ow-cap">Monthly cost</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.4px' }}>{formatMoney(housing.cost)}</div>
+                  <div style={{ fontSize: 22, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.4px' }}>{formatMoney(housing.cost)}</div>
                 </div>
                 <div>
                   <div className="ow-cap">Equity built</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.4px' }}>{formatMoney(housing.equity)}</div>
+                  <div style={{ fontSize: 22, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.4px' }}>{formatMoney(housing.equity)}</div>
                 </div>
               </div>
               {housing.multi && (
                 <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '0.5px solid var(--hairline)', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                   <span style={{ fontSize: 13, color: 'var(--text-2)' }}>Net rental income</span>
-                  <span style={{ fontSize: 15, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: housing.netRental >= 0 ? 'var(--positive)' : 'var(--text)' }}>
+                  <span style={{ fontSize: 15, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: housing.netRental >= 0 ? 'var(--positive)' : 'var(--text)' }}>
                     {formatMoney(housing.netRental, { leadingPlus: housing.netRental > 0 })}
                   </span>
                 </div>
@@ -243,7 +243,7 @@ export function DashboardDesktop() {
                   )}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ fontWeight: 600 }}>{ins.title}.</span>{' '}
+                  <span style={{ fontWeight: 400 }}>{ins.title}.</span>{' '}
                   <span style={{ color: 'var(--text-2)' }}>{ins.body}</span>
                 </div>
               </div>
@@ -263,8 +263,8 @@ export function DashboardDesktop() {
                   <CatTile category={cat} size={28} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
-                      <span style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.1px' }}>{categoryMeta(cat).label}</span>
-                      <span style={{ fontSize: 14, fontWeight: 600, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.2px' }}>{formatMoney(amt)}</span>
+                      <span style={{ fontSize: 14, fontWeight: 400, letterSpacing: '-0.1px' }}>{categoryMeta(cat).label}</span>
+                      <span style={{ fontSize: 14, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.2px' }}>{formatMoney(amt)}</span>
                     </div>
                     <ShareBar pct={(amt / catMax) * 100} color={categoryMeta(cat).tint} />
                   </div>
@@ -285,15 +285,15 @@ export function DashboardDesktop() {
                 const pal = paletteFor(o.user.color_key)
                 return (
                   <div key={o.user.id} style={{ display: 'flex', gap: 12 }}>
-                    <div className="flex shrink-0 items-center justify-center rounded-full" style={{ width: 32, height: 32, background: pal.bg, color: pal.fg, fontWeight: 600, fontSize: 14 }}>
+                    <div className="flex shrink-0 items-center justify-center rounded-full" style={{ width: 32, height: 32, background: pal.bg, color: pal.fg, fontWeight: 400, fontSize: 14 }}>
                       {o.user.initial}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
-                        <span style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.1px' }}>
+                        <span style={{ fontSize: 14, fontWeight: 400, letterSpacing: '-0.1px' }}>
                           {o.user.id === currentUserId ? `${o.user.name} (you)` : o.user.name}
                         </span>
-                        <span style={{ fontSize: 14, fontWeight: 600, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.2px' }}>{formatMoney(o.amount)}</span>
+                        <span style={{ fontSize: 14, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.2px' }}>{formatMoney(o.amount)}</span>
                       </div>
                       <ShareBar pct={(o.amount / ownerTotal) * 100} color={pal.bg} />
                       {o.top && (
@@ -321,10 +321,10 @@ export function DashboardDesktop() {
             merchants.map(([name, info], i) => (
               <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 24px', borderTop: i === 0 ? 'none' : '0.5px solid var(--hairline)' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                  <div style={{ fontSize: 14, fontWeight: 400, letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{info.count} {info.count === 1 ? 'visit' : 'visits'}</div>
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 600, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.2px' }}>{formatMoney(info.cents)}</div>
+                <div style={{ fontSize: 14, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.2px' }}>{formatMoney(info.cents)}</div>
               </div>
             ))
           )}
@@ -341,12 +341,12 @@ export function DashboardDesktop() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 16 }}>
             <div>
               <div className="ow-cap">Avg / day</div>
-              <div style={{ fontSize: 17, fontWeight: 600, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px' }}>{formatMoney(trend.avg)}</div>
+              <div style={{ fontSize: 17, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px' }}>{formatMoney(trend.avg)}</div>
             </div>
             {trend.delta !== null && (
               <div style={{ textAlign: 'right' }}>
                 <div className="ow-cap">vs. prior 30</div>
-                <div style={{ fontSize: 17, fontWeight: 600, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px', color: 'var(--text-2)' }}>
+                <div style={{ fontSize: 17, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px', color: 'var(--text-2)' }}>
                   {trend.delta >= 0 ? '+' : '−'}{Math.abs(trend.delta)}%
                 </div>
               </div>

@@ -45,7 +45,7 @@ export default function HousingPage() {
             <ChevronLeft size={18} />
           </IconButton>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-[28px] font-bold tracking-[-0.6px] text-text">
+            <h1 className="truncate text-[28px] font-light tracking-[-0.6px] text-text">
               {propertyTitle(selected)}
             </h1>
             <p className="text-[13px] text-text-2">
@@ -55,7 +55,7 @@ export default function HousingPage() {
           <button
             type="button"
             onClick={() => setEditingId(selected.id)}
-            className="pt-2 text-[15px] font-semibold text-accent"
+            className="pt-2 text-[15px] font-normal text-accent"
           >
             Edit
           </button>
@@ -74,7 +74,7 @@ export default function HousingPage() {
         <button
           type="button"
           onClick={() => setEditingId(lonely.id)}
-          className="text-[15px] font-semibold text-accent"
+          className="text-[15px] font-normal text-accent"
         >
           Edit
         </button>
@@ -98,7 +98,7 @@ export default function HousingPage() {
               <button
                 type="button"
                 onClick={openPicker}
-                className="mt-1 rounded-full px-5 py-2.5 text-[15px] font-semibold text-accent"
+                className="mt-1 rounded-full px-5 py-2.5 text-[15px] font-normal text-accent"
                 style={{ background: 'rgba(0,0,0,0.05)' }}
               >
                 Add property

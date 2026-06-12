@@ -39,7 +39,7 @@ export function AddUserModal({ open, onClose }: { open: boolean; onClose: () => 
           type="button"
           onClick={handleAdd}
           disabled={!canAdd}
-          className="font-semibold text-accent disabled:opacity-40"
+          className="font-normal text-accent disabled:opacity-40"
         >
           Add
         </button>
@@ -47,7 +47,7 @@ export function AddUserModal({ open, onClose }: { open: boolean; onClose: () => 
     >
       <div className="mb-5 flex justify-center">
         <div
-          className="flex h-16 w-16 items-center justify-center rounded-full font-semibold"
+          className="flex h-16 w-16 items-center justify-center rounded-full font-light"
           style={{
             background: swatch.bg,
             color: swatch.fg,

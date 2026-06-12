@@ -91,7 +91,7 @@ export function HousingSnapshotCard() {
             <div className="mt-0.5 flex items-center justify-between">
               <span className="text-[13px] text-text-2">Net rental income</span>
               <span
-                className="text-[13px] font-semibold tabular-nums"
+                className="text-[13px] font-normal tabular-nums"
                 style={{
                   color: netRentalIncome >= 0 ? 'var(--positive)' : 'var(--destructive)',
                 }}
@@ -116,12 +116,12 @@ export function HousingSnapshotCard() {
                     <Icon size={16} className="text-text-2" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-semibold text-text">
+                    <p className="truncate text-[15px] font-normal text-text">
                       {propertyTitle(p)}
                     </p>
                     <p className="truncate text-xs text-text-3">{subtitle(p, formatMoney)}</p>
                   </div>
-                  <span className="text-[15px] font-semibold tabular-nums text-text">
+                  <span className="text-[15px] font-normal tabular-nums text-text">
                     {formatMoney(headlineCost(p))}
                   </span>
                 </div>
@@ -131,14 +131,14 @@ export function HousingSnapshotCard() {
           <div className="mt-1 h-px bg-hairline" />
           <div className="mt-2.5 flex items-center gap-2">
             <span className="text-[13px] text-text-2">Total</span>
-            <span className="ml-auto text-[13px] font-semibold tabular-nums text-text">
+            <span className="ml-auto text-[13px] font-normal tabular-nums text-text">
               {formatMoney(totalMonthlyCost)} / mo
             </span>
             {totalEquity > 0 && (
               <>
                 <span className="text-[13px] text-text-3">·</span>
                 <span
-                  className="text-[13px] font-semibold tabular-nums"
+                  className="text-[13px] font-normal tabular-nums"
                   style={{ color: 'var(--positive)' }}
                 >
                   {formatMoney(totalEquity)} equity
@@ -191,7 +191,7 @@ function StatColumn({
     <div className="flex flex-col gap-0.5">
       <span className="text-xs text-text-2">{label}</span>
       <span
-        className="text-[22px] font-bold tracking-[-0.4px] tabular-nums"
+        className="text-[22px] font-normal tracking-[-0.4px] tabular-nums"
         style={{ color: tint ?? 'var(--text)' }}
       >
         {value}

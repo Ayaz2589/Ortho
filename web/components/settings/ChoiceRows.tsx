@@ -27,7 +27,7 @@ export function ChoiceRow({
       >
         {icon}
       </span>
-      <span className="text-[17px] font-medium text-text">{label}</span>
+      <span className="text-[17px] font-normal text-text">{label}</span>
       {active && <Check size={16} className="ml-auto text-accent" strokeWidth={2.5} />}
     </button>
   )

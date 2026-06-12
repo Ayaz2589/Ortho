@@ -101,7 +101,7 @@ function Readout({
     <div className="flex flex-col gap-0.5">
       <span className="text-xs text-text-2">{label}</span>
       <span
-        className="text-[17px] font-semibold tabular-nums"
+        className="text-[17px] font-normal tabular-nums"
         style={{ color: tint ?? 'var(--text)' }}
       >
         {value}

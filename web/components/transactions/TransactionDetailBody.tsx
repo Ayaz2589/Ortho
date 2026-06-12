@@ -22,7 +22,7 @@ export function TransactionDetailBody({ tx }: { tx: Transaction }) {
       <div className="flex items-center justify-center py-2">
         <span
           className={
-            'text-[40px] font-bold tabular-nums ' + (isIncome ? 'text-positive' : 'text-text')
+            'text-[40px] font-light tabular-nums ' + (isIncome ? 'text-positive' : 'text-text')
           }
         >
           {formatMoney(tx.amount_cents, { leadingPlus: isIncome })}
@@ -32,11 +32,11 @@ export function TransactionDetailBody({ tx }: { tx: Transaction }) {
       {/* Merchant + category */}
       <FormGroup>
         <FieldRow label={isIncome ? 'Source' : 'Merchant'}>
-          <span className="text-[15px] font-medium text-text">{tx.merchant}</span>
+          <span className="text-[15px] font-normal text-text">{tx.merchant}</span>
         </FieldRow>
         {!isIncome && (
           <FieldRow label="Category">
-            <span className="flex items-center gap-1.5 text-[15px] font-medium text-text">
+            <span className="flex items-center gap-1.5 text-[15px] font-normal text-text">
               <CatIcon size={15} />
               {meta.label}
             </span>
@@ -51,9 +51,9 @@ export function TransactionDetailBody({ tx }: { tx: Transaction }) {
           return (
             <div key={id} className="flex min-h-[52px] items-center gap-3 px-4">
               <Avatar user={u} size={28} />
-              <span className="flex-1 text-[15px] font-medium text-text">{u.name}</span>
+              <span className="flex-1 text-[15px] font-normal text-text">{u.name}</span>
               {multi && (
-                <span className="text-[15px] font-medium tabular-nums text-text-2">
+                <span className="text-[15px] font-normal tabular-nums text-text-2">
                   {(splits[id] ?? 0).toFixed(2)}%
                 </span>
               )}
@@ -65,10 +65,10 @@ export function TransactionDetailBody({ tx }: { tx: Transaction }) {
       {/* Meta */}
       <FormGroup>
         <FieldRow label={isIncome ? 'Deposit to' : 'Paid with'}>
-          <span className="text-[15px] font-medium text-text">{tx.source}</span>
+          <span className="text-[15px] font-normal text-text">{tx.source}</span>
         </FieldRow>
         <FieldRow label="Date">
-          <span className="text-[15px] font-medium text-text">
+          <span className="text-[15px] font-normal text-text">
             {mediumDate(new Date(tx.date), locale)}
           </span>
         </FieldRow>

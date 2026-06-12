@@ -45,11 +45,11 @@ export default function BudgetsPage() {
               >
                 <Icon size={14} />
               </span>
-              <span className="text-[17px] font-medium text-text">{meta.label}</span>
+              <span className="text-[17px] font-normal text-text">{meta.label}</span>
               <span className="ml-auto flex items-center gap-1.5">
                 <span
                   className={
-                    'text-[15px] font-medium tabular-nums ' +
+                    'text-[15px] font-normal tabular-nums ' +
                     (budget ? 'text-text-2' : 'text-text-3')
                   }
                 >
