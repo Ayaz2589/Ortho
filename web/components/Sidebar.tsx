@@ -3,16 +3,19 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { BarChart3, ArrowUpDown, House, Settings } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { Avatar } from '@/components/ui'
-import { NavIconColor } from '@/components/web/NavIcons'
 import { cn } from '@/lib/utils'
 
+// Outlined, monochrome icons matching the iOS tab bar's SF Symbols
+// (chart.bar, arrow.up.arrow.down, house, gearshape). Selection is shown by
+// color via .ow-nav-item, so the glyphs inherit currentColor — same as iOS.
 const TABS = [
-  { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' as const },
-  { href: '/transactions', label: 'Transactions', icon: 'transactions' as const },
-  { href: '/housing', label: 'Housing', icon: 'housing' as const },
-  { href: '/settings', label: 'Settings', icon: 'settings' as const },
+  { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
+  { href: '/transactions', label: 'Transactions', icon: ArrowUpDown },
+  { href: '/housing', label: 'Housing', icon: House },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export function Sidebar() {
@@ -30,11 +33,11 @@ export function Sidebar() {
       <div className="flex items-center gap-2.5 sm:justify-center lg:justify-start" style={{ padding: '4px 12px 24px' }}>
         <div
           className="flex shrink-0 items-center justify-center rounded-full"
-          style={{ width: 28, height: 28, background: 'var(--text)', color: 'var(--bg)', fontSize: 15, fontWeight: 700 }}
+          style={{ width: 28, height: 28, background: 'var(--text)', color: 'var(--bg)', fontSize: 15, fontWeight: 400 }}
         >
           O
         </div>
-        <span className="hidden lg:block" style={{ fontSize: 19, fontWeight: 700, letterSpacing: '-0.4px', color: 'var(--text)' }}>
+        <span className="hidden lg:block" style={{ fontSize: 19, fontWeight: 400, letterSpacing: '-0.4px', color: 'var(--text)' }}>
           Ortho
         </span>
       </div>
@@ -43,6 +46,7 @@ export function Sidebar() {
       <div className="flex flex-col gap-0.5">
         {TABS.map((t) => {
           const active = pathname === t.href || pathname.startsWith(t.href + '/')
+          const Icon = t.icon
           return (
             <Link
               key={t.href}
@@ -51,7 +55,7 @@ export function Sidebar() {
               aria-current={active ? 'page' : undefined}
               className={cn('ow-nav-item sm:justify-center lg:justify-start', active && 'is-active')}
             >
-              <NavIconColor name={t.icon} size={22} tone={active ? 'full' : 'muted'} />
+              <Icon size={22} strokeWidth={active ? 2.4 : 2} className="shrink-0" />
               <span className="hidden lg:block">{t.label}</span>
             </Link>
           )
@@ -69,7 +73,7 @@ export function Sidebar() {
             ))}
           </div>
           <div className="hidden min-w-0 lg:block">
-            <div className="truncate" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.1px' }}>
+            <div className="truncate" style={{ fontSize: 13, fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.1px' }}>
               {currentHousehold?.name ?? 'Household'}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
