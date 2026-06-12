@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useApp } from '@/lib/store'
-import { Modal, FormGroup, FieldRow, PrimaryButton } from '@/components/ui'
+import { FormGroup, FieldRow, PrimaryButton } from '@/components/ui'
+import { Drawer, DrawerHeader } from '@/components/web/Drawer'
 import { TextInput, MoneyInput, parseMoney, DatePicker } from '@/components/inputs'
 import { fractionDigits } from '@/lib/finance/currency'
 import type { Property, RentalPayment } from '@/lib/types'
@@ -65,21 +66,22 @@ export function AddRentalPaymentModal({
   }
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Log payment"
-      right={
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={!canAdd}
-          className="font-normal text-accent disabled:opacity-40"
-        >
-          Add
-        </button>
-      }
-    >
+    <Drawer open={open} onClose={onClose} label="Log payment">
+      <DrawerHeader
+        title="Log payment"
+        onClose={onClose}
+        right={
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={!canAdd}
+            className="text-[15px] text-accent disabled:opacity-40"
+          >
+            Add
+          </button>
+        }
+      />
+      <div className="overflow-auto p-4 pb-6">
       <FormGroup>
         <FieldRow label="Amount" labelWidth={96}>
           <MoneyInput value={amount} onChange={setAmount} autoFocus />
@@ -100,6 +102,7 @@ export function AddRentalPaymentModal({
           Add payment
         </PrimaryButton>
       </div>
-    </Modal>
+      </div>
+    </Drawer>
   )
 }

@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react'
 import { ChevronDown, MinusCircle, Plus } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import {
-  Modal,
   FormGroup,
   FieldRow,
   SectionLabel,
   PrimaryButton,
 } from '@/components/ui'
+import { Drawer, DrawerHeader } from '@/components/web/Drawer'
 import { TextInput, MoneyInput, parseMoney, DatePicker } from '@/components/inputs'
 import { fractionDigits } from '@/lib/finance/currency'
 import type {
@@ -228,22 +228,22 @@ export function AddPropertyModal({
     setUnits((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u)))
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={navTitle}
-      right={
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={!canSubmit}
-          className="font-normal text-accent disabled:opacity-40"
-        >
-          {isEditing ? 'Save' : 'Add'}
-        </button>
-      }
-    >
-      <div className="flex flex-col gap-5">
+    <Drawer open={open} onClose={onClose} label={navTitle}>
+      <DrawerHeader
+        title={navTitle}
+        onClose={onClose}
+        right={
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className="text-[15px] text-accent disabled:opacity-40"
+          >
+            {isEditing ? 'Save' : 'Add'}
+          </button>
+        }
+      />
+      <div className="flex flex-col gap-5 overflow-auto p-4 pb-6">
         <FormGroup>
           <FieldRow label="Address">
             <TextInput
@@ -401,6 +401,6 @@ export function AddPropertyModal({
           {isEditing ? 'Save property' : 'Add property'}
         </PrimaryButton>
       </div>
-    </Modal>
+    </Drawer>
   )
 }

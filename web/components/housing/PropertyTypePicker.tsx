@@ -1,7 +1,7 @@
 'use client'
 
 import { ChevronRight } from 'lucide-react'
-import { Modal } from '@/components/ui'
+import { Drawer, DrawerHeader } from '@/components/web/Drawer'
 import type { PropertyKind } from '@/lib/types'
 import { PROPERTY_KINDS, kindMeta } from './kinds'
 
@@ -15,7 +15,9 @@ export function PropertyTypePicker({
   onPick: (kind: PropertyKind) => void
 }) {
   return (
-    <Modal open={open} onClose={onClose} title="New property">
+    <Drawer open={open} onClose={onClose} label="New property">
+      <DrawerHeader title="New property" onClose={onClose} />
+      <div className="overflow-auto p-4 pb-6">
       <p className="px-1 pb-4 text-[14px] leading-relaxed text-text-2">
         What kind of home is this? Choose one — we&apos;ll ask only the questions that fit.
       </p>
@@ -49,6 +51,7 @@ export function PropertyTypePicker({
       <p className="px-1 pb-2 pt-4 text-[13px] leading-relaxed text-text-3">
         You can change details later from the property&apos;s Edit screen.
       </p>
-    </Modal>
+      </div>
+    </Drawer>
   )
 }
