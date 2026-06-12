@@ -28,6 +28,11 @@ export function TransactionRow({
 }) {
   const { formatMoney, ownersDisplay } = useApp()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const closeMenu = () => {
+    setMenuOpen(false)
+    setConfirmDelete(false)
+  }
   const meta = categoryMeta(tx.category)
   const Icon = meta.icon
   const display = ownersDisplay(tx)
@@ -99,13 +104,13 @@ export function TransactionRow({
           <>
             <div
               className="fixed inset-0 z-10"
-              onClick={() => setMenuOpen(false)}
+              onClick={closeMenu}
             />
-            <div className="absolute right-0 top-8 z-20 w-36 overflow-hidden rounded-xl border border-hairline bg-surface py-1 shadow-lg">
+            <div className="absolute right-0 top-8 z-20 w-40 overflow-hidden rounded-xl border border-hairline bg-surface py-1 shadow-lg">
               <button
                 type="button"
                 onClick={() => {
-                  setMenuOpen(false)
+                  closeMenu()
                   onCopy()
                 }}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-[14px] text-text hover:bg-[var(--hairline)]"
@@ -113,17 +118,36 @@ export function TransactionRow({
                 <Copy size={15} />
                 Copy
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMenuOpen(false)
-                  onDelete()
-                }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[14px] text-destructive hover:bg-[var(--hairline)]"
-              >
-                <Trash2 size={15} />
-                Delete
-              </button>
+              {confirmDelete ? (
+                <div className="flex items-center gap-1 px-2 py-1">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    className="flex-1 rounded-lg px-2 py-1.5 text-[13px] text-text-2 hover:bg-[var(--hairline)]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeMenu()
+                      onDelete()
+                    }}
+                    className="flex-1 rounded-lg px-2 py-1.5 text-[13px] text-destructive hover:bg-[var(--hairline)]"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[14px] text-destructive hover:bg-[var(--hairline)]"
+                >
+                  <Trash2 size={15} />
+                  Delete
+                </button>
+              )}
             </div>
           </>
         )}

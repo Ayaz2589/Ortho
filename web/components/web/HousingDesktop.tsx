@@ -75,6 +75,7 @@ function Amortization({ property }: { property: Property }) {
 function MortgageColumns({ property }: { property: Property }) {
   const { formatMoney, rentalPayments, locale, deleteRentalPayment } = useApp()
   const [logging, setLogging] = useState(false)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
   const m = property.mortgage
   const payment = m ? monthlyPaymentCents(m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years) : 0
 
@@ -193,7 +194,14 @@ function MortgageColumns({ property }: { property: Property }) {
                       {rp.note && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{rp.note}</div>}
                     </div>
                     <div style={{ fontSize: 15, fontWeight: 400, fontVariantNumeric: 'tabular-nums' }}>{formatMoney(rp.amount_cents)}</div>
-                    <button className="ow-btn ow-quiet-link" onClick={() => deleteRentalPayment(rp.id)} aria-label="Delete payment">Remove</button>
+                    {confirmId === rp.id ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <button className="ow-btn ow-quiet-link" onClick={() => setConfirmId(null)}>Cancel</button>
+                        <button className="ow-btn" onClick={() => { setConfirmId(null); deleteRentalPayment(rp.id) }} style={{ fontSize: 13, fontWeight: 400, color: 'var(--destructive)' }} aria-label="Confirm delete payment">Delete</button>
+                      </span>
+                    ) : (
+                      <button className="ow-btn ow-quiet-link" onClick={() => setConfirmId(rp.id)} aria-label="Delete payment">Remove</button>
+                    )}
                   </div>
                 ))
             )}

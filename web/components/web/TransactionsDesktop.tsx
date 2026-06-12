@@ -52,6 +52,7 @@ function TxDetailContent({
   onDelete: () => void
 }) {
   const { formatMoney, ownersDisplay, locale } = useApp()
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const isIncome = tx.kind === 'income'
   const meta = categoryMeta(tx.category)
   const owners = ownersDisplay(tx)
@@ -101,9 +102,20 @@ function TxDetailContent({
         <button className="ow-btn" onClick={onEdit} style={{ fontSize: 14, fontWeight: 400, color: 'var(--accent)', letterSpacing: '-0.1px', padding: '4px 0' }}>
           Edit transaction
         </button>
-        <button className="ow-btn ow-quiet-link" onClick={onDelete}>
-          Delete
-        </button>
+        {confirmDelete ? (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <button className="ow-btn ow-quiet-link" onClick={() => setConfirmDelete(false)}>
+              Cancel
+            </button>
+            <button className="ow-btn" onClick={onDelete} style={{ fontSize: 13, fontWeight: 400, color: 'var(--destructive)', letterSpacing: '-0.1px' }}>
+              Delete
+            </button>
+          </span>
+        ) : (
+          <button className="ow-btn ow-quiet-link" onClick={() => setConfirmDelete(true)}>
+            Delete
+          </button>
+        )}
       </div>
     </>
   )

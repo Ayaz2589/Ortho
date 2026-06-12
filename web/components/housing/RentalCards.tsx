@@ -73,6 +73,7 @@ export function LeaseInfoCard({ lease }: { lease: LeaseInfo }) {
 export function RentalPaymentsCard({ property }: { property: Property }) {
   const { rentalPayments, formatMoney, deleteRentalPayment, locale } = useApp()
   const [adding, setAdding] = useState(false)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
 
   const payments = useMemo(
     () =>
@@ -115,14 +116,36 @@ export function RentalPaymentsCard({ property }: { property: Property }) {
                 <span className="ml-auto text-[17px] font-normal tabular-nums text-text">
                   {formatMoney(payment.amount_cents)}
                 </span>
-                <button
-                  type="button"
-                  aria-label="Delete payment"
-                  onClick={() => deleteRentalPayment(payment.id)}
-                  className="text-destructive"
-                >
-                  <MinusCircle size={18} />
-                </button>
+                {confirmId === payment.id ? (
+                  <span className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmId(null)}
+                      className="text-[13px] text-text-2"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConfirmId(null)
+                        deleteRentalPayment(payment.id)
+                      }}
+                      className="text-[13px] text-destructive"
+                    >
+                      Delete
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    aria-label="Delete payment"
+                    onClick={() => setConfirmId(payment.id)}
+                    className="text-destructive"
+                  >
+                    <MinusCircle size={18} />
+                  </button>
+                )}
               </div>
             ))}
           </div>
