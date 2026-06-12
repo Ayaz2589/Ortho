@@ -1,11 +1,11 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Search, Plus, X, ArrowUpDown } from 'lucide-react'
+import { Search, Plus, X, ArrowUpDown, ChevronDown } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { PageHeader, IconButton, Card, Segmented, EmptyState } from '@/components/ui'
 import { useIsExpanded } from '@/lib/useMediaQuery'
-import { groupByDay, dayLabel, expenseTotal } from '@/lib/format'
+import { groupByDay, groupDaysByMonth, dayLabel, monthYearLong, expenseTotal, startOfMonth } from '@/lib/format'
 import type { Transaction } from '@/lib/types'
 import { TransactionRow } from '@/components/transactions/TransactionRow'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
@@ -52,9 +52,9 @@ export default function TransactionsPage() {
     return false
   }
 
-  const groups = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return groupByDay(transactions)
+  const q = query.trim().toLowerCase()
+  const months = useMemo(() => {
+    const days = groupByDay(transactions)
       .map((g) => ({
         day: g.day,
         items: g.items.filter((tx) => {
@@ -64,8 +64,33 @@ export default function TransactionsPage() {
         }),
       }))
       .filter((g) => g.items.length > 0)
+    return groupDaysByMonth(days)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transactions, query, scopeFilter, currentHousehold])
+  }, [transactions, q, scopeFilter, currentHousehold])
+
+  // Collapse every month by default except one: the current month, or — if it
+  // has no transactions — the most recent month that does. An active search
+  // expands all months so matches aren't hidden inside a collapsed section.
+  const currentMonthKey = useMemo(() => startOfMonth(new Date()).getTime(), [])
+  const defaultOpenKey = useMemo(() => {
+    if (months.some((m) => m.month.getTime() === currentMonthKey)) return currentMonthKey
+    return months[0]?.month.getTime() ?? null
+  }, [months, currentMonthKey])
+
+  // `null` = untouched, follow the default; once the user toggles we track an
+  // explicit set so the default stops overriding their choices.
+  const [openMonths, setOpenMonths] = useState<Set<number> | null>(null)
+  const isMonthOpen = (key: number) =>
+    q !== '' || (openMonths === null ? key === defaultOpenKey : openMonths.has(key))
+  function toggleMonth(key: number) {
+    setOpenMonths((prev) => {
+      const base = prev ?? (defaultOpenKey !== null ? new Set([defaultOpenKey]) : new Set<number>())
+      const next = new Set(base)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
 
   function openAdd() {
     setCopySource(null)
@@ -147,31 +172,59 @@ export default function TransactionsPage() {
           }
         />
       ) : (
-        <div className="flex flex-col gap-3">
-          {groups.map((g) => (
-            <Card key={g.day.getTime()} className="overflow-hidden">
-              <div className="flex items-center justify-between px-4 pb-1 pt-3">
-                <span className="text-[13px] font-semibold uppercase tracking-[0.6px] text-text-2">
-                  {dayLabel(g.day, locale)}
-                </span>
-                <span className="text-[13px] font-semibold tabular-nums text-text-3">
-                  {formatMoney(expenseTotal(g.items))}
-                </span>
+        <div className="flex flex-col gap-5">
+          {months.map((m) => {
+            const key = m.month.getTime()
+            const open = isMonthOpen(key)
+            const monthItems = m.days.flatMap((d) => d.items)
+            return (
+              <div key={key} className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => toggleMonth(key)}
+                  aria-expanded={open}
+                  className="flex items-center justify-between px-1 py-1"
+                >
+                  <span className="flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-[0.6px] text-text-2">
+                    <ChevronDown
+                      size={15}
+                      className="text-text-3 transition-transform"
+                      style={{ transform: open ? undefined : 'rotate(-90deg)' }}
+                    />
+                    {monthYearLong(m.month, locale)}
+                  </span>
+                  <span className="text-[13px] font-semibold tabular-nums text-text-3">
+                    {formatMoney(expenseTotal(monthItems))}
+                  </span>
+                </button>
+                {open &&
+                  m.days.map((g) => (
+                    <Card key={g.day.getTime()} className="overflow-hidden">
+                      <div className="flex items-center justify-between px-4 pb-1 pt-3">
+                        <span className="text-[13px] font-semibold uppercase tracking-[0.6px] text-text-2">
+                          {dayLabel(g.day, locale)}
+                        </span>
+                        <span className="text-[13px] font-semibold tabular-nums text-text-3">
+                          {formatMoney(expenseTotal(g.items))}
+                        </span>
+                      </div>
+                      <div className="divide-y divide-hairline">
+                        {g.items.map((tx) => (
+                          <TransactionRow
+                            key={tx.id}
+                            tx={tx}
+                            onOpen={() => setDetailId(tx.id)}
+                            onCopy={() => openCopy(tx)}
+                            onDelete={() => deleteTransaction(tx.id)}
+                          />
+                        ))}
+                      </div>
+                    </Card>
+                  ))}
               </div>
-              <div className="divide-y divide-hairline">
-                {g.items.map((tx) => (
-                  <TransactionRow
-                    key={tx.id}
-                    tx={tx}
-                    onOpen={() => setDetailId(tx.id)}
-                    onCopy={() => openCopy(tx)}
-                    onDelete={() => deleteTransaction(tx.id)}
-                  />
-                ))}
-              </div>
-            </Card>
-          ))}
-          {groups.length === 0 && (
+            )
+          })}
+          {months.length === 0 && (
             <p className="py-12 text-center text-sm text-text-3">No matching transactions.</p>
           )}
         </div>

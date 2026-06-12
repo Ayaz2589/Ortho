@@ -17,6 +17,14 @@ export function startOfDay(d: Date): Date {
   return x
 }
 
+/** First instant of the month containing `d` (local time). */
+export function startOfMonth(d: Date): Date {
+  const x = new Date(d)
+  x.setHours(0, 0, 0, 0)
+  x.setDate(1)
+  return x
+}
+
 /** "Today" / "Yesterday" / weekday / "MMM d" relative to now. */
 export function dayLabel(date: Date, locale: string = 'en-US', now: Date = new Date()): string {
   const a = startOfDay(date).getTime()
@@ -42,6 +50,11 @@ export function mediumDate(date: Date, locale: string = 'en-US'): string {
 
 export function monthYear(date: Date, locale: string = 'en-US'): string {
   return new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(date)
+}
+
+/** Full month name + year, e.g. "January 2025". */
+export function monthYearLong(date: Date, locale: string = 'en-US'): string {
+  return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(date)
 }
 
 export function relativeTime(date: Date, now: Date = new Date()): string {
@@ -75,6 +88,25 @@ export function groupByDay(txs: Transaction[]): TxDayGroup[] {
       day: new Date(key),
       items: items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     }))
+}
+
+/** Group day-buckets into month-buckets, newest month first. Days keep their order. */
+export interface TxMonthGroup {
+  month: Date
+  days: TxDayGroup[]
+}
+
+export function groupDaysByMonth(days: TxDayGroup[]): TxMonthGroup[] {
+  const buckets = new Map<number, TxDayGroup[]>()
+  for (const d of days) {
+    const key = startOfMonth(d.day).getTime()
+    const arr = buckets.get(key) ?? []
+    arr.push(d)
+    buckets.set(key, arr)
+  }
+  return [...buckets.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .map(([key, dayGroups]) => ({ month: new Date(key), days: dayGroups }))
 }
 
 /** Sum of expense amounts in a list (income excluded). */

@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { useApp } from '@/lib/store'
-import { groupByDay, dayLabel, expenseTotal, mediumDate } from '@/lib/format'
+import { groupByDay, groupDaysByMonth, dayLabel, monthYearLong, expenseTotal, mediumDate, startOfMonth } from '@/lib/format'
 import { categoryMeta } from '@/lib/categories'
 import type { Transaction } from '@/lib/types'
 import { Avatar } from '@/components/ui'
@@ -218,8 +219,8 @@ export function TransactionsDesktop() {
   }
 
   const q = query.trim().toLowerCase()
-  const groups = useMemo(() => {
-    return groupByDay(transactions)
+  const months = useMemo(() => {
+    const days = groupByDay(transactions)
       .map((g) => ({
         day: g.day,
         items: g.items.filter((tx) => {
@@ -231,8 +232,32 @@ export function TransactionsDesktop() {
         }),
       }))
       .filter((g) => g.items.length > 0)
+    return groupDaysByMonth(days)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactions, q])
+
+  // Collapse every month by default except one: the current month, or — if it
+  // has no transactions — the most recent month that does. An active search
+  // expands all months so matches aren't hidden inside a collapsed section.
+  const currentMonthKey = useMemo(() => startOfMonth(new Date()).getTime(), [])
+  const defaultOpenKey = useMemo(() => {
+    if (months.some((m) => m.month.getTime() === currentMonthKey)) return currentMonthKey
+    return months[0]?.month.getTime() ?? null
+  }, [months, currentMonthKey])
+
+  // `null` = untouched, follow the default; once the user toggles we track an
+  // explicit set so the default stops overriding their choices.
+  const [openMonths, setOpenMonths] = useState<Set<number> | null>(null)
+  const isMonthOpen = (key: number) =>
+    q !== '' || (openMonths === null ? key === defaultOpenKey : openMonths.has(key))
+  const toggleMonth = (key: number) =>
+    setOpenMonths((prev) => {
+      const base = prev ?? (defaultOpenKey !== null ? new Set([defaultOpenKey]) : new Set<number>())
+      const next = new Set(base)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
 
   return (
     <div
@@ -271,22 +296,56 @@ export function TransactionsDesktop() {
             <div style={{ textAlign: 'right' }}>Amount</div>
           </div>
 
-          {groups.map((g) => (
-            <div key={g.day.getTime()}>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '22px 16px 8px' }}>
-                <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-2)' }}>
-                  {dayLabel(g.day, locale)}
-                </span>
-                <span style={{ fontSize: 12, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>
-                  {formatMoney(expenseTotal(g.items))}
-                </span>
+          {months.map((m) => {
+            const key = m.month.getTime()
+            const open = isMonthOpen(key)
+            const monthItems = m.days.flatMap((d) => d.items)
+            return (
+              <div key={key}>
+                <button
+                  className="ow-btn"
+                  onClick={() => toggleMonth(key)}
+                  aria-expanded={open}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    padding: '20px 16px 10px',
+                    borderBottom: '0.5px solid var(--hairline)',
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, letterSpacing: '-0.2px', color: 'var(--text)' }}>
+                    <ChevronDown
+                      size={15}
+                      style={{ color: 'var(--text-3)', transition: 'transform var(--duration-mid) var(--ease-out)', transform: open ? undefined : 'rotate(-90deg)' }}
+                    />
+                    {monthYearLong(m.month, locale)}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>
+                    {formatMoney(expenseTotal(monthItems))}
+                  </span>
+                </button>
+                {open &&
+                  m.days.map((g) => (
+                    <div key={g.day.getTime()}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '22px 16px 8px' }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-2)' }}>
+                          {dayLabel(g.day, locale)}
+                        </span>
+                        <span style={{ fontSize: 12, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>
+                          {formatMoney(expenseTotal(g.items))}
+                        </span>
+                      </div>
+                      {g.items.map((tx) => (
+                        <TxRow key={tx.id} tx={tx} selected={tx.id === selectedId} onClick={() => selectRow(tx.id)} />
+                      ))}
+                    </div>
+                  ))}
               </div>
-              {g.items.map((tx) => (
-                <TxRow key={tx.id} tx={tx} selected={tx.id === selectedId} onClick={() => selectRow(tx.id)} />
-              ))}
-            </div>
-          ))}
-          {groups.length === 0 && (
+            )
+          })}
+          {months.length === 0 && (
             <p style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
               No matching transactions.
             </p>

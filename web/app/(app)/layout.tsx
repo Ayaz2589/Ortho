@@ -10,7 +10,7 @@ function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="sm:flex sm:h-screen sm:overflow-hidden">
       <Sidebar />
-      <main className="relative flex-1 sm:min-w-0 sm:overflow-y-auto">
+      <main className="relative flex-1 sm:min-w-0 sm:overflow-y-auto sm:[scrollbar-gutter:stable]">
         {error && (
           <div className="sticky top-0 z-40 bg-destructive/10 px-4 py-2 text-center text-xs text-destructive">
             {error}
