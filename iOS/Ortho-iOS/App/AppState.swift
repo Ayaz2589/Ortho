@@ -74,6 +74,18 @@ final class AppState {
     }
     private static let localUsersKey = "localUsers"
 
+    /// On-device owners/splits for PERSONAL transactions, which may include
+    /// local (device-only) users. Never written to Supabase — merged back in
+    /// after a server reload. Keyed by transaction id. Mirrors the web app.
+    struct PersonalShare: Codable {
+        var ownerIDs: [User.ID]
+        var splits: [User.ID: Decimal]?
+    }
+    var personalShares: [Transaction.ID: PersonalShare] = [:] {
+        didSet { persistPersonalShares() }
+    }
+    private static let personalSharesKey = "personalShares"
+
     // MARK: - Identity + active household
 
     /// Which user is "me" on this device. Persisted so the choice survives
@@ -192,6 +204,7 @@ final class AppState {
         // Restore persisted local users (last — has a `didSet` that touches
         // `self`, which the compiler only allows once init is complete).
         loadLocalUsers()
+        loadPersonalShares()
     }
 
     // MARK: - User helpers
@@ -246,6 +259,44 @@ final class AppState {
         localUsers = decoded
     }
 
+    private func persistPersonalShares() {
+        guard let data = try? JSONEncoder().encode(personalShares) else { return }
+        UserDefaults.standard.set(data, forKey: Self.personalSharesKey)
+    }
+
+    private func loadPersonalShares() {
+        guard let data = UserDefaults.standard.data(forKey: Self.personalSharesKey),
+              let decoded = try? JSONDecoder().decode([Transaction.ID: PersonalShare].self, from: data)
+        else { return }
+        personalShares = decoded
+    }
+
+    /// Persist (or clear) a transaction's on-device owners/splits. Personal
+    /// transactions store their participants locally; others clear any stale entry.
+    private func savePersonalShare(_ tx: Transaction) {
+        if tx.scope == .personal {
+            personalShares[tx.id] = PersonalShare(ownerIDs: Array(tx.ownerIDs), splits: tx.splits)
+        } else {
+            personalShares[tx.id] = nil
+        }
+    }
+
+    /// Merge on-device personal owners/splits back into freshly-fetched rows,
+    /// and forget shares whose transaction no longer exists.
+    private func applyPersonalShares(to fetched: [Transaction]) -> [Transaction] {
+        let merged = fetched.map { tx -> Transaction in
+            guard tx.scope == .personal,
+                  let s = personalShares[tx.id], !s.ownerIDs.isEmpty else { return tx }
+            var copy = tx
+            copy.ownerIDs = Set(s.ownerIDs)
+            copy.splits = s.splits
+            return copy
+        }
+        let keep = Set(fetched.filter { $0.scope == .personal }.map(\.id))
+        personalShares = personalShares.filter { keep.contains($0.key) }
+        return merged
+    }
+
     func resolveOwners(of tx: Transaction) -> [User] {
         tx.ownerIDs.map { user($0) }
     }
@@ -286,6 +337,7 @@ final class AppState {
     /// demo mode the server hop is skipped — local-only by design.
     func addTransaction(_ tx: Transaction) {
         transactions.append(tx)
+        savePersonalShare(tx)
         guard !isInDemoMode else { return }
         Task {
             do {
@@ -293,6 +345,7 @@ final class AppState {
             } catch {
                 await MainActor.run {
                     transactions.removeAll { $0.id == tx.id }
+                    personalShares[tx.id] = nil
                     dataError = error.localizedDescription
                 }
             }
@@ -305,6 +358,7 @@ final class AppState {
         guard let idx = transactions.firstIndex(where: { $0.id == tx.id }) else { return }
         let previous = transactions[idx]
         transactions[idx] = tx
+        savePersonalShare(tx)
         guard !isInDemoMode else { return }
         Task {
             do {
@@ -314,6 +368,7 @@ final class AppState {
                     if let i = transactions.firstIndex(where: { $0.id == tx.id }) {
                         transactions[i] = previous
                     }
+                    savePersonalShare(previous)
                     dataError = error.localizedDescription
                 }
             }
@@ -324,6 +379,7 @@ final class AppState {
     /// the row at the end (loses original position — acceptable for v1).
     func deleteTransaction(_ tx: Transaction) {
         transactions.removeAll { $0.id == tx.id }
+        personalShares[tx.id] = nil
         guard !isInDemoMode else { return }
         Task {
             do {
@@ -331,6 +387,7 @@ final class AppState {
             } catch {
                 await MainActor.run {
                     transactions.append(tx)
+                    savePersonalShare(tx)
                     dataError = error.localizedDescription
                 }
             }
@@ -343,7 +400,7 @@ final class AppState {
     func loadTransactionsFromServer() async {
         do {
             let fetched = try await transactionsAPI.fetch()
-            await MainActor.run { transactions = fetched }
+            await MainActor.run { transactions = applyPersonalShares(to: fetched) }
         } catch {
             await MainActor.run { dataError = error.localizedDescription }
         }

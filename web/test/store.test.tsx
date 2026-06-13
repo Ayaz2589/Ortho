@@ -134,6 +134,42 @@ describe('store (AppStateProvider)', () => {
     expect(h.mock!.callsFor('transactions').some((c) => c.op === 'delete')).toBe(true)
   })
 
+  it('restores a personal transaction\'s local-user owners after reload', async () => {
+    // The server only knows the creator for a personal tx; the local-user split
+    // lives on-device and must be merged back in on load.
+    h.mock = makeSupabaseMock({
+      authUser: { id: 'u-me', email: 'maya@example.com' },
+      tables: {
+        users: [{ id: 'u-me', name: 'Maya', initial: 'M', color_key: 'sage', created_at: '2026-01-01T00:00:00Z' }],
+        household_members: [{ household_id: 'hh-1', user_id: 'u-me', role: 'owner', created_at: '2026-01-01T00:00:00Z' }],
+        households: [{ id: 'hh-1', owner_id: 'u-me', name: 'Home', created_at: '2026-01-01T00:00:00Z' }],
+        transactions: [
+          {
+            id: 'tx-p',
+            household_id: null,
+            merchant: 'Dinner',
+            category: 'dining',
+            kind: 'expense',
+            scope: 'personal',
+            amount_cents: 4000,
+            source: 'Checking',
+            date: '2026-06-10T12:00:00Z',
+            created_by: 'u-me',
+            created_at: '2026-06-10T12:00:00Z',
+            updated_at: '2026-06-10T12:00:00Z',
+          },
+        ],
+        transaction_shares: [],
+        cards: [], properties: [], mortgage_info: [], lease_info: [], units: [], rental_payments: [], budgets: [],
+      },
+    })
+    localStorage.setItem('personalShares', JSON.stringify({ 'tx-p': { owner_ids: ['u-me', 'l1'], splits: null } }))
+
+    await renderStore()
+    const tx = api.transactions.find((t) => t.id === 'tx-p')!
+    expect(tx.owner_ids).toEqual(['u-me', 'l1']) // local user 'l1' merged back in
+  })
+
   it('performs no real network I/O', async () => {
     await renderStore()
     // stubNoNetwork installs a fetch that rejects; reaching loaded state without

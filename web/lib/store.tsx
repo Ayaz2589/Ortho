@@ -13,6 +13,14 @@ import { createClient } from './supabase/client'
 import { formatMoney as fmtMoney, type CurrencyKey } from './finance/money'
 import { FALLBACK_RATE_FROM_USD } from './finance/currency'
 import { effectiveSplits } from './format'
+import {
+  readPersonalShares,
+  writePersonalShare,
+  removePersonalShare,
+  prunePersonalShares,
+  resolvePersonalOwners,
+  type PersonalShare,
+} from './personalShares'
 import { paletteFor } from './categories'
 import type {
   User,
@@ -105,7 +113,11 @@ const uuid = () =>
         return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
       })
 
-function rehydrateTransactions(rows: Transaction[], shares: TransactionShare[]): Transaction[] {
+function rehydrateTransactions(
+  rows: Transaction[],
+  shares: TransactionShare[],
+  personalShares: Record<string, PersonalShare>
+): Transaction[] {
   const byTx = new Map<string, TransactionShare[]>()
   for (const s of shares) {
     const arr = byTx.get(s.transaction_id) ?? []
@@ -114,7 +126,9 @@ function rehydrateTransactions(rows: Transaction[], shares: TransactionShare[]):
   }
   return rows.map((r) => {
     if (r.scope === 'personal') {
-      return { ...r, owner_ids: [r.created_by], splits: null }
+      // Local-user splits live on-device; merge them back (creator-only otherwise).
+      const { owner_ids, splits } = resolvePersonalOwners(r.id, r.created_by, personalShares)
+      return { ...r, owner_ids, splits }
     }
     const sh = byTx.get(r.id) ?? []
     const owner_ids = sh.map((s) => s.user_id)
@@ -274,12 +288,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       name: householdName,
       created_at: new Date().toISOString(),
     })
+    const txRows = (txRes.data as Transaction[]) ?? []
     setTransactions(
-      rehydrateTransactions(
-        (txRes.data as Transaction[]) ?? [],
-        (sharesRes.data as TransactionShare[]) ?? []
-      )
+      rehydrateTransactions(txRows, (sharesRes.data as TransactionShare[]) ?? [], readPersonalShares())
     )
+    // Forget on-device shares for personal transactions that no longer exist.
+    prunePersonalShares(new Set(txRows.filter((t) => t.scope === 'personal').map((t) => t.id)))
     setCards((cardsRes.data as Card[]) ?? [])
 
     // stitch properties
@@ -444,12 +458,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     created_by: tx.created_by,
   })
 
+  // Personal-scope owners/splits include device-only local users — persist them
+  // on-device (never to Supabase) so they survive a reload. `null` = creator-only.
+  const savePersonalShare = (tx: Transaction) => {
+    if (tx.scope === 'personal') writePersonalShare(tx.id, { owner_ids: tx.owner_ids, splits: tx.splits })
+    else removePersonalShare(tx.id)
+  }
+
   const addTransaction = (tx: Transaction) => {
     setTransactions((prev) => [tx, ...prev])
+    savePersonalShare(tx)
     ;(async () => {
       const { error: e } = await supabase.from('transactions').insert(txRecord(tx))
       if (e) {
         setTransactions((prev) => prev.filter((t) => t.id !== tx.id))
+        removePersonalShare(tx.id)
         setError(e.message)
         return
       }
@@ -463,10 +486,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       prevTx = prev.find((t) => t.id === tx.id)
       return prev.map((t) => (t.id === tx.id ? tx : t))
     })
+    savePersonalShare(tx)
     ;(async () => {
       const { error: e } = await supabase.from('transactions').update(txRecord(tx)).eq('id', tx.id)
       if (e) {
-        if (prevTx) setTransactions((prev) => prev.map((t) => (t.id === tx.id ? prevTx! : t)))
+        if (prevTx) {
+          setTransactions((prev) => prev.map((t) => (t.id === tx.id ? prevTx! : t)))
+          savePersonalShare(prevTx) // restore the prior on-device share
+        }
         setError(e.message)
         return
       }
@@ -480,10 +507,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       removed = prev.find((t) => t.id === id)
       return prev.filter((t) => t.id !== id)
     })
+    removePersonalShare(id)
     ;(async () => {
       const { error: e } = await supabase.from('transactions').delete().eq('id', id)
       if (e && removed) {
         setTransactions((prev) => [removed!, ...prev])
+        if (removed) savePersonalShare(removed)
         setError(e.message)
       }
     })()
