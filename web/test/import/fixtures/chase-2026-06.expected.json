@@ -1,0 +1,104 @@
+{
+  "bankId": "chase",
+  "bankLabel": "Chase (Credit Card CSV)",
+  "accountHolder": "",
+  "source": "Chase",
+  "period": {
+    "start": "2026-05-15T12:00:00.000Z",
+    "end": "2026-06-01T12:00:00.000Z"
+  },
+  "sections": [
+    {
+      "name": "Transactions",
+      "kind": "expense",
+      "printedSubtotalCents": 100637,
+      "rows": [
+        {
+          "dateISO": "2026-06-01T12:00:00.000Z",
+          "rawDescription": "AMAZON PRIME*B82WW89Q3",
+          "merchant": "Amazon Prime",
+          "amountCents": 1632,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "utilities",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-31T12:00:00.000Z",
+          "rawDescription": "Payment Thank You-Mobile",
+          "merchant": "Payment Thank You-Mobile",
+          "amountCents": 53662,
+          "kind": "income",
+          "section": "Transactions",
+          "category": "income",
+          "excluded": true,
+          "excludeReason": "card-payment",
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-29T12:00:00.000Z",
+          "rawDescription": "AMAZON MKTPL*E764Q7483",
+          "merchant": "Amazon Mktpl",
+          "amountCents": 15237,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "entertainment",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-30T12:00:00.000Z",
+          "rawDescription": "AMAZON MKTPL*CW1LB0OH3",
+          "merchant": "Amazon Mktpl",
+          "amountCents": 1436,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "entertainment",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-26T12:00:00.000Z",
+          "rawDescription": "AMAZON MKTPL*YP2M28IH3",
+          "merchant": "Amazon Mktpl",
+          "amountCents": 12529,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "entertainment",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-15T12:00:00.000Z",
+          "rawDescription": "AMAZON MKTPL*E57NL5V63",
+          "merchant": "Amazon Mktpl",
+          "amountCents": 16141,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "entertainment",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        }
+      ]
+    }
+  ],
+  "reconcilable": false
+}

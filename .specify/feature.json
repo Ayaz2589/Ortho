@@ -1,1 +1,3 @@
-{"feature_directory":"specs/003-web-test-coverage"}
+{
+  "feature_directory": "specs/005-transaction-crud-cli"
+}

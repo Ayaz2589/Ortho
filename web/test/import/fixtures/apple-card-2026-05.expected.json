@@ -1,0 +1,222 @@
+{
+  "bankId": "apple",
+  "bankLabel": "Apple Card (Goldman Sachs)",
+  "accountHolder": "Ayaz Uddin",
+  "source": "Apple Card",
+  "period": {
+    "start": "2026-04-30T12:00:00.000Z",
+    "end": "2026-05-31T12:00:00.000Z"
+  },
+  "sections": [
+    {
+      "name": "Payments",
+      "kind": "income",
+      "printedSubtotalCents": 108079,
+      "rows": [
+        {
+          "dateISO": "2026-05-31T12:00:00.000Z",
+          "rawDescription": "ACH Deposit Internet transfer from account ending in 0110",
+          "merchant": "ACH Payment",
+          "amountCents": 72274,
+          "kind": "income",
+          "section": "Payments",
+          "category": "income",
+          "excluded": true,
+          "excludeReason": "card-payment",
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-31T12:00:00.000Z",
+          "rawDescription": "ACH Deposit Internet transfer from account ending in 0110",
+          "merchant": "ACH Payment",
+          "amountCents": 35805,
+          "kind": "income",
+          "section": "Payments",
+          "category": "income",
+          "excluded": true,
+          "excludeReason": "card-payment",
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "kind": "expense",
+      "printedSubtotalCents": 38268,
+      "rows": [
+        {
+          "dateISO": "2026-04-30T12:00:00.000Z",
+          "rawDescription": "WISPR 444 Townsend St SAN FRANCI94107 CA USA",
+          "merchant": "Wispr",
+          "amountCents": 1500,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "subs",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-01T12:00:00.000Z",
+          "rawDescription": "Amazon web services 440 Terry Ave N SEATTLE 98109 WA USA",
+          "merchant": "Amazon Web Services",
+          "amountCents": 1259,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "subs",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-03T12:00:00.000Z",
+          "rawDescription": "OPENAI *CHATGPT SUBSCR1455 3rd Street SAN FRANCI94158 CA USA",
+          "merchant": "OpenAI",
+          "amountCents": 2178,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "subs",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-08T12:00:00.000Z",
+          "rawDescription": "APPLE.COM/BILL ONE APPLE PARK WAY CUPERTINO 95014 CA USA",
+          "merchant": "Apple.com/Bill",
+          "amountCents": 1099,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "subs",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-12T12:00:00.000Z",
+          "rawDescription": "Peacock 1907A PremPlus30 Rockefeller Plaza New York 10112 NY USA",
+          "merchant": "Peacock",
+          "amountCents": 1699,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "subs",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-13T12:00:00.000Z",
+          "rawDescription": "ABC*8909-RETRO FITNESS32-32 49TH ST ASTORIA 11103 NY USA",
+          "merchant": "Retro Fitness",
+          "amountCents": 2925,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "health",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-14T12:00:00.000Z",
+          "rawDescription": "CLAUDE.AI SUBSCRIPTION548 Market Street PMB 90375 SAN FRANCI94104 CA USA",
+          "merchant": "Claude.ai",
+          "amountCents": 10888,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "subs",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-20T12:00:00.000Z",
+          "rawDescription": "APPLE.COM/BILL ONE APPLE PARK WAY CUPERTINO 95014 CA USA",
+          "merchant": "Apple.com/Bill",
+          "amountCents": 2132,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "subs",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-24T12:00:00.000Z",
+          "rawDescription": "APPLE.COM/BILL ONE APPLE PARK WAY CUPERTINO 95014 CA USA",
+          "merchant": "Apple.com/Bill",
+          "amountCents": 2285,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "subs",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-29T12:00:00.000Z",
+          "rawDescription": "OPENAI *CHATGPT SUBSCR1455 3rd Street SAN FRANCISCO94158 CA USA",
+          "merchant": "OpenAI",
+          "amountCents": 10504,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "subs",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-29T12:00:00.000Z",
+          "rawDescription": "APPLE.COM/BILL ONE APPLE PARK WAY CUPERTINO 95014 CA USA",
+          "merchant": "Apple.com/Bill",
+          "amountCents": 299,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "subs",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-30T12:00:00.000Z",
+          "rawDescription": "WISPR 444 Townsend St SAN FRANCISCO94107 CA USA",
+          "merchant": "Wispr",
+          "amountCents": 1500,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "subs",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        }
+      ]
+    }
+  ]
+}

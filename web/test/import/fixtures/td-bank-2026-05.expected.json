@@ -1,0 +1,467 @@
+{
+  "bankId": "td",
+  "bankLabel": "TD Bank (Premier Checking)",
+  "accountHolder": "AYAZ UDDIN",
+  "source": "TD Bank",
+  "period": {
+    "start": "2026-04-26T00:00:00.000Z",
+    "end": "2026-05-25T00:00:00.000Z"
+  },
+  "sections": [
+    {
+      "name": "Deposits",
+      "kind": "income",
+      "printedSubtotalCents": 280000,
+      "rows": [
+        {
+          "dateISO": "2026-05-04T12:00:00.000Z",
+          "rawDescription": "MOBILE DEPOSIT",
+          "merchant": "Mobile Deposit",
+          "amountCents": 280000,
+          "kind": "income",
+          "section": "Deposits",
+          "category": "income",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        }
+      ]
+    },
+    {
+      "name": "Electronic Deposits",
+      "kind": "income",
+      "printedSubtotalCents": 2415688,
+      "rows": [
+        {
+          "dateISO": "2026-04-30T12:00:00.000Z",
+          "rawDescription": "ACH DEPOSIT, CROSSTERRA INC PAYROLL G0ALO7ZLWXWK7WQ",
+          "merchant": "Crossterra Payroll",
+          "amountCents": 417844,
+          "kind": "income",
+          "section": "Electronic Deposits",
+          "category": "income",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-01T12:00:00.000Z",
+          "rawDescription": "TD ZELLE RECEIVED, 612100F0IP4Z Zelle JOHN TEJADA",
+          "merchant": "Zelle · John Tejada",
+          "amountCents": 220000,
+          "kind": "income",
+          "section": "Electronic Deposits",
+          "category": "income",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-04T12:00:00.000Z",
+          "rawDescription": "TD ZELLE RECEIVED, 612400A0L97S Zelle KATHRYN N NEUSER",
+          "merchant": "Zelle · Kathryn N Neuser",
+          "amountCents": 50000,
+          "kind": "income",
+          "section": "Electronic Deposits",
+          "category": "income",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-04T12:00:00.000Z",
+          "rawDescription": "TD ZELLE RECEIVED, 612200F02W7C Zelle TASNUVA AHMED",
+          "merchant": "Zelle · Tasnuva Ahmed",
+          "amountCents": 200000,
+          "kind": "income",
+          "section": "Electronic Deposits",
+          "category": "income",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-04T12:00:00.000Z",
+          "rawDescription": "TD ZELLE RECEIVED, 612400C0DIOA Zelle TAHER UDDIN",
+          "merchant": "Zelle · Taher Uddin",
+          "amountCents": 210000,
+          "kind": "income",
+          "section": "Electronic Deposits",
+          "category": "income",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-05T12:00:00.000Z",
+          "rawDescription": "eTransfer Credit, Online Xfer Transfer from SV 00006772817632",
+          "merchant": "Transfer from Savings",
+          "amountCents": 200000,
+          "kind": "income",
+          "section": "Electronic Deposits",
+          "category": "income",
+          "excluded": true,
+          "excludeReason": "internal-transfer",
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-11T12:00:00.000Z",
+          "rawDescription": "eTransfer Credit, Online Xfer Transfer from SV 00006772817632",
+          "merchant": "Transfer from Savings",
+          "amountCents": 700000,
+          "kind": "income",
+          "section": "Electronic Deposits",
+          "category": "income",
+          "excluded": true,
+          "excludeReason": "internal-transfer",
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-15T12:00:00.000Z",
+          "rawDescription": "ACH DEPOSIT, PEO CROSSTERRA PAYROLL BWEQK9D806GMXVO",
+          "merchant": "Crossterra Payroll",
+          "amountCents": 417844,
+          "kind": "income",
+          "section": "Electronic Deposits",
+          "category": "income",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        }
+      ]
+    },
+    {
+      "name": "Other Credits",
+      "kind": "income",
+      "printedSubtotalCents": 3,
+      "rows": [
+        {
+          "dateISO": "2026-05-22T12:00:00.000Z",
+          "rawDescription": "INTEREST PAID",
+          "merchant": "Interest Paid",
+          "amountCents": 3,
+          "kind": "income",
+          "section": "Other Credits",
+          "category": "income",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        }
+      ]
+    },
+    {
+      "name": "Checks Paid",
+      "kind": "expense",
+      "printedSubtotalCents": 53096,
+      "rows": [
+        {
+          "dateISO": "2026-04-27T12:00:00.000Z",
+          "rawDescription": "Check #338",
+          "merchant": "Check #338",
+          "amountCents": 24466,
+          "kind": "expense",
+          "section": "Checks Paid",
+          "category": "entertainment",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-22T12:00:00.000Z",
+          "rawDescription": "Check #339",
+          "merchant": "Check #339",
+          "amountCents": 28630,
+          "kind": "expense",
+          "section": "Checks Paid",
+          "category": "entertainment",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        }
+      ]
+    },
+    {
+      "name": "Electronic Payments",
+      "kind": "expense",
+      "printedSubtotalCents": 2241468,
+      "rows": [
+        {
+          "dateISO": "2026-04-28T12:00:00.000Z",
+          "rawDescription": "CCD DEBIT, CON ED OF NY CECONY ****2620006",
+          "merchant": "Con Edison",
+          "amountCents": 12989,
+          "kind": "expense",
+          "section": "Electronic Payments",
+          "category": "utilities",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-04-28T12:00:00.000Z",
+          "rawDescription": "NONTD ATM DB AP, *****30223970963, AUT 042826 DDA WITHDRAW AP EFT ASTORIA * NY",
+          "merchant": "ATM Withdrawal",
+          "amountCents": 3850,
+          "kind": "expense",
+          "section": "Electronic Payments",
+          "category": "entertainment",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-04-29T12:00:00.000Z",
+          "rawDescription": "NONTD ATM DB AP, *****30223970963, AUT 042926 DDA WITHDRAW AP EFT ASTORIA * NY",
+          "merchant": "ATM Withdrawal",
+          "amountCents": 3850,
+          "kind": "expense",
+          "section": "Electronic Payments",
+          "category": "entertainment",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-04-30T12:00:00.000Z",
+          "rawDescription": "ELECTRONIC PMT-WEB, AMEX EPAYMENT ACH PMT A5390",
+          "merchant": "Amex Payment",
+          "amountCents": 216408,
+          "kind": "expense",
+          "section": "Electronic Payments",
+          "category": "entertainment",
+          "excluded": true,
+          "excludeReason": "cc-payment",
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-01T12:00:00.000Z",
+          "rawDescription": "ELECTRONIC PMT-WEB, APPLECARD GSBANK PAYMENT 1962740",
+          "merchant": "Apple Card Payment",
+          "amountCents": 4579,
+          "kind": "expense",
+          "section": "Electronic Payments",
+          "category": "entertainment",
+          "excluded": true,
+          "excludeReason": "cc-payment",
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-04T12:00:00.000Z",
+          "rawDescription": "eTransfer Debit, Online Xfer Transfer to SV 00006772817632",
+          "merchant": "Transfer to Savings",
+          "amountCents": 15000,
+          "kind": "expense",
+          "section": "Electronic Payments",
+          "category": "entertainment",
+          "excluded": true,
+          "excludeReason": "internal-transfer",
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-04T12:00:00.000Z",
+          "rawDescription": "ACH DEBIT, VERIZON PAYMENTREC ****461550001",
+          "merchant": "Verizon",
+          "amountCents": 8999,
+          "kind": "expense",
+          "section": "Electronic Payments",
+          "category": "utilities",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-04T12:00:00.000Z",
+          "rawDescription": "eTransfer Debit, Online Xfer Transfer to ML 6022371130",
+          "merchant": "Transfer to ML",
+          "amountCents": 533931,
+          "kind": "expense",
+          "section": "Electronic Payments",
+          "category": "entertainment",
+          "excluded": true,
+          "excludeReason": "internal-transfer",
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-05T12:00:00.000Z",
+          "rawDescription": "eTransfer Debit, Online Xfer Transfer to SV 00006772817632",
+          "merchant": "Transfer to Savings",
+          "amountCents": 670000,
+          "kind": "expense",
+          "section": "Electronic Payments",
+          "category": "entertainment",
+          "excluded": true,
+          "excludeReason": "internal-transfer",
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-07T12:00:00.000Z",
+          "rawDescription": "TD ZELLE SENT, 612700B0LLLE Zelle VUKSANI PLUMBING",
+          "merchant": "Zelle · Vuksani Plumbing",
+          "amountCents": 20000,
+          "kind": "expense",
+          "section": "Electronic Payments",
+          "category": "utilities",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-11T12:00:00.000Z",
+          "rawDescription": "TD ZELLE SENT, 613000H07TB3 Zelle TIPU SULTAN",
+          "merchant": "Zelle · Tipu Sultan",
+          "amountCents": 4142,
+          "kind": "expense",
+          "section": "Electronic Payments",
+          "category": "entertainment",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-11T12:00:00.000Z",
+          "rawDescription": "ELECTRONIC PMT-WEB, AMEX EPAYMENT ACH PMT M2620",
+          "merchant": "Amex Payment",
+          "amountCents": 220899,
+          "kind": "expense",
+          "section": "Electronic Payments",
+          "category": "entertainment",
+          "excluded": true,
+          "excludeReason": "cc-payment",
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-13T12:00:00.000Z",
+          "rawDescription": "ACH DEBIT, CHASE CREDIT CRD AUTOPAY ****00000371642",
+          "merchant": "Chase Credit Card",
+          "amountCents": 73971,
+          "kind": "expense",
+          "section": "Electronic Payments",
+          "category": "entertainment",
+          "excluded": true,
+          "excludeReason": "cc-payment",
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-13T12:00:00.000Z",
+          "rawDescription": "NONTD ATM DB AP, *****30223970963, AUT 051326 DDA WITHDRAW AP EFT ASTORIA * NY",
+          "merchant": "ATM Withdrawal",
+          "amountCents": 2850,
+          "kind": "expense",
+          "section": "Electronic Payments",
+          "category": "entertainment",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-05-13T12:00:00.000Z",
+          "rawDescription": "ELECTRONIC PMT-WEB, WEALTHFRONT EDI PYMNTS ****40423CCB40",
+          "merchant": "Wealthfront",
+          "amountCents": 450000,
+          "kind": "expense",
+          "section": "Electronic Payments",
+          "category": "entertainment",
+          "excluded": true,
+          "excludeReason": "investment",
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        }
+      ]
+    },
+    {
+      "name": "Other Withdrawals",
+      "kind": "expense",
+      "printedSubtotalCents": 185000,
+      "rows": [
+        {
+          "dateISO": "2026-05-01T12:00:00.000Z",
+          "rawDescription": "DEBIT TRANSFER, DDA TRNSFR TRANSFER TO SAVINGS ACCT 9400400000000006772817632",
+          "merchant": "Transfer to Savings",
+          "amountCents": 185000,
+          "kind": "expense",
+          "section": "Other Withdrawals",
+          "category": "entertainment",
+          "excluded": true,
+          "excludeReason": "internal-transfer",
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        }
+      ]
+    },
+    {
+      "name": "Service Charges",
+      "kind": "expense",
+      "printedSubtotalCents": 2500,
+      "rows": [
+        {
+          "dateISO": "2026-05-22T12:00:00.000Z",
+          "rawDescription": "MAINTENANCE FEE",
+          "merchant": "Maintenance Fee",
+          "amountCents": 2500,
+          "kind": "expense",
+          "section": "Service Charges",
+          "category": "utilities",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        }
+      ]
+    }
+  ]
+}
