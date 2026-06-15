@@ -72,6 +72,19 @@ Postgres schema and migrations for the shared backend (households, members,
 transactions + shares, cards, properties/mortgage/lease/units, rental payments,
 budgets, aggregate RPCs). Apply with the Supabase CLI.
 
+### Importing bank statements (`make ingest`)
+
+A deterministic (no-LLM) CLI parses a bank-statement **PDF** and writes
+transactions into the shared database, identical to app-entered ones. Always
+preview first: `make ingest FILE=<statement.pdf> DRY_RUN=1`. It auto-detects the
+bank, reconciles each section against the statement's printed subtotals (and
+refuses to import on a mismatch), suggests categories, flags non-spending rows,
+and lets you assign owners/splits. The same CLI also offers transaction CRUD —
+`make tx-list / tx-add / tx-edit / tx-rm` — for managing transactions from the
+terminal. See [`web/scripts/import/README.md`](web/scripts/import/README.md),
+[`specs/004-bank-statement-import/`](specs/004-bank-statement-import/), and
+[`specs/005-transaction-crud-cli/`](specs/005-transaction-crud-cli/).
+
 ## Testing
 
 - **Web:** Vitest runs pure-logic suites (node) and component/behavior suites (jsdom +
