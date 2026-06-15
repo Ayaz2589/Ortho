@@ -4,5 +4,6 @@ import type { BankProfile } from '../engine/types'
 import { tdBank } from './td-bank'
 import { chaseCsv } from './chase-csv'
 import { appleCard } from './apple-card'
+import { amexGold } from './amex-gold'
 
-export const PROFILES: BankProfile[] = [tdBank, chaseCsv, appleCard]
+export const PROFILES: BankProfile[] = [tdBank, chaseCsv, appleCard, amexGold]

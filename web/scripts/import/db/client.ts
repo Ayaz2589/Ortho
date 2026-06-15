@@ -27,6 +27,16 @@ export interface AuthedClient {
   userId: string
 }
 
+// Supabase's client constructs a realtime client that needs a global WebSocket.
+// Node < 22 has none, so polyfill it from `ws`. No-op on Node 22+ (native WS).
+let wsReady = false
+async function ensureWebSocket(): Promise<void> {
+  if (wsReady || typeof (globalThis as { WebSocket?: unknown }).WebSocket !== 'undefined') return
+  const ws = (await import('ws')) as { default?: unknown }
+  ;(globalThis as { WebSocket?: unknown }).WebSocket = ws.default ?? ws
+  wsReady = true
+}
+
 export interface ClientOptions {
   admin: boolean
   /** Email for OTP sign-in (sign-in mode). */
@@ -40,6 +50,7 @@ export interface ClientOptions {
 }
 
 export async function makeClient(opts: ClientOptions): Promise<AuthedClient> {
+  await ensureWebSocket()
   // Env is loaded by the CLI entrypoints (cli.ts/tx.ts) before this is called.
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   if (!url) throw new Error('MISSING_ENV: NEXT_PUBLIC_SUPABASE_URL')

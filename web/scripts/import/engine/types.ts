@@ -29,6 +29,9 @@ export interface ParsedTransaction {
   excludeReason: string | null
   /** Probable duplicate of an already-imported row (same day + amount + bank). */
   duplicate: boolean
+  /** Statement-stated cardholder for this row (multi-cardholder statements like
+   *  Amex), used to default the owner by first-name match. Omitted otherwise. */
+  cardMember?: string
   /** Resolved Ortho user ids (default = account holder). */
   ownerIds: string[]
   /** Per-owner percent summing to 100; null = even split. */

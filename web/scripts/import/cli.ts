@@ -10,6 +10,7 @@ import { reconcile } from './engine/reconcile'
 import { markDuplicates } from './engine/dedupe'
 import { toTransaction } from './engine/toTransaction'
 import { evenSplit, validateCustomSplit } from './engine/split'
+import { matchOwnerByName } from './engine/ownerMatch'
 import { loadEnv, makeClient } from './db/client'
 import { listUsers, resolveHousehold, fetchExistingForDedupe } from './db/lookups'
 import { persist } from './db/persist'
@@ -149,7 +150,9 @@ async function run(): Promise<void> {
     }
 
     const defaultOwnerId = client.userId
-    for (const r of rows) r.ownerIds = [defaultOwnerId]
+    // Default each row's owner: match the statement's card member (Amex) to an
+    // Ortho user by first name, else the operator. Operator can change in review.
+    for (const r of rows) r.ownerIds = [matchOwnerByName(r.cardMember, users, defaultOwnerId)]
     const coOwners = household.members.length ? household.members : users.filter((u) => u.id === defaultOwnerId)
     const canSplit = !!household.household && household.members.length >= 2
 
@@ -172,12 +175,12 @@ async function run(): Promise<void> {
     }
 
     const included = rows.filter((r) => !r.excluded)
-    if (!opts.assumeYes) {
-      const ans = await rl.question(`\nImport ${included.length} transactions? [y/N] `)
-      if (!/^y/i.test(ans.trim())) {
-        console.log('Aborted — nothing written.')
-        return
-      }
+    // Always require an explicit final confirmation before writing (FR-025).
+    // YES=1 only skips the per-row review, never this gate.
+    const ans = await rl.question(`\nImport ${included.length} transactions? [y/N] `)
+    if (!/^y/i.test(ans.trim())) {
+      console.log('Aborted — nothing written.')
+      return
     }
 
     const now = new Date().toISOString()

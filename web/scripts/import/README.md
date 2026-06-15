@@ -5,10 +5,14 @@ writes transactions into the same Supabase database the web and iOS apps use.
 See the full design in [`specs/004-bank-statement-import/`](../../../specs/004-bank-statement-import/).
 
 **Supported sources** (auto-detected): **TD Bank** Premier Checking (PDF) ·
-**Apple Card** / Goldman Sachs (PDF) · **Chase** credit-card Activity (CSV).
-PDF statements are reconciled against their printed subtotals; the CSV export has
-no control total, so reconciliation is reported `n/a` for it (the preview +
-duplicate detection are the safeguards).
+**Apple Card** / Goldman Sachs (PDF) · **American Express Gold** (PDF) ·
+**Chase** credit-card Activity (CSV). PDF statements are reconciled against their
+printed subtotals; the CSV export has no control total, so reconciliation is
+reported `n/a` for it (the preview + duplicate detection are the safeguards).
+
+On multi-cardholder statements (Amex), each charge's **owner defaults to the card
+member**, matched to an Ortho user by first name (operator otherwise); you can
+change it in review.
 
 ## Usage
 
@@ -81,7 +85,7 @@ See [spec 005](../../../specs/005-transaction-crud-cli/) and its [`contracts/cli
 engine/    pure logic: readInput, extractText, csv, detectBank, money, dates,
            categorize, exclusions, reconcile, split, dedupe, toTransaction,
            filters, validate, render, args, types
-profiles/  per-bank profiles (td-bank.ts, apple-card.ts PDF; chase-csv.ts CSV) + registry
+profiles/  per-bank profiles (td-bank.ts, apple-card.ts, amex-gold.ts PDF; chase-csv.ts CSV) + registry
 db/        client (sign-in / admin), lookups, persist, transactions (CRUD)
 cli.ts     ingest orchestration + interactive review
 tx.ts      transaction CRUD (list | add | edit | rm)

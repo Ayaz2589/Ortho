@@ -40,6 +40,12 @@ describe('detectBank', () => {
     if (r.ok) expect(r.profile.id).toBe('apple')
   })
 
+  it('detects Amex Gold from its markers (registry dispatch)', () => {
+    const r = detectBank('… American Express® Gold Card … Pay Over Time Limit $15,000 …')
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.profile.id).toBe('amex')
+  })
+
   it('reports ambiguity when more than one profile matches', () => {
     const fake = (id: string) => ({ id, label: id, source: id, detect: () => true, parse: () => ({}) as never })
     const r = detectBank('anything', null, [fake('a'), fake('b')])
