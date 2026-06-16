@@ -56,11 +56,11 @@ function TxDetailContent({
   onEdit: () => void
   onDelete: () => void
 }) {
-  const { formatMoney, ownersDisplay, locale } = useApp()
+  const { formatMoney, resolveUser, locale } = useApp()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const isIncome = tx.kind === 'income'
   const meta = categoryMeta(tx.category)
-  const owners = ownersDisplay(tx)
+  const ownerUsers = tx.owner_ids.map(resolveUser)
   const date = new Date(tx.date)
 
   return (
@@ -90,9 +90,9 @@ function TxDetailContent({
       </div>
 
       <div className="ow-card" style={{ margin: '0 16px' }}>
-        <TxDetailRow label="Owner" first>
-          <Avatar user={owners.avatarUser} size={22} />
-          <span>{owners.label}</span>
+        <TxDetailRow label={ownerUsers.length > 1 ? 'Owners' : 'Owner'} first>
+          <StackedAvatars users={ownerUsers} size={22} ring="var(--surface)" />
+          <span>{ownerUsers.map((u) => u.name).join(', ')}</span>
         </TxDetailRow>
         <TxDetailRow label={isIncome ? 'Deposit to' : 'Paid with'}>
           <SourceDot size={8} />

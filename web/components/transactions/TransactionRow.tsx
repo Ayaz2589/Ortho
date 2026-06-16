@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { MoreHorizontal, Copy, Trash2 } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { categoryMeta } from '@/lib/categories'
-import { Avatar } from '@/components/ui'
+import { Avatar, StackedAvatars } from '@/components/ui'
 import type { Transaction } from '@/lib/types'
 
 /**
@@ -26,7 +26,7 @@ export function TransactionRow({
   onDelete: () => void
   selected?: boolean
 }) {
-  const { formatMoney, ownersDisplay } = useApp()
+  const { formatMoney, resolveUser } = useApp()
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const closeMenu = () => {
@@ -35,7 +35,8 @@ export function TransactionRow({
   }
   const meta = categoryMeta(tx.category)
   const Icon = meta.icon
-  const display = ownersDisplay(tx)
+  const ownerUsers = tx.owner_ids.map(resolveUser)
+  const ownerLabel = ownerUsers.map((u) => u.name).join(', ')
   const isIncome = tx.kind === 'income'
 
   return (
@@ -61,11 +62,14 @@ export function TransactionRow({
           >
             <Icon size={18} className="text-white" strokeWidth={2.2} />
           </div>
-          <div
-            className="absolute -bottom-1 -right-1 rounded-full ring-2 ring-surface"
-            style={{ background: 'var(--surface)' }}
-          >
-            <Avatar user={display.avatarUser} size={20} />
+          <div className="absolute -bottom-1 -right-1">
+            {ownerUsers.length <= 1 ? (
+              <div className="rounded-full ring-2 ring-surface" style={{ background: 'var(--surface)' }}>
+                <Avatar user={ownerUsers[0] ?? resolveUser('')} size={20} />
+              </div>
+            ) : (
+              <StackedAvatars users={ownerUsers} size={18} ring="var(--surface)" />
+            )}
           </div>
         </div>
 
@@ -73,7 +77,7 @@ export function TransactionRow({
         <div className="min-w-0 flex-1">
           <div className="truncate text-[15px] font-normal text-text">{tx.merchant}</div>
           <div className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-text-3">
-            <span className="truncate">{display.label}</span>
+            <span className="truncate">{ownerLabel}</span>
             <span className="opacity-50">·</span>
             <span className="truncate">{tx.source}</span>
           </div>
