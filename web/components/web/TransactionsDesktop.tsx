@@ -6,7 +6,7 @@ import { useApp } from '@/lib/store'
 import { groupByDay, groupDaysByMonth, dayLabel, monthYearLong, expenseTotal, mediumDate, startOfMonth } from '@/lib/format'
 import { categoryMeta } from '@/lib/categories'
 import type { Transaction } from '@/lib/types'
-import { Avatar } from '@/components/ui'
+import { Avatar, StackedAvatars } from '@/components/ui'
 import { Drawer, DrawerHeader } from './Drawer'
 import { useTransactionFilters } from '@/lib/useTransactionFilters'
 import { FilterPanel } from './FilterPanel'
@@ -135,9 +135,10 @@ function TxRow({
   selected: boolean
   onClick: () => void
 }) {
-  const { formatMoney, ownersDisplay } = useApp()
+  const { formatMoney, resolveUser } = useApp()
   const isIncome = tx.kind === 'income'
-  const owners = ownersDisplay(tx)
+  const ownerUsers = tx.owner_ids.map(resolveUser)
+  const single = ownerUsers.length === 1 ? ownerUsers[0] : null
   return (
     <button
       className={'ow-btn ow-tab-row ow-tab-tr' + (selected ? ' is-selected' : '')}
@@ -152,10 +153,18 @@ function TxRow({
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-        <Avatar user={owners.avatarUser} size={20} />
-        <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {owners.label}
-        </span>
+        {single ? (
+          <>
+            <Avatar user={single} size={20} />
+            <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {single.name}
+            </span>
+          </>
+        ) : ownerUsers.length === 0 ? (
+          <span style={{ fontSize: 13, color: 'var(--text-3)' }}>—</span>
+        ) : (
+          <StackedAvatars users={ownerUsers} size={20} />
+        )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
         <SourceDot />

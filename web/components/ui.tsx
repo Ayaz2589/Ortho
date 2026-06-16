@@ -54,6 +54,45 @@ export function Avatar({
   )
 }
 
+/** Overlapping avatar stack for a transaction's owners. Each avatar gets a ring
+ *  in the surrounding `ring` color so they read as a stack; overflow past `max`
+ *  collapses to "+N". */
+export function StackedAvatars({
+  users,
+  size = 20,
+  ring = 'var(--bg)',
+  max = 4,
+}: {
+  users: User[]
+  size?: number
+  ring?: string
+  max?: number
+}) {
+  const shown = users.slice(0, max)
+  const overlap = Math.round(size * 0.32)
+  return (
+    <div className="flex shrink-0 items-center">
+      {shown.map((u, i) => (
+        <span
+          key={`${u.id}-${i}`}
+          className="rounded-full"
+          style={{
+            marginLeft: i === 0 ? 0 : -overlap,
+            boxShadow: `0 0 0 1.5px ${ring}`,
+            position: 'relative',
+            zIndex: shown.length - i,
+          }}
+        >
+          <Avatar user={u} size={size} />
+        </span>
+      ))}
+      {users.length > max && (
+        <span className="ml-1 text-[11px] tabular-nums text-text-3">+{users.length - max}</span>
+      )}
+    </div>
+  )
+}
+
 export function IconButton({
   onClick,
   children,
