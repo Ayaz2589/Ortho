@@ -85,6 +85,7 @@ interface AppStateValue {
   updateHouseholdName: (name: string) => void
   addPerson: (name: string, colorKey?: string) => void
   renamePerson: (id: string, name: string) => void
+  setPersonColor: (id: string, colorKey: string) => void
   removePerson: (id: string) => void
   refreshRates: () => void
   signOut: () => Promise<void>
@@ -751,6 +752,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     })()
   }
 
+  const setPersonColor = (id: string, colorKey: string) => {
+    let prev: Person | undefined
+    setPeople((list) => {
+      prev = list.find((p) => p.id === id)
+      return list.map((p) => (p.id === id ? { ...p, color_key: colorKey } : p))
+    })
+    ;(async () => {
+      const { error: e } = await supabase.from('household_people').update({ color_key: colorKey }).eq('id', id)
+      if (e) {
+        if (prev) setPeople((list) => list.map((p) => (p.id === id ? prev! : p)))
+        setError(e.message)
+      }
+    })()
+  }
+
   const removePerson = (id: string) => {
     const at = new Date().toISOString()
     let prev: Person | undefined
@@ -814,6 +830,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     updateHouseholdName,
     addPerson,
     renamePerson,
+    setPersonColor,
     removePerson,
     refreshRates,
     signOut,

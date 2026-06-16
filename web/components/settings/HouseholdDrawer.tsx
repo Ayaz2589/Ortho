@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Check, MinusCircle } from 'lucide-react'
 import { useApp } from '@/lib/store'
-import { Avatar, FormGroup, FieldRow, SectionLabel } from '@/components/ui'
+import { FormGroup, FieldRow, SectionLabel } from '@/components/ui'
 import { TextInput } from '@/components/inputs'
 import { PALETTE, deriveInitial, paletteFor } from '@/lib/categories'
 import { Drawer, DrawerHeader } from '@/components/web/Drawer'
@@ -32,6 +32,7 @@ export function HouseholdDrawer({
     updateHouseholdName,
     addPerson,
     renamePerson,
+    setPersonColor,
     removePerson,
   } = useApp()
 
@@ -43,6 +44,7 @@ export function HouseholdDrawer({
   // Member-detail state
   const [confirmRemove, setConfirmRemove] = useState(false)
   const [editName, setEditName] = useState('')
+  const [editColor, setEditColor] = useState(PALETTE[0].key)
 
   useEffect(() => {
     if (!mode) return
@@ -53,7 +55,9 @@ export function HouseholdDrawer({
       setAddColor(PALETTE[0].key)
     }
     if (mode.type === 'member') {
-      setEditName(householdMembers.find((u) => u.id === mode.userId)?.name ?? '')
+      const m = householdMembers.find((u) => u.id === mode.userId)
+      setEditName(m?.name ?? '')
+      setEditColor(m?.color_key ?? PALETTE[0].key)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
@@ -172,8 +176,10 @@ export function HouseholdDrawer({
         const saveRename = () => {
           const trimmed = editName.trim()
           if (trimmed !== '' && trimmed !== user.name) renamePerson(user.id, trimmed)
+          if (editColor !== user.color_key) setPersonColor(user.id, editColor)
           onClose()
         }
+        const swatch = paletteFor(editColor)
         const doRemove = () => {
           removePerson(user.id)
           onClose()
@@ -191,7 +197,12 @@ export function HouseholdDrawer({
             />
             <div style={{ overflow: 'auto', padding: '20px 20px 24px' }}>
               <div className="flex justify-center pb-4">
-                <Avatar user={user} size={64} />
+                <div
+                  className="flex h-16 w-16 items-center justify-center rounded-full font-light"
+                  style={{ background: swatch.bg, color: swatch.fg, fontSize: (user.initial?.length ?? 1) > 1 ? 18 : 26 }}
+                >
+                  {user.initial}
+                </div>
               </div>
               <FormGroup>
                 <FieldRow label="Name">
@@ -199,6 +210,27 @@ export function HouseholdDrawer({
                 </FieldRow>
               </FormGroup>
               <p className="px-1 pt-2 text-center text-[13px] text-text-2">{detail}</p>
+
+              <div className="mt-5">
+                <SectionLabel>Color</SectionLabel>
+              </div>
+              <div className="mt-2 grid grid-cols-6 gap-3 rounded-2xl bg-surface p-4" style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+                {PALETTE.map((opt) => {
+                  const active = opt.key === editColor
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      aria-label={opt.key}
+                      onClick={() => setEditColor(opt.key)}
+                      className="flex aspect-square items-center justify-center rounded-full"
+                      style={{ background: opt.bg, color: opt.fg, outline: active ? '2px solid var(--text)' : 'none', outlineOffset: 2 }}
+                    >
+                      {active && <Check size={14} strokeWidth={3} />}
+                    </button>
+                  )
+                })}
+              </div>
 
               {removable &&
                 (confirmRemove ? (
