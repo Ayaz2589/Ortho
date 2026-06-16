@@ -1,19 +1,5 @@
 import SwiftUI
 
-/// Filter pill above the transactions list. Composes (AND) with the
-/// merchant search filter.
-enum TransactionScopeFilter: String, CaseIterable, Hashable, Identifiable {
-    case all, shared, personal
-    var id: String { rawValue }
-    var label: LocalizedStringResource {
-        switch self {
-        case .all:      "All"
-        case .shared:   "Shared"
-        case .personal: "Personal"
-        }
-    }
-}
-
 /// Day-grouped transactions list — the Transactions tab. Built on a native
 /// SwiftUI `List` so vertical scroll and `.swipeActions` are arbitrated by
 /// UIKit. The custom `ScrollView + LazyVStack + SwipeActionRow` stack this
@@ -72,7 +58,7 @@ struct TransactionsView: View {
         for tx in appState.transactions {
             for id in tx.ownerIDs where names[id] == nil { names[id] = appState.user(id).name }
         }
-        return FilterContext(householdID: appState.currentHouseholdID, ownerNames: names)
+        return FilterContext(ownerNames: names)
     }
 
     private var activeFilterCount_: Int { activeFilterCount(criteria) }
@@ -291,11 +277,6 @@ struct TransactionsView: View {
                 )
                     .padding(.vertical, 8)
                     .transition(.move(edge: .top).combined(with: .opacity))
-
-                scopeFilterPill
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
             }
 
             if hasAnyTransactions && activeFilterCount_ > 0 {
@@ -371,39 +352,6 @@ struct TransactionsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// All | Shared | Personal segmented pill above the transactions list.
-    /// Bridges the display enum to `criteria.scope` via the shared raw values.
-    private var scopeFilterPill: some View {
-        HStack(spacing: 4) {
-            ForEach(TransactionScopeFilter.allCases) { f in
-                let isOn = criteria.scope.rawValue == f.rawValue
-                Button {
-                    criteria.scope = FilterCriteria.Scope(rawValue: f.rawValue) ?? .all
-                } label: {
-                    Text(f.label)
-                        .font(.lato(size: 13, weight: .semibold))
-                        .tracking(-0.1)
-                        .foregroundStyle(isOn ? AppTheme.text : AppTheme.text.opacity(0.58))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .fill(isOn ? AppTheme.surface : .clear)
-                                .shadow(color: isOn ? .black.opacity(0.06) : .clear,
-                                        radius: 2, y: 1)
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(3)
-        .background(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(AppTheme.text.opacity(0.05))
-        )
-        .animation(.easeOut(duration: 0.15), value: criteria.scope)
-    }
-
     /// Circular filter button next to search/"+", with an accent count badge.
     private var filterButton: some View {
         Button { filterSheetPresented = true } label: {
@@ -477,10 +425,6 @@ struct TransactionsView: View {
 
     private var activeChips: [ActiveChip] {
         var out: [ActiveChip] = []
-        if criteria.scope != .all {
-            let label = TransactionScopeFilter(rawValue: criteria.scope.rawValue).map { String(localized: $0.label) } ?? "Scope"
-            out.append(.init(id: "scope", label: label, remove: { criteria.scope = .all }))
-        }
         let q = criteria.query.trimmingCharacters(in: .whitespaces)
         if !q.isEmpty {
             out.append(.init(id: "query", label: "“\(q)”", remove: { criteria.query = "" }))

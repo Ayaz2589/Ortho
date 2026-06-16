@@ -9,9 +9,9 @@ final class TransactionFilterParityTests: XCTestCase {
 
     // The vector JSON uses string-keyed objects / string arrays; decode loosely then
     // map to the strongly-typed FilterCriteria/FilterContext (UUID/enum) below.
-    private struct CtxJSON: Decodable { let householdId: UUID?; let ownerNames: [String: String] }
+    private struct CtxJSON: Decodable { let ownerNames: [String: String] }
     private struct CritJSON: Decodable {
-        let scope: String; let query: String; let categories: [String]; let kind: String
+        let query: String; let categories: [String]; let kind: String
         let sources: [String]; let owners: [String]; let dateFrom: String?; let dateTo: String?
     }
     private struct Case: Decodable {
@@ -49,13 +49,11 @@ final class TransactionFilterParityTests: XCTestCase {
 
         for c in vectors.cases {
             let ctx = FilterContext(
-                householdID: c.context.householdId,
                 ownerNames: Dictionary(uniqueKeysWithValues: c.context.ownerNames.compactMap { key, val in
                     UUID(uuidString: key).map { ($0, val) }
                 })
             )
             let criteria = FilterCriteria(
-                scope: FilterCriteria.Scope(rawValue: c.criteria.scope) ?? .all,
                 query: c.criteria.query,
                 categories: Set(c.criteria.categories.compactMap(TransactionCategory.init(rawValue:))),
                 kind: FilterCriteria.Kind(rawValue: c.criteria.kind) ?? .all,

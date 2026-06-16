@@ -5,10 +5,8 @@ import Foundation
 // see Ortho-iOSTests/TransactionFilterParityTests.swift. See specs/006-transaction-filters.
 
 struct FilterCriteria: Equatable {
-    enum Scope: String, CaseIterable { case all, shared, personal }
     enum Kind: String, CaseIterable { case all, expense, income }
 
-    var scope: Scope = .all
     var query: String = ""
     var categories: Set<TransactionCategory> = []
     var kind: Kind = .all
@@ -23,8 +21,7 @@ struct FilterCriteria: Equatable {
 }
 
 struct FilterContext {
-    var householdID: Household.ID?
-    /// userId → display name, for search-by-owner-name.
+    /// ownerId → display name, for search-by-owner-name.
     var ownerNames: [User.ID: String]
 }
 
@@ -32,14 +29,6 @@ struct FilterContext {
 func filterTransactions(_ txs: [Transaction], _ c: FilterCriteria, _ ctx: FilterContext) -> [Transaction] {
     let q = c.query.trimmingCharacters(in: .whitespaces).lowercased()
     return txs.filter { tx in
-        // scope
-        let isShared = tx.householdID != nil && tx.householdID == ctx.householdID
-        let isPersonal = tx.householdID == nil
-        switch c.scope {
-        case .shared:   if !isShared { return false }
-        case .personal: if !isPersonal { return false }
-        case .all:      if !(isShared || isPersonal) { return false }
-        }
         // search
         if !q.isEmpty {
             var hit = tx.merchant.lowercased().contains(q)
@@ -70,7 +59,6 @@ func filterTransactions(_ txs: [Transaction], _ c: FilterCriteria, _ ctx: Filter
 /// Count of non-default dimensions (for the "N filters active" badge).
 func activeFilterCount(_ c: FilterCriteria) -> Int {
     var n = 0
-    if c.scope != .all { n += 1 }
     if !c.query.trimmingCharacters(in: .whitespaces).isEmpty { n += 1 }
     if !c.categories.isEmpty { n += 1 }
     if c.kind != .all { n += 1 }

@@ -144,13 +144,11 @@ const FSET: Transaction[] = [
   ftx({ id: C, merchant: 'Payroll', category: 'income', kind: 'income', source: 'TD Bank', household_id: H1, owner_ids: [U2], date: '2026-06-01T12:00:00.000Z' }),
   ftx({ id: D, merchant: 'Whole Foods', category: 'groceries', kind: 'expense', source: 'Chase', household_id: H1, owner_ids: [U1, U2], date: '2026-04-20T12:00:00.000Z' }),
 ]
-const FCTX: FilterContext = { householdId: H1, ownerNames: { [U1]: 'Ayaz', [U2]: 'Tasnuva' } }
+const FCTX: FilterContext = { ownerNames: { [U1]: 'Ayaz', [U2]: 'Tasnuva' } }
 const may = monthBounds('2026-05')
 
 const FILTER_CASES: Array<{ name: string; transactions: Transaction[]; context: FilterContext; criteria: FilterCriteria }> = [
   { name: 'no filters → all', transactions: FSET, context: FCTX, criteria: emptyCriteria() },
-  { name: 'scope personal', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), scope: 'personal' } },
-  { name: 'scope shared', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), scope: 'shared' } },
   { name: 'search merchant', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), query: 'bistro' } },
   { name: 'search source', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), query: 'td bank' } },
   { name: 'search owner name', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), query: 'tasnuva' } },
@@ -163,7 +161,7 @@ const FILTER_CASES: Array<{ name: string; transactions: Transaction[]; context: 
   { name: 'month May (half-open)', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), dateFrom: may.dateFrom, dateTo: may.dateTo } },
   { name: 'dateFrom only', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), dateFrom: '2026-05-01T00:00:00.000Z' } },
   { name: 'AND: kind expense ∧ source TD Bank', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), kind: 'expense', sources: ['TD Bank'] } },
-  { name: 'AND: shared ∧ dining ∧ May', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), scope: 'shared', categories: ['dining'], dateFrom: may.dateFrom, dateTo: may.dateTo } },
+  { name: 'AND: dining ∧ May', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), categories: ['dining'], dateFrom: may.dateFrom, dateTo: may.dateTo } },
   { name: 'absent source → empty', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), sources: ['Wells Fargo'] } },
 ]
 

@@ -24,7 +24,6 @@ function RemovableChip({ label, onRemove }: { label: string; onRemove: () => voi
   )
 }
 
-const SCOPE_LABEL: Record<string, string> = { shared: 'Shared', personal: 'Personal' }
 const KIND_LABEL: Record<string, string> = { expense: 'Expenses', income: 'Income' }
 
 /** A wrapping row of removable chips for every active filter dimension + Clear all. */
@@ -35,7 +34,6 @@ export function ActiveFilterChips({ f }: { f: TxFilters }) {
 
   return (
     <div className="mb-4 flex flex-wrap items-center gap-2">
-      {c.scope !== 'all' && <RemovableChip label={SCOPE_LABEL[c.scope]} onRemove={() => f.setScope('all')} />}
       {c.query.trim() !== '' && <RemovableChip label={`“${c.query.trim()}”`} onRemove={() => f.setQuery('')} />}
       {c.kind !== 'all' && <RemovableChip label={KIND_LABEL[c.kind]} onRemove={() => f.setKind('all')} />}
       {c.categories.map((cat) => (

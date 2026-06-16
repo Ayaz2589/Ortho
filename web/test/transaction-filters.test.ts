@@ -27,7 +27,7 @@ const tx = (o: Partial<Transaction>): Transaction => ({
   ...o,
 })
 
-const CTX: FilterContext = { householdId: 'h1', ownerNames: { u1: 'Ayaz', u2: 'Tasnuva' } }
+const CTX: FilterContext = { ownerNames: { u1: 'Ayaz', u2: 'Tasnuva' } }
 const ids = (txs: Transaction[]) => txs.map((t) => t.id)
 
 const SET: Transaction[] = [
@@ -40,10 +40,6 @@ const SET: Transaction[] = [
 describe('filterTransactions — dimensions', () => {
   it('emptyCriteria returns everything', () => {
     expect(ids(filterTransactions(SET, emptyCriteria(), CTX))).toEqual(['a', 'b', 'c', 'd'])
-  })
-  it('scope: personal vs shared', () => {
-    expect(ids(filterTransactions(SET, { ...emptyCriteria(), scope: 'personal' }, CTX))).toEqual(['b'])
-    expect(ids(filterTransactions(SET, { ...emptyCriteria(), scope: 'shared' }, CTX))).toEqual(['a', 'c', 'd'])
   })
   it('search matches merchant / source / category / owner-name', () => {
     expect(ids(filterTransactions(SET, { ...emptyCriteria(), query: 'bistro' }, CTX))).toEqual(['a'])
@@ -80,9 +76,9 @@ describe('filterTransactions — AND across dimensions', () => {
   it('kind ∧ source', () => {
     expect(ids(filterTransactions(SET, { ...emptyCriteria(), kind: 'expense', sources: ['TD Bank'] }, CTX))).toEqual(['b'])
   })
-  it('scope ∧ category ∧ month', () => {
+  it('category ∧ month', () => {
     const { dateFrom, dateTo } = monthBounds('2026-05')
-    expect(ids(filterTransactions(SET, { ...emptyCriteria(), scope: 'shared', categories: ['dining'], dateFrom, dateTo }, CTX))).toEqual(['a'])
+    expect(ids(filterTransactions(SET, { ...emptyCriteria(), categories: ['dining'], dateFrom, dateTo }, CTX))).toEqual(['a'])
   })
   it('selected-but-absent source/owner matches nothing (no throw)', () => {
     expect(ids(filterTransactions(SET, { ...emptyCriteria(), sources: ['Wells Fargo'] }, CTX))).toEqual([])
@@ -93,7 +89,7 @@ describe('filterTransactions — AND across dimensions', () => {
 describe('helpers', () => {
   it('activeFilterCount counts non-default dimensions', () => {
     expect(activeFilterCount(emptyCriteria())).toBe(0)
-    expect(activeFilterCount({ ...emptyCriteria(), scope: 'shared', categories: ['dining'], kind: 'income', dateFrom: 'x' })).toBe(4)
+    expect(activeFilterCount({ ...emptyCriteria(), categories: ['dining'], kind: 'income', dateFrom: 'x' })).toBe(3)
     expect(activeFilterCount({ ...emptyCriteria(), query: '  ' })).toBe(0) // blank query is not active
   })
   it('availableSources is distinct, non-empty, alphabetized', () => {

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Search, Plus, X, ArrowUpDown, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { useApp } from '@/lib/store'
-import { PageHeader, IconButton, Card, Segmented, EmptyState, Modal } from '@/components/ui'
+import { PageHeader, IconButton, Card, EmptyState, Modal } from '@/components/ui'
 import { useIsExpanded } from '@/lib/useMediaQuery'
 import { groupByDay, groupDaysByMonth, dayLabel, monthYearLong, expenseTotal, startOfMonth } from '@/lib/format'
 import type { Transaction } from '@/lib/types'
@@ -14,8 +14,6 @@ import { TxModalWeb } from '@/components/web/TxModalWeb'
 import { useTransactionFilters } from '@/lib/useTransactionFilters'
 import { FilterPanel } from '@/components/web/FilterPanel'
 import { ActiveFilterChips } from '@/components/web/ActiveFilterChips'
-
-type ScopeFilter = 'all' | 'shared' | 'personal'
 
 export default function TransactionsPage() {
   const isExpanded = useIsExpanded()
@@ -119,15 +117,6 @@ export default function TransactionsPage() {
             onChange={(e) => f.setQuery(e.target.value)}
             placeholder="Search transactions"
             className="w-full rounded-xl bg-surface px-4 py-2.5 text-[15px] text-text outline-none placeholder:text-text-3"
-          />
-          <Segmented<ScopeFilter>
-            options={[
-              { value: 'all', label: 'All' },
-              { value: 'shared', label: 'Shared' },
-              { value: 'personal', label: 'Personal' },
-            ]}
-            value={f.criteria.scope}
-            onChange={f.setScope}
           />
         </div>
       )}

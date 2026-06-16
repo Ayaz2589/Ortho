@@ -78,14 +78,12 @@
         }
       ],
       "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
         "ownerNames": {
           "00000000-0000-0000-0000-000000000101": "Ayaz",
           "00000000-0000-0000-0000-000000000102": "Tasnuva"
         }
       },
       "criteria": {
-        "scope": "all",
         "query": "",
         "categories": [],
         "kind": "all",
@@ -97,204 +95,6 @@
       "expectedIds": [
         "00000000-0000-0000-0000-000000000001",
         "00000000-0000-0000-0000-000000000002",
-        "00000000-0000-0000-0000-000000000003",
-        "00000000-0000-0000-0000-000000000004"
-      ]
-    },
-    {
-      "name": "scope personal",
-      "transactions": [
-        {
-          "id": "00000000-0000-0000-0000-000000000001",
-          "household_id": "00000000-0000-0000-0000-000000000201",
-          "merchant": "Bistro",
-          "category": "dining",
-          "kind": "expense",
-          "scope": "personal",
-          "amount_cents": 0,
-          "source": "Amex Gold",
-          "date": "2026-05-04T12:00:00.000Z",
-          "created_by": "00000000-0000-0000-0000-000000000999",
-          "created_at": "",
-          "updated_at": "",
-          "owner_ids": [
-            "00000000-0000-0000-0000-000000000101"
-          ],
-          "splits": null
-        },
-        {
-          "id": "00000000-0000-0000-0000-000000000002",
-          "household_id": null,
-          "merchant": "Blue Bottle",
-          "category": "coffee",
-          "kind": "expense",
-          "scope": "personal",
-          "amount_cents": 0,
-          "source": "TD Bank",
-          "date": "2026-05-10T12:00:00.000Z",
-          "created_by": "00000000-0000-0000-0000-000000000999",
-          "created_at": "",
-          "updated_at": "",
-          "owner_ids": [
-            "00000000-0000-0000-0000-000000000101"
-          ],
-          "splits": null
-        },
-        {
-          "id": "00000000-0000-0000-0000-000000000003",
-          "household_id": "00000000-0000-0000-0000-000000000201",
-          "merchant": "Payroll",
-          "category": "income",
-          "kind": "income",
-          "scope": "personal",
-          "amount_cents": 0,
-          "source": "TD Bank",
-          "date": "2026-06-01T12:00:00.000Z",
-          "created_by": "00000000-0000-0000-0000-000000000999",
-          "created_at": "",
-          "updated_at": "",
-          "owner_ids": [
-            "00000000-0000-0000-0000-000000000102"
-          ],
-          "splits": null
-        },
-        {
-          "id": "00000000-0000-0000-0000-000000000004",
-          "household_id": "00000000-0000-0000-0000-000000000201",
-          "merchant": "Whole Foods",
-          "category": "groceries",
-          "kind": "expense",
-          "scope": "personal",
-          "amount_cents": 0,
-          "source": "Chase",
-          "date": "2026-04-20T12:00:00.000Z",
-          "created_by": "00000000-0000-0000-0000-000000000999",
-          "created_at": "",
-          "updated_at": "",
-          "owner_ids": [
-            "00000000-0000-0000-0000-000000000101",
-            "00000000-0000-0000-0000-000000000102"
-          ],
-          "splits": null
-        }
-      ],
-      "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
-        "ownerNames": {
-          "00000000-0000-0000-0000-000000000101": "Ayaz",
-          "00000000-0000-0000-0000-000000000102": "Tasnuva"
-        }
-      },
-      "criteria": {
-        "scope": "personal",
-        "query": "",
-        "categories": [],
-        "kind": "all",
-        "sources": [],
-        "owners": [],
-        "dateFrom": null,
-        "dateTo": null
-      },
-      "expectedIds": [
-        "00000000-0000-0000-0000-000000000002"
-      ]
-    },
-    {
-      "name": "scope shared",
-      "transactions": [
-        {
-          "id": "00000000-0000-0000-0000-000000000001",
-          "household_id": "00000000-0000-0000-0000-000000000201",
-          "merchant": "Bistro",
-          "category": "dining",
-          "kind": "expense",
-          "scope": "personal",
-          "amount_cents": 0,
-          "source": "Amex Gold",
-          "date": "2026-05-04T12:00:00.000Z",
-          "created_by": "00000000-0000-0000-0000-000000000999",
-          "created_at": "",
-          "updated_at": "",
-          "owner_ids": [
-            "00000000-0000-0000-0000-000000000101"
-          ],
-          "splits": null
-        },
-        {
-          "id": "00000000-0000-0000-0000-000000000002",
-          "household_id": null,
-          "merchant": "Blue Bottle",
-          "category": "coffee",
-          "kind": "expense",
-          "scope": "personal",
-          "amount_cents": 0,
-          "source": "TD Bank",
-          "date": "2026-05-10T12:00:00.000Z",
-          "created_by": "00000000-0000-0000-0000-000000000999",
-          "created_at": "",
-          "updated_at": "",
-          "owner_ids": [
-            "00000000-0000-0000-0000-000000000101"
-          ],
-          "splits": null
-        },
-        {
-          "id": "00000000-0000-0000-0000-000000000003",
-          "household_id": "00000000-0000-0000-0000-000000000201",
-          "merchant": "Payroll",
-          "category": "income",
-          "kind": "income",
-          "scope": "personal",
-          "amount_cents": 0,
-          "source": "TD Bank",
-          "date": "2026-06-01T12:00:00.000Z",
-          "created_by": "00000000-0000-0000-0000-000000000999",
-          "created_at": "",
-          "updated_at": "",
-          "owner_ids": [
-            "00000000-0000-0000-0000-000000000102"
-          ],
-          "splits": null
-        },
-        {
-          "id": "00000000-0000-0000-0000-000000000004",
-          "household_id": "00000000-0000-0000-0000-000000000201",
-          "merchant": "Whole Foods",
-          "category": "groceries",
-          "kind": "expense",
-          "scope": "personal",
-          "amount_cents": 0,
-          "source": "Chase",
-          "date": "2026-04-20T12:00:00.000Z",
-          "created_by": "00000000-0000-0000-0000-000000000999",
-          "created_at": "",
-          "updated_at": "",
-          "owner_ids": [
-            "00000000-0000-0000-0000-000000000101",
-            "00000000-0000-0000-0000-000000000102"
-          ],
-          "splits": null
-        }
-      ],
-      "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
-        "ownerNames": {
-          "00000000-0000-0000-0000-000000000101": "Ayaz",
-          "00000000-0000-0000-0000-000000000102": "Tasnuva"
-        }
-      },
-      "criteria": {
-        "scope": "shared",
-        "query": "",
-        "categories": [],
-        "kind": "all",
-        "sources": [],
-        "owners": [],
-        "dateFrom": null,
-        "dateTo": null
-      },
-      "expectedIds": [
-        "00000000-0000-0000-0000-000000000001",
         "00000000-0000-0000-0000-000000000003",
         "00000000-0000-0000-0000-000000000004"
       ]
@@ -377,14 +177,12 @@
         }
       ],
       "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
         "ownerNames": {
           "00000000-0000-0000-0000-000000000101": "Ayaz",
           "00000000-0000-0000-0000-000000000102": "Tasnuva"
         }
       },
       "criteria": {
-        "scope": "all",
         "query": "bistro",
         "categories": [],
         "kind": "all",
@@ -475,14 +273,12 @@
         }
       ],
       "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
         "ownerNames": {
           "00000000-0000-0000-0000-000000000101": "Ayaz",
           "00000000-0000-0000-0000-000000000102": "Tasnuva"
         }
       },
       "criteria": {
-        "scope": "all",
         "query": "td bank",
         "categories": [],
         "kind": "all",
@@ -574,14 +370,12 @@
         }
       ],
       "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
         "ownerNames": {
           "00000000-0000-0000-0000-000000000101": "Ayaz",
           "00000000-0000-0000-0000-000000000102": "Tasnuva"
         }
       },
       "criteria": {
-        "scope": "all",
         "query": "tasnuva",
         "categories": [],
         "kind": "all",
@@ -673,14 +467,12 @@
         }
       ],
       "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
         "ownerNames": {
           "00000000-0000-0000-0000-000000000101": "Ayaz",
           "00000000-0000-0000-0000-000000000102": "Tasnuva"
         }
       },
       "criteria": {
-        "scope": "all",
         "query": "zzz",
         "categories": [],
         "kind": "all",
@@ -769,14 +561,12 @@
         }
       ],
       "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
         "ownerNames": {
           "00000000-0000-0000-0000-000000000101": "Ayaz",
           "00000000-0000-0000-0000-000000000102": "Tasnuva"
         }
       },
       "criteria": {
-        "scope": "all",
         "query": "",
         "categories": [
           "dining",
@@ -871,14 +661,12 @@
         }
       ],
       "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
         "ownerNames": {
           "00000000-0000-0000-0000-000000000101": "Ayaz",
           "00000000-0000-0000-0000-000000000102": "Tasnuva"
         }
       },
       "criteria": {
-        "scope": "all",
         "query": "",
         "categories": [],
         "kind": "income",
@@ -969,14 +757,12 @@
         }
       ],
       "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
         "ownerNames": {
           "00000000-0000-0000-0000-000000000101": "Ayaz",
           "00000000-0000-0000-0000-000000000102": "Tasnuva"
         }
       },
       "criteria": {
-        "scope": "all",
         "query": "",
         "categories": [],
         "kind": "expense",
@@ -1069,14 +855,12 @@
         }
       ],
       "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
         "ownerNames": {
           "00000000-0000-0000-0000-000000000101": "Ayaz",
           "00000000-0000-0000-0000-000000000102": "Tasnuva"
         }
       },
       "criteria": {
-        "scope": "all",
         "query": "",
         "categories": [],
         "kind": "all",
@@ -1172,14 +956,12 @@
         }
       ],
       "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
         "ownerNames": {
           "00000000-0000-0000-0000-000000000101": "Ayaz",
           "00000000-0000-0000-0000-000000000102": "Tasnuva"
         }
       },
       "criteria": {
-        "scope": "all",
         "query": "",
         "categories": [],
         "kind": "all",
@@ -1273,14 +1055,12 @@
         }
       ],
       "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
         "ownerNames": {
           "00000000-0000-0000-0000-000000000101": "Ayaz",
           "00000000-0000-0000-0000-000000000102": "Tasnuva"
         }
       },
       "criteria": {
-        "scope": "all",
         "query": "",
         "categories": [],
         "kind": "all",
@@ -1372,14 +1152,12 @@
         }
       ],
       "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
         "ownerNames": {
           "00000000-0000-0000-0000-000000000101": "Ayaz",
           "00000000-0000-0000-0000-000000000102": "Tasnuva"
         }
       },
       "criteria": {
-        "scope": "all",
         "query": "",
         "categories": [],
         "kind": "all",
@@ -1472,14 +1250,12 @@
         }
       ],
       "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
         "ownerNames": {
           "00000000-0000-0000-0000-000000000101": "Ayaz",
           "00000000-0000-0000-0000-000000000102": "Tasnuva"
         }
       },
       "criteria": {
-        "scope": "all",
         "query": "",
         "categories": [],
         "kind": "expense",
@@ -1495,7 +1271,7 @@
       ]
     },
     {
-      "name": "AND: shared ∧ dining ∧ May",
+      "name": "AND: dining ∧ May",
       "transactions": [
         {
           "id": "00000000-0000-0000-0000-000000000001",
@@ -1572,14 +1348,12 @@
         }
       ],
       "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
         "ownerNames": {
           "00000000-0000-0000-0000-000000000101": "Ayaz",
           "00000000-0000-0000-0000-000000000102": "Tasnuva"
         }
       },
       "criteria": {
-        "scope": "shared",
         "query": "",
         "categories": [
           "dining"
@@ -1672,14 +1446,12 @@
         }
       ],
       "context": {
-        "householdId": "00000000-0000-0000-0000-000000000201",
         "ownerNames": {
           "00000000-0000-0000-0000-000000000101": "Ayaz",
           "00000000-0000-0000-0000-000000000102": "Tasnuva"
         }
       },
       "criteria": {
-        "scope": "all",
         "query": "",
         "categories": [],
         "kind": "all",

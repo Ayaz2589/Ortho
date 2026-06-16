@@ -27,7 +27,7 @@ export interface MonthOption {
 /** Single source of filter state + the filtered/derived data, shared by the
  *  compact page and the desktop view. The pure `filterTransactions` does the work. */
 export function useTransactionFilters() {
-  const { transactions, currentHousehold, resolveUser } = useApp()
+  const { transactions, resolveUser } = useApp()
   const [criteria, setCriteria] = useState<FilterCriteria>(emptyCriteria)
 
   const ownerNames = useMemo(() => {
@@ -36,10 +36,7 @@ export function useTransactionFilters() {
     return m
   }, [transactions, resolveUser])
 
-  const ctx: FilterContext = useMemo(
-    () => ({ householdId: currentHousehold?.id ?? null, ownerNames }),
-    [currentHousehold, ownerNames]
-  )
+  const ctx: FilterContext = useMemo(() => ({ ownerNames }), [ownerNames])
 
   const ownerOptions: OwnerOption[] = useMemo(() => {
     const ids = new Set<string>()
@@ -82,7 +79,6 @@ export function useTransactionFilters() {
     ownerOptions,
     monthOptions,
     selectedMonth,
-    setScope: (v: FilterCriteria['scope']) => patch({ scope: v }),
     setQuery: (v: string) => patch({ query: v }),
     setKind: (v: FilterCriteria['kind']) => patch({ kind: v }),
     toggleCategory: (c: TransactionCategory) => toggleIn('categories', c),

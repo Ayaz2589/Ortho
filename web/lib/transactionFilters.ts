@@ -5,7 +5,6 @@
 import type { Transaction, TransactionCategory } from './types'
 
 export interface FilterCriteria {
-  scope: 'all' | 'shared' | 'personal'
   query: string
   categories: TransactionCategory[]
   kind: 'all' | 'expense' | 'income'
@@ -18,21 +17,12 @@ export interface FilterCriteria {
 }
 
 export interface FilterContext {
-  householdId: string | null
-  /** userId → display name, for search-by-owner-name. */
+  /** ownerId → display name, for search-by-owner-name. */
   ownerNames: Record<string, string>
 }
 
 export function emptyCriteria(): FilterCriteria {
-  return { scope: 'all', query: '', categories: [], kind: 'all', sources: [], owners: [], dateFrom: null, dateTo: null }
-}
-
-function inScope(tx: Transaction, scope: FilterCriteria['scope'], householdId: string | null): boolean {
-  const isShared = tx.household_id !== null && tx.household_id === householdId
-  const isPersonal = tx.household_id === null
-  if (scope === 'shared') return isShared
-  if (scope === 'personal') return isPersonal
-  return isShared || isPersonal
+  return { query: '', categories: [], kind: 'all', sources: [], owners: [], dateFrom: null, dateTo: null }
 }
 
 function matchesQuery(tx: Transaction, q: string, ownerNames: Record<string, string>): boolean {
@@ -53,7 +43,6 @@ export function filterTransactions(txs: Transaction[], c: FilterCriteria, ctx: F
   const fromT = c.dateFrom ? new Date(c.dateFrom).getTime() : null
   const toT = c.dateTo ? new Date(c.dateTo).getTime() : null
   return txs.filter((tx) => {
-    if (!inScope(tx, c.scope, ctx.householdId)) return false
     if (!matchesQuery(tx, q, ctx.ownerNames)) return false
     if (c.categories.length > 0 && !c.categories.includes(tx.category)) return false
     if (c.kind !== 'all' && tx.kind !== c.kind) return false
@@ -71,7 +60,6 @@ export function filterTransactions(txs: Transaction[], c: FilterCriteria, ctx: F
 /** Count of non-default dimensions (for the "N filters active" badge). */
 export function activeFilterCount(c: FilterCriteria): number {
   let n = 0
-  if (c.scope !== 'all') n++
   if (c.query.trim() !== '') n++
   if (c.categories.length > 0) n++
   if (c.kind !== 'all') n++
