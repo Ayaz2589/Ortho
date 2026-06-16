@@ -22,32 +22,24 @@ import {
   writeAppearance,
 } from '@/components/settings/appearance'
 import { CURRENCIES, CURRENCY_NAMES, currencyCode } from '@/lib/finance/currency'
-
-const LANGUAGES = ['System', 'English', 'বাংলা', 'Español', '日本語', '简体中文', '한국어']
+import { LANGUAGES } from '@/lib/language'
 
 export default function SettingsPage() {
-  const { cards, budgets, currentHousehold, currency, setCurrency, deleteCard, signOut } = useApp()
+  const { cards, budgets, currentHousehold, currency, setCurrency, language, chooseLanguage, deleteCard, signOut } =
+    useApp()
   const [addingCard, setAddingCard] = useState(false)
   const [appearance, setAppearance] = useState<Appearance>('system')
-  const [language, setLanguage] = useState('System')
   const [signingOut, setSigningOut] = useState(false)
 
   useEffect(() => {
     const a = readAppearance()
     setAppearance(a)
     applyAppearance(a)
-    const l = localStorage.getItem('language')
-    if (l) setLanguage(l)
   }, [])
 
   const chooseAppearance = (mode: Appearance) => {
     setAppearance(mode)
     writeAppearance(mode)
-  }
-
-  const chooseLanguage = (lang: string) => {
-    setLanguage(lang)
-    localStorage.setItem('language', lang)
   }
 
   return (
