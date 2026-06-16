@@ -52,8 +52,8 @@ CLI tools (vitest/tsx/xcodebuild/supabase) need `dangerouslyDisableSandbox`.
 - [ ] T015 [US2] iOS XCTest: extend `iOS/Ortho-iOSTests/TransactionSplitParityTests.swift` to assert `seedSplit` + new cases against the same vectors (red → green). — depends T002, T013
 - [ ] T016 [US2] In `iOS/Ortho-iOS/Features/Transactions/AddTransactionSheet.swift`, drop the `kind == .expense` gate so multi-owner **income** shows the split editor and persists shares; fix the caption. (R6, FR-008) — depends T012
 - [ ] T017 [US2] In `iOS/Ortho-iOS/Features/Transactions/AddTransactionSheet.swift`, seed the edit/copy form via `seedSplit` (set `splitMethod=.value` from exact stored cents for custom splits) so re-save round-trips losslessly. (R7, FR-009) — depends T012
-- [ ] T018 [US2] Add `setPersonColor(_:colorKey:)` to `iOS/Ortho-iOS/App/AppState.swift` (optimistic local update + rollback via `HouseholdsAPI.updatePerson`), mirroring `renamePerson`. (R8, FR-011)
-- [ ] T019 [US2] Add an edit affordance in `iOS/Ortho-iOS/Features/Settings/HouseholdView.swift`: give `UserRowView` an `onTap` opening an edit sheet (reuse `AddUserSheet` name+swatch UI seeded from the person) whose Save calls `renamePerson`/`setPersonColor`. (R8, FR-011) — depends T018
+- [X] T018 [US2] Add `setPersonColor(_:colorKey:)` to `iOS/Ortho-iOS/App/AppState.swift` (optimistic local update + rollback via `HouseholdsAPI.updatePerson`), mirroring `renamePerson`. (R8, FR-011)
+- [X] T019 [US2] Add an edit affordance in `iOS/Ortho-iOS/Features/Settings/HouseholdView.swift`: give `UserRowView` an `onTap` opening an edit sheet (reuse `AddUserSheet` name+swatch UI seeded from the person) whose Save calls `renamePerson`/`setPersonColor`. (R8, FR-011) — depends T018
 - [ ] T020 [US2] Validate: both suites green on the new split vectors; manual custom-split round-trip + person rename/recolor per quickstart Story 2. (SC-003/004)
 
 **Checkpoint**: No silent split divergence; people fully editable on iOS.
@@ -81,10 +81,10 @@ CLI tools (vitest/tsx/xcodebuild/supabase) need `dangerouslyDisableSandbox`.
 
 **Independent test**: On a ≥1024px window, split detail shows per-owner amounts; dashboard shows drill-downs; language changes formatting.
 
-- [ ] T025 [P] [US4] In `web/components/web/TransactionsDesktop.tsx`, render the shared `components/transactions/TransactionDetailBody.tsx` in the detail pane (per-owner cents + percent). (R11, FR-015)
-- [ ] T026 [P] [US4] In the web desktop dashboard component, render the shared `SpendByCategoryCard` / `PerOwnerBreakdownCard` / `InsightsCardStack` into its grid instead of trimmed variants. (R11, FR-016)
-- [ ] T027 [P] [US4] Lift language into `web/lib/store.tsx`: map options → BCP-47 locale, persist, and drive the store `locale` (System → `navigator.language`) so `Intl` formatters re-render. (R12, FR-017)
-- [ ] T028 [US4] Web tests in `web/test/`: desktop detail shows per-owner shares; language selection drives locale formatting (behavior, not pixels). — depends T025, T027
+- [X] T025 [P] [US4] In `web/components/web/TransactionsDesktop.tsx`, render the shared `components/transactions/TransactionDetailBody.tsx` in the detail pane (per-owner cents + percent). (R11, FR-015)
+- [X] T026 [P] [US4] In the web desktop dashboard component, render the shared `SpendByCategoryCard` / `PerOwnerBreakdownCard` / `InsightsCardStack` into its grid instead of trimmed variants. (R11, FR-016)
+- [X] T027 [P] [US4] Lift language into `web/lib/store.tsx`: map options → BCP-47 locale, persist, and drive the store `locale` (System → `navigator.language`) so `Intl` formatters re-render. (R12, FR-017)
+- [X] T028 [US4] Web tests in `web/test/`: desktop detail shows per-owner shares; language selection drives locale formatting (behavior, not pixels). — depends T025, T027
 - [ ] T029 [US4] Validate quickstart Story 4 at ≥1024px (visual + behavior).
 
 **Checkpoint**: Desktop is *more room*, not less capability.

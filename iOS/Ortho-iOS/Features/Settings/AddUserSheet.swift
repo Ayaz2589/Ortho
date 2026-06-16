@@ -1,17 +1,41 @@
 import SwiftUI
 
-/// Modal sheet for adding a household **person** — anyone you split
-/// transactions with (partner, roommate, family). No Ortho account needed.
-/// Emits `(name, colorKey)`; the caller persists via `AppState.addPerson`.
+/// Modal sheet for adding OR editing a household **person** — anyone you
+/// split transactions with (partner, roommate, family). No Ortho account
+/// needed. Emits `(name, colorKey)`; the caller persists via
+/// `AppState.addPerson` (add) or `renamePerson` + `setPersonColor` (edit).
 /// Initial is auto-derived from the name; color picker uses `OrthoColorOption.all`.
+/// Seed `initialName` / `initialColorKey` (and a `title` / `actionLabel`) to
+/// reuse it as the edit sheet.
 struct AddUserSheet: View {
+    let title: String
+    let actionLabel: String
     let onAdd: (_ name: String, _ colorKey: String) -> Void
+    /// When set (edit mode for a removable person), a destructive Remove
+    /// action appears at the bottom of the sheet — mirroring web's person
+    /// editor which combines rename + recolor + remove.
+    let onRemove: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
 
-    @State private var name: String = ""
-    @State private var colorKey: String = OrthoColorOption.all[0].key
+    @State private var name: String
+    @State private var colorKey: String
+    @State private var showingRemoveConfirm = false
     @FocusState private var nameFocused: Bool
+
+    init(initialName: String = "",
+         initialColorKey: String = OrthoColorOption.all[0].key,
+         title: String = "Add person",
+         actionLabel: String = "Add",
+         onRemove: (() -> Void)? = nil,
+         onAdd: @escaping (_ name: String, _ colorKey: String) -> Void) {
+        _name = State(initialValue: initialName)
+        _colorKey = State(initialValue: initialColorKey)
+        self.title = title
+        self.actionLabel = actionLabel
+        self.onRemove = onRemove
+        self.onAdd = onAdd
+    }
 
     private var derivedInitial: String { Self.deriveInitial(from: name) }
     private var canAdd: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -54,17 +78,39 @@ struct AddUserSheet: View {
                         .padding(.horizontal, 24)
                         .padding(.bottom, 24)
                         .frame(maxWidth: 320, alignment: .leading)
+
+                    if onRemove != nil {
+                        Button { showingRemoveConfirm = true } label: {
+                            Text("Remove from household")
+                                .font(.lato(size: 17, weight: .medium))
+                                .foregroundStyle(AppTheme.destructive)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(AppTheme.surface)
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 24)
+                    }
                 }
             }
             .scrollDismissesKeyboard(.interactively)
         }
         .background(AppTheme.bg)
         .onAppear { nameFocused = true }
+        .alert("Remove \(name.trimmingCharacters(in: .whitespaces)) from this household?",
+               isPresented: $showingRemoveConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Remove", role: .destructive) { onRemove?() }
+        } message: {
+            Text("Existing transactions keep this person as the owner.")
+        }
     }
 
     private var sheetNav: some View {
         ZStack {
-            Text("Add person")
+            Text(title)
                 .font(.lato(size: 17, weight: .semibold))
                 .foregroundStyle(AppTheme.text)
                 .tracking(-0.3)
@@ -75,7 +121,7 @@ struct AddUserSheet: View {
                     .foregroundStyle(AppTheme.accent)
                     .buttonStyle(.plain)
                 Spacer()
-                Button("Add") {
+                Button(actionLabel) {
                     onAdd(name.trimmingCharacters(in: .whitespaces), colorKey)
                 }
                 .font(.lato(size: 17, weight: .semibold))

@@ -245,6 +245,20 @@ final class AppState {
         }
     }
 
+    /// Recolor an existing person. Optimistic local update with rollback on
+    /// failure, persisted via `updatePerson` — mirrors `renamePerson`. Web
+    /// has the same capability (setPersonColor); this brings iOS to parity.
+    func setPersonColor(_ id: Person.ID, colorKey: String) {
+        guard let idx = people.firstIndex(where: { $0.id == id }) else { return }
+        let previous = people[idx]
+        people[idx].colorKey = colorKey
+        let updated = people[idx]
+        Task {
+            do { try await householdsAPI.updatePerson(updated) }
+            catch { await MainActor.run { if let i = people.firstIndex(where: { $0.id == id }) { people[i] = previous }; dataError = error.localizedDescription } }
+        }
+    }
+
     func removePerson(_ id: Person.ID) {
         guard let idx = people.firstIndex(where: { $0.id == id }) else { return }
         let previous = people[idx]

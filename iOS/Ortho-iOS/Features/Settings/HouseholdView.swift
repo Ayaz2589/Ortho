@@ -11,6 +11,7 @@ struct HouseholdView: View {
     @State private var showingRenameHousehold = false
     @State private var pendingHouseholdName: String = ""
     @State private var showingAddPerson = false
+    @State private var editingUser: User?
 
     private var householdMembers: [User] { appState.householdMembers }
 
@@ -33,9 +34,7 @@ struct HouseholdView: View {
                             user: u,
                             detail: detail(for: u),
                             isCurrentUser: u.id == appState.currentPersonID,
-                            onRemove: canRemove(u)
-                                ? { appState.removePerson(u.id) }
-                                : nil
+                            onTap: { editingUser = u }
                         )
                         if idx < householdMembers.count - 1 {
                             RowSeparator(density: .comfortable)
@@ -62,6 +61,27 @@ struct HouseholdView: View {
             AddUserSheet { name, colorKey in
                 appState.addPerson(name: name, colorKey: colorKey)
                 showingAddPerson = false
+            }
+            .presentationDetents([.large])
+            .presentationBackground(AppTheme.bg)
+        }
+        .sheet(item: $editingUser) { u in
+            // Tap a person to edit name + color (and remove, if removable) —
+            // reuses AddUserSheet seeded from the existing person, bringing
+            // iOS to parity with web's person editor.
+            AddUserSheet(
+                initialName: u.name,
+                initialColorKey: u.colorKey,
+                title: "Edit person",
+                actionLabel: "Save",
+                onRemove: canRemove(u) ? {
+                    appState.removePerson(u.id)
+                    editingUser = nil
+                } : nil
+            ) { name, colorKey in
+                appState.renamePerson(u.id, name: name)
+                appState.setPersonColor(u.id, colorKey: colorKey)
+                editingUser = nil
             }
             .presentationDetents([.large])
             .presentationBackground(AppTheme.bg)
