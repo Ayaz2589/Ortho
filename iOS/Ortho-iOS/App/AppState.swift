@@ -187,10 +187,12 @@ final class AppState {
 
     // MARK: - User helpers
 
-    /// Resolve an owner (person) id to its display fields; returns
-    /// `User.placeholder` when the person no longer exists.
+    /// Resolve an owner id to its display fields. People are the real owners;
+    /// `users` is a fallback for the sample/demo state (which seeds `users`,
+    /// not `people`). Returns `User.placeholder` when neither matches.
     func user(_ id: User.ID) -> User {
         if let p = people.first(where: { $0.id == id }) { return p.asUser }
+        if let u = users.first(where: { $0.id == id }) { return u }
         return .placeholder
     }
 
@@ -702,9 +704,11 @@ final class AppState {
     }
 
     /// The household's people as display Users (active, in order) — the one
-    /// owner list used by pickers and the dashboard.
+    /// owner list used by pickers and the dashboard. Falls back to `users` for
+    /// the sample/demo state, which seeds `users` rather than `people`.
     var householdMembers: [User] {
-        activePeople.map { $0.asUser }
+        let active = activePeople
+        return active.isEmpty ? users : active.map { $0.asUser }
     }
 
     // MARK: - Properties
