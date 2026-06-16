@@ -67,7 +67,7 @@ P3) on a vector-locked shared core + schema migration. Paths relative to repo ro
 - [x] T018 [P] [US1] iOS `Features/Transactions/AddTransactionSheet.swift`: remove the scope segmented + dual pools; one owner pool; split editor (even/%/value, per-owner fields, reconcile, even default); save cents.
 - [x] T019 [P] [US1] iOS `Features/Transactions/TransactionDetailSheet.swift`: per-owner cents + %.
 - [x] T020 [US1] Remove scope from the filter UI both platforms: web `components/web/FilterPanel.tsx`, `ActiveFilterChips.tsx`, `lib/useTransactionFilters.ts`, `app/(app)/transactions/page.tsx` (scope segmented + chip + option); iOS `FilterSheet.swift` + `TransactionsView.swift` (scope pill). Update `web/test/transactions-filter-ui.test.tsx`.
-- [ ] T021 [US1] Run `cd web && npm test` (splits + parity + split-editor + updated filter UI green) + `npx tsc --noEmit`; iOS build. Fix until green.
+- [x] T021 [US1] Run `cd web && npm test` (splits + parity + split-editor + updated filter UI green) + `npx tsc --noEmit`; iOS build. Fix until green.
 
 **Checkpoint**: flexible splitting end-to-end on both platforms. **MVP.**
 
@@ -80,12 +80,12 @@ P3) on a vector-locked shared core + schema migration. Paths relative to repo ro
 **Independent Test**: $100 split $70/$30 → dashboard shows $70/$30; per-person sums equal the household total exactly.
 
 ### Tests (write first) ⚠️
-- [ ] T022 [P] [US2] `web/test/per-owner-breakdown.test.tsx`: per-person amounts come from cents shares; reconcile to the period total; expandable rows show each share.
+- [x] T022 [P] [US2] `web/test/per-owner-breakdown.test.tsx`: per-person amounts come from cents shares; reconcile to the period total; expandable rows show each share.
 
 ### Implementation
 - [x] T023 [US2] `web/components/dashboard/PerOwnerBreakdownCard.tsx`: compute per-person from cents shares (drop percent-weighting).
 - [x] T024 [P] [US2] iOS `Features/Dashboard/Widgets/PerOwnerBreakdownCard.swift`: per-person from cents shares.
-- [ ] T025 [US2] Confirm the aggregate RPC (`household_owner_spend`) + store aggregation return cents per person; verify dashboard numbers. `npm test` + tsc; iOS build.
+- [x] T025 [US2] Confirm the aggregate RPC (`household_owner_spend`) + store aggregation return cents per person; verify dashboard numbers. `npm test` + tsc; iOS build.
 
 **Checkpoint**: dashboard reflects exact per-person shares on both platforms.
 
@@ -98,22 +98,22 @@ P3) on a vector-locked shared core + schema migration. Paths relative to repo ro
 **Independent Test**: add "Jordan" → selectable owner; rename → reflected; remove → unselectable but history intact.
 
 ### Tests (write first) ⚠️
-- [ ] T026 [P] [US3] `web/test/household-people.test.tsx`: add a person → appears in the owner picker; rename → reflected; remove → not selectable, existing transaction still renders the name.
+- [x] T026 [P] [US3] `web/test/household-people.test.tsx`: add a person → appears in the owner picker; rename → reflected; remove → not selectable, existing transaction still renders the name.
 
 ### Implementation
 - [x] T027 [US3] `web/app/(app)/settings/household/page.tsx` + `web/components/settings/HouseholdDrawer.tsx`: one people list (add by name + color, rename person, rename household, soft-remove person). Drop the local-vs-member distinction + scope footnotes.
 - [x] T028 [P] [US3] iOS `Features/Settings/HouseholdView.swift` + `AddUserSheet.swift`: unified people list (add/rename/remove), no local/member split.
-- [ ] T029 [US3] Verify `npm test` + tsc; iOS build; quickstart §4 passes.
+- [x] T029 [US3] Verify `npm test` + tsc; iOS build; quickstart §4 passes.
 
 **Checkpoint**: full feature on both platforms.
 
 ---
 
 ## Phase 6: Polish & Cross-Cutting
-- [ ] T030 [P] Update `shared/test-vectors/README.md`: add `transaction-splits.json` (inputs/outputs, regen note) and note `transaction-filters.json` no longer has a scope dimension.
-- [ ] T031 [P] Accessibility pass on the split editor + people list (labelled numeric fields, focus-visible ring, ≥44px targets, AA, `prefers-reduced-motion`) per constitution V.
-- [ ] T032 Migration verification: apply the migration to a copy of existing data and run the quickstart §6 sum-check — every transaction `household_id NOT NULL`, ≥1 share row, `Σ shares = amount_cents`; prior single-participant txns owned full by creator's person.
-- [ ] T033 Run full `quickstart.md` (web §1–5, + `tsc --noEmit` + `npm test` green; `lib/` coverage incl. `splits.ts` at threshold); confirm scope is gone everywhere (SC-004); document the iOS Xcode steps. Mark tasks complete in this file.
+- [x] T030 [P] Update `shared/test-vectors/README.md`: add `transaction-splits.json` (inputs/outputs, regen note) and note `transaction-filters.json` no longer has a scope dimension.
+- [x] T031 [P] Accessibility pass on the split editor + people list (labelled numeric fields, focus-visible ring, ≥44px targets, AA, `prefers-reduced-motion`) per constitution V.
+- [x] T032 Migration verification: apply the migration to a copy of existing data and run the quickstart §6 sum-check — every transaction `household_id NOT NULL`, ≥1 share row, `Σ shares = amount_cents`; prior single-participant txns owned full by creator's person.
+- [x] T033 Run full `quickstart.md` (web §1–5, + `tsc --noEmit` + `npm test` green; `lib/` coverage incl. `splits.ts` at threshold); confirm scope is gone everywhere (SC-004); document the iOS Xcode steps. Mark tasks complete in this file.
 
 ---
 

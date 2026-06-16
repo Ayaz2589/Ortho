@@ -138,6 +138,38 @@ describe('store (AppStateProvider)', () => {
     expect(h.mock!.callsFor('transactions').some((c) => c.op === 'delete')).toBe(true)
   })
 
+  it('spentBy returns each person\'s exact cents share, reconciling to the total', async () => {
+    await renderStore()
+    // The seeded shared expense ($50.00) is split 50/50 across the two people.
+    const start = new Date('2026-06-01T00:00:00Z')
+    const end = new Date('2026-07-01T00:00:00Z')
+    expect(api.spentBy('u-me', start, end)).toBe(2500)
+    expect(api.spentBy('u-jordan', start, end)).toBe(2500)
+    expect(api.spentBy('u-me', start, end) + api.spentBy('u-jordan', start, end)).toBe(5000)
+  })
+
+  it('exposes active people, currentPersonId, and household members', async () => {
+    await renderStore()
+    expect(api.people.map((p) => p.id).sort()).toEqual(['u-jordan', 'u-me'])
+    expect(api.currentPersonId).toBe('u-me') // the person linked to the auth user
+    expect(api.householdMembers.map((u) => u.name).sort()).toEqual(['Jordan', 'Maya'])
+  })
+
+  it('addPerson / renamePerson / removePerson mutate the people list + persist', async () => {
+    await renderStore()
+    await act(async () => { api.addPerson('Sam', 'sky') })
+    await waitFor(() => expect(api.people.some((p) => p.name === 'Sam')).toBe(true))
+    const sam = api.people.find((p) => p.name === 'Sam')!
+    expect(h.mock!.callsFor('household_people').some((c) => c.op === 'insert')).toBe(true)
+
+    await act(async () => { api.renamePerson(sam.id, 'Samuel') })
+    await waitFor(() => expect(api.people.find((p) => p.id === sam.id)?.name).toBe('Samuel'))
+
+    await act(async () => { api.removePerson(sam.id) })
+    // Soft-remove drops the person from the active list the store exposes.
+    await waitFor(() => expect(api.people.some((p) => p.id === sam.id)).toBe(false))
+  })
+
   it('defaults a share-less transaction to its creator\'s person on load', async () => {
     h.mock = makeSupabaseMock({
       authUser: { id: 'u-me', email: 'maya@example.com' },
