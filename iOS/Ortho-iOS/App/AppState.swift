@@ -64,27 +64,10 @@ final class AppState {
     var rentalPayments: [RentalPayment]
     var budgets: [Budget]
 
-    /// Device-only people the user can split personal expenses with —
-    /// e.g. a partner, roommate, or family member without an Ortho
-    /// account. Persisted to `UserDefaults` (JSON) and never written
-    /// to Supabase. See `LocalUser` for the invariant that local users
-    /// can only participate in personal-scope transactions.
-    var localUsers: [LocalUser] = [] {
-        didSet { persistLocalUsers() }
-    }
-    private static let localUsersKey = "localUsers"
-
-    /// On-device owners/splits for PERSONAL transactions, which may include
-    /// local (device-only) users. Never written to Supabase — merged back in
-    /// after a server reload. Keyed by transaction id. Mirrors the web app.
-    struct PersonalShare: Codable {
-        var ownerIDs: [User.ID]
-        var splits: [User.ID: Decimal]?
-    }
-    var personalShares: [Transaction.ID: PersonalShare] = [:] {
-        didSet { persistPersonalShares() }
-    }
-    private static let personalSharesKey = "personalShares"
+    /// The household's people — the account holder plus anyone added by name.
+    /// Owners of transactions are People. Server-backed (`household_people`);
+    /// no on-device persistence. Includes soft-removed people for history.
+    var people: [Person] = []
 
     // MARK: - Identity + active household
 
@@ -200,24 +183,14 @@ final class AppState {
         if fetchedAt > 0 {
             self.ratesLastFetched = Date(timeIntervalSince1970: fetchedAt)
         }
-
-        // Restore persisted local users (last — has a `didSet` that touches
-        // `self`, which the compiler only allows once init is complete).
-        loadLocalUsers()
-        loadPersonalShares()
     }
 
     // MARK: - User helpers
 
-    /// Resolve a user id; returns `User.placeholder` when no longer present
-    /// (e.g. user was deleted after the transaction was logged).
+    /// Resolve an owner (person) id to its display fields; returns
+    /// `User.placeholder` when the person no longer exists.
     func user(_ id: User.ID) -> User {
-        // Lookup order: Supabase users first (the common case), then
-        // local users via the rendering shim (`LocalUser.asUser`).
-        // Personal-scope transactions can have LocalUser owner IDs;
-        // without this fallback they'd render as the placeholder.
-        if let u = users.first(where: { $0.id == id }) { return u }
-        if let lu = localUsers.first(where: { $0.id == id }) { return lu.asUser }
+        if let p = people.first(where: { $0.id == id }) { return p.asUser }
         return .placeholder
     }
 
@@ -225,76 +198,62 @@ final class AppState {
         users.append(user)
     }
 
-    /// Owners selectable in a personal-scope transaction's picker: the
-    /// current Supabase user plus every local user on this device.
-    var personalParticipants: [User] {
-        var out: [User] = []
-        if let me = users.first(where: { $0.id == currentUserID }) { out.append(me) }
-        out.append(contentsOf: localUsers.map { $0.asUser })
-        return out
+    /// Active (non-removed) people, in display order.
+    var activePeople: [Person] {
+        people.filter { $0.removedAt == nil }.sorted { $0.sortOrder < $1.sortOrder }
     }
 
-    // MARK: - Local users (device-only, never synced)
-
-    func addLocalUser(_ u: LocalUser) {
-        localUsers.append(u)
+    /// The current account holder's Person id (default transaction owner).
+    var currentPersonID: Person.ID? {
+        people.first { $0.linkedUserID == currentUserID }?.id
     }
 
-    func removeLocalUser(_ id: LocalUser.ID) {
-        localUsers.removeAll { $0.id == id }
-    }
+    // MARK: - People (household members)
 
-    private func persistLocalUsers() {
-        guard let data = try? JSONEncoder().encode(localUsers) else { return }
-        UserDefaults.standard.set(data, forKey: Self.localUsersKey)
-    }
-
-    private func loadLocalUsers() {
-        guard let data = UserDefaults.standard.data(forKey: Self.localUsersKey),
-              let decoded = try? JSONDecoder().decode([LocalUser].self, from: data)
-        else { return }
-        // Assign directly — `didSet` re-encodes which is wasteful on launch,
-        // but it's a small array so the cost is negligible. Could short-
-        // circuit if it becomes hot.
-        localUsers = decoded
-    }
-
-    private func persistPersonalShares() {
-        guard let data = try? JSONEncoder().encode(personalShares) else { return }
-        UserDefaults.standard.set(data, forKey: Self.personalSharesKey)
-    }
-
-    private func loadPersonalShares() {
-        guard let data = UserDefaults.standard.data(forKey: Self.personalSharesKey),
-              let decoded = try? JSONDecoder().decode([Transaction.ID: PersonalShare].self, from: data)
-        else { return }
-        personalShares = decoded
-    }
-
-    /// Persist (or clear) a transaction's on-device owners/splits. Personal
-    /// transactions store their participants locally; others clear any stale entry.
-    private func savePersonalShare(_ tx: Transaction) {
-        if tx.scope == .personal {
-            personalShares[tx.id] = PersonalShare(ownerIDs: Array(tx.ownerIDs), splits: tx.splits)
-        } else {
-            personalShares[tx.id] = nil
+    func addPerson(name: String, colorKey: String = "sage") {
+        guard let householdID = currentHouseholdID else { return }
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let person = Person(
+            householdID: householdID,
+            name: trimmed,
+            initial: String(trimmed.prefix(1)).uppercased(),
+            colorKey: colorKey,
+            linkedUserID: nil,
+            sortOrder: people.count
+        )
+        people.append(person)
+        guard !isInDemoMode else { return }
+        Task {
+            do { try await householdsAPI.createPerson(person) }
+            catch { await MainActor.run { people.removeAll { $0.id == person.id }; dataError = error.localizedDescription } }
         }
     }
 
-    /// Merge on-device personal owners/splits back into freshly-fetched rows,
-    /// and forget shares whose transaction no longer exists.
-    private func applyPersonalShares(to fetched: [Transaction]) -> [Transaction] {
-        let merged = fetched.map { tx -> Transaction in
-            guard tx.scope == .personal,
-                  let s = personalShares[tx.id], !s.ownerIDs.isEmpty else { return tx }
-            var copy = tx
-            copy.ownerIDs = Set(s.ownerIDs)
-            copy.splits = s.splits
-            return copy
+    func renamePerson(_ id: Person.ID, name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty, let idx = people.firstIndex(where: { $0.id == id }) else { return }
+        let previous = people[idx]
+        people[idx].name = trimmed
+        people[idx].initial = String(trimmed.prefix(1)).uppercased()
+        guard !isInDemoMode else { return }
+        let updated = people[idx]
+        Task {
+            do { try await householdsAPI.updatePerson(updated) }
+            catch { await MainActor.run { if let i = people.firstIndex(where: { $0.id == id }) { people[i] = previous }; dataError = error.localizedDescription } }
         }
-        let keep = Set(fetched.filter { $0.scope == .personal }.map(\.id))
-        personalShares = personalShares.filter { keep.contains($0.key) }
-        return merged
+    }
+
+    func removePerson(_ id: Person.ID) {
+        guard let idx = people.firstIndex(where: { $0.id == id }) else { return }
+        let previous = people[idx]
+        people[idx].removedAt = Date()
+        guard !isInDemoMode else { return }
+        let updated = people[idx]
+        Task {
+            do { try await householdsAPI.updatePerson(updated) }
+            catch { await MainActor.run { if let i = people.firstIndex(where: { $0.id == id }) { people[i] = previous }; dataError = error.localizedDescription } }
+        }
     }
 
     func resolveOwners(of tx: Transaction) -> [User] {
@@ -337,7 +296,6 @@ final class AppState {
     /// demo mode the server hop is skipped — local-only by design.
     func addTransaction(_ tx: Transaction) {
         transactions.append(tx)
-        savePersonalShare(tx)
         guard !isInDemoMode else { return }
         Task {
             do {
@@ -345,7 +303,6 @@ final class AppState {
             } catch {
                 await MainActor.run {
                     transactions.removeAll { $0.id == tx.id }
-                    personalShares[tx.id] = nil
                     dataError = error.localizedDescription
                 }
             }
@@ -358,7 +315,6 @@ final class AppState {
         guard let idx = transactions.firstIndex(where: { $0.id == tx.id }) else { return }
         let previous = transactions[idx]
         transactions[idx] = tx
-        savePersonalShare(tx)
         guard !isInDemoMode else { return }
         Task {
             do {
@@ -368,7 +324,6 @@ final class AppState {
                     if let i = transactions.firstIndex(where: { $0.id == tx.id }) {
                         transactions[i] = previous
                     }
-                    savePersonalShare(previous)
                     dataError = error.localizedDescription
                 }
             }
@@ -379,7 +334,6 @@ final class AppState {
     /// the row at the end (loses original position — acceptable for v1).
     func deleteTransaction(_ tx: Transaction) {
         transactions.removeAll { $0.id == tx.id }
-        personalShares[tx.id] = nil
         guard !isInDemoMode else { return }
         Task {
             do {
@@ -387,7 +341,6 @@ final class AppState {
             } catch {
                 await MainActor.run {
                     transactions.append(tx)
-                    savePersonalShare(tx)
                     dataError = error.localizedDescription
                 }
             }
@@ -400,7 +353,7 @@ final class AppState {
     func loadTransactionsFromServer() async {
         do {
             let fetched = try await transactionsAPI.fetch()
-            await MainActor.run { transactions = applyPersonalShares(to: fetched) }
+            await MainActor.run { transactions = fetched }
         } catch {
             await MainActor.run { dataError = error.localizedDescription }
         }
@@ -412,11 +365,29 @@ final class AppState {
     /// server" affordance.
     func loadAllFromServer() async {
         await withTaskGroup(of: Void.self) { group in
+            group.addTask { await self.loadPeopleFromServer() }
             group.addTask { await self.loadTransactionsFromServer() }
             group.addTask { await self.loadCardsFromServer() }
             group.addTask { await self.loadPropertiesFromServer() }
             group.addTask { await self.loadRentalPaymentsFromServer() }
             group.addTask { await self.loadBudgetsFromServer() }
+        }
+    }
+
+    /// Ensure the account holder has a Person row, then load the household's people.
+    func loadPeopleFromServer() async {
+        guard let householdID = currentHouseholdID else { return }
+        do {
+            let me = users.first { $0.id == currentUserID }
+            try await householdsAPI.ensureAccountPerson(householdID: householdID,
+                                                         userID: currentUserID,
+                                                         name: me?.name ?? "Me",
+                                                         initial: me?.initial ?? "M",
+                                                         colorKey: me?.colorKey ?? "sage")
+            let fetched = try await householdsAPI.fetchPeople(householdID: householdID)
+            await MainActor.run { people = fetched }
+        } catch {
+            await MainActor.run { dataError = error.localizedDescription }
         }
     }
 
@@ -427,25 +398,20 @@ final class AppState {
     /// Sum (USD cents) of this user's share of all expense transactions whose
     /// `date` falls inside the calendar month containing `referenceDate`.
     /// Solo expenses count fully; multi-owner expenses contribute
-    /// `amount × split% / 100` via `Transaction.effectiveSplits`.
+    /// Sum of this person's exact cents shares of their expenses this month.
     func monthlySpent(
-        by userID: User.ID,
+        by personID: Person.ID,
         in calendar: Calendar = .current,
         on referenceDate: Date = .now
     ) -> Int64 {
         let interval = calendar.dateInterval(of: .month, for: referenceDate)
-        let sum: Decimal = transactions.reduce(Decimal(0)) { acc, tx in
+        return transactions.reduce(Int64(0)) { acc, tx in
             guard tx.kind == .expense,
-                  tx.ownerIDs.contains(userID),
+                  tx.ownerIDs.contains(personID),
                   interval?.contains(tx.date) ?? true
             else { return acc }
-            let pct = tx.effectiveSplits[userID] ?? 0
-            return acc + (Decimal(tx.amount) * pct / 100)
+            return acc + (tx.effectiveShares[personID] ?? 0)
         }
-        var rounded = sum
-        var src = sum
-        NSDecimalRound(&rounded, &src, 0, .plain)
-        return NSDecimalNumber(decimal: rounded).int64Value
     }
 
     // MARK: - Dashboard aggregations
@@ -487,22 +453,15 @@ final class AppState {
         }
     }
 
-    /// Sum of a single user's share of expense transactions inside the
-    /// given interval. Uses `Transaction.effectiveSplits` like
-    /// `monthlySpent(by:)`.
-    func spent(by userID: User.ID, in interval: DateInterval) -> Int64 {
-        let sum: Decimal = transactions.reduce(Decimal(0)) { acc, tx in
+    /// Sum of a single person's exact cents shares of expenses in the interval.
+    func spent(by personID: Person.ID, in interval: DateInterval) -> Int64 {
+        transactions.reduce(Int64(0)) { acc, tx in
             guard tx.kind == .expense,
-                  tx.ownerIDs.contains(userID),
+                  tx.ownerIDs.contains(personID),
                   interval.contains(tx.date)
             else { return acc }
-            let pct = tx.effectiveSplits[userID] ?? 0
-            return acc + (Decimal(tx.amount) * pct / 100)
+            return acc + (tx.effectiveShares[personID] ?? 0)
         }
-        var rounded = sum
-        var src = sum
-        NSDecimalRound(&rounded, &src, 0, .plain)
-        return NSDecimalNumber(decimal: rounded).int64Value
     }
 
     /// Per-day expense totals (USD cents) for the trailing `days` days
@@ -554,27 +513,18 @@ final class AppState {
             .sorted { $0.date > $1.date }
     }
 
-    /// Each expense in the interval that `userID` participated in, paired
-    /// with their split-weighted share in USD cents. Sorted by date,
-    /// newest first. Powers the expanded transaction list in the
-    /// Dashboard's per-owner breakdown.
-    func expenseShares(by userID: User.ID,
+    /// Each expense in the interval that `personID` owns, paired with their
+    /// exact cents share. Sorted by date, newest first. Powers the expanded
+    /// transaction list in the Dashboard's per-owner breakdown.
+    func expenseShares(by personID: Person.ID,
                        in interval: DateInterval)
         -> [(transaction: Transaction, shareCents: Int64)]
     {
         transactions
             .filter { $0.kind == .expense
-                      && $0.ownerIDs.contains(userID)
+                      && $0.ownerIDs.contains(personID)
                       && interval.contains($0.date) }
-            .map { tx in
-                let pct = tx.effectiveSplits[userID] ?? 0
-                let raw = Decimal(tx.amount) * pct / 100
-                var rounded = raw
-                var src = raw
-                NSDecimalRound(&rounded, &src, 0, .plain)
-                let share = NSDecimalNumber(decimal: rounded).int64Value
-                return (transaction: tx, shareCents: share)
-            }
+            .map { tx in (transaction: tx, shareCents: tx.effectiveShares[personID] ?? 0) }
             .sorted { $0.transaction.date > $1.transaction.date }
     }
 
@@ -751,12 +701,10 @@ final class AppState {
         }
     }
 
-    /// Members of the active household, resolved against `users` in the
-    /// household's `memberIDs` order. Falls back to all users when there's no
-    /// active household (defensive — shouldn't happen in MVP).
+    /// The household's people as display Users (active, in order) — the one
+    /// owner list used by pickers and the dashboard.
     var householdMembers: [User] {
-        guard let h = currentHousehold else { return users }
-        return h.memberIDs.compactMap { id in users.first { $0.id == id } }
+        activePeople.map { $0.asUser }
     }
 
     // MARK: - Properties

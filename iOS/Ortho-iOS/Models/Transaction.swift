@@ -12,23 +12,14 @@ struct Transaction: Identifiable, Hashable, Codable {
     /// USD cents. Always non-negative; direction comes from `kind`.
     /// e.g. $5.75 → 575; $2,850.00 → 285_000.
     var amount: Int64
-    /// Personal vs shared. Invariant: `scope == .personal ⇔ householdID == nil`
-    /// (enforced server-side by a CHECK constraint; clients should preserve
-    /// it when constructing transactions).
-    var scope: TransactionScope
-    /// One or more participants. For `.shared` transactions these are
-    /// **Ortho users only** (each id equals an `auth.uid()`); local-user
-    /// splits stay device-only and never appear here. For `.personal`
-    /// transactions this is `[createdBy]` by convention — the queries
-    /// (`monthlySpent`, `expenseShares`) read from this set.
-    var ownerIDs: Set<User.ID>
-    /// Explicit per-owner share of the amount, as percentages summing to 100.
-    /// `nil` means split evenly across `ownerIDs`. Only meaningful for
-    /// multi-owner shared transactions.
-    var splits: [User.ID: Decimal]?
+    /// One or more owners (household People). Derived from `transaction_shares`.
+    var ownerIDs: Set<Person.ID>
+    /// Per-owner share of the amount, in cents. The values sum to `amount`.
+    /// Materialized from `transaction_shares` rows server-side.
+    var shares: [Person.ID: Int64]
     var source: String
     var date: Date
-    /// `nil` for personal; non-nil for shared.
+    /// The household this transaction belongs to.
     var householdID: Household.ID?
     /// Auth UUID of the user who created the transaction. Drives the
     /// "creator can update/delete" RLS policy.
@@ -39,9 +30,8 @@ struct Transaction: Identifiable, Hashable, Codable {
          category: TransactionCategory,
          kind: TransactionKind,
          amount: Int64,
-         scope: TransactionScope,
-         ownerIDs: Set<User.ID>,
-         splits: [User.ID: Decimal]? = nil,
+         ownerIDs: Set<Person.ID>,
+         shares: [Person.ID: Int64] = [:],
          source: String,
          date: Date,
          householdID: Household.ID? = nil,
@@ -51,9 +41,8 @@ struct Transaction: Identifiable, Hashable, Codable {
         self.category = category
         self.kind = kind
         self.amount = amount
-        self.scope = scope
         self.ownerIDs = ownerIDs
-        self.splits = splits
+        self.shares = shares
         self.source = source
         self.date = date
         self.householdID = householdID
@@ -62,35 +51,59 @@ struct Transaction: Identifiable, Hashable, Codable {
 
     var isIncome: Bool { kind == .income }
 
-    /// Resolved per-owner percentages — always returns a value, deriving an
-    /// even split when `splits` is `nil`. Returns an empty dict for empty
-    /// `ownerIDs` (shouldn't happen by invariant, but safe).
-    var effectiveSplits: [User.ID: Decimal] {
-        if let splits, !splits.isEmpty { return splits }
-        let count = ownerIDs.count
-        guard count > 0 else { return [:] }
-        let per = Decimal(100) / Decimal(count)
-        return Dictionary(uniqueKeysWithValues: ownerIDs.map { ($0, per) })
+    /// Deterministic owner order (for even-split remainder placement).
+    private var orderedOwners: [Person.ID] { ownerIDs.sorted { $0.uuidString < $1.uuidString } }
+
+    /// Per-owner cents — the stored shares, or an even split when absent.
+    var effectiveShares: [Person.ID: Int64] {
+        if !shares.isEmpty { return shares }
+        return computeShares(amount, orderedOwners, .even)
     }
 
-    /// CodingKeys map the schema-backed fields to snake_case so cached JSON
-    /// matches what the server emits. `ownerIDs` / `splits` don't have a
-    /// matching column on `transactions` (they live in `transaction_shares`
-    /// server-side) — they encode here for the local cache only; the data
-    /// layer materializes them from `transaction_shares` rows on fetch.
+    /// `ownerIDs` / `shares` live in `transaction_shares` server-side; they are
+    /// encoded here for the local cache and the shared filter vectors. `shares`
+    /// uses a uuid-string-keyed object so it round-trips with the TS vectors.
     enum CodingKeys: String, CodingKey {
-        case id
-        case merchant
-        case category
-        case kind
+        case id, merchant, category, kind
         case amount       = "amount_cents"
-        case scope
         case ownerIDs     = "owner_ids"
-        case splits
-        case source
-        case date
+        case shares
+        case source, date
         case householdID  = "household_id"
         case createdBy    = "created_by"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        merchant = try c.decode(String.self, forKey: .merchant)
+        category = try c.decode(TransactionCategory.self, forKey: .category)
+        kind = try c.decode(TransactionKind.self, forKey: .kind)
+        amount = try c.decode(Int64.self, forKey: .amount)
+        ownerIDs = try c.decodeIfPresent(Set<UUID>.self, forKey: .ownerIDs) ?? []
+        let raw = try c.decodeIfPresent([String: Int64].self, forKey: .shares) ?? [:]
+        shares = Dictionary(uniqueKeysWithValues: raw.compactMap { key, value in
+            UUID(uuidString: key).map { ($0, value) }
+        })
+        source = try c.decode(String.self, forKey: .source)
+        date = try c.decode(Date.self, forKey: .date)
+        householdID = try c.decodeIfPresent(UUID.self, forKey: .householdID)
+        createdBy = try c.decode(UUID.self, forKey: .createdBy)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(merchant, forKey: .merchant)
+        try c.encode(category, forKey: .category)
+        try c.encode(kind, forKey: .kind)
+        try c.encode(amount, forKey: .amount)
+        try c.encode(ownerIDs, forKey: .ownerIDs)
+        try c.encode(Dictionary(uniqueKeysWithValues: shares.map { ($0.key.uuidString, $0.value) }), forKey: .shares)
+        try c.encode(source, forKey: .source)
+        try c.encode(date, forKey: .date)
+        try c.encodeIfPresent(householdID, forKey: .householdID)
+        try c.encode(createdBy, forKey: .createdBy)
     }
 }
 
@@ -121,8 +134,8 @@ extension Transaction {
             category: category,
             kind: kind,
             amount: cents,
-            scope: householdID == nil ? .personal : .shared,
             ownerIDs: ownerIDs,
+            shares: computeShares(cents, ownerIDs.sorted { $0.uuidString < $1.uuidString }, .even),
             source: source,
             date: date,
             householdID: householdID,

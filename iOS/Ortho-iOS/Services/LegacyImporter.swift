@@ -89,16 +89,19 @@ struct LegacyImporter {
         //   - currentHouseholdID is needed for Card creation (cards are
         //     household-scoped server-side), even though transactions stay
         //     personal (householdID = nil).
-        let ayazID = appState.currentUserID
+        let createdBy = appState.currentUserID
         guard let householdID = appState.currentHouseholdID else {
             throw ImportError.householdNotReady("no active household.")
         }
-        guard let tasnuvaLocal = Self.findTasnuva(in: appState.localUsers) else {
+        guard let ayazID = appState.currentPersonID else {
+            throw ImportError.householdNotReady("your person isn't ready yet.")
+        }
+        guard let tasnuva = Self.findTasnuva(in: appState.people) else {
             throw ImportError.householdNotReady(
-                "Tasnuva isn't on this device yet. Go to Settings → Household → Add user to create her as a Local user, then re-run."
+                "Tasnuva isn't in your household yet. Go to Settings → Household → Add person, then re-run."
             )
         }
-        let tasnuvaID = tasnuvaLocal.id
+        let tasnuvaID = tasnuva.id
 
         var report = Report()
 
@@ -131,6 +134,8 @@ struct LegacyImporter {
                 let tx = try Self.buildTransaction(
                     from: expense,
                     kind: .expense,
+                    householdID: householdID,
+                    createdBy: createdBy,
                     ayazID: ayazID,
                     tasnuvaID: tasnuvaID
                 )
@@ -152,6 +157,8 @@ struct LegacyImporter {
             do {
                 let tx = try Self.buildIncomeTransaction(
                     from: income,
+                    householdID: householdID,
+                    createdBy: createdBy,
                     ayazID: ayazID,
                     tasnuvaID: tasnuvaID
                 )
@@ -179,14 +186,15 @@ struct LegacyImporter {
     private static func buildTransaction(
         from row: LegacyDataset.Expense,
         kind: TransactionKind,
-        ayazID: User.ID,
-        tasnuvaID: User.ID
+        householdID: Household.ID,
+        createdBy: User.ID,
+        ayazID: Person.ID,
+        tasnuvaID: Person.ID
     ) throws -> Transaction {
         let allocation = row.allocation ?? []
 
-        // Resolve named owners into IDs. "House" → distribute across both;
-        // unknown names → drop the slice.
-        let expand: (String, Decimal) -> [(User.ID, Decimal)] = { name, pct in
+        // Resolve named owners into person ids. "House" → both; unknown → drop.
+        let expand: (String, Decimal) -> [(Person.ID, Decimal)] = { name, pct in
             switch name {
             case "Ayaz Uddin":    return [(ayazID, pct)]
             case "Tasnuva Ahmed": return [(tasnuvaID, pct)]
@@ -197,73 +205,58 @@ struct LegacyImporter {
 
         // Build a percentage dict from the allocation array, falling back
         // to `row.owner` when allocation is absent or empty.
-        var splitsDict: [User.ID: Decimal] = [:]
+        var percentDict: [Person.ID: Decimal] = [:]
         for entry in allocation {
             for (id, pct) in expand(entry.owner, entry.percent) {
-                splitsDict[id, default: 0] += pct
+                percentDict[id, default: 0] += pct
             }
         }
-        if splitsDict.isEmpty, let ownerName = row.owner {
+        if percentDict.isEmpty, let ownerName = row.owner {
             for (id, pct) in expand(ownerName, 100) {
-                splitsDict[id, default: 0] += pct
+                percentDict[id, default: 0] += pct
             }
         }
-        guard !splitsDict.isEmpty else {
+        guard !percentDict.isEmpty else {
             throw MappingError(reason: "no resolvable owner (owner=\(row.owner ?? "nil"))")
         }
 
-        // Everything personal. ownerIDs reflects participants; splits is
-        // nil for single-owner or "evenish" multi-owner (so AppState's
-        // even-split derivation kicks in), populated otherwise.
-        let ownerIDs = Set(splitsDict.keys)
-        let splits: [User.ID: Decimal]?
-        if splitsDict.count == 1 {
-            splits = nil
-        } else {
-            let target = Decimal(100) / Decimal(splitsDict.count)
-            let tolerance = Decimal(string: "0.01")!
-            let isEvenish = splitsDict.values.allSatisfy { value in
-                let diff = value - target
-                let absDiff = diff < 0 ? -diff : diff
-                return absDiff < tolerance
-            }
-            splits = isEvenish ? nil : splitsDict
-        }
+        let amountCents = Self.toCents(row.amount)
+        let owners = Array(percentDict.keys)
+        let split: SplitInput<Person.ID> = owners.count == 1
+            ? .even
+            : .percent(Dictionary(uniqueKeysWithValues: percentDict.map { ($0.key, NSDecimalNumber(decimal: $0.value).doubleValue) }))
+        let shares = computeShares(amountCents, owners, split)
 
         let date = try Self.parseDate(row.date)
         let category = Self.mapCategory(row.category, kind: kind)
         let source = Self.cardName(for: row.source ?? "manual")
-        let amountCents = Self.toCents(row.amount)
 
         return Transaction(
             merchant: row.description,
             category: category,
             kind: kind,
             amount: amountCents,
-            scope: .personal,
-            ownerIDs: ownerIDs,
-            splits: splits,
+            ownerIDs: Set(owners),
+            shares: shares,
             source: source,
             date: date,
-            householdID: nil,
-            createdBy: ayazID
+            householdID: householdID,
+            createdBy: createdBy
         )
     }
 
     private static func buildIncomeTransaction(
         from row: LegacyDataset.Income,
-        ayazID: User.ID,
-        tasnuvaID: User.ID
+        householdID: Household.ID,
+        createdBy: User.ID,
+        ayazID: Person.ID,
+        tasnuvaID: Person.ID
     ) throws -> Transaction {
-        let ownerIDs: Set<User.ID>
+        let owners: [Person.ID]
         switch row.owner {
-        case "Ayaz Uddin":
-            ownerIDs = [ayazID]
-        case "Tasnuva Ahmed":
-            ownerIDs = [tasnuvaID]
-        case "House":
-            // Rental income — 50/50 split between Ayaz and Tasnuva-local.
-            ownerIDs = [ayazID, tasnuvaID]
+        case "Ayaz Uddin":    owners = [ayazID]
+        case "Tasnuva Ahmed": owners = [tasnuvaID]
+        case "House":         owners = [ayazID, tasnuvaID]
         default:
             throw MappingError(reason: "unknown income owner: \(row.owner)")
         }
@@ -277,24 +270,23 @@ struct LegacyImporter {
             category: category,
             kind: .income,
             amount: amountCents,
-            scope: .personal,
-            ownerIDs: ownerIDs,
-            splits: nil,
+            ownerIDs: Set(owners),
+            shares: computeShares(amountCents, owners, .even),
             source: "Manual",
             date: date,
-            householdID: nil,
-            createdBy: ayazID
+            householdID: householdID,
+            createdBy: createdBy
         )
     }
 
-    /// Match by case-insensitive "Tasnuva" prefix; if a single LocalUser
-    /// exists, prefer it as a fallback (handles e.g. "Tasnuva Ahmed" vs
-    /// just "Tasnuva" being entered as the display name).
-    private static func findTasnuva(in localUsers: [LocalUser]) -> LocalUser? {
-        if let match = localUsers.first(where: { $0.name.lowercased().contains("tasnuva") }) {
+    /// Match by case-insensitive "Tasnuva"; if a single non-account person
+    /// exists, prefer it as a fallback.
+    private static func findTasnuva(in people: [Person]) -> Person? {
+        if let match = people.first(where: { $0.name.lowercased().contains("tasnuva") }) {
             return match
         }
-        if localUsers.count == 1 { return localUsers.first }
+        let added = people.filter { $0.linkedUserID == nil && $0.removedAt == nil }
+        if added.count == 1 { return added.first }
         return nil
     }
 

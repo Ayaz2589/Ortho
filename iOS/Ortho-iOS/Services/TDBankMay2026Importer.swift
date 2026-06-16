@@ -25,11 +25,13 @@ struct TDBankMay2026Importer {
 
     @MainActor
     static func run(appState: AppState, dryRun: Bool) async throws -> Report {
-        let ayazID = appState.currentUserID
+        let createdBy = appState.currentUserID
+        guard let ownerID = appState.currentPersonID,
+              let householdID = appState.currentHouseholdID else { return Report() }
         let api = TransactionsAPI(client: appState.supabase)
         var report = Report()
 
-        for tx in buildTransactions(ayazID: ayazID) {
+        for tx in buildTransactions(ownerID: ownerID, householdID: householdID, createdBy: createdBy) {
             if !dryRun {
                 try await api.create(tx)
                 appState.transactions.append(tx)
@@ -42,68 +44,55 @@ struct TDBankMay2026Importer {
 
     // MARK: - Transaction list
 
-    private static func buildTransactions(ayazID: User.ID) -> [Transaction] {
-        [
+    private static func buildTransactions(ownerID: Person.ID, householdID: Household.ID, createdBy: User.ID) -> [Transaction] {
+        func income(_ merchant: String, cents: Int64, date: String) -> Transaction {
+            build(merchant, category: .income, kind: .income, cents: cents, date: date, ownerID: ownerID, householdID: householdID, createdBy: createdBy)
+        }
+        func expense(_ merchant: String, category: TransactionCategory, cents: Int64, date: String) -> Transaction {
+            build(merchant, category: category, kind: .expense, cents: cents, date: date, ownerID: ownerID, householdID: householdID, createdBy: createdBy)
+        }
+        return [
             // ── Income ──────────────────────────────────────────────────────
-            income("Zelle · John Tejada",     cents: 220_000, date: "2026-05-01", ayaz: ayazID),
-            income("Zelle · Tasnuva Ahmed",   cents: 200_000, date: "2026-05-04", ayaz: ayazID),
-            income("Zelle · Taher Uddin",     cents: 210_000, date: "2026-05-04", ayaz: ayazID),
-            income("Zelle · Kathryn Neuser",  cents:  50_000, date: "2026-05-04", ayaz: ayazID),
-            income("Mobile Deposit",          cents: 280_000, date: "2026-05-04", ayaz: ayazID),
-            income("Crossterra Payroll",      cents: 417_844, date: "2026-05-15", ayaz: ayazID),
+            income("Zelle · John Tejada",     cents: 220_000, date: "2026-05-01"),
+            income("Zelle · Tasnuva Ahmed",   cents: 200_000, date: "2026-05-04"),
+            income("Zelle · Taher Uddin",     cents: 210_000, date: "2026-05-04"),
+            income("Zelle · Kathryn Neuser",  cents:  50_000, date: "2026-05-04"),
+            income("Mobile Deposit",          cents: 280_000, date: "2026-05-04"),
+            income("Crossterra Payroll",      cents: 417_844, date: "2026-05-15"),
 
             // ── Expenses ────────────────────────────────────────────────────
-            expense("Verizon",               category: .utilities,     cents:  8_999, date: "2026-05-04", ayaz: ayazID),
-            expense("Vuksani Plumbing",      category: .utilities,     cents: 20_000, date: "2026-05-07", ayaz: ayazID),
-            expense("Tipu Sultan",           category: .entertainment, cents:  4_142, date: "2026-05-11", ayaz: ayazID),
-            expense("ATM Withdrawal",        category: .entertainment, cents:  2_850, date: "2026-05-13", ayaz: ayazID),
-            expense("Con Edison",            category: .utilities,     cents: 28_630, date: "2026-05-22", ayaz: ayazID),
-            expense("TD Bank Fee",           category: .utilities,     cents:  2_500, date: "2026-05-22", ayaz: ayazID),
+            expense("Verizon",               category: .utilities,     cents:  8_999, date: "2026-05-04"),
+            expense("Vuksani Plumbing",      category: .utilities,     cents: 20_000, date: "2026-05-07"),
+            expense("Tipu Sultan",           category: .entertainment, cents:  4_142, date: "2026-05-11"),
+            expense("ATM Withdrawal",        category: .entertainment, cents:  2_850, date: "2026-05-13"),
+            expense("Con Edison",            category: .utilities,     cents: 28_630, date: "2026-05-22"),
+            expense("TD Bank Fee",           category: .utilities,     cents:  2_500, date: "2026-05-22"),
         ]
     }
 
-    // MARK: - Builders
+    // MARK: - Builder
 
-    private static func income(
-        _ merchant: String,
-        cents: Int64,
-        date dateStr: String,
-        ayaz ayazID: User.ID
-    ) -> Transaction {
-        Transaction(
-            merchant: merchant,
-            category: .income,
-            kind: .income,
-            amount: cents,
-            scope: .personal,
-            ownerIDs: [ayazID],
-            splits: nil,
-            source: "TD Bank",
-            date: parseDate(dateStr),
-            householdID: nil,
-            createdBy: ayazID
-        )
-    }
-
-    private static func expense(
+    private static func build(
         _ merchant: String,
         category: TransactionCategory,
+        kind: TransactionKind,
         cents: Int64,
         date dateStr: String,
-        ayaz ayazID: User.ID
+        ownerID: Person.ID,
+        householdID: Household.ID,
+        createdBy: User.ID
     ) -> Transaction {
         Transaction(
             merchant: merchant,
             category: category,
-            kind: .expense,
+            kind: kind,
             amount: cents,
-            scope: .personal,
-            ownerIDs: [ayazID],
-            splits: nil,
+            ownerIDs: [ownerID],
+            shares: [ownerID: cents],
             source: "TD Bank",
             date: parseDate(dateStr),
-            householdID: nil,
-            createdBy: ayazID
+            householdID: householdID,
+            createdBy: createdBy
         )
     }
 

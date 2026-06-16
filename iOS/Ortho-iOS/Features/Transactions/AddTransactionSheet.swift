@@ -25,8 +25,6 @@ struct AddTransactionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
 
-    /// Personal vs Shared (household) scope of the transaction being edited.
-    @State private var scope: TransactionScope
     @State private var kind: TransactionKind
     @State private var amountText: String
     /// Snapshot of `amountText` when the sheet appeared / loaded. If the user
@@ -58,7 +56,6 @@ struct AddTransactionSheet: View {
         // expected). The prefill source for non-amount fields is the same
         // shape either way; the only difference is the date.
         if let tx = editing ?? copying {
-            _scope = State(initialValue: tx.householdID == nil ? .personal : .shared)
             _kind = State(initialValue: tx.kind)
             // Amount text is filled in on appear once we can read appState's
             // currency + rate. Start blank so the first frame doesn't show a
@@ -70,15 +67,13 @@ struct AddTransactionSheet: View {
             _source = State(initialValue: tx.source)
             // Copy mode uses today; edit mode keeps the original date.
             _date = State(initialValue: editing != nil ? tx.date : .now)
-            // Pre-fill split strings from the resolved (effective) splits so
-            // they survive even when the stored `splits` is nil (even-split).
-            let resolved = tx.effectiveSplits
+            // Pre-fill split strings from the resolved cents shares as percentages.
+            let resolved = tx.effectiveShares
             let mapped = Dictionary(uniqueKeysWithValues:
-                resolved.map { ($0.key, Self.formatPercentForField($0.value)) }
+                resolved.map { ($0.key, Self.formatPercentForField(Decimal(sharePercent($0.value, of: tx.amount)))) }
             )
             _splitPercents = State(initialValue: mapped)
         } else {
-            _scope = State(initialValue: .shared)
             _kind = State(initialValue: .expense)
             _amountText = State(initialValue: "")
             _merchant = State(initialValue: "")
@@ -121,23 +116,18 @@ struct AddTransactionSheet: View {
         guard parsedAmount != nil,
               !merchant.trimmingCharacters(in: .whitespaces).isEmpty
         else { return false }
-        if scope == .shared && selectedOwners.isEmpty { return false }
+        if selectedOwners.isEmpty { return false }
         if showsSplit && !splitIsValid { return false }
         return true
     }
 
-    /// Owners offered in the picker for the current scope. Shared lists
-    /// Supabase household members; personal lists the current user plus
-    /// any device-only local users so personal expenses can be split
-    /// with non-Ortho people (roommates, partners).
+    /// The single household people list — every transaction's owners come from here.
     private var availableOwners: [User] {
-        scope == .shared ? appState.householdMembers : appState.personalParticipants
+        appState.householdMembers
     }
 
-    /// Split editor appears for any multi-owner expense, regardless of
-    /// scope — personal scope can now include local users, so a split
-    /// between you and a roommate (local) is a real case. Income with
-    /// multiple owners stays equal-split per the footer caption.
+    /// Split editor appears for any multi-owner expense. Income with multiple
+    /// owners stays equal-split per the footer caption.
     private var showsSplit: Bool {
         kind == .expense && selectedOwners.count >= 2
     }
@@ -180,7 +170,6 @@ struct AddTransactionSheet: View {
                         copyFromRecentButton
                     }
                     amountHero
-                    scopeToggle
                     directionToggle
 
                     formGroup {
@@ -255,11 +244,13 @@ struct AddTransactionSheet: View {
                 amountText = formatted
                 originalAmountText = editing != nil ? formatted : ""
             } else {
-                // Add mode: seed default owner(s) + even split + first card.
-                if scope == .personal {
-                    selectedOwners = [appState.currentUserID]
-                } else if selectedOwners.isEmpty, let first = appState.householdMembers.first {
-                    selectedOwners = [first.id]
+                // Add mode: seed the current person (or first member) + first card.
+                if selectedOwners.isEmpty {
+                    if let me = appState.currentPersonID {
+                        selectedOwners = [me]
+                    } else if let first = appState.householdMembers.first {
+                        selectedOwners = [first.id]
+                    }
                 }
                 if source.isEmpty, let firstCard = sources.first {
                     source = firstCard
@@ -281,18 +272,6 @@ struct AddTransactionSheet: View {
             resetSplitsToEven()
         }
         .onChange(of: selectedOwners) { _, _ in
-            resetSplitsToEven()
-        }
-        .onChange(of: scope) { _, newScope in
-            // Drop any owners that aren't valid for the new scope. Shared
-            // can't include local users; personal can't include other
-            // Supabase members (only you + local users). Defaults to
-            // `[currentUserID]` if everything got pruned.
-            let validIDs = Set(availableOwners.map(\.id))
-            selectedOwners = selectedOwners.intersection(validIDs)
-            if selectedOwners.isEmpty {
-                selectedOwners = [appState.currentUserID]
-            }
             resetSplitsToEven()
         }
         .sheet(isPresented: $showingCopyPicker) {
@@ -364,43 +343,12 @@ struct AddTransactionSheet: View {
     }
 
     private var footerCaption: LocalizedStringKey {
-        if scope == .personal {
-            return "Personal transactions are visible only to you. They don't appear in the household's shared list."
+        if selectedOwners.count >= 2 {
+            return kind == .income
+                ? "Income with multiple owners is attributed to all of them."
+                : "Split this transaction between its owners by percentage below."
         }
-        return kind == .income
-            ? "Income shows in sage on the Activity list. Selecting multiple owners attributes shared income to all of them."
-            : "Selecting multiple owners marks the transaction as shared."
-    }
-
-    private var scopeToggle: some View {
-        HStack(spacing: 4) {
-            ForEach(TransactionScope.allCases, id: \.self) { s in
-                Button {
-                    scope = s
-                } label: {
-                    Text(s == .shared ? "Shared" : "Personal")
-                        .font(.lato(size: 14, weight: .semibold))
-                        .tracking(-0.1)
-                        .foregroundStyle(scope == s ? AppTheme.text : AppTheme.text.opacity(0.58))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(scope == s ? AppTheme.surface : .clear)
-                                .shadow(color: scope == s ? .black.opacity(0.06) : .clear,
-                                        radius: 2, y: 1)
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(4)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(AppTheme.text.opacity(0.05))
-        )
-        .padding(.horizontal, 16)
-        .animation(.easeOut(duration: 0.15), value: scope)
+        return "Pick more than one owner to split this transaction."
     }
 
     // MARK: - Sheet nav
@@ -448,28 +396,24 @@ struct AddTransactionSheet: View {
                                      from: appState.currency,
                                      rate: appState.rate(for: appState.currency))
         }
-        // Owners always come straight from the picker. Personal scope's
-        // valid set is `[you] + localUsers` (enforced by `availableOwners`
-        // + the scope `onChange` that prunes); shared scope's set is the
-        // household members. Personal still gets `householdID = nil` so
-        // it's not part of any household's shared view.
-        let resolvedOwners: Set<User.ID> = selectedOwners
-        let resolvedSplits: [User.ID: Decimal]? = showsSplit ? parsedSplits : nil
-        let resolvedHousehold: Household.ID? = scope == .personal
-            ? nil
-            : appState.currentHouseholdID
+        // Owners come straight from the picker; shares are exact cents derived
+        // from the per-owner percentages (even when a single owner takes all).
+        let owners = Array(selectedOwners).sorted { $0.uuidString < $1.uuidString }
+        let split: SplitInput<Person.ID> = (showsSplit && splitIsValid)
+            ? .percent(Dictionary(uniqueKeysWithValues: parsedSplits.map { ($0.key, NSDecimalNumber(decimal: $0.value).doubleValue) }))
+            : .even
+        let shares = computeShares(cents, owners, split)
         let tx = Transaction(
             id: editing?.id ?? UUID(),
             merchant: merchant.trimmingCharacters(in: .whitespaces),
             category: kind == .income ? .income : category,
             kind: kind,
             amount: cents,
-            scope: scope,
-            ownerIDs: resolvedOwners,
-            splits: resolvedSplits,
+            ownerIDs: selectedOwners,
+            shares: shares,
             source: source,
             date: date,
-            householdID: resolvedHousehold,
+            householdID: appState.currentHouseholdID,
             createdBy: editing?.createdBy ?? appState.currentUserID
         )
         onSubmit(tx, keepOpen)
@@ -489,7 +433,6 @@ struct AddTransactionSheet: View {
         if source.kind == .expense {
             category = source.category
         }
-        scope = source.householdID == nil ? .personal : .shared
         self.source = source.source
         date = .now
 
@@ -514,17 +457,15 @@ struct AddTransactionSheet: View {
         // scope checks `[you] + local users`.
         let validIDs = Set(availableOwners.map(\.id))
         let validOwners = source.ownerIDs.intersection(validIDs)
-        selectedOwners = validOwners.isEmpty
-            ? [appState.currentUserID]
-            : validOwners
+        let fallback = appState.currentPersonID.map { Set([$0]) } ?? []
+        selectedOwners = validOwners.isEmpty ? fallback : validOwners
 
-        // Split percentages — only meaningful when source had explicit
-        // ones AND the resulting owner set is multi-member.
-        if let sourceSplits = source.splits, validOwners.count >= 2 {
+        // Split percentages — derived from the source's cents shares when the
+        // resulting owner set is multi-member.
+        if validOwners.count >= 2 {
+            let shares = source.effectiveShares
             splitPercents = Dictionary(uniqueKeysWithValues:
-                sourceSplits
-                    .filter { validOwners.contains($0.key) }
-                    .map { ($0.key, Self.formatPercentForField($0.value)) }
+                validOwners.map { ($0, Self.formatPercentForField(Decimal(sharePercent(shares[$0] ?? 0, of: source.amount)))) }
             )
         } else {
             resetSplitsToEven()

@@ -99,20 +99,20 @@ struct TransactionsAPI {
 
     // MARK: - Internals
 
+    /// One cents-share row per owner (always materialized; values sum to the amount).
     private static func shareRows(for tx: Transaction) -> [TransactionShareRow] {
-        guard tx.scope == .shared else { return [] }
-        return tx.effectiveSplits.map { (userID, percent) in
+        let shares = tx.effectiveShares
+        return tx.ownerIDs.map { personID in
             TransactionShareRow(
                 transactionID: tx.id,
-                userID: userID,
-                percent: percent
+                personID: personID,
+                amountCents: shares[personID] ?? 0
             )
         }
     }
 
-    /// Stitch transaction rows back together with their shares to produce
-    /// Swift `Transaction` values. For `.personal` rows the owner set is
-    /// `[createdBy]` by convention (no `transaction_shares` rows exist).
+    /// Stitch transaction rows back together with their cents shares. A row with
+    /// no shares falls back to its creator's person at the full amount.
     private static func rehydrate(
         rows: [TransactionRecord],
         shares: [TransactionShareRow]
@@ -120,17 +120,14 @@ struct TransactionsAPI {
         let sharesByTx = Dictionary(grouping: shares, by: \.transactionID)
         return rows.map { row in
             let txShares = sharesByTx[row.id] ?? []
-            let ownerIDs: Set<User.ID>
-            let splits: [User.ID: Decimal]?
-            switch row.scope {
-            case .personal:
+            let ownerIDs: Set<Person.ID>
+            let shareMap: [Person.ID: Int64]
+            if txShares.isEmpty {
                 ownerIDs = [row.createdBy]
-                splits = nil
-            case .shared:
-                ownerIDs = Set(txShares.map(\.userID))
-                splits = txShares.isEmpty
-                    ? nil
-                    : Dictionary(uniqueKeysWithValues: txShares.map { ($0.userID, $0.percent) })
+                shareMap = [row.createdBy: row.amountCents]
+            } else {
+                ownerIDs = Set(txShares.map(\.personID))
+                shareMap = Dictionary(uniqueKeysWithValues: txShares.map { ($0.personID, $0.amountCents) })
             }
             return Transaction(
                 id: row.id,
@@ -138,9 +135,8 @@ struct TransactionsAPI {
                 category: row.category,
                 kind: row.kind,
                 amount: row.amountCents,
-                scope: row.scope,
                 ownerIDs: ownerIDs,
-                splits: splits,
+                shares: shareMap,
                 source: row.source,
                 date: row.date,
                 householdID: row.householdID,
@@ -161,7 +157,6 @@ private struct TransactionRecord: Codable {
     let merchant: String
     let category: TransactionCategory
     let kind: TransactionKind
-    let scope: TransactionScope
     let amountCents: Int64
     let source: String
     let date: Date
@@ -174,7 +169,6 @@ private struct TransactionRecord: Codable {
             merchant: tx.merchant,
             category: tx.category,
             kind: tx.kind,
-            scope: tx.scope,
             amountCents: tx.amount,
             source: tx.source,
             date: tx.date,
@@ -188,7 +182,6 @@ private struct TransactionRecord: Codable {
         case merchant
         case category
         case kind
-        case scope
         case amountCents = "amount_cents"
         case source
         case date
@@ -198,12 +191,12 @@ private struct TransactionRecord: Codable {
 
 private struct TransactionShareRow: Codable {
     let transactionID: UUID
-    let userID: UUID
-    let percent: Decimal
+    let personID: UUID
+    let amountCents: Int64
 
     enum CodingKeys: String, CodingKey {
         case transactionID = "transaction_id"
-        case userID = "user_id"
-        case percent
+        case personID = "person_id"
+        case amountCents = "amount_cents"
     }
 }

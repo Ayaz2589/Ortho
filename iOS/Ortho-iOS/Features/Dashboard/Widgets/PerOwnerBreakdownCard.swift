@@ -90,7 +90,7 @@ struct PerOwnerBreakdownCard: View {
                 Text(entry.user.name)
                     .font(.lato(size: 15, weight: .medium))
                     .foregroundStyle(AppTheme.text)
-                if entry.user.id == appState.currentUserID {
+                if entry.user.id == appState.currentPersonID {
                     Text("(you)")
                         .font(.lato(size: 12))
                         .foregroundStyle(AppTheme.text3)
@@ -169,8 +169,7 @@ struct PerOwnerBreakdownCard: View {
                         .foregroundStyle(AppTheme.text)
                         .lineLimit(1)
                     if tx.ownerIDs.count > 1 {
-                        let pct = tx.effectiveSplits[userID] ?? 0
-                        Text(percentLabel(pct))
+                        Text("\(sharePercent(tx.effectiveShares[userID] ?? 0, of: tx.amount))%")
                             .font(.lato(size: 10, weight: .semibold))
                             .foregroundStyle(AppTheme.text.opacity(0.7))
                             .padding(.horizontal, 6)

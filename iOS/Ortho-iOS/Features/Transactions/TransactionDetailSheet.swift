@@ -144,7 +144,7 @@ struct TransactionDetailSheet: View {
 
     private func ownersCard(for tx: Transaction) -> some View {
         let owners = appState.resolveOwners(of: tx)
-        let splits = tx.effectiveSplits
+        let shares = tx.effectiveShares
         return formGroup {
             ForEach(Array(owners.enumerated()), id: \.element.id) { idx, u in
                 HStack(spacing: 12) {
@@ -155,10 +155,15 @@ struct TransactionDetailSheet: View {
                         .foregroundStyle(AppTheme.text)
                     Spacer()
                     if owners.count > 1 {
-                        Text("\(formatPercent(splits[u.id] ?? 0))%")
-                            .font(.lato(size: 17, weight: .medium))
-                            .monospacedDigit()
-                            .foregroundStyle(AppTheme.text.opacity(0.58))
+                        HStack(spacing: 6) {
+                            Text(appState.formatMoney(shares[u.id] ?? 0))
+                                .font(.lato(size: 17, weight: .medium))
+                                .monospacedDigit()
+                                .foregroundStyle(AppTheme.text)
+                            Text("\(sharePercent(shares[u.id] ?? 0, of: tx.amount))%")
+                                .font(.lato(size: 13))
+                                .foregroundStyle(AppTheme.text.opacity(0.5))
+                        }
                     }
                 }
                 .padding(.horizontal, 16)
@@ -248,12 +253,9 @@ struct TransactionDetailSheet: View {
         return f
     }
 
-    /// Nav title that surfaces the scope ("Personal expense", "Expense · Home").
+    /// Nav title — "Expense · Home" / "Income · Home".
     private func navTitle(for tx: Transaction) -> String {
         let kindLabel = Localizer.tr(tx.kind == .income ? "Income" : "Expense")
-        if tx.householdID == nil {
-            return "Personal \(kindLabel.lowercased())"
-        }
         if let h = appState.households.first(where: { $0.id == tx.householdID }) {
             return "\(kindLabel) · \(h.name)"
         }

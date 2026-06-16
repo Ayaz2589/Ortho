@@ -83,6 +83,57 @@ struct HouseholdsAPI {
             .eq("user_id", value: userID)
             .execute()
     }
+
+    // MARK: - People (household_people)
+
+    func fetchPeople(householdID: Household.ID) async throws -> [Person] {
+        try await client
+            .from("household_people")
+            .select()
+            .eq("household_id", value: householdID)
+            .order("sort_order", ascending: true)
+            .execute()
+            .value
+    }
+
+    /// Insert the account holder's Person row if one isn't already linked.
+    func ensureAccountPerson(
+        householdID: Household.ID,
+        userID: User.ID,
+        name: String,
+        initial: String,
+        colorKey: String
+    ) async throws {
+        let existing: [Person] = try await client
+            .from("household_people")
+            .select("id")
+            .eq("household_id", value: householdID)
+            .eq("linked_user_id", value: userID)
+            .execute()
+            .value
+        guard existing.isEmpty else { return }
+        let person = Person(
+            householdID: householdID,
+            name: name,
+            initial: initial,
+            colorKey: colorKey,
+            linkedUserID: userID,
+            sortOrder: 0
+        )
+        try await client.from("household_people").insert(person).execute()
+    }
+
+    func createPerson(_ person: Person) async throws {
+        try await client.from("household_people").insert(person).execute()
+    }
+
+    func updatePerson(_ person: Person) async throws {
+        try await client
+            .from("household_people")
+            .update(person)
+            .eq("id", value: person.id)
+            .execute()
+    }
 }
 
 // MARK: - DTOs
