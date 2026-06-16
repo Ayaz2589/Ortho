@@ -10,20 +10,19 @@ import type { TransactionCategory } from '@/lib/types'
  * ADDITIVE / not yet wired: the dashboard widgets still compute these locally so
  * the app keeps working before the migration is applied. Cut-over (per widget,
  * once the migration is live):
- *   - PerOwnerBreakdownCard:  spentBy(...) per member  → fetchOwnerSpend()
+ *   - PerOwnerBreakdownCard:  spentBy(...) per person  → fetchOwnerSpend()
  *   - SpendByCategoryCard:    category sums            → fetchCategoryTotals()
  *   - MonthSummaryCard:       income/expense/net       → fetchMonthSummary()
  *   - DailySpendTrendCard:    daily buckets            → fetchDailyExpense()
  *
- * Scope: these cover a household's SHARED transactions only (the unambiguous,
- * RLS-clean aggregate). Personal transactions stay a client concern. All values
- * are USD cents; convert for display on the client.
+ * These cover the whole household ledger (spec 007 removed personal/shared
+ * scope). All values are USD cents; convert for display on the client.
  */
 
 const iso = (d: Date) => d.toISOString()
 
 export interface OwnerSpendRow {
-  user_id: string
+  person_id: string
   cents: number
 }
 export async function fetchOwnerSpend(
