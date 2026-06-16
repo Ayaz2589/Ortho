@@ -50,14 +50,21 @@ alter table public.transaction_shares add column person_id    uuid references pu
 alter table public.transaction_shares add column amount_cents bigint check (amount_cents >= 0);
 
 -- 2a. Map existing (shared) percent rows to the linked person + rounded cents.
+-- (Comma-join with all correlations in WHERE — a JOIN's ON clause may not
+-- reference the UPDATE target table `s` in Postgres.)
 update public.transaction_shares s
    set person_id    = hp.id,
        amount_cents = round(t.amount_cents * s.percent / 100.0)::bigint
-  from public.transactions t
-  join public.household_people hp
-    on hp.household_id = t.household_id
-   and hp.linked_user_id = s.user_id
- where s.transaction_id = t.id;
+  from public.transactions t, public.household_people hp
+ where s.transaction_id = t.id
+   and hp.household_id = t.household_id
+   and hp.linked_user_id = s.user_id;
+
+-- Loosen the legacy shape (PK on user_id + NOT NULLs) so 2b can insert
+-- person-only rows. The columns are dropped entirely in 2d.
+alter table public.transaction_shares drop constraint transaction_shares_pkey;
+alter table public.transaction_shares alter column user_id drop not null;
+alter table public.transaction_shares alter column percent drop not null;
 
 -- 2b. Transactions with no share rows (personal + shared single-owner): one
 --     full-amount row owned by the creator's person.
@@ -72,6 +79,10 @@ select t.id,
  )
  -- the creator's person must be in the transaction's household
  and hp.household_id = coalesce(t.household_id, hp.household_id);
+
+-- Drop any shares whose user_id didn't map to a person (orphans, e.g. a since-
+-- removed member). The reconcile below redistributes their amount to the rest.
+delete from public.transaction_shares where person_id is null;
 
 -- 2c. Reconcile rounding so each transaction's shares sum to its amount: assign
 --     any difference to the lowest-sort_order person (the deterministic "first
@@ -99,8 +110,7 @@ update public.transaction_shares s
    and s.person_id = fo.person_id
    and d.delta <> 0;
 
--- 2d. Finalize the new shape.
-alter table public.transaction_shares drop constraint transaction_shares_pkey;
+-- 2d. Finalize the new shape (the legacy PK was already dropped above).
 alter table public.transaction_shares drop column percent;
 alter table public.transaction_shares drop column user_id;
 alter table public.transaction_shares alter column person_id    set not null;
@@ -112,6 +122,10 @@ create index transaction_shares_person_idx on public.transaction_shares (person_
 -- 3. transactions -> drop scope, household_id NOT NULL
 -- ============================================================================
 
+-- Drop the scope↔household invariant first so personal rows can take a
+-- household_id during backfill.
+alter table public.transactions drop constraint scope_matches_household;
+
 -- Personal rows had household_id null: attribute to the creator's household.
 update public.transactions t
    set household_id = (
@@ -121,7 +135,15 @@ update public.transactions t
    )
  where t.household_id is null;
 
-alter table public.transactions drop constraint scope_matches_household;
+-- The old RLS policies (on both tables) reference `scope`, so they must be
+-- dropped before the column can be removed.
+drop policy transactions_select on public.transactions;
+drop policy transactions_insert on public.transactions;
+drop policy transactions_update on public.transactions;
+drop policy transactions_delete on public.transactions;
+drop policy transaction_shares_select on public.transaction_shares;
+drop policy transaction_shares_write  on public.transaction_shares;
+
 alter table public.transactions drop column scope;
 alter table public.transactions alter column household_id set not null;
 
@@ -130,11 +152,6 @@ drop type transaction_scope;
 -- ============================================================================
 -- 4. RLS rewrite — household membership only (no scope branches)
 -- ============================================================================
-
-drop policy transactions_select on public.transactions;
-drop policy transactions_insert on public.transactions;
-drop policy transactions_update on public.transactions;
-drop policy transactions_delete on public.transactions;
 
 create policy transactions_select on public.transactions
   for select using (public.is_household_member(household_id));
@@ -157,9 +174,6 @@ create policy transactions_delete on public.transactions
   for delete using (
     created_by = auth.uid() or public.is_household_owner(household_id)
   );
-
-drop policy transaction_shares_select on public.transaction_shares;
-drop policy transaction_shares_write  on public.transaction_shares;
 
 create policy transaction_shares_select on public.transaction_shares
   for select using (
