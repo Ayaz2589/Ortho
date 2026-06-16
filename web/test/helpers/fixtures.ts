@@ -3,9 +3,9 @@ import type {
   Household,
   Transaction,
   TransactionCategory,
-  TransactionScope,
   TransactionKind,
 } from '@/lib/types'
+import { computeShares } from '@/lib/splits'
 
 let seq = 0
 const nextId = (p: string) => `${p}-${++seq}`
@@ -33,25 +33,24 @@ export function makeHousehold(overrides: Partial<Household> = {}): Household {
 }
 
 export function makeTx(overrides: Partial<Transaction> = {}): Transaction {
-  const scope: TransactionScope = overrides.scope ?? 'shared'
   const kind: TransactionKind = overrides.kind ?? 'expense'
   const category: TransactionCategory = overrides.category ?? (kind === 'income' ? 'income' : 'groceries')
   const owner_ids = overrides.owner_ids ?? ['u-me']
+  const amount_cents = overrides.amount_cents ?? 1000
   return {
     id: overrides.id ?? nextId('tx'),
-    household_id: overrides.household_id ?? (scope === 'personal' ? null : 'hh-1'),
+    household_id: overrides.household_id ?? 'hh-1',
     merchant: overrides.merchant ?? 'Whole Foods',
     category,
     kind,
-    scope,
-    amount_cents: overrides.amount_cents ?? 1000,
+    amount_cents,
     source: overrides.source ?? 'Checking',
     date: overrides.date ?? '2026-06-12T12:00:00.000Z',
     created_by: overrides.created_by ?? owner_ids[0] ?? 'u-me',
     created_at: overrides.created_at ?? '2026-06-12T12:00:00.000Z',
     updated_at: overrides.updated_at ?? '2026-06-12T12:00:00.000Z',
     owner_ids,
-    splits: overrides.splits ?? null,
+    shares: overrides.shares ?? computeShares(amount_cents, owner_ids, { method: 'even' }),
     ...overrides,
   }
 }

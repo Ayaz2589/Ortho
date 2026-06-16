@@ -52,11 +52,10 @@ function mock(result: { data: unknown; error: unknown } = { data: [], error: nul
 
 const baseTx: Transaction = {
   id: 't1',
-  household_id: null,
+  household_id: 'h1',
   merchant: 'Verizon',
   category: 'utilities',
   kind: 'expense',
-  scope: 'personal',
   amount_cents: 8999,
   source: 'TD Bank',
   date: '2026-05-04T12:00:00.000Z',
@@ -64,32 +63,32 @@ const baseTx: Transaction = {
   created_at: '',
   updated_at: '',
   owner_ids: ['u1'],
-  splits: null,
+  shares: { u1: 8999 },
 }
-const sharedTx: Transaction = { ...baseTx, scope: 'shared', household_id: 'h1', owner_ids: ['u1', 'u2'], splits: { u1: 70, u2: 30 } }
+const sharedTx: Transaction = { ...baseTx, owner_ids: ['u1', 'u2'], shares: { u1: 6000, u2: 2999 } }
 
 describe('getOne', () => {
   it('returns null when the row is absent (not found / RLS-hidden)', async () => {
     const { supabase } = mockTables({ transactions: { data: null, error: null } })
     expect(await getOne(supabase, 'missing')).toBeNull()
   })
-  it('rehydrates owner_ids/splits from transaction_shares when shared', async () => {
+  it('rehydrates owner_ids/shares from transaction_shares (cents per person)', async () => {
     const { supabase } = mockTables({
-      transactions: { data: { ...sharedTx, owner_ids: [], splits: null }, error: null },
-      transaction_shares: { data: [{ user_id: 'u1', percent: 70 }, { user_id: 'u2', percent: 30 }], error: null },
+      transactions: { data: { ...sharedTx, owner_ids: [], shares: {} }, error: null },
+      transaction_shares: { data: [{ person_id: 'u1', amount_cents: 6000 }, { person_id: 'u2', amount_cents: 2999 }], error: null },
     })
     const tx = await getOne(supabase, 't1')
     expect(tx?.owner_ids).toEqual(['u1', 'u2'])
-    expect(tx?.splits).toEqual({ u1: 70, u2: 30 })
+    expect(tx?.shares).toEqual({ u1: 6000, u2: 2999 })
   })
-  it('defaults owners to the creator when there are no shares', async () => {
+  it('defaults owner to the creator (full amount) when there are no shares', async () => {
     const { supabase } = mockTables({
-      transactions: { data: { ...baseTx, owner_ids: [], splits: null }, error: null },
+      transactions: { data: { ...baseTx, owner_ids: [], shares: {} }, error: null },
       transaction_shares: { data: [], error: null },
     })
     const tx = await getOne(supabase, 't1')
     expect(tx?.owner_ids).toEqual(['u1'])
-    expect(tx?.splits).toBeNull()
+    expect(tx?.shares).toEqual({ u1: 8999 })
   })
   it('throws on a DB error', async () => {
     const { supabase } = mockTables({ transactions: { data: null, error: { message: 'boom' } } })
@@ -123,36 +122,36 @@ describe('listTransactions', () => {
 })
 
 describe('createOne', () => {
-  it('inserts the txRecord and no shares for a personal transaction', async () => {
+  it('inserts the txRecord and a materialized share for a single-owner transaction', async () => {
     const { supabase, calls } = mock({ data: null, error: null })
     await createOne(supabase, baseTx)
     expect(calls).toContainEqual(['from', 'transactions'])
-    expect(calls.filter((c) => c[0] === 'insert')).toHaveLength(1)
-    expect(calls).not.toContainEqual(['from', 'transaction_shares'])
+    expect(calls).toContainEqual(['from', 'transaction_shares'])
+    expect(calls.filter((c) => c[0] === 'insert')).toHaveLength(2) // tx row + 1 share
   })
-  it('inserts shares for a shared transaction', async () => {
+  it('inserts one share per owner for a multi-owner transaction', async () => {
     const { supabase, calls } = mock({ data: null, error: null })
     await createOne(supabase, sharedTx)
     expect(calls).toContainEqual(['from', 'transaction_shares'])
-    expect(calls.filter((c) => c[0] === 'insert')).toHaveLength(2)
+    expect(calls.filter((c) => c[0] === 'insert')).toHaveLength(2) // tx row + share-rows array
   })
 })
 
 describe('updateOne', () => {
-  it('updates by id, then rewrites shares (delete + insert) for shared', async () => {
+  it('updates by id, then rewrites shares (delete + insert)', async () => {
     const { supabase, calls } = mock({ data: null, error: null })
     await updateOne(supabase, sharedTx)
-    expect(calls).toContainEqual(['update', expect.objectContaining({ id: 't1', scope: 'shared' })])
+    expect(calls).toContainEqual(['update', expect.objectContaining({ id: 't1' })])
     expect(calls).toContainEqual(['eq', 'id', 't1'])
     expect(calls).toContainEqual(['delete'])
     expect(calls).toContainEqual(['eq', 'transaction_id', 't1'])
     expect(calls.filter((c) => c[0] === 'insert')).toHaveLength(1)
   })
-  it('a personal update deletes shares and inserts none', async () => {
+  it('a single-owner update deletes then re-inserts one share', async () => {
     const { supabase, calls } = mock({ data: null, error: null })
     await updateOne(supabase, baseTx)
     expect(calls).toContainEqual(['delete'])
-    expect(calls.filter((c) => c[0] === 'insert')).toHaveLength(0)
+    expect(calls.filter((c) => c[0] === 'insert')).toHaveLength(1)
   })
 })
 

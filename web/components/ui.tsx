@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { paletteFor } from '@/lib/categories'
-import type { User, LocalUser } from '@/lib/types'
+import type { User } from '@/lib/types'
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
   return (
@@ -33,7 +33,7 @@ export function Avatar({
   user,
   size = 38,
 }: {
-  user: User | LocalUser
+  user: User
   size?: number
 }) {
   const p = paletteFor(user.color_key)

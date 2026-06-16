@@ -5,7 +5,8 @@ import { ChevronDown } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { Card, SectionLabel } from '@/components/ui'
 import { paletteFor } from '@/lib/categories'
-import { effectiveSplits, shortDate } from '@/lib/format'
+import { effectiveShares, shortDate } from '@/lib/format'
+import { sharePercent } from '@/lib/splits'
 import type { Transaction, User } from '@/lib/types'
 import { longLabel, type DashboardRange, type Interval } from './range'
 
@@ -18,7 +19,7 @@ export function PerOwnerBreakdownCard({
   range: DashboardRange
   interval: Interval
 }) {
-  const { householdMembers, spentBy, currentUserId, transactions, formatMoney, locale } =
+  const { householdMembers, spentBy, currentPersonId, transactions, formatMoney, locale } =
     useApp()
   const [expanded, setExpanded] = useState<string | null>(null)
 
@@ -64,7 +65,7 @@ export function PerOwnerBreakdownCard({
                     <span className="text-[15px] font-normal text-text">
                       {entry.user.name}
                     </span>
-                    {entry.user.id === currentUserId && (
+                    {entry.user.id === currentPersonId && (
                       <span className="text-xs text-text-3">(you)</span>
                     )}
                     <span className="ml-auto text-[15px] font-normal tabular-nums text-text">
@@ -127,9 +128,8 @@ function ExpandedShares({
       (t) => t.kind === 'expense' && inRange(t.date) && t.owner_ids.includes(user.id)
     )
     .map((tx) => {
-      const splits = effectiveSplits(tx)
-      const pct = splits[user.id] ?? 0
-      return { tx, share: Math.round((tx.amount_cents * pct) / 100), pct }
+      const share = effectiveShares(tx)[user.id] ?? 0
+      return { tx, share, pct: sharePercent(share, tx.amount_cents) }
     })
 
   const shown = shares.slice(0, MAX_ROWS)

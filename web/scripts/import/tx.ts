@@ -10,9 +10,10 @@ import { getOne, listTransactions, createOne, updateOne, deleteOne } from './db/
 import { parseFilters, CATEGORY_LIST } from './engine/filters'
 import { renderTable, renderDetail } from './engine/render'
 import { validateAmount, validateMerchant, validateCategory, parseDay, todayISO } from './engine/validate'
-import { evenSplit, validateCustomSplit } from './engine/split'
+import { validateCustomSplit } from './engine/split'
+import { computeShares, type SplitInput } from '../../lib/splits'
 import { parseFlags, flagStr as str, type Flags } from './engine/args'
-import type { Transaction, TransactionCategory, TransactionKind, TransactionScope, User } from '../../lib/types'
+import type { Transaction, TransactionCategory, TransactionKind, Person } from '../../lib/types'
 
 function die(code: number, msg: string): never {
   console.error(msg)
@@ -37,39 +38,37 @@ function asKind(s: string): TransactionKind {
   if (s !== 'expense' && s !== 'income') die(1, `invalid kind: ${s} (expense|income)`)
   return s
 }
-function asScope(s: string): TransactionScope {
-  if (s !== 'personal' && s !== 'shared') die(1, `invalid scope: ${s} (personal|shared)`)
-  return s
-}
 
-/** Interactive owner + split picker for shared transactions. */
+/** Interactive owner + split picker. Returns owners (person ids) and the
+ *  resolved cents shares (even by default, or operator percentages). */
 async function pickOwnersAndSplit(
   rl: readline.Interface,
-  members: User[],
-  fallbackOwnerId: string
-): Promise<{ ownerIds: string[]; splits: Record<string, number> | null }> {
-  members.forEach((u, i) => console.log(`  ${i + 1}. ${u.name}`))
+  people: Person[],
+  fallbackOwnerId: string,
+  amountCents: number
+): Promise<{ ownerIds: string[]; shares: Record<string, number> }> {
+  people.forEach((u, i) => console.log(`  ${i + 1}. ${u.name}`))
   const sel = await rl.question('Owners (comma-separated numbers): ')
   let ownerIds = sel
     .split(',')
-    .map((s) => members[Number(s.trim()) - 1]?.id)
+    .map((s) => people[Number(s.trim()) - 1]?.id)
     .filter((x): x is string => Boolean(x))
   if (ownerIds.length === 0) ownerIds = [fallbackOwnerId]
 
-  let splits: Record<string, number> | null = null
+  let split: SplitInput = { method: 'even' }
   if (ownerIds.length >= 2) {
-    console.log(`Even split = ${JSON.stringify(evenSplit(ownerIds))}; leave blank for even.`)
+    console.log(`Even split = ${JSON.stringify(computeShares(amountCents, ownerIds, { method: 'even' }))} cents; leave blank for even.`)
     const raw = await rl.question(`Percentages for ${ownerIds.join(', ')} (e.g. 70 30): `)
     if (raw.trim()) {
       const nums = raw.trim().split(/[\s,]+/).map(Number)
-      const custom: Record<string, number> = {}
-      ownerIds.forEach((id, i) => (custom[id] = nums[i]))
-      const v = validateCustomSplit(custom, ownerIds)
+      const percents: Record<string, number> = {}
+      ownerIds.forEach((id, i) => (percents[id] = nums[i]))
+      const v = validateCustomSplit(percents, ownerIds)
       if (!v.ok) die(1, v.error)
-      splits = custom
+      split = { method: 'percent', percents }
     }
   }
-  return { ownerIds, splits }
+  return { ownerIds, shares: computeShares(amountCents, ownerIds, split) }
 }
 
 async function cmdList(flags: Flags, rl: readline.Interface): Promise<void> {
@@ -80,7 +79,6 @@ async function cmdList(flags: Flags, rl: readline.Interface): Promise<void> {
       month: str(flags.month),
       category: str(flags.category),
       source: str(flags.source),
-      scope: str(flags.scope),
       kind: str(flags.kind),
       limit: str(flags.limit),
     })
@@ -102,7 +100,6 @@ async function cmdAdd(flags: Flags, rl: readline.Interface): Promise<void> {
     : kind === 'income'
       ? 'income'
       : 'entertainment'
-  let scope: TransactionScope = asScope(str(flags.scope) ?? 'personal')
   const dateISO = str(flags.date) ? parseDay(str(flags.date)!) : todayISO(new Date())
   const source = str(flags.source) ?? ''
 
@@ -115,30 +112,28 @@ async function cmdAdd(flags: Flags, rl: readline.Interface): Promise<void> {
     console.log(`Admin: created_by = ${users[0].name}`)
   }
 
-  let ownerIds = [createdBy]
-  let splits: Record<string, number> | null = null
-  let householdId: string | null = null
-  if (scope === 'shared') {
-    const household = await resolveHousehold(supabase, createdBy)
-    if (!household.household || household.members.length < 2) die(1, 'shared requires a household with 2+ members')
-    const picked = await pickOwnersAndSplit(rl, household.members, createdBy)
-    if (picked.ownerIds.length < 2) {
-      scope = 'personal' // one owner ⇒ personal
-    } else {
-      householdId = household.household.id
+  const household = await resolveHousehold(supabase, createdBy)
+  if (!household.household) die(1, 'no household found for this user')
+  const defaultOwnerId = household.defaultPersonId || createdBy
+
+  let ownerIds = [defaultOwnerId]
+  let shares = computeShares(amountCents, ownerIds, { method: 'even' })
+  if (household.people.length >= 2) {
+    const yn = (await rl.question('Split with other household people? [y/N] ')).trim()
+    if (/^y/i.test(yn)) {
+      const picked = await pickOwnersAndSplit(rl, household.people, defaultOwnerId, amountCents)
       ownerIds = picked.ownerIds
-      splits = picked.splits
+      shares = picked.shares
     }
   }
 
   const now = new Date().toISOString()
   const tx: Transaction = {
     id: randomUUID(),
-    household_id: scope === 'shared' ? householdId : null,
+    household_id: household.household.id,
     merchant,
     category,
     kind,
-    scope,
     amount_cents: amountCents,
     source,
     date: dateISO,
@@ -146,7 +141,7 @@ async function cmdAdd(flags: Flags, rl: readline.Interface): Promise<void> {
     created_at: now,
     updated_at: now,
     owner_ids: ownerIds,
-    splits,
+    shares,
   }
   console.log('\n' + renderDetail(tx))
   const ans = await rl.question('\nCreate this transaction? [y/N] ')
@@ -181,28 +176,18 @@ async function cmdEdit(flags: Flags, rl: readline.Interface): Promise<void> {
   if (d) tx.date = parseDay(d)
   const k = (await rl.question(`Kind [${tx.kind}]: `)).trim()
   if (k) tx.kind = asKind(k)
-  const s = (await rl.question(`Scope [${tx.scope}] (personal/shared): `)).trim()
-  if (s) tx.scope = asScope(s)
 
-  if (tx.scope === 'shared') {
-    const household = await resolveHousehold(supabase, tx.created_by)
-    if (!household.household || household.members.length < 2) die(1, 'shared requires a household with 2+ members')
-    tx.household_id = household.household.id
-    const keep =
-      tx.owner_ids.length >= 2 ? (await rl.question(`Keep current owners (${tx.owner_ids.join(', ')})? [Y/n] `)).trim() : 'n'
-    if (/^n/i.test(keep) || tx.owner_ids.length < 2) {
-      const picked = await pickOwnersAndSplit(rl, household.members, tx.created_by)
-      tx.owner_ids = picked.ownerIds
-      tx.splits = picked.splits
-    }
-    if (tx.owner_ids.length < 2) {
-      tx.scope = 'personal'
-    }
-  }
-  if (tx.scope === 'personal') {
-    tx.household_id = null
-    tx.owner_ids = [tx.created_by]
-    tx.splits = null
+  const household = await resolveHousehold(supabase, tx.created_by)
+  if (household.household) tx.household_id = household.household.id
+  const defaultOwnerId = household.defaultPersonId || tx.created_by
+  const reassign = (await rl.question(`Owners [${tx.owner_ids.join(', ')}] — reassign? [y/N] `)).trim()
+  if (/^y/i.test(reassign) && household.people.length) {
+    const picked = await pickOwnersAndSplit(rl, household.people, defaultOwnerId, tx.amount_cents)
+    tx.owner_ids = picked.ownerIds
+    tx.shares = picked.shares
+  } else {
+    // Re-derive an even split so shares always sum to the (possibly edited) amount.
+    tx.shares = computeShares(tx.amount_cents, tx.owner_ids, { method: 'even' })
   }
   tx.updated_at = new Date().toISOString()
 

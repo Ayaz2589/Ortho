@@ -7,7 +7,8 @@ import { currencySymbol, fractionDigits } from '@/lib/finance/currency'
 import { groupByDay, dayLabel } from '@/lib/format'
 import { parseMoney, DatePicker } from '@/components/inputs'
 import { Avatar } from '@/components/ui'
-import type { Transaction, TransactionCategory, TransactionScope, TransactionKind } from '@/lib/types'
+import { computeShares, validateSplit, type SplitInput, type SplitMethod } from '@/lib/splits'
+import type { Transaction, TransactionCategory, TransactionKind } from '@/lib/types'
 import { Seg, CatTile, SourceDot } from './kit'
 
 const INCOME_SOURCES = ['ACH · Checking', 'ACH · Joint', 'Wire']
@@ -45,6 +46,13 @@ function Row({ label, children, first = false }: { label: string; children: Reac
 }
 
 /** Shared form state + submit for the New/Edit transaction surfaces (modal + drawer). */
+/** Is this transaction's stored split just an even one? (for inferring the editor mode) */
+function isEvenSplit(tx: Transaction): boolean {
+  if (tx.owner_ids.length < 2) return true
+  const even = computeShares(tx.amount_cents, tx.owner_ids, { method: 'even' })
+  return tx.owner_ids.every((id) => (tx.shares[id] ?? 0) === even[id])
+}
+
 export function useTxForm({ editing, copying }: { editing?: Transaction | null; copying?: Transaction | null }) {
   const {
     currency,
@@ -52,8 +60,8 @@ export function useTxForm({ editing, copying }: { editing?: Transaction | null; 
     cards,
     currentHousehold,
     currentUserId,
+    currentPersonId,
     householdMembers,
-    personalParticipants,
     addTransaction,
     updateTransaction,
   } = useApp()
@@ -62,75 +70,100 @@ export function useTxForm({ editing, copying }: { editing?: Transaction | null; 
   const r = rate(currency)
   const src = editing ?? copying ?? null
   const initialKind: TransactionKind = src?.kind ?? 'expense'
-  const initialScope: TransactionScope = src ? src.scope : 'shared'
+  const defaultOwner = currentPersonId || householdMembers[0]?.id || currentUserId
 
   const [direction, setDirection] = useState<TransactionKind>(initialKind)
-  const [scope, setScope] = useState<TransactionScope>(initialScope)
   const [amount, setAmount] = useState(src ? centsToDisplay(src.amount_cents, r, fd) : '')
   const [merchant, setMerchant] = useState(src?.merchant ?? '')
   const [category, setCategory] = useState<TransactionCategory>(
     src && src.kind === 'expense' ? src.category : 'groceries'
   )
-  const [owners, setOwners] = useState<string[]>(src ? src.owner_ids : [currentUserId])
+  const [owners, setOwners] = useState<string[]>(src && src.owner_ids.length ? src.owner_ids : [defaultOwner])
   const expenseSources = useMemo(() => cards.map((c) => c.name), [cards])
   const [source, setSource] = useState(
     src?.source ?? (initialKind === 'income' ? INCOME_SOURCES[0] : expenseSources[0] ?? '')
   )
   const [date, setDate] = useState((editing?.date ?? new Date().toISOString()).slice(0, 10))
 
+  // Split editor: method + per-owner text input (percentage or display-currency
+  // amount). Even by default; a custom stored split loads as a value split.
+  const [splitMethod, setSplitMethod] = useState<SplitMethod>(src && !isEvenSplit(src) ? 'value' : 'even')
+  const [splitText, setSplitText] = useState<Record<string, string>>(() => {
+    if (src && src.owner_ids.length >= 2 && !isEvenSplit(src)) {
+      const t: Record<string, string> = {}
+      for (const id of src.owner_ids) t[id] = centsToDisplay(src.shares[id] ?? 0, r, fd)
+      return t
+    }
+    return {}
+  })
+
   const isIncome = direction === 'income'
-  const availableOwners = scope === 'personal' ? personalParticipants : householdMembers
   const sources = isIncome ? INCOME_SOURCES : expenseSources
   const cents = parseMoney(amount, currency, r)
-  const canSave = !!cents && cents > 0 && merchant.trim() !== '' && owners.length > 0
+
+  function buildSplit(): SplitInput {
+    if (owners.length < 2 || splitMethod === 'even') return { method: 'even' }
+    if (splitMethod === 'percent') {
+      const percents: Record<string, number> = {}
+      for (const id of owners) percents[id] = Number(splitText[id] ?? '') || 0
+      return { method: 'percent', percents }
+    }
+    const values: Record<string, number> = {}
+    for (const id of owners) values[id] = parseMoney(splitText[id] ?? '', currency, r) ?? 0
+    return { method: 'value', values }
+  }
+
+  const splitInput = buildSplit()
+  const shares = cents ? computeShares(cents, owners, splitInput) : {}
+  const splitValidation = cents ? validateSplit(cents, owners, splitInput) : ({ ok: true } as const)
+  const splitOk = owners.length < 2 || splitValidation.ok
+  const splitReason = splitValidation.ok ? null : splitValidation.reason
+
+  const canSave = !!cents && cents > 0 && merchant.trim() !== '' && owners.length > 0 && splitOk
 
   function setDir(d: TransactionKind) {
     setDirection(d)
     if (d === 'income') setSource((s) => (INCOME_SOURCES.includes(s) ? s : INCOME_SOURCES[0]))
     else setSource((s) => (expenseSources.includes(s) ? s : expenseSources[0] ?? ''))
   }
-  function setScopeAndPrune(s: TransactionScope) {
-    setScope(s)
-    const allowed = (s === 'personal' ? personalParticipants : householdMembers).map((u) => u.id)
-    setOwners((prev) => {
-      const next = prev.filter((id) => allowed.includes(id))
-      return next.length ? next : [currentUserId]
-    })
-  }
   function toggleOwner(id: string) {
     setOwners((prev) => (prev.includes(id) ? (prev.length > 1 ? prev.filter((x) => x !== id) : prev) : [...prev, id]))
+    // Re-balance to an even default whenever the owner set changes.
+    setSplitMethod('even')
+    setSplitText({})
+  }
+  function setSplit(id: string, v: string) {
+    setSplitText((prev) => ({ ...prev, [id]: v }))
   }
 
   // Copy values from an existing transaction into the form (keeps today's date).
   function loadFrom(tx: Transaction) {
     setDir(tx.kind)
-    setScopeAndPrune(tx.scope)
     setAmount(centsToDisplay(tx.amount_cents, r, fd))
     setMerchant(tx.merchant)
     setCategory(tx.kind === 'expense' ? tx.category : 'groceries')
-    setOwners(tx.owner_ids.length ? tx.owner_ids : [currentUserId])
+    setOwners(tx.owner_ids.length ? tx.owner_ids : [defaultOwner])
     setSource(tx.source)
+    setSplitMethod('even')
+    setSplitText({})
   }
 
   function submit(): boolean {
     if (!canSave || !cents) return false
     const tx: Transaction = {
       id: editing?.id ?? crypto.randomUUID(),
-      household_id: scope === 'personal' ? null : currentHousehold?.id ?? null,
+      household_id: currentHousehold?.id ?? '',
       merchant: merchant.trim(),
       category: isIncome ? 'income' : category,
       kind: direction,
-      scope,
       amount_cents: cents,
       source,
       date: new Date(date + 'T12:00:00').toISOString(),
       created_by: editing?.created_by ?? currentUserId,
       created_at: editing?.created_at ?? new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      // Personal transactions may be split with local (device-only) users —
-      // mirrors iOS. owners is pruned to valid participants per scope.
       owner_ids: owners,
-      splits: null,
+      shares: computeShares(cents, owners, splitInput),
     }
     if (editing) updateTransaction(tx)
     else addTransaction(tx)
@@ -141,8 +174,6 @@ export function useTxForm({ editing, copying }: { editing?: Transaction | null; 
     currency,
     direction,
     setDir,
-    scope,
-    setScopeAndPrune,
     amount,
     setAmount,
     merchant,
@@ -156,9 +187,19 @@ export function useTxForm({ editing, copying }: { editing?: Transaction | null; 
     date,
     setDate,
     isIncome,
-    availableOwners,
+    members: householdMembers,
     sources,
     fd,
+    rate: r,
+    cents,
+    // split editor
+    splitMethod,
+    setSplitMethod,
+    splitText,
+    setSplit,
+    shares,
+    splitOk,
+    splitReason,
     canSave,
     submit,
     loadFrom,
@@ -170,9 +211,10 @@ export type TxFormApi = ReturnType<typeof useTxForm>
 /** The shared field stack (amount hero, toggles, rows) used by both the modal and the drawer. */
 export function TxFormFields({ form }: { form: TxFormApi }) {
   const { currency, isIncome } = form
-  // Show the owner/participant picker for shared scope (household members) and
-  // for personal scope when there are local users to split with (you + locals).
-  const showOwners = form.scope === 'shared' || form.availableOwners.length > 1
+  const { formatMoney } = useApp()
+  // Owner picker appears whenever the household has more than one person.
+  const showOwners = form.members.length > 1
+  const multi = form.owners.length >= 2
   return (
     <>
       {/* Amount hero */}
@@ -191,10 +233,9 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
         />
       </div>
 
-      {/* Direction + scope */}
+      {/* Direction */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 10, paddingBottom: 18, flexWrap: 'wrap' }}>
         <Seg value={form.direction} onChange={form.setDir} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} />
-        <Seg value={form.scope} onChange={form.setScopeAndPrune} options={[{ value: 'shared', label: 'Shared' }, { value: 'personal', label: 'Personal' }]} />
       </div>
 
       {/* Merchant + category */}
@@ -216,16 +257,18 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
         )}
       </div>
 
-      {/* Owner + source + date */}
-      <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-        {showOwners && (
-          <Row label="Owner" first>
+      {/* Owners */}
+      {showOwners && (
+        <div className="ow-card" style={{ margin: '0 20px 14px' }}>
+          <Row label="Owners" first>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              {form.availableOwners.map((u) => {
+              {form.members.map((u) => {
                 const on = form.owners.includes(u.id)
                 return (
                   <button
                     key={u.id}
+                    type="button"
+                    aria-pressed={on}
                     className="ow-btn"
                     onClick={() => form.toggleOwner(u.id)}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 9px 3px 4px', borderRadius: 999, background: 'var(--chip-bg)', boxShadow: on ? 'inset 0 0 0 1.5px var(--text)' : 'none' }}
@@ -237,8 +280,69 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
               })}
             </div>
           </Row>
-        )}
-        <Row label={isIncome ? 'Deposit to' : 'Paid with'} first={!showOwners}>
+        </div>
+      )}
+
+      {/* Split editor (multi-owner only) */}
+      {multi && (
+        <div className="ow-card" style={{ margin: '0 20px 14px' }}>
+          <Row label="Split" first>
+            <Seg
+              value={form.splitMethod}
+              onChange={form.setSplitMethod}
+              options={[{ value: 'even', label: 'Even' }, { value: 'percent', label: '%' }, { value: 'value', label: currencySymbol(currency) }]}
+            />
+          </Row>
+          {form.owners.map((id) => {
+            const name = form.members.find((m) => m.id === id)?.name ?? '—'
+            return (
+              <Row key={id} label={name}>
+                {form.splitMethod === 'even' ? (
+                  <span style={{ color: 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>{formatMoney(form.shares[id] ?? 0)}</span>
+                ) : form.splitMethod === 'percent' ? (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input
+                      className="ow-row-input"
+                      style={{ textAlign: 'right', width: 56 }}
+                      inputMode="decimal"
+                      aria-label={`${name} percent`}
+                      value={form.splitText[id] ?? ''}
+                      onChange={(e) => form.setSplit(id, e.target.value.replace(/[^\d.]/g, ''))}
+                    />
+                    <span style={{ color: 'var(--text-3)' }}>%</span>
+                    <span style={{ color: 'var(--text-3)', minWidth: 70, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                      {formatMoney(form.shares[id] ?? 0)}
+                    </span>
+                  </span>
+                ) : (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ color: 'var(--text-3)' }}>{currencySymbol(currency)}</span>
+                    <input
+                      className="ow-row-input"
+                      style={{ textAlign: 'right', width: 78 }}
+                      inputMode="decimal"
+                      aria-label={`${name} amount`}
+                      value={form.splitText[id] ?? ''}
+                      onChange={(e) => form.setSplit(id, e.target.value.replace(/[^\d.,]/g, ''))}
+                    />
+                  </span>
+                )}
+              </Row>
+            )
+          })}
+          {!form.splitOk && (
+            <div style={{ padding: '6px 20px 12px', fontSize: 12.5, lineHeight: 1.45, color: 'var(--text-2)' }}>
+              {form.splitReason === 'percent_sum'
+                ? 'Percentages must total 100%.'
+                : `Amounts must add up to ${formatMoney(form.cents ?? 0)}.`}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Source + date */}
+      <div className="ow-card" style={{ margin: '0 20px 14px' }}>
+        <Row label={isIncome ? 'Deposit to' : 'Paid with'} first>
           {form.sources.length === 0 ? (
             <span style={{ color: 'var(--text-3)' }}>No cards yet</span>
           ) : (
@@ -257,9 +361,9 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
       </div>
 
       <div style={{ padding: '2px 28px 16px', fontSize: 12.5, lineHeight: 1.45, color: 'var(--text-3)' }}>
-        {form.scope === 'personal'
-          ? 'Personal transactions are visible only to you.'
-          : 'Shared transactions are visible to everyone in your household. Multiple owners split it evenly.'}
+        {multi
+          ? 'Split this transaction between its owners by even shares, percentage, or amount.'
+          : 'Pick more than one owner to split this transaction.'}
       </div>
     </>
   )

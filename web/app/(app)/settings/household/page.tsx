@@ -12,9 +12,8 @@ import { HouseholdDrawer, type HouseholdDrawerMode } from '@/components/settings
 export default function HouseholdPage() {
   const {
     currentHousehold,
-    currentUserId,
+    currentPersonId,
     householdMembers,
-    localUsers,
     formatMoney,
     monthlySpentBy,
   } = useApp()
@@ -50,27 +49,18 @@ export default function HouseholdPage() {
           <UserRow
             key={u.id}
             user={u}
-            isCurrentUser={u.id === currentUserId}
+            isCurrentUser={u.id === currentPersonId}
             detail={`${formatMoney(monthlySpentBy(u.id))} this month`}
             onClick={() => setDrawer({ type: 'member', userId: u.id })}
           />
         ))}
 
-        {localUsers.map((u) => (
-          <UserRow
-            key={u.id}
-            user={u}
-            detail="Local"
-            onClick={() => setDrawer({ type: 'member', userId: u.id })}
-          />
-        ))}
-
-        <AddRow label="Add user" onClick={() => setDrawer({ type: 'add' })} />
+        <AddRow label="Add person" onClick={() => setDrawer({ type: 'add' })} />
       </SectionCard>
 
       <p className="px-1 pt-3 text-[13px] leading-relaxed text-text-3">
-        Members can see all Shared transactions in this household. Personal transactions are visible
-        only to you. Local users stay on this device.
+        Everyone in your household can be an owner of a transaction. People you add need no Ortho
+        account; you can split any transaction between them.
       </p>
 
       <HouseholdDrawer mode={drawer} onClose={() => setDrawer(null)} />

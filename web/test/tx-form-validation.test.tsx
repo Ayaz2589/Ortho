@@ -22,8 +22,8 @@ vi.mock('@/lib/store', () => ({
     cards: [{ id: 'c1', household_id: 'h1', name: 'Visa', created_at: '2026-01-01' }],
     currentHousehold: { id: 'h1', owner_id: 'u1', name: 'Home', created_at: '2026-01-01' },
     currentUserId: 'u1',
+    currentPersonId: 'u1',
     householdMembers: [ALICE, BOB],
-    personalParticipants: [ALICE],
     addTransaction,
     updateTransaction,
   }),
@@ -93,14 +93,12 @@ describe('useTxForm validation (via TxFormFields harness)', () => {
     expect(h.addBtn()).toBeDisabled()
   })
 
-  it('enables save once amount > 0 and merchant are set (shared scope keeps default owner)', async () => {
+  it('enables save once amount > 0 and merchant are set (default owner seeded)', async () => {
     vi.useRealTimers()
     const h = setup()
     await h.user.type(h.amount(), '12.50')
     await h.user.type(h.merchant(), 'Whole Foods')
-    // Shared scope is the default and seeds the current user as owner, so the
-    // "shared requires >=1 owner" rule is already satisfied.
-    expect(h.getApi().scope).toBe('shared')
+    // The current person is seeded as the sole owner, satisfying ">=1 owner".
     expect(h.getApi().owners.length).toBeGreaterThan(0)
     expect(h.getApi().canSave).toBe(true)
     expect(h.addBtn()).toBeEnabled()
@@ -134,8 +132,8 @@ describe('useTxForm validation (via TxFormFields harness)', () => {
     expect(tx.merchant).toBe('Whole Foods')
     expect(tx.amount_cents).toBe(1250) // 12.50 USD -> 1250 cents
     expect(tx.kind).toBe('expense')
-    expect(tx.scope).toBe('shared')
     expect(tx.owner_ids).toContain('u1')
+    expect(tx.shares).toEqual({ u1: 1250 })
     expect(updateTransaction).not.toHaveBeenCalled()
   })
 })

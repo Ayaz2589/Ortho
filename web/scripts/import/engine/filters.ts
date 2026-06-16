@@ -1,6 +1,6 @@
 // List filters for tx-list. Pure: parse + validate flag values into a TxFilter,
 // and translate MONTH into a half-open [start, end) date window.
-import type { TransactionCategory, TransactionKind, TransactionScope } from '../../../lib/types'
+import type { TransactionCategory, TransactionKind } from '../../../lib/types'
 
 export const CATEGORY_LIST: TransactionCategory[] = [
   'coffee', 'groceries', 'dining', 'subs', 'fuel', 'rent',
@@ -12,7 +12,6 @@ export interface TxFilter {
   endISO?: string
   category?: TransactionCategory
   source?: string
-  scope?: TransactionScope
   kind?: TransactionKind
   limit?: number
 }
@@ -38,7 +37,6 @@ export interface FilterArgs {
   month?: string
   category?: string
   source?: string
-  scope?: string
   kind?: string
   limit?: string
 }
@@ -56,10 +54,6 @@ export function parseFilters(args: FilterArgs): TxFilter {
     f.category = args.category as TransactionCategory
   }
   if (args.source) f.source = args.source
-  if (args.scope) {
-    if (args.scope !== 'personal' && args.scope !== 'shared') throw new Error(`INVALID_SCOPE: ${args.scope}`)
-    f.scope = args.scope
-  }
   if (args.kind) {
     if (args.kind !== 'expense' && args.kind !== 'income') throw new Error(`INVALID_KIND: ${args.kind}`)
     f.kind = args.kind

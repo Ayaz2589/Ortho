@@ -17,51 +17,53 @@ const base: ParsedTransaction = {
   splits: null,
 }
 const NOW = '2026-06-15T00:00:00.000Z'
+const CTX = { createdBy: 'u1', householdId: 'h1', defaultOwnerId: 'p1' }
 
 describe('toTransaction', () => {
-  it('single (default) owner → personal, no household, no splits', () => {
-    const tx = toTransaction(base, 'TD Bank', { createdBy: 'u1', householdId: 'h1' }, 'id1', NOW)
+  it('single (default) owner → owned in full by the default person', () => {
+    const tx = toTransaction(base, 'TD Bank', CTX, 'id1', NOW)
     expect(tx).toMatchObject({
       id: 'id1',
-      scope: 'personal',
-      household_id: null,
+      household_id: 'h1',
       created_by: 'u1',
-      owner_ids: ['u1'],
-      splits: null,
+      owner_ids: ['p1'],
       source: 'TD Bank',
       amount_cents: 8999,
       category: 'utilities',
       kind: 'expense',
       date: base.dateISO,
     })
+    expect(tx.shares).toEqual({ p1: 8999 })
   })
 
-  it('an explicit single owner is still personal', () => {
-    const tx = toTransaction({ ...base, ownerIds: ['u2'] }, 'TD Bank', { createdBy: 'u1', householdId: 'h1' }, 'id2', NOW)
-    expect(tx.scope).toBe('personal')
-    expect(tx.owner_ids).toEqual(['u2'])
+  it('an explicit single owner gets the full amount', () => {
+    const tx = toTransaction({ ...base, ownerIds: ['p2'] }, 'TD Bank', CTX, 'id2', NOW)
+    expect(tx.owner_ids).toEqual(['p2'])
+    expect(tx.shares).toEqual({ p2: 8999 })
     expect(tx.created_by).toBe('u1')
   })
 
-  it('multiple owners → shared with the operator household', () => {
-    const tx = toTransaction({ ...base, ownerIds: ['u1', 'u2'] }, 'TD Bank', { createdBy: 'u1', householdId: 'h1' }, 'id3', NOW)
-    expect(tx).toMatchObject({ scope: 'shared', household_id: 'h1', owner_ids: ['u1', 'u2'] })
+  it('multiple owners split evenly in cents by default', () => {
+    const tx = toTransaction({ ...base, ownerIds: ['p1', 'p2'] }, 'TD Bank', CTX, 'id3', NOW)
+    expect(tx).toMatchObject({ household_id: 'h1', owner_ids: ['p1', 'p2'] })
+    expect(tx.shares).toEqual({ p1: 4500, p2: 4499 }) // 8999 even → leftover cent to first
   })
 
-  it('carries custom splits through', () => {
+  it('converts custom percent splits to cents (remainder to first owner)', () => {
     const tx = toTransaction(
-      { ...base, ownerIds: ['u1', 'u2'], splits: { u1: 70, u2: 30 } },
+      { ...base, ownerIds: ['p1', 'p2'], splits: { p1: 70, p2: 30 } },
       'TD Bank',
-      { createdBy: 'u1', householdId: 'h1' },
+      CTX,
       'id4',
       NOW
     )
-    expect(tx.splits).toEqual({ u1: 70, u2: 30 })
+    expect(tx.shares).toEqual({ p1: 6300, p2: 2699 })
+    expect(Object.values(tx.shares).reduce((a, b) => a + b, 0)).toBe(8999)
   })
 
-  it('throws if a multi-owner row has no household', () => {
+  it('throws if there is no household', () => {
     expect(() =>
-      toTransaction({ ...base, ownerIds: ['u1', 'u2'] }, 'TD Bank', { createdBy: 'u1', householdId: null }, 'id5', NOW)
+      toTransaction({ ...base, ownerIds: ['p1', 'p2'] }, 'TD Bank', { ...CTX, householdId: null }, 'id5', NOW)
     ).toThrow()
   })
 })

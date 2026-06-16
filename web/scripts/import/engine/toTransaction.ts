@@ -1,14 +1,17 @@
 // Map a reviewed ParsedTransaction to the app's persisted Transaction shape.
-// Single owner → personal; multiple owners → shared (needs a household). Mirrors
-// the web store's record so imported rows are indistinguishable (FR-021).
+// Every transaction belongs to the household and carries cents-per-owner shares,
+// so imported rows are indistinguishable from app-entered ones (FR-021).
 import type { Transaction } from '../../../lib/types'
+import { computeShares, type SplitInput } from '../../../lib/splits'
 import type { ParsedTransaction } from './types'
 
 export interface OwnerContext {
   /** Authed user id — becomes created_by. */
   createdBy: string
-  /** Operator's household id, required when a row has multiple owners. */
+  /** Operator's household id (required — every transaction has a household). */
   householdId: string | null
+  /** The owner (person id) used when a row resolves no explicit owners. */
+  defaultOwnerId: string
 }
 
 /** Deterministic given injected `id` and `nowISO` (so it is unit-testable). */
@@ -19,18 +22,18 @@ export function toTransaction(
   id: string,
   nowISO: string
 ): Transaction {
-  const owners = p.ownerIds.length ? p.ownerIds : [ctx.createdBy]
-  const shared = owners.length > 1
-  if (shared && !ctx.householdId) {
-    throw new Error('SHARED_REQUIRES_HOUSEHOLD: multi-owner row needs a household')
+  if (!ctx.householdId) {
+    throw new Error('IMPORT_REQUIRES_HOUSEHOLD: every transaction needs a household')
   }
+  const owners = p.ownerIds.length ? p.ownerIds : [ctx.defaultOwnerId]
+  const split: SplitInput = p.splits ? { method: 'percent', percents: p.splits } : { method: 'even' }
+  const shares = computeShares(p.amountCents, owners, split)
   return {
     id,
-    household_id: shared ? ctx.householdId : null,
+    household_id: ctx.householdId,
     merchant: p.merchant,
     category: p.category,
     kind: p.kind,
-    scope: shared ? 'shared' : 'personal',
     amount_cents: p.amountCents,
     source,
     date: p.dateISO,
@@ -38,6 +41,6 @@ export function toTransaction(
     created_at: nowISO,
     updated_at: nowISO,
     owner_ids: owners,
-    splits: p.splits,
+    shares,
   }
 }

@@ -11,10 +11,12 @@ export async function getOne(supabase: SupabaseClient, id: string): Promise<Tran
   if (error) throw new Error(`GET_TX: ${error.message}`)
   if (!data) return null
   const tx = data as Transaction
-  const { data: shares } = await supabase.from('transaction_shares').select('user_id,percent').eq('transaction_id', id)
-  const rows = (shares ?? []) as Array<{ user_id: string; percent: number }>
-  tx.owner_ids = rows.length ? rows.map((s) => s.user_id) : [tx.created_by]
-  tx.splits = rows.length ? Object.fromEntries(rows.map((s) => [s.user_id, Number(s.percent)])) : null
+  const { data: shares } = await supabase.from('transaction_shares').select('person_id,amount_cents').eq('transaction_id', id)
+  const rows = (shares ?? []) as Array<{ person_id: string; amount_cents: number }>
+  tx.owner_ids = rows.length ? rows.map((s) => s.person_id) : [tx.created_by]
+  tx.shares = rows.length
+    ? Object.fromEntries(rows.map((s) => [s.person_id, Number(s.amount_cents)]))
+    : { [tx.created_by]: tx.amount_cents }
   return tx
 }
 
@@ -28,7 +30,6 @@ export async function listTransactions(
   if (!admin) q = q.eq('created_by', userId)
   if (filter.category) q = q.eq('category', filter.category)
   if (filter.source) q = q.eq('source', filter.source)
-  if (filter.scope) q = q.eq('scope', filter.scope)
   if (filter.kind) q = q.eq('kind', filter.kind)
   if (filter.startISO) q = q.gte('date', filter.startISO)
   if (filter.endISO) q = q.lt('date', filter.endISO)

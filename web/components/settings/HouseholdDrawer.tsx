@@ -25,24 +25,24 @@ export function HouseholdDrawer({
 }) {
   const {
     currentHousehold,
-    currentUserId,
+    currentPersonId,
     householdMembers,
-    localUsers,
     formatMoney,
     monthlySpentBy,
     updateHouseholdName,
-    removeMember,
-    removeLocalUser,
-    addLocalUser,
+    addPerson,
+    renamePerson,
+    removePerson,
   } = useApp()
 
-  // Rename state
+  // Rename-household state
   const [renameName, setRenameName] = useState('')
-  // Add-user state
+  // Add-person state
   const [addName, setAddName] = useState('')
   const [addColor, setAddColor] = useState(PALETTE[0].key)
   // Member-detail state
   const [confirmRemove, setConfirmRemove] = useState(false)
+  const [editName, setEditName] = useState('')
 
   useEffect(() => {
     if (!mode) return
@@ -51,6 +51,9 @@ export function HouseholdDrawer({
     if (mode.type === 'add') {
       setAddName('')
       setAddColor(PALETTE[0].key)
+    }
+    if (mode.type === 'member') {
+      setEditName(householdMembers.find((u) => u.id === mode.userId)?.name ?? '')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
@@ -66,12 +69,12 @@ export function HouseholdDrawer({
   const swatch = paletteFor(addColor)
   const handleAdd = () => {
     if (!canAdd) return
-    addLocalUser({ name: addName.trim(), initial: addInitial, color_key: addColor })
+    addPerson(addName.trim(), addColor)
     onClose()
   }
 
   const title =
-    mode?.type === 'rename' ? 'Rename household' : mode?.type === 'add' ? 'New local user' : 'Member'
+    mode?.type === 'rename' ? 'Rename household' : mode?.type === 'add' ? 'Add person' : 'Person'
 
   return (
     <Drawer open={mode !== null} onClose={onClose} label={title}>
@@ -104,7 +107,7 @@ export function HouseholdDrawer({
       {mode?.type === 'add' && (
         <>
           <DrawerHeader
-            title="New local user"
+            title="Add person"
             onClose={onClose}
             right={
               <button type="button" onClick={handleAdd} disabled={!canAdd} className={accentBtn}>
@@ -150,47 +153,58 @@ export function HouseholdDrawer({
               })}
             </div>
             <p className="px-1 pt-3 text-[13px] leading-relaxed text-text-3">
-              Initial is set automatically from the name. Local users stay on this device — use them to
-              split personal expenses with people who don&apos;t have Ortho.
+              Initial is set automatically from the name. People you add can own and split
+              transactions — no account needed.
             </p>
           </div>
         </>
       )}
 
       {mode?.type === 'member' && (() => {
-        const member = householdMembers.find((u) => u.id === mode.userId)
-        const local = localUsers.find((u) => u.id === mode.userId)
-        const user = member ?? local
+        const user = householdMembers.find((u) => u.id === mode.userId)
         if (!user) return null
-        const isCurrentUser = user.id === currentUserId
-        const removable = member
-          ? !isCurrentUser && householdMembers.length > 1
-          : !!local
-        const detail = local
-          ? 'Local user'
-          : isCurrentUser
-            ? `(you) · ${formatMoney(monthlySpentBy(user.id))} this month`
-            : `${formatMoney(monthlySpentBy(user.id))} this month`
+        const isCurrentPerson = user.id === currentPersonId
+        // Keep at least one person; the account holder can't be removed.
+        const removable = !isCurrentPerson && householdMembers.length > 1
+        const detail = isCurrentPerson
+          ? `(you) · ${formatMoney(monthlySpentBy(user.id))} this month`
+          : `${formatMoney(monthlySpentBy(user.id))} this month`
+        const saveRename = () => {
+          const trimmed = editName.trim()
+          if (trimmed !== '' && trimmed !== user.name) renamePerson(user.id, trimmed)
+          onClose()
+        }
         const doRemove = () => {
-          if (member) removeMember(user.id)
-          else if (local) removeLocalUser(user.id)
+          removePerson(user.id)
           onClose()
         }
         return (
           <>
-            <DrawerHeader title="Member" onClose={onClose} />
-            <div style={{ overflow: 'auto', padding: '20px 20px 24px', textAlign: 'center' }}>
-              <div className="flex justify-center pb-3">
+            <DrawerHeader
+              title="Person"
+              onClose={onClose}
+              right={
+                <button type="button" onClick={saveRename} disabled={editName.trim() === ''} className={accentBtn}>
+                  Save
+                </button>
+              }
+            />
+            <div style={{ overflow: 'auto', padding: '20px 20px 24px' }}>
+              <div className="flex justify-center pb-4">
                 <Avatar user={user} size={64} />
               </div>
-              <div className="text-[20px] text-text">{user.name}</div>
-              <div className="pt-1 text-[14px] text-text-2">{detail}</div>
+              <FormGroup>
+                <FieldRow label="Name">
+                  <TextInput value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Name" />
+                </FieldRow>
+              </FormGroup>
+              <p className="px-1 pt-2 text-center text-[13px] text-text-2">{detail}</p>
 
               {removable &&
                 (confirmRemove ? (
                   <div className="mt-6 flex flex-col gap-2 rounded-2xl bg-surface p-4" style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
                     <p className="text-[14px] text-text-2">
-                      {member ? 'Remove this member from the household?' : 'Remove this local user?'}
+                      Remove this person? Past transactions keep their name.
                     </p>
                     <div className="flex gap-2">
                       <button type="button" onClick={() => setConfirmRemove(false)} className="flex-1 rounded-full py-2.5 text-[15px] text-text-2" style={{ background: 'var(--chip-bg)' }}>
@@ -209,7 +223,7 @@ export function HouseholdDrawer({
                     style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
                   >
                     <MinusCircle size={16} />
-                    {member ? 'Remove member' : 'Remove user'}
+                    Remove person
                   </button>
                 ))}
             </div>

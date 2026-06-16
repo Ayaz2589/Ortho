@@ -11,7 +11,7 @@ import {
   groupByDay,
   groupDaysByMonth,
   expenseTotal,
-  effectiveSplits,
+  effectiveShares,
 } from '@/lib/format'
 import { makeTx } from './helpers/fixtures'
 
@@ -174,35 +174,35 @@ describe('expenseTotal', () => {
   })
 })
 
-describe('effectiveSplits', () => {
-  it('splits evenly across N owners, summing to 100, equal per owner', () => {
-    const tx = makeTx({ owner_ids: ['a', 'b', 'c', 'd'], splits: null })
-    const splits = effectiveSplits(tx)
-    expect(Object.keys(splits)).toEqual(['a', 'b', 'c', 'd'])
-    const values = Object.values(splits)
-    expect(values.every((v) => v === 25)).toBe(true)
-    expect(values.reduce((s, v) => s + v, 0)).toBe(100)
+describe('effectiveShares', () => {
+  it('splits evenly across N owners in cents, summing to the amount', () => {
+    const tx = makeTx({ owner_ids: ['a', 'b', 'c', 'd'], amount_cents: 10000 })
+    const shares = effectiveShares(tx)
+    expect(Object.keys(shares)).toEqual(['a', 'b', 'c', 'd'])
+    expect(Object.values(shares).every((v) => v === 2500)).toBe(true)
+    expect(Object.values(shares).reduce((s, v) => s + v, 0)).toBe(10000)
   })
 
-  it('single owner gets 100', () => {
-    const tx = makeTx({ owner_ids: ['solo'], splits: null })
-    expect(effectiveSplits(tx)).toEqual({ solo: 100 })
+  it('single owner gets the full amount', () => {
+    const tx = makeTx({ owner_ids: ['solo'], amount_cents: 9999 })
+    expect(effectiveShares(tx)).toEqual({ solo: 9999 })
   })
 
-  it('passes explicit splits through unchanged', () => {
-    const explicit = { a: 70, b: 30 }
-    const tx = makeTx({ owner_ids: ['a', 'b'], splits: explicit })
-    expect(effectiveSplits(tx)).toBe(explicit)
+  it('passes explicit cents shares through unchanged', () => {
+    const explicit = { a: 7000, b: 3000 }
+    const tx = makeTx({ owner_ids: ['a', 'b'], amount_cents: 10000, shares: explicit })
+    expect(effectiveShares(tx)).toBe(explicit)
   })
 
   it('returns {} for zero owners', () => {
-    const tx = makeTx({ owner_ids: [], splits: null })
-    expect(effectiveSplits(tx)).toEqual({})
+    const tx = makeTx({ owner_ids: [], amount_cents: 100, shares: {} })
+    expect(effectiveShares(tx)).toEqual({})
   })
 
-  it('even split of 3 sums to 100 (repeating decimal)', () => {
-    const tx = makeTx({ owner_ids: ['a', 'b', 'c'], splits: null })
-    const splits = effectiveSplits(tx)
-    expect(Object.values(splits).reduce((s, v) => s + v, 0)).toBeCloseTo(100, 10)
+  it('even split of 3 sums to the amount (remainder to first)', () => {
+    const tx = makeTx({ owner_ids: ['a', 'b', 'c'], amount_cents: 10000, shares: {} })
+    const shares = effectiveShares(tx)
+    expect(shares).toEqual({ a: 3334, b: 3333, c: 3333 })
+    expect(Object.values(shares).reduce((s, v) => s + v, 0)).toBe(10000)
   })
 })

@@ -1,12 +1,14 @@
-// Split math for multi-owner (shared) transactions. Even splits reuse the web's
-// effectiveSplits for exact parity (including its rounding). Custom splits must
-// cover exactly the owners and total 100.
-import { effectiveSplits } from '../../../lib/format'
-import type { Transaction } from '../../../lib/types'
+// Split entry for multi-owner transactions in the CLI. The operator enters
+// percentages (even by default); cents are computed at persist time via the
+// shared `computeShares` (lib/splits.ts) so CLI rows match app rows exactly.
 
-/** Even split percentages per owner — identical to the apps' default. */
+/** Even split percentages per owner — the default when no custom split given. */
 export function evenSplit(ownerIds: string[]): Record<string, number> {
-  return effectiveSplits({ owner_ids: ownerIds, splits: null } as Transaction)
+  if (ownerIds.length === 0) return {}
+  const even = 100 / ownerIds.length
+  const out: Record<string, number> = {}
+  ownerIds.forEach((id) => (out[id] = even))
+  return out
 }
 
 /** Validate operator-entered custom percentages. */

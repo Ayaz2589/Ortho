@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { ChevronRight, CreditCard, MinusCircle, Plus } from 'lucide-react'
 import { Avatar } from '@/components/ui'
-import type { Card, User, LocalUser } from '@/lib/types'
+import type { Card, User } from '@/lib/types'
 
 export function SectionCard({ children }: { children: ReactNode }) {
   return (
@@ -132,7 +132,7 @@ export function UserRow({
   onRemove,
   onClick,
 }: {
-  user: User | LocalUser
+  user: User
   isCurrentUser?: boolean
   detail?: string
   onRemove?: () => void

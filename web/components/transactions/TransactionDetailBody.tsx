@@ -3,7 +3,8 @@
 import { useApp } from '@/lib/store'
 import { FormGroup, FieldRow, Avatar } from '@/components/ui'
 import { categoryMeta } from '@/lib/categories'
-import { effectiveSplits, mediumDate } from '@/lib/format'
+import { effectiveShares, mediumDate } from '@/lib/format'
+import { sharePercent } from '@/lib/splits'
 import type { Transaction } from '@/lib/types'
 
 /** Read-only presentational detail for a transaction. Shared by the mobile
@@ -13,7 +14,7 @@ export function TransactionDetailBody({ tx }: { tx: Transaction }) {
   const isIncome = tx.kind === 'income'
   const meta = categoryMeta(tx.category)
   const CatIcon = meta.icon
-  const splits = effectiveSplits(tx)
+  const shares = effectiveShares(tx)
   const multi = tx.owner_ids.length > 1
 
   return (
@@ -53,8 +54,11 @@ export function TransactionDetailBody({ tx }: { tx: Transaction }) {
               <Avatar user={u} size={28} />
               <span className="flex-1 text-[15px] font-normal text-text">{u.name}</span>
               {multi && (
-                <span className="text-[15px] font-normal tabular-nums text-text-2">
-                  {(splits[id] ?? 0).toFixed(2)}%
+                <span className="flex items-baseline gap-1.5 text-[15px] font-normal tabular-nums text-text">
+                  {formatMoney(shares[id] ?? 0)}
+                  <span className="text-[13px] text-text-3">
+                    {sharePercent(shares[id] ?? 0, tx.amount_cents)}%
+                  </span>
                 </span>
               )}
             </div>

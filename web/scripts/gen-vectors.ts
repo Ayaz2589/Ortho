@@ -74,7 +74,7 @@ const mortgage = MORTGAGE_INPUTS.map((i) => {
 // ── Insight vectors ─────────────────────────────────────────────────────────
 
 const tx = (o: Partial<Transaction>): Transaction =>
-  ({ owner_ids: [], splits: null, scope: 'shared', household_id: 'h', source: '', created_by: 'u', created_at: '', updated_at: '', ...o }) as Transaction
+  ({ owner_ids: [], shares: {}, household_id: 'h', source: '', created_by: 'u', created_at: '', updated_at: '', ...o }) as Transaction
 const budget = (o: Partial<Budget>): Budget => ({ id: 'b', household_id: 'h', ...o }) as Budget
 
 interface InsightScenario {
@@ -129,7 +129,7 @@ const insights = SCENARIOS.map((s) => ({
 // ── Transaction filter vectors ──────────────────────────────────────────────
 
 const ftx = (o: Partial<Transaction>): Transaction =>
-  ({ id: '', household_id: null, merchant: '', category: 'dining', kind: 'expense', scope: 'personal', amount_cents: 0, source: '', date: '2026-05-15T12:00:00.000Z', created_by: '00000000-0000-0000-0000-000000000999', created_at: '', updated_at: '', owner_ids: [], splits: null, ...o }) as Transaction
+  ({ id: '', household_id: '00000000-0000-0000-0000-000000000201', merchant: '', category: 'dining', kind: 'expense', amount_cents: 0, source: '', date: '2026-05-15T12:00:00.000Z', created_by: '00000000-0000-0000-0000-000000000999', created_at: '', updated_at: '', owner_ids: [], shares: {}, ...o }) as Transaction
 
 // UUID-form ids so the iOS suite can decode the vectors straight into `Transaction`
 // (its ids are UUIDs); the web compares strings, so it's agnostic.
@@ -140,7 +140,7 @@ const U1 = uid('101'), U2 = uid('102'), H1 = uid('201')
 // A fixed, representative set spanning scopes/categories/kinds/sources/owners/dates.
 const FSET: Transaction[] = [
   ftx({ id: A, merchant: 'Bistro', category: 'dining', kind: 'expense', source: 'Amex Gold', household_id: H1, owner_ids: [U1], date: '2026-05-04T12:00:00.000Z' }),
-  ftx({ id: B, merchant: 'Blue Bottle', category: 'coffee', kind: 'expense', source: 'TD Bank', household_id: null, owner_ids: [U1], date: '2026-05-10T12:00:00.000Z' }),
+  ftx({ id: B, merchant: 'Blue Bottle', category: 'coffee', kind: 'expense', source: 'TD Bank', household_id: H1, owner_ids: [U1], date: '2026-05-10T12:00:00.000Z' }),
   ftx({ id: C, merchant: 'Payroll', category: 'income', kind: 'income', source: 'TD Bank', household_id: H1, owner_ids: [U2], date: '2026-06-01T12:00:00.000Z' }),
   ftx({ id: D, merchant: 'Whole Foods', category: 'groceries', kind: 'expense', source: 'Chase', household_id: H1, owner_ids: [U1, U2], date: '2026-04-20T12:00:00.000Z' }),
 ]

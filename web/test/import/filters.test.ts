@@ -23,13 +23,12 @@ describe('monthRange', () => {
 
 describe('parseFilters', () => {
   it('combines filters and maps MONTH to a half-open range', () => {
-    const f = parseFilters({ month: '2026-05', category: 'dining', source: 'TD Bank', scope: 'personal', kind: 'expense', limit: '10' })
+    const f = parseFilters({ month: '2026-05', category: 'dining', source: 'TD Bank', kind: 'expense', limit: '10' })
     expect(f).toEqual({
       startISO: '2026-05-01T00:00:00.000Z',
       endISO: '2026-06-01T00:00:00.000Z',
       category: 'dining',
       source: 'TD Bank',
-      scope: 'personal',
       kind: 'expense',
       limit: 10,
     })
@@ -39,7 +38,6 @@ describe('parseFilters', () => {
   })
   it('rejects invalid enum values and limit', () => {
     expect(() => parseFilters({ category: 'food' })).toThrow()
-    expect(() => parseFilters({ scope: 'group' })).toThrow()
     expect(() => parseFilters({ kind: 'debit' })).toThrow()
     expect(() => parseFilters({ limit: '0' })).toThrow()
     expect(() => parseFilters({ limit: '-3' })).toThrow()

@@ -41,10 +41,10 @@ P3) on a vector-locked shared core + schema migration. Paths relative to repo ro
 - [x] T008 Create `supabase/migrations/<ts>_household_people_and_value_splits.sql` per `contracts/schema.md`: create `household_people` (+ backfill from `household_members`); add `person_id`+`amount_cents` to `transaction_shares` (+ backfill percent→cents and full-amount rows for share-less txns), drop `user_id`/`percent`, set NOT NULL + new PK; backfill `transactions.household_id`, drop `scope` + `scope_matches_household`, set `household_id` NOT NULL; drop `transaction_scope` enum; rewrite `transactions`/`transaction_shares` RLS without scope; update `household_owner_spend` (+ siblings) to sum `amount_cents` per `person_id`.
 
 ### Model + scope removal (pure, both platforms)
-- [ ] T009 [P] Web data model `web/lib/types.ts`: add `Person`; change `Transaction` to carry `owners: string[]` (person ids) + `shares: Record<string, number>` (cents); remove `scope`; remove `TransactionShare.percent` (→ person_id + amount_cents). Update `web/lib/format.ts` `effectiveSplits`→cents helper.
+- [x] T009 [P] Web data model `web/lib/types.ts`: add `Person`; change `Transaction` to carry `owners: string[]` (person ids) + `shares: Record<string, number>` (cents); remove `scope`; remove `TransactionShare.percent` (→ person_id + amount_cents). Update `web/lib/format.ts` `effectiveSplits`→cents helper.
 - [ ] T010 [P] iOS models: create `Models/Person.swift`; change `Transaction` `ownerIDs: Set<Person.ID>` + `shares: [Person.ID: Int64]`; delete `scope`/`TransactionScope.swift` references; stop using `LocalUser` as an owner identity (fold into Person).
 - [x] T011 Remove the **scope** dimension from the pure filter on both platforms: `web/lib/transactionFilters.ts` + `iOS/.../TransactionFilters.swift` (drop `scope` from `FilterCriteria`, the predicate, `activeFilterCount`); update `web/test/transaction-filters.test.ts`; regenerate `shared/test-vectors/transaction-filters.json` from `gen-vectors.ts` (remove scope from cases); update both parity tests.
-- [ ] T012 Web store `web/lib/store.tsx`: one member list sourced from `household_people`; people CRUD (`addPerson`/`renamePerson`/`removePerson` + `renameHousehold`); `addTransaction`/`updateTransaction` write one `transaction_shares` row per owner with cents from `computeShares`; **delete** `web/lib/personalShares.ts` + its rehydration; `spentBy`/aggregations read cents shares. Update `web/lib/api/aggregates.ts` callers (person_id).
+- [x] T012 Web store `web/lib/store.tsx`: one member list sourced from `household_people`; people CRUD (`addPerson`/`renamePerson`/`removePerson` + `renameHousehold`); `addTransaction`/`updateTransaction` write one `transaction_shares` row per owner with cents from `computeShares`; **delete** `web/lib/personalShares.ts` + its rehydration; `spentBy`/aggregations read cents shares. Update `web/lib/api/aggregates.ts` callers (person_id).
 - [ ] T013 iOS `App/AppState.swift`: people list + CRUD; read/write shares as cents; **remove** `personalShares`/`applyPersonalShares` + the local-user-vs-user machinery; aggregations (`spent(by:)`/`monthlySpent`/`expenseShares`) from cents shares.
 - [ ] T014 Persistence layer: `web/scripts/import/db/transactions.ts` + the store's transaction writes, and iOS `Services/TransactionsAPI.swift` + a `household_people` CRUD path in `Services/HouseholdsAPI.swift` — read/write `transaction_shares(person_id, amount_cents)` and `household_people`.
 
@@ -59,11 +59,11 @@ P3) on a vector-locked shared core + schema migration. Paths relative to repo ro
 **Independent Test**: $100 expense, two owners → even $50/$50; 70/30 → $70/$30; value $60/$40 saves; bad totals block save; single owner = full; detail shows shares.
 
 ### Tests (write first) ⚠️
-- [ ] T015 [P] [US1] `web/test/split-editor.test.tsx` (jsdom): mount `TxForm` with a mocked store; multi-owner shows the editor with an even default; switch to % then value; invalid totals disable Save with the reconcile message; single owner hides the editor; removing to one owner gives full amount.
+- [x] T015 [P] [US1] `web/test/split-editor.test.tsx` (jsdom): mount `TxForm` with a mocked store; multi-owner shows the editor with an even default; switch to % then value; invalid totals disable Save with the reconcile message; single owner hides the editor; removing to one owner gives full amount.
 
 ### Implementation
-- [ ] T016 [US1] `web/components/web/TxForm.tsx`: remove the scope toggle + dual pools; owner chips from the one people list; add the split editor (method `Segmented` even/%/value, per-owner inputs, live reconcile via `validateSplit`, even default); save shares as cents via `computeShares`.
-- [ ] T017 [US1] `web/components/transactions/TransactionDetailBody.tsx`: per-owner exact cents + derived %; no split for single owner.
+- [x] T016 [US1] `web/components/web/TxForm.tsx`: remove the scope toggle + dual pools; owner chips from the one people list; add the split editor (method `Segmented` even/%/value, per-owner inputs, live reconcile via `validateSplit`, even default); save shares as cents via `computeShares`.
+- [x] T017 [US1] `web/components/transactions/TransactionDetailBody.tsx`: per-owner exact cents + derived %; no split for single owner.
 - [ ] T018 [P] [US1] iOS `Features/Transactions/AddTransactionSheet.swift`: remove the scope segmented + dual pools; one owner pool; split editor (even/%/value, per-owner fields, reconcile, even default); save cents.
 - [ ] T019 [P] [US1] iOS `Features/Transactions/TransactionDetailSheet.swift`: per-owner cents + %.
 - [x] T020 [US1] Remove scope from the filter UI both platforms: web `components/web/FilterPanel.tsx`, `ActiveFilterChips.tsx`, `lib/useTransactionFilters.ts`, `app/(app)/transactions/page.tsx` (scope segmented + chip + option); iOS `FilterSheet.swift` + `TransactionsView.swift` (scope pill). Update `web/test/transactions-filter-ui.test.tsx`.
@@ -83,7 +83,7 @@ P3) on a vector-locked shared core + schema migration. Paths relative to repo ro
 - [ ] T022 [P] [US2] `web/test/per-owner-breakdown.test.tsx`: per-person amounts come from cents shares; reconcile to the period total; expandable rows show each share.
 
 ### Implementation
-- [ ] T023 [US2] `web/components/dashboard/PerOwnerBreakdownCard.tsx`: compute per-person from cents shares (drop percent-weighting).
+- [x] T023 [US2] `web/components/dashboard/PerOwnerBreakdownCard.tsx`: compute per-person from cents shares (drop percent-weighting).
 - [ ] T024 [P] [US2] iOS `Features/Dashboard/Widgets/PerOwnerBreakdownCard.swift`: per-person from cents shares.
 - [ ] T025 [US2] Confirm the aggregate RPC (`household_owner_spend`) + store aggregation return cents per person; verify dashboard numbers. `npm test` + tsc; iOS build.
 
@@ -101,7 +101,7 @@ P3) on a vector-locked shared core + schema migration. Paths relative to repo ro
 - [ ] T026 [P] [US3] `web/test/household-people.test.tsx`: add a person → appears in the owner picker; rename → reflected; remove → not selectable, existing transaction still renders the name.
 
 ### Implementation
-- [ ] T027 [US3] `web/app/(app)/settings/household/page.tsx` + `web/components/settings/HouseholdDrawer.tsx`: one people list (add by name + color, rename person, rename household, soft-remove person). Drop the local-vs-member distinction + scope footnotes.
+- [x] T027 [US3] `web/app/(app)/settings/household/page.tsx` + `web/components/settings/HouseholdDrawer.tsx`: one people list (add by name + color, rename person, rename household, soft-remove person). Drop the local-vs-member distinction + scope footnotes.
 - [ ] T028 [P] [US3] iOS `Features/Settings/HouseholdView.swift` + `AddUserSheet.swift`: unified people list (add/rename/remove), no local/member split.
 - [ ] T029 [US3] Verify `npm test` + tsc; iOS build; quickstart §4 passes.
 

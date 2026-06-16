@@ -4,11 +4,10 @@ import type { Transaction } from '../../lib/types'
 
 const tx = (over: Partial<Transaction>): Transaction => ({
   id: 'a1b2c3d4-0000-0000-0000-000000000000',
-  household_id: null,
+  household_id: 'h1',
   merchant: 'Verizon',
   category: 'utilities',
   kind: 'expense',
-  scope: 'personal',
   amount_cents: 8999,
   source: 'TD Bank',
   date: '2026-05-04T12:00:00.000Z',
@@ -16,7 +15,7 @@ const tx = (over: Partial<Transaction>): Transaction => ({
   created_at: '',
   updated_at: '',
   owner_ids: ['u1'],
-  splits: null,
+  shares: { u1: 8999 },
   ...over,
 })
 
@@ -45,16 +44,16 @@ describe('renderTable', () => {
 })
 
 describe('renderDetail', () => {
-  it('shows labelled fields and a split when shared', () => {
-    const out = renderDetail(tx({ scope: 'shared', household_id: 'h1', owner_ids: ['u1', 'u2'], splits: { u1: 70, u2: 30 } }))
+  it('shows labelled fields and cents shares when multi-owner', () => {
+    const out = renderDetail(tx({ owner_ids: ['u1', 'u2'], shares: { u1: 6000, u2: 2999 } }))
     expect(out).toContain('merchant: Verizon')
     expect(out).toContain('−$89.99')
-    expect(out).toContain('splits')
+    expect(out).toContain('shares')
   })
-  it('falls back to created_by for owners and — for an empty source, no split line', () => {
-    const out = renderDetail(tx({ owner_ids: [], source: '', splits: null }))
+  it('falls back to created_by for owners and — for an empty source, no shares line', () => {
+    const out = renderDetail(tx({ owner_ids: [], source: '' }))
     expect(out).toContain('owners:   u1')
     expect(out).toContain('source:   —')
-    expect(out).not.toContain('splits')
+    expect(out).not.toContain('shares')
   })
 })

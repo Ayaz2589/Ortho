@@ -25,7 +25,6 @@ function tx(over: Partial<Transaction> = {}): Transaction {
     merchant: over.merchant ?? 'Merchant',
     category: over.category ?? (kind === 'income' ? 'income' : 'groceries'),
     kind,
-    scope: 'shared',
     amount_cents: over.amount_cents ?? 1000,
     source: 'Checking',
     date: over.date ?? '2026-06-05T12:00:00.000Z',
@@ -33,7 +32,7 @@ function tx(over: Partial<Transaction> = {}): Transaction {
     created_at: '2026-06-05T12:00:00.000Z',
     updated_at: '2026-06-05T12:00:00.000Z',
     owner_ids: ['u-me'],
-    splits: null,
+    shares: {},
     ...over,
   }
 }

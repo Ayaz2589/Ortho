@@ -6,7 +6,7 @@ function mockQueue(results: Array<{ data: unknown; error: unknown }>) {
   const calls: Array<[string, ...unknown[]]> = []
   let idx = -1
   const builder: Record<string, unknown> = {}
-  for (const m of ['select', 'eq', 'limit', 'order']) {
+  for (const m of ['select', 'eq', 'limit', 'order', 'is']) {
     builder[m] = (...args: unknown[]) => {
       calls.push([m, ...args])
       return builder
@@ -37,21 +37,34 @@ describe('listUsers', () => {
   })
 })
 
+const person = (id: string, name: string, linked: string | null) => ({
+  id,
+  household_id: 'h1',
+  name,
+  initial: name[0],
+  color_key: 'sage',
+  linked_user_id: linked,
+  sort_order: 0,
+  removed_at: null,
+  created_at: '',
+})
+
 describe('resolveHousehold', () => {
-  it('returns the household + flattened members (object or array join)', async () => {
+  it('returns the household + active people, with the operator as default owner', async () => {
     const { supabase } = mockQueue([
       { data: [{ household_id: 'h1' }], error: null }, // membership lookup
       { data: [{ id: 'h1', owner_id: 'u1', name: 'Home', created_at: '' }], error: null }, // household
-      { data: [{ users: u('u1', 'Ayaz') }, { users: [u('u2', 'Tas')] }], error: null }, // members (mixed shapes)
+      { data: [person('p1', 'Ayaz', 'u1'), person('p2', 'Tas', null)], error: null }, // people
     ])
     const r = await resolveHousehold(supabase, 'u1')
     expect(r.household?.id).toBe('h1')
-    expect(r.members.map((m) => m.name).sort()).toEqual(['Ayaz', 'Tas'])
+    expect(r.people.map((p) => p.name).sort()).toEqual(['Ayaz', 'Tas'])
+    expect(r.defaultPersonId).toBe('p1')
   })
   it('returns no household when the user is not a member', async () => {
     const { supabase } = mockQueue([{ data: [], error: null }])
     const r = await resolveHousehold(supabase, 'u1')
-    expect(r).toEqual({ household: null, members: [] })
+    expect(r).toEqual({ household: null, people: [], defaultPersonId: '' })
   })
 })
 

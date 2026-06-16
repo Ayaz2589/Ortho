@@ -6,8 +6,7 @@
       "transactions": [
         {
           "owner_ids": [],
-          "splits": null,
-          "scope": "shared",
+          "shares": {},
           "household_id": "h",
           "source": "",
           "created_by": "u",
@@ -21,8 +20,7 @@
         },
         {
           "owner_ids": [],
-          "splits": null,
-          "scope": "shared",
+          "shares": {},
           "household_id": "h",
           "source": "",
           "created_by": "u",
@@ -36,8 +34,7 @@
         },
         {
           "owner_ids": [],
-          "splits": null,
-          "scope": "shared",
+          "shares": {},
           "household_id": "h",
           "source": "",
           "created_by": "u",
@@ -88,8 +85,7 @@
       "transactions": [
         {
           "owner_ids": [],
-          "splits": null,
-          "scope": "shared",
+          "shares": {},
           "household_id": "h",
           "source": "",
           "created_by": "u",
@@ -103,8 +99,7 @@
         },
         {
           "owner_ids": [],
-          "splits": null,
-          "scope": "shared",
+          "shares": {},
           "household_id": "h",
           "source": "",
           "created_by": "u",

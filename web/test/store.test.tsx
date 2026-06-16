@@ -25,6 +25,11 @@ function dataset() {
         { household_id: 'hh-1', user_id: 'u-me', role: 'owner', created_at: '2026-01-01T00:00:00Z' },
         { household_id: 'hh-1', user_id: 'u-jordan', role: 'member', created_at: '2026-01-02T00:00:00Z' },
       ],
+      // People reuse the user ids so owner_ids in the assertions read naturally.
+      household_people: [
+        { id: 'u-me', household_id: 'hh-1', name: 'Maya', initial: 'M', color_key: 'sage', linked_user_id: 'u-me', sort_order: 0, removed_at: null, created_at: '2026-01-01T00:00:00Z' },
+        { id: 'u-jordan', household_id: 'hh-1', name: 'Jordan', initial: 'J', color_key: 'slate', linked_user_id: 'u-jordan', sort_order: 1, removed_at: null, created_at: '2026-01-02T00:00:00Z' },
+      ],
       households: [{ id: 'hh-1', owner_id: 'u-me', name: 'Home', created_at: '2026-01-01T00:00:00Z' }],
       transactions: [
         {
@@ -33,7 +38,6 @@ function dataset() {
           merchant: 'Costco',
           category: 'groceries',
           kind: 'expense',
-          scope: 'shared',
           amount_cents: 5000,
           source: 'Checking',
           date: '2026-06-10T12:00:00Z',
@@ -43,8 +47,8 @@ function dataset() {
         },
       ],
       transaction_shares: [
-        { transaction_id: 'tx-shared', user_id: 'u-me', percent: 50 },
-        { transaction_id: 'tx-shared', user_id: 'u-jordan', percent: 50 },
+        { transaction_id: 'tx-shared', person_id: 'u-me', amount_cents: 2500 },
+        { transaction_id: 'tx-shared', person_id: 'u-jordan', amount_cents: 2500 },
       ],
       cards: [],
       properties: [],
@@ -100,7 +104,7 @@ describe('store (AppStateProvider)', () => {
     const od = api.ownersDisplay(shared)
     expect(od.count).toBe(2)
 
-    const personal = makeTx({ scope: 'personal', owner_ids: ['u-me'], household_id: null })
+    const personal = makeTx({ owner_ids: ['u-me'], household_id: 'hh-1' })
     const pod = api.ownersDisplay(personal)
     expect(pod.count).toBe(1)
     expect(pod.label).toBe('Maya')
@@ -116,7 +120,7 @@ describe('store (AppStateProvider)', () => {
     await renderStore()
     const startLen = api.transactions.length
 
-    const tx = makeTx({ id: 'tx-new', merchant: 'Blue Bottle', amount_cents: 450, scope: 'shared', owner_ids: ['u-me'], household_id: 'hh-1' })
+    const tx = makeTx({ id: 'tx-new', merchant: 'Blue Bottle', amount_cents: 450, owner_ids: ['u-me'], household_id: 'hh-1' })
     await act(async () => { api.addTransaction(tx) })
     await waitFor(() => expect(api.transactions).toHaveLength(startLen + 1))
     expect(api.transactions[0].id).toBe('tx-new') // prepended
@@ -134,23 +138,23 @@ describe('store (AppStateProvider)', () => {
     expect(h.mock!.callsFor('transactions').some((c) => c.op === 'delete')).toBe(true)
   })
 
-  it('restores a personal transaction\'s local-user owners after reload', async () => {
-    // The server only knows the creator for a personal tx; the local-user split
-    // lives on-device and must be merged back in on load.
+  it('defaults a share-less transaction to its creator\'s person on load', async () => {
     h.mock = makeSupabaseMock({
       authUser: { id: 'u-me', email: 'maya@example.com' },
       tables: {
         users: [{ id: 'u-me', name: 'Maya', initial: 'M', color_key: 'sage', created_at: '2026-01-01T00:00:00Z' }],
         household_members: [{ household_id: 'hh-1', user_id: 'u-me', role: 'owner', created_at: '2026-01-01T00:00:00Z' }],
+        household_people: [
+          { id: 'p-me', household_id: 'hh-1', name: 'Maya', initial: 'M', color_key: 'sage', linked_user_id: 'u-me', sort_order: 0, removed_at: null, created_at: '2026-01-01T00:00:00Z' },
+        ],
         households: [{ id: 'hh-1', owner_id: 'u-me', name: 'Home', created_at: '2026-01-01T00:00:00Z' }],
         transactions: [
           {
             id: 'tx-p',
-            household_id: null,
+            household_id: 'hh-1',
             merchant: 'Dinner',
             category: 'dining',
             kind: 'expense',
-            scope: 'personal',
             amount_cents: 4000,
             source: 'Checking',
             date: '2026-06-10T12:00:00Z',
@@ -163,11 +167,11 @@ describe('store (AppStateProvider)', () => {
         cards: [], properties: [], mortgage_info: [], lease_info: [], units: [], rental_payments: [], budgets: [],
       },
     })
-    localStorage.setItem('personalShares', JSON.stringify({ 'tx-p': { owner_ids: ['u-me', 'l1'], splits: null } }))
 
     await renderStore()
     const tx = api.transactions.find((t) => t.id === 'tx-p')!
-    expect(tx.owner_ids).toEqual(['u-me', 'l1']) // local user 'l1' merged back in
+    expect(tx.owner_ids).toEqual(['p-me']) // creator's person, full amount
+    expect(tx.shares).toEqual({ 'p-me': 4000 })
   })
 
   it('performs no real network I/O', async () => {

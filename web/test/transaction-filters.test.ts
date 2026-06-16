@@ -11,11 +11,10 @@ import type { Transaction } from '../lib/types'
 
 const tx = (o: Partial<Transaction>): Transaction => ({
   id: '',
-  household_id: null,
+  household_id: 'h1',
   merchant: '',
   category: 'dining',
   kind: 'expense',
-  scope: 'personal',
   amount_cents: 0,
   source: '',
   date: '2026-05-15T12:00:00.000Z',
@@ -23,7 +22,7 @@ const tx = (o: Partial<Transaction>): Transaction => ({
   created_at: '',
   updated_at: '',
   owner_ids: ['u1'],
-  splits: null,
+  shares: {},
   ...o,
 })
 
@@ -32,7 +31,7 @@ const ids = (txs: Transaction[]) => txs.map((t) => t.id)
 
 const SET: Transaction[] = [
   tx({ id: 'a', merchant: 'Bistro', category: 'dining', kind: 'expense', source: 'Amex Gold', household_id: 'h1', owner_ids: ['u1'], date: '2026-05-04T12:00:00.000Z' }),
-  tx({ id: 'b', merchant: 'Blue Bottle', category: 'coffee', kind: 'expense', source: 'TD Bank', household_id: null, owner_ids: ['u1'], date: '2026-05-10T12:00:00.000Z' }),
+  tx({ id: 'b', merchant: 'Blue Bottle', category: 'coffee', kind: 'expense', source: 'TD Bank', household_id: 'h1', owner_ids: ['u1'], date: '2026-05-10T12:00:00.000Z' }),
   tx({ id: 'c', merchant: 'Payroll', category: 'income', kind: 'income', source: 'TD Bank', household_id: 'h1', owner_ids: ['u2'], date: '2026-06-01T12:00:00.000Z' }),
   tx({ id: 'd', merchant: 'Whole Foods', category: 'groceries', kind: 'expense', source: 'Chase', household_id: 'h1', owner_ids: ['u1', 'u2'], date: '2026-04-20T12:00:00.000Z' }),
 ]

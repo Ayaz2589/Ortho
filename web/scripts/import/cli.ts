@@ -149,12 +149,12 @@ async function run(): Promise<void> {
       die(5, `Lookup error: ${e instanceof Error ? e.message : String(e)}`)
     }
 
-    const defaultOwnerId = client.userId
-    // Default each row's owner: match the statement's card member (Amex) to an
-    // Ortho user by first name, else the operator. Operator can change in review.
-    for (const r of rows) r.ownerIds = [matchOwnerByName(r.cardMember, users, defaultOwnerId)]
-    const coOwners = household.members.length ? household.members : users.filter((u) => u.id === defaultOwnerId)
-    const canSplit = !!household.household && household.members.length >= 2
+    const defaultOwnerId = household.defaultPersonId || client.userId
+    // Default each row's owner: match the statement's card member (Amex) to a
+    // household person by first name, else the operator. Changeable in review.
+    for (const r of rows) r.ownerIds = [matchOwnerByName(r.cardMember, household.people, defaultOwnerId)]
+    const coOwners = household.people
+    const canSplit = !!household.household && household.people.length >= 2
 
     // Flag probable duplicates (same day + amount + bank) before review, so they
     // appear as [DUPLICATE]. Excluded by default; re-include with 'x' if separate.
@@ -185,7 +185,13 @@ async function run(): Promise<void> {
 
     const now = new Date().toISOString()
     const txs = included.map((r) =>
-      toTransaction(r, stmt.source, { createdBy: client.userId, householdId: household.household?.id ?? null }, randomUUID(), now)
+      toTransaction(
+        r,
+        stmt.source,
+        { createdBy: client.userId, householdId: household.household?.id ?? null, defaultOwnerId },
+        randomUUID(),
+        now
+      )
     )
     let written = 0
     try {

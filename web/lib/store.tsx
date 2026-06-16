@@ -12,19 +12,11 @@ import {
 import { createClient } from './supabase/client'
 import { formatMoney as fmtMoney, type CurrencyKey } from './finance/money'
 import { FALLBACK_RATE_FROM_USD } from './finance/currency'
-import { effectiveSplits } from './format'
-import {
-  readPersonalShares,
-  writePersonalShare,
-  removePersonalShare,
-  prunePersonalShares,
-  resolvePersonalOwners,
-  type PersonalShare,
-} from './personalShares'
+import { effectiveShares } from './format'
 import { paletteFor } from './categories'
 import type {
   User,
-  LocalUser,
+  Person,
   Household,
   Transaction,
   TransactionShare,
@@ -38,21 +30,22 @@ import type {
 const PLACEHOLDER_ID = '00000000-0000-0000-0000-000000000000'
 
 export interface OwnerDisplay {
-  avatarUser: User | LocalUser
+  avatarUser: User
   label: string
   count: number
 }
-
-type AnyUser = User | LocalUser
 
 interface AppStateValue {
   loading: boolean
   error: string | null
   currentUserId: string
   currentUser: User | null
+  /** The current account holder's Person (owner default), if resolved. */
+  currentPersonId: string
   currentHousehold: Household | null
   users: User[]
-  localUsers: LocalUser[]
+  /** Active (non-removed) household people, in display order. Owners are People. */
+  people: Person[]
   householdMembers: User[]
   transactions: Transaction[]
   cards: Card[]
@@ -67,14 +60,14 @@ interface AppStateValue {
   rate: (c: CurrencyKey) => number
   formatMoney: (cents: number, opts?: { leadingPlus?: boolean }) => string
 
-  resolveUser: (id: string) => AnyUser
+  /** Resolve a person id (a transaction owner) to its display fields. */
+  resolveUser: (id: string) => User
   ownersDisplay: (tx: Transaction) => OwnerDisplay
-  personalParticipants: AnyUser[]
 
   // aggregation helpers (USD cents)
   categoryExpenseTotal: (category: TransactionCategory, start: Date, end: Date) => number
-  monthlySpentBy: (userId: string) => number
-  spentBy: (userId: string, start: Date, end: Date) => number
+  monthlySpentBy: (personId: string) => number
+  spentBy: (personId: string, start: Date, end: Date) => number
 
   // mutations
   addTransaction: (tx: Transaction) => void
@@ -90,9 +83,9 @@ interface AppStateValue {
   addOrUpdateBudget: (b: Budget) => void
   deleteBudget: (id: string) => void
   updateHouseholdName: (name: string) => void
-  removeMember: (userId: string) => void
-  addLocalUser: (u: Omit<LocalUser, 'id' | 'is_local'>) => void
-  removeLocalUser: (id: string) => void
+  addPerson: (name: string, colorKey?: string) => void
+  renamePerson: (id: string, name: string) => void
+  removePerson: (id: string) => void
   refreshRates: () => void
   signOut: () => Promise<void>
 }
@@ -113,10 +106,18 @@ const uuid = () =>
         return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
       })
 
+function personToUser(p: Person): User {
+  return { id: p.id, name: p.name, initial: p.initial, color_key: p.color_key, created_at: p.created_at }
+}
+
+/** Attach owner_ids (person ids) + per-owner cents shares to each transaction
+ *  from its `transaction_shares` rows. A row with no shares falls back to its
+ *  creator's person at the full amount (defensive — post-migration all rows
+ *  carry materialized shares). */
 function rehydrateTransactions(
   rows: Transaction[],
   shares: TransactionShare[],
-  personalShares: Record<string, PersonalShare>
+  personForUser: (createdBy: string) => string
 ): Transaction[] {
   const byTx = new Map<string, TransactionShare[]>()
   for (const s of shares) {
@@ -125,18 +126,14 @@ function rehydrateTransactions(
     byTx.set(s.transaction_id, arr)
   }
   return rows.map((r) => {
-    if (r.scope === 'personal') {
-      // Local-user splits live on-device; merge them back (creator-only otherwise).
-      const { owner_ids, splits } = resolvePersonalOwners(r.id, r.created_by, personalShares)
-      return { ...r, owner_ids, splits }
-    }
     const sh = byTx.get(r.id) ?? []
-    const owner_ids = sh.map((s) => s.user_id)
-    const splits =
-      sh.length === 0
-        ? null
-        : sh.reduce<Record<string, number>>((m, s) => ((m[s.user_id] = s.percent), m), {})
-    return { ...r, owner_ids: owner_ids.length ? owner_ids : [r.created_by], splits }
+    if (sh.length === 0) {
+      const pid = personForUser(r.created_by)
+      return { ...r, owner_ids: [pid], shares: { [pid]: r.amount_cents } }
+    }
+    const owner_ids = sh.map((s) => s.person_id)
+    const sharesMap = sh.reduce<Record<string, number>>((m, s) => ((m[s.person_id] = s.amount_cents), m), {})
+    return { ...r, owner_ids, shares: sharesMap }
   })
 }
 
@@ -146,9 +143,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState('')
   const [users, setUsers] = useState<User[]>([])
-  const [localUsers, setLocalUsers] = useState<LocalUser[]>([])
+  const [people, setPeople] = useState<Person[]>([]) // all people, incl. removed
   const [household, setHousehold] = useState<Household | null>(null)
-  const [members, setMembers] = useState<string[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [cards, setCards] = useState<Card[]>([])
   const [properties, setProperties] = useState<Property[]>([])
@@ -163,19 +159,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const c = localStorage.getItem('currency') as CurrencyKey | null
     if (c) setCurrencyState(c)
-    try {
-      const lu = JSON.parse(localStorage.getItem('localUsers') ?? '[]')
-      if (Array.isArray(lu)) setLocalUsers(lu)
-    } catch {}
   }, [])
 
   const setCurrency = (c: CurrencyKey) => {
     setCurrencyState(c)
     localStorage.setItem('currency', c)
-  }
-  const persistLocalUsers = (next: LocalUser[]) => {
-    setLocalUsers(next)
-    localStorage.setItem('localUsers', JSON.stringify(next))
   }
 
   // ---- bootstrap ----
@@ -237,6 +225,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             .insert({ household_id: householdId, user_id: authUser.id, role: 'owner' })
         }
 
+        // ensure the account holder has a Person row, then fold any legacy
+        // device-only local users into household_people (one-time).
+        await ensureAccountPersonAndFoldLegacy(householdId, me)
+
         await loadAll(householdId, householdName)
       } catch (e) {
         setError(`Failed to load: ${(e as Error).message}`)
@@ -248,10 +240,48 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  async function ensureAccountPersonAndFoldLegacy(householdId: string, me: User) {
+    const { data: existing } = await supabase
+      .from('household_people')
+      .select('id, linked_user_id')
+      .eq('household_id', householdId)
+    const rows = (existing ?? []) as { id: string; linked_user_id: string | null }[]
+    let order = rows.length
+    if (!rows.some((p) => p.linked_user_id === me.id)) {
+      await supabase.from('household_people').insert({
+        id: uuid(),
+        household_id: householdId,
+        name: me.name,
+        initial: me.initial,
+        color_key: me.color_key,
+        linked_user_id: me.id,
+        sort_order: 0,
+      })
+    }
+    // Legacy: people previously stored only on this device (localStorage).
+    try {
+      const legacy = JSON.parse(localStorage.getItem('localUsers') ?? '[]')
+      if (Array.isArray(legacy) && legacy.length) {
+        for (const lu of legacy) {
+          await supabase.from('household_people').insert({
+            id: uuid(),
+            household_id: householdId,
+            name: lu.name,
+            initial: lu.initial ?? (lu.name?.[0]?.toUpperCase() || '·'),
+            color_key: lu.color_key ?? 'sand',
+            linked_user_id: null,
+            sort_order: order++,
+          })
+        }
+        localStorage.removeItem('localUsers')
+      }
+    } catch {}
+  }
+
   async function loadAll(householdId: string, householdName: string) {
     const [
       usersRes,
-      membersRes,
+      peopleRes,
       txRes,
       sharesRes,
       cardsRes,
@@ -263,7 +293,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       budgetsRes,
     ] = await Promise.all([
       supabase.from('users').select('*'),
-      supabase.from('household_members').select('*').eq('household_id', householdId),
+      supabase.from('household_people').select('*').eq('household_id', householdId).order('sort_order', { ascending: true }),
       supabase.from('transactions').select('*').order('date', { ascending: false }),
       supabase.from('transaction_shares').select('*'),
       supabase.from('cards').select('*').order('created_at', { ascending: true }),
@@ -276,24 +306,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     ])
 
     setUsers((usersRes.data as User[]) ?? [])
-    const memberRows = (membersRes.data ?? []) as { user_id: string; created_at: string }[]
-    const orderedMembers = memberRows
-      .slice()
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-      .map((m) => m.user_id)
-    setMembers(orderedMembers)
+    const peopleRows = (peopleRes.data as Person[]) ?? []
+    setPeople(peopleRows)
     setHousehold({
       id: householdId,
       owner_id: currentUserId,
       name: householdName,
       created_at: new Date().toISOString(),
     })
+    const personForUser = (createdBy: string) =>
+      peopleRows.find((p) => p.linked_user_id === createdBy)?.id ?? createdBy
     const txRows = (txRes.data as Transaction[]) ?? []
-    setTransactions(
-      rehydrateTransactions(txRows, (sharesRes.data as TransactionShare[]) ?? [], readPersonalShares())
-    )
-    // Forget on-device shares for personal transactions that no longer exist.
-    prunePersonalShares(new Set(txRows.filter((t) => t.scope === 'personal').map((t) => t.id)))
+    setTransactions(rehydrateTransactions(txRows, (sharesRes.data as TransactionShare[]) ?? [], personForUser))
     setCards((cardsRes.data as Card[]) ?? [])
 
     // stitch properties
@@ -346,19 +370,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const formatMoney = (cents: number, opts?: { leadingPlus?: boolean }) =>
     fmtMoney(cents, currency, rate(currency), opts?.leadingPlus ?? false)
 
-  // ---- user resolution ----
-  const resolveUser = (id: string): AnyUser => {
-    const u = users.find((x) => x.id === id)
-    if (u) return u
-    const l = localUsers.find((x) => x.id === id)
-    if (l) return l
-    return {
-      id: PLACEHOLDER_ID,
-      name: 'Removed',
-      initial: '·',
-      color_key: 'sand',
-      created_at: '',
-    } as User
+  // ---- owner (person) resolution ----
+  const resolveUser = (id: string): User => {
+    const p = people.find((x) => x.id === id)
+    if (p) return personToUser(p)
+    return { id: PLACEHOLDER_ID, name: 'Removed', initial: '·', color_key: 'sand', created_at: '' }
   }
 
   const ownersDisplay = (tx: Transaction): OwnerDisplay => {
@@ -392,20 +408,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return { avatarUser: synthetic, label: 'Shared', count: owners.length }
   }
 
-  const householdMembers = useMemo(
-    () => members.map((id) => users.find((u) => u.id === id)).filter(Boolean) as User[],
-    [members, users]
+  const activePeople = useMemo(
+    () => people.filter((p) => !p.removed_at).sort((a, b) => a.sort_order - b.sort_order),
+    [people]
   )
+  const householdMembers = useMemo(() => activePeople.map(personToUser), [activePeople])
 
   const currentUser = useMemo(
     () => users.find((u) => u.id === currentUserId) ?? null,
     [users, currentUserId]
   )
-
-  const personalParticipants: AnyUser[] = useMemo(() => {
-    const me = currentUser
-    return [...(me ? [me] : []), ...localUsers]
-  }, [currentUser, localUsers])
+  const currentPersonId = useMemo(
+    () => people.find((p) => p.linked_user_id === currentUserId)?.id ?? '',
+    [people, currentUserId]
+  )
 
   // ---- aggregation ----
   const inRange = (date: string, start: Date, end: Date) => {
@@ -418,31 +434,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       .filter((t) => t.kind === 'expense' && t.category === category && inRange(t.date, start, end))
       .reduce((s, t) => s + t.amount_cents, 0)
 
-  const spentBy = (userId: string, start: Date, end: Date) =>
+  const spentBy = (personId: string, start: Date, end: Date) =>
     transactions
-      .filter((t) => t.kind === 'expense' && inRange(t.date, start, end) && t.owner_ids.includes(userId))
-      .reduce((s, t) => {
-        const splits = effectiveSplits(t)
-        return s + Math.round((t.amount_cents * (splits[userId] ?? 0)) / 100)
-      }, 0)
+      .filter((t) => t.kind === 'expense' && inRange(t.date, start, end) && t.owner_ids.includes(personId))
+      .reduce((s, t) => s + (effectiveShares(t)[personId] ?? 0), 0)
 
-  const monthlySpentBy = (userId: string) => {
+  const monthlySpentBy = (personId: string) => {
     const now = new Date()
-    return spentBy(userId, new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 1))
+    return spentBy(personId, new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 1))
   }
 
   // ---- mutations (optimistic) ----
   const writeShares = async (tx: Transaction) => {
     await supabase.from('transaction_shares').delete().eq('transaction_id', tx.id)
-    if (tx.scope === 'shared') {
-      const splits = effectiveSplits(tx)
-      const rows = tx.owner_ids.map((uid) => ({
-        transaction_id: tx.id,
-        user_id: uid,
-        percent: splits[uid] ?? 0,
-      }))
-      if (rows.length) await supabase.from('transaction_shares').insert(rows)
-    }
+    const shares = effectiveShares(tx)
+    const rows = tx.owner_ids.map((pid) => ({
+      transaction_id: tx.id,
+      person_id: pid,
+      amount_cents: shares[pid] ?? 0,
+    }))
+    if (rows.length) await supabase.from('transaction_shares').insert(rows)
   }
 
   const txRecord = (tx: Transaction) => ({
@@ -451,32 +462,22 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     merchant: tx.merchant,
     category: tx.category,
     kind: tx.kind,
-    scope: tx.scope,
     amount_cents: tx.amount_cents,
     source: tx.source,
     date: tx.date,
     created_by: tx.created_by,
   })
 
-  // Personal-scope owners/splits include device-only local users — persist them
-  // on-device (never to Supabase) so they survive a reload. `null` = creator-only.
-  const savePersonalShare = (tx: Transaction) => {
-    if (tx.scope === 'personal') writePersonalShare(tx.id, { owner_ids: tx.owner_ids, splits: tx.splits })
-    else removePersonalShare(tx.id)
-  }
-
   const addTransaction = (tx: Transaction) => {
     setTransactions((prev) => [tx, ...prev])
-    savePersonalShare(tx)
     ;(async () => {
       const { error: e } = await supabase.from('transactions').insert(txRecord(tx))
       if (e) {
         setTransactions((prev) => prev.filter((t) => t.id !== tx.id))
-        removePersonalShare(tx.id)
         setError(e.message)
         return
       }
-      if (tx.scope === 'shared') await writeShares(tx)
+      await writeShares(tx)
     })()
   }
 
@@ -486,14 +487,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       prevTx = prev.find((t) => t.id === tx.id)
       return prev.map((t) => (t.id === tx.id ? tx : t))
     })
-    savePersonalShare(tx)
     ;(async () => {
       const { error: e } = await supabase.from('transactions').update(txRecord(tx)).eq('id', tx.id)
       if (e) {
-        if (prevTx) {
-          setTransactions((prev) => prev.map((t) => (t.id === tx.id ? prevTx! : t)))
-          savePersonalShare(prevTx) // restore the prior on-device share
-        }
+        if (prevTx) setTransactions((prev) => prev.map((t) => (t.id === tx.id ? prevTx! : t)))
         setError(e.message)
         return
       }
@@ -507,12 +504,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       removed = prev.find((t) => t.id === id)
       return prev.filter((t) => t.id !== id)
     })
-    removePersonalShare(id)
     ;(async () => {
       const { error: e } = await supabase.from('transactions').delete().eq('id', id)
       if (e && removed) {
         setTransactions((prev) => [removed!, ...prev])
-        if (removed) savePersonalShare(removed)
         setError(e.message)
       }
     })()
@@ -701,28 +696,75 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     })()
   }
 
-  const removeMember = (userId: string) => {
+  // ---- people CRUD ----
+  const addPerson = (name: string, colorKey = 'sage') => {
     if (!household) return
-    const prev = members
-    setMembers((m) => m.filter((id) => id !== userId))
+    const trimmed = name.trim()
+    if (!trimmed) return
+    const p: Person = {
+      id: uuid(),
+      household_id: household.id,
+      name: trimmed,
+      initial: (trimmed[0] ?? '·').toUpperCase(),
+      color_key: colorKey,
+      linked_user_id: null,
+      sort_order: people.length,
+      removed_at: null,
+      created_at: new Date().toISOString(),
+    }
+    setPeople((prev) => [...prev, p])
     ;(async () => {
-      const { error: e } = await supabase
-        .from('household_members')
-        .delete()
-        .eq('household_id', household.id)
-        .eq('user_id', userId)
+      const { error: e } = await supabase.from('household_people').insert({
+        id: p.id,
+        household_id: p.household_id,
+        name: p.name,
+        initial: p.initial,
+        color_key: p.color_key,
+        linked_user_id: null,
+        sort_order: p.sort_order,
+      })
       if (e) {
-        setMembers(prev)
+        setPeople((prev) => prev.filter((x) => x.id !== p.id))
         setError(e.message)
       }
     })()
   }
 
-  const addLocalUser = (u: Omit<LocalUser, 'id' | 'is_local'>) => {
-    persistLocalUsers([...localUsers, { ...u, id: uuid(), is_local: true }])
+  const renamePerson = (id: string, name: string) => {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    const initial = (trimmed[0] ?? '·').toUpperCase()
+    let prev: Person | undefined
+    setPeople((list) => {
+      prev = list.find((p) => p.id === id)
+      return list.map((p) => (p.id === id ? { ...p, name: trimmed, initial } : p))
+    })
+    ;(async () => {
+      const { error: e } = await supabase
+        .from('household_people')
+        .update({ name: trimmed, initial })
+        .eq('id', id)
+      if (e) {
+        if (prev) setPeople((list) => list.map((p) => (p.id === id ? prev! : p)))
+        setError(e.message)
+      }
+    })()
   }
-  const removeLocalUser = (id: string) => {
-    persistLocalUsers(localUsers.filter((u) => u.id !== id))
+
+  const removePerson = (id: string) => {
+    const at = new Date().toISOString()
+    let prev: Person | undefined
+    setPeople((list) => {
+      prev = list.find((p) => p.id === id)
+      return list.map((p) => (p.id === id ? { ...p, removed_at: at } : p))
+    })
+    ;(async () => {
+      const { error: e } = await supabase.from('household_people').update({ removed_at: at }).eq('id', id)
+      if (e) {
+        if (prev) setPeople((list) => list.map((p) => (p.id === id ? prev! : p)))
+        setError(e.message)
+      }
+    })()
   }
 
   const signOut = async () => {
@@ -736,9 +778,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     error,
     currentUserId,
     currentUser,
+    currentPersonId,
     currentHousehold: household,
     users,
-    localUsers,
+    people: activePeople,
     householdMembers,
     transactions,
     cards,
@@ -753,7 +796,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     formatMoney,
     resolveUser,
     ownersDisplay,
-    personalParticipants,
     categoryExpenseTotal,
     monthlySpentBy,
     spentBy,
@@ -770,9 +812,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     addOrUpdateBudget,
     deleteBudget,
     updateHouseholdName,
-    removeMember,
-    addLocalUser,
-    removeLocalUser,
+    addPerson,
+    renamePerson,
+    removePerson,
     refreshRates,
     signOut,
   }

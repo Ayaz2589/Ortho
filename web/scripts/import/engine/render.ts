@@ -13,10 +13,10 @@ const trunc = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…
 
 export function renderTable(rows: Transaction[]): string {
   if (rows.length === 0) return 'No transactions match.'
-  const header = `${'id'.padEnd(8)}  ${'date'.padEnd(10)}  ${trunc('merchant', 24)} ${'amount'.padStart(12)}  ${'category'.padEnd(13)} ${'scope'.padEnd(8)}  source`
+  const header = `${'id'.padEnd(8)}  ${'date'.padEnd(10)}  ${trunc('merchant', 24)} ${'amount'.padStart(12)}  ${'category'.padEnd(13)} source`
   const lines = rows.map(
     (t) =>
-      `${shortId(t.id)}  ${day(t.date)}  ${trunc(t.merchant, 24)} ${money(t).padStart(12)}  ${t.category.padEnd(13)} ${t.scope.padEnd(8)}  ${t.source}`
+      `${shortId(t.id)}  ${day(t.date)}  ${trunc(t.merchant, 24)} ${money(t).padStart(12)}  ${t.category.padEnd(13)} ${t.source}`
   )
   return [header, ...lines, `(${rows.length} transaction${rows.length === 1 ? '' : 's'})`].join('\n')
 }
@@ -30,8 +30,7 @@ export function renderDetail(t: Transaction): string {
     `  amount:   ${money(t)}`,
     `  category: ${t.category}`,
     `  kind:     ${t.kind}`,
-    `  scope:    ${t.scope}`,
     `  source:   ${t.source || '—'}`,
-    `  owners:   ${owners}${t.splits ? `  splits ${JSON.stringify(t.splits)}` : ''}`,
+    `  owners:   ${owners}${t.owner_ids?.length > 1 ? `  shares ${JSON.stringify(t.shares)}` : ''}`,
   ].join('\n')
 }

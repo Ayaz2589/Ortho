@@ -1,6 +1,5 @@
 export type Role = 'owner' | 'member'
 export type TransactionKind = 'expense' | 'income'
-export type TransactionScope = 'personal' | 'shared'
 export type PropertyKind = 'primary_home' | 'multifamily' | 'rental'
 export type TransactionCategory =
   | 'coffee'
@@ -38,6 +37,22 @@ export interface HouseholdMember {
   created_at: string
 }
 
+/** A name-only member of a household (the account holder or someone you added).
+ *  Owners of transactions are People. Added people need no Ortho account. */
+export interface Person {
+  id: string
+  household_id: string
+  name: string
+  initial: string
+  color_key: string
+  /** Set for the account holder (their auth uid); null for name-only people. */
+  linked_user_id: string | null
+  sort_order: number
+  /** Soft-remove: hidden from pickers, kept on existing transactions. */
+  removed_at: string | null
+  created_at: string
+}
+
 export interface Card {
   id: string
   household_id: string
@@ -47,41 +62,29 @@ export interface Card {
 
 export interface Transaction {
   id: string
-  household_id: string | null
+  household_id: string
   merchant: string
   category: TransactionCategory
   kind: TransactionKind
-  scope: TransactionScope
   amount_cents: number
   source: string
   date: string
   created_by: string
   created_at: string
   updated_at: string
-  shares?: TransactionShare[]
-  // Client-derived from shares / created_by (see rehydrate in store).
+  /** Person ids that own/share this transaction (ordered). Derived from shares. */
   owner_ids: string[]
-  // Explicit per-owner percentages (sum to 100); null = split evenly.
-  splits: Record<string, number> | null
-}
-
-/** A device-only person (roommate/partner) without an Ortho account.
- *  Never written to Supabase — persisted in localStorage. May only
- *  participate in PERSONAL-scope transactions. */
-export interface LocalUser {
-  id: string
-  name: string
-  initial: string
-  color_key: string
-  is_local: true
+  /** Per-owner amount in cents; the values sum to `amount_cents`. */
+  shares: Record<string, number>
 }
 
 export type Platform = 'web' | 'ios'
 
+/** One owner's cents share of a transaction (Supabase `transaction_shares`). */
 export interface TransactionShare {
   transaction_id: string
-  user_id: string
-  percent: number
+  person_id: string
+  amount_cents: number
 }
 
 export interface Property {

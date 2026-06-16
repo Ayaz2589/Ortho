@@ -45,14 +45,13 @@ function tx(over: Partial<Transaction> & Pick<Transaction, 'id' | 'merchant' | '
     household_id: HOUSEHOLD.id,
     category: 'groceries',
     kind: 'expense',
-    scope: 'shared',
     amount_cents: 1000,
     source: 'Visa',
     created_by: 'u1',
     created_at: over.date,
     updated_at: over.date,
     owner_ids: ['u1'],
-    splits: null,
+    shares: {},
     ...over,
   }
 }

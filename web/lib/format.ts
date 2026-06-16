@@ -1,14 +1,12 @@
 import type { Transaction } from './types'
+import { evenShares } from './splits'
 
-/** Even or explicit splits for a transaction (percent per owner id). */
-export function effectiveSplits(tx: Transaction): Record<string, number> {
-  if (tx.splits && Object.keys(tx.splits).length > 0) return tx.splits
-  const owners = tx.owner_ids
-  if (owners.length === 0) return {}
-  const even = 100 / owners.length
-  const out: Record<string, number> = {}
-  owners.forEach((id) => (out[id] = even))
-  return out
+/** Per-owner cents for a transaction. Falls back to an even split when shares
+ *  are absent (defensive — persisted transactions always carry materialized
+ *  cents shares that sum to the amount). */
+export function effectiveShares(tx: Transaction): Record<string, number> {
+  if (tx.shares && Object.keys(tx.shares).length > 0) return tx.shares
+  return evenShares(tx.amount_cents, tx.owner_ids)
 }
 
 export function startOfDay(d: Date): Date {
