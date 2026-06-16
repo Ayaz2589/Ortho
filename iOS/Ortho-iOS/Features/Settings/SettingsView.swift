@@ -8,7 +8,6 @@ struct SettingsView: View {
     @State private var showingAddCard = false
     @State private var showingSignOutConfirm = false
     #if DEBUG
-    @State private var showingLoadDummyConfirm = false
     @State private var showingLegacyImportConfirm = false
     @State private var legacyImportRunning = false
     @State private var legacyImportResult: String?
@@ -141,8 +140,6 @@ struct SettingsView: View {
                     sectionLabel("Developer")
 
                     VStack(spacing: 0) {
-                        loadDummyDataRow
-                        RowSeparator(density: .comfortable)
                         syncFromServerRow
                         RowSeparator(density: .comfortable)
                         legacyImportRow
@@ -154,7 +151,7 @@ struct SettingsView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 8)
 
-                    Text("Only visible in DEBUG builds. \"Load demo data\" enters demo mode — the app shows a 6-month sample dataset, and every change you make stays local (nothing syncs to Supabase). A banner appears at the top with an Exit button that restores your real data. \"Sync all from server\" replaces local transactions, cards, properties, and rental payments with what Supabase returns. \"Import legacy JSON\" runs a one-shot seed against Supabase from a bundled file — use the dry-run option first.")
+                    Text("Only visible in DEBUG builds. \"Sync all from server\" replaces local transactions, cards, properties, and rental payments with what Supabase returns. \"Import legacy JSON\" runs a one-shot seed against Supabase from a bundled file — use the dry-run option first.")
                         .font(.lato(size: 13))
                         .foregroundStyle(AppTheme.text.opacity(0.36))
                         .lineSpacing(2)
@@ -201,15 +198,6 @@ struct SettingsView: View {
                 Text("You'll need to sign in again next time you open Ortho.")
             }
             #if DEBUG
-            .alert("Enter demo mode?",
-                   isPresented: $showingLoadDummyConfirm) {
-                Button("Cancel", role: .cancel) { }
-                Button("Load demo") {
-                    appState.loadDummyData()
-                }
-            } message: {
-                Text("The app will show a 6-month sample dataset (3 users · 3 properties · ~300 transactions). Your real data on Supabase isn't touched, and changes you make in demo mode stay local. Tap Exit in the banner at the top to restore your live data.")
-            }
             .confirmationDialog("Import legacy JSON?",
                                 isPresented: $showingLegacyImportConfirm,
                                 titleVisibility: .visible) {
@@ -259,40 +247,6 @@ struct SettingsView: View {
     }
 
     #if DEBUG
-    private var loadDummyDataRow: some View {
-        Button {
-            showingLoadDummyConfirm = true
-        } label: {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle().fill(AppTheme.text.opacity(0.05))
-                        .frame(width: 40, height: 40)
-                    Image(systemName: "tray.and.arrow.down")
-                        .font(.lato(size: 15, weight: .medium))
-                        .foregroundStyle(AppTheme.accent)
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Load demo data")
-                        .font(.lato(size: 17, weight: .medium))
-                        .tracking(-0.2)
-                        .foregroundStyle(AppTheme.text)
-                    Text("6 months · 3 users · 3 properties")
-                        .font(.lato(size: 13))
-                        .foregroundStyle(AppTheme.text.opacity(0.58))
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.lato(size: 13, weight: .semibold))
-                    .foregroundStyle(AppTheme.text.opacity(0.36))
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .frame(minHeight: 64)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
     private var legacyImportRow: some View {
         Button {
             showingLegacyImportConfirm = true
@@ -359,7 +313,7 @@ struct SettingsView: View {
                         .foregroundStyle(AppTheme.text)
                     Text(tdBankImportRunning
                          ? "Importing… don't close the app"
-                         : "6 income · 6 expenses · personal scope")
+                         : "6 income · 6 expenses")
                         .font(.lato(size: 13))
                         .foregroundStyle(AppTheme.text.opacity(0.58))
                 }

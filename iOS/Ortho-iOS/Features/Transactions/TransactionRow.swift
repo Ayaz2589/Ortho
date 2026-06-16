@@ -11,8 +11,8 @@ import SwiftUI
 /// fire its tap on touch-up of a horizontal swipe.
 struct TransactionRow: View {
     let tx: Transaction
-    /// `(avatarUser, label)` from `AppState.ownersDisplay(of:)`.
-    let display: (avatarUser: User, label: String)
+    /// `(owners, label)` from `AppState.ownersDisplay(of:)`.
+    let display: (owners: [User], label: String)
     let density: Density
 
     @Environment(AppState.self) private var appState
@@ -54,13 +54,28 @@ struct TransactionRow: View {
                         .font(.lato(size: density.avatar * 0.42, weight: .semibold))
                         .foregroundStyle(.white)
                 )
+            ownerOverlay
+                .offset(x: 3, y: 3)
+        }
+    }
+
+    /// Single owner → one avatar; split (2+) → real stacked avatars, matching
+    /// web. Never a synthetic "Shared" circle.
+    @ViewBuilder
+    private var ownerOverlay: some View {
+        if display.owners.count <= 1 {
             UserAvatarView(
-                user: display.avatarUser,
+                user: display.owners.first ?? .placeholder,
                 size: density.avatar * 0.52,
                 ring: true,
                 ringColor: AppTheme.surface
             )
-            .offset(x: 3, y: 3)
+        } else {
+            StackedAvatarsView(
+                users: display.owners,
+                size: density.avatar * 0.46,
+                ring: AppTheme.surface
+            )
         }
     }
 

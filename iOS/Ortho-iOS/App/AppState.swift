@@ -38,14 +38,6 @@ final class AppState {
     /// Stays `false` for incremental syncs after the first bootstrap.
     var isLoadingInitialData: Bool = false
 
-    /// True after `loadDummyData()` runs, until `exitDemoMode()` restores
-    /// the real session. While set, every CRUD method skips its server-
-    /// sync Task — local mutations still happen, but nothing is pushed
-    /// because the in-memory UUIDs (Maya / Jordan / Alex / sample household)
-    /// don't exist server-side and would FK-violate immediately. Bootstrap
-    /// resets the flag to false defensively.
-    var isInDemoMode: Bool = false
-
     /// Email of the currently-signed-in user, or `nil` when signed out.
     /// Surfaced as a String here so view code doesn't have to import `Auth`
     /// to read it (Swift 6 member-import-visibility — the `User.email`
@@ -225,7 +217,6 @@ final class AppState {
             sortOrder: people.count
         )
         people.append(person)
-        guard !isInDemoMode else { return }
         Task {
             do { try await householdsAPI.createPerson(person) }
             catch { await MainActor.run { people.removeAll { $0.id == person.id }; dataError = error.localizedDescription } }
@@ -238,7 +229,6 @@ final class AppState {
         let previous = people[idx]
         people[idx].name = trimmed
         people[idx].initial = String(trimmed.prefix(1)).uppercased()
-        guard !isInDemoMode else { return }
         let updated = people[idx]
         Task {
             do { try await householdsAPI.updatePerson(updated) }
@@ -250,7 +240,6 @@ final class AppState {
         guard let idx = people.firstIndex(where: { $0.id == id }) else { return }
         let previous = people[idx]
         people[idx].removedAt = Date()
-        guard !isInDemoMode else { return }
         let updated = people[idx]
         Task {
             do { try await householdsAPI.updatePerson(updated) }
@@ -262,26 +251,15 @@ final class AppState {
         tx.ownerIDs.map { user($0) }
     }
 
-    /// What the transaction row should render in its single avatar slot + meta
-    /// line. Multi-owner transactions render a synthetic avatar with joined
-    /// initials and the sage palette swatch (the legacy "joint" default).
-    func ownersDisplay(of tx: Transaction) -> (avatarUser: User, label: String) {
+    /// The owners of `tx` (resolved to current members) plus a comma-joined
+    /// label, for the transaction row. Mirrors web's `TransactionRow`: real
+    /// member avatars (single or stacked for splits), never a synthetic
+    /// "Shared" chip. An owner-less transaction falls back to a single
+    /// `.placeholder` so the row always has something to render.
+    func ownersDisplay(of tx: Transaction) -> (owners: [User], label: String) {
         let owners = resolveOwners(of: tx)
-        switch owners.count {
-        case 0:
-            return (.placeholder, "—")
-        case 1:
-            return (owners[0], owners[0].name)
-        case 2:
-            let joined = "\(owners[0].initial.prefix(1))+\(owners[1].initial.prefix(1))"
-            let synthetic = User(name: "Shared",
-                                 initial: joined.uppercased(),
-                                 colorKey: "sage")
-            return (synthetic, "\(owners[0].name) + \(owners[1].name)")
-        default:
-            let synthetic = User(name: "Shared", initial: "··", colorKey: "sage")
-            return (synthetic, "Shared")
-        }
+        guard !owners.isEmpty else { return ([.placeholder], "—") }
+        return (owners, owners.map(\.name).joined(separator: ", "))
     }
 
     // MARK: - Transactions
@@ -298,7 +276,6 @@ final class AppState {
     /// demo mode the server hop is skipped — local-only by design.
     func addTransaction(_ tx: Transaction) {
         transactions.append(tx)
-        guard !isInDemoMode else { return }
         Task {
             do {
                 try await transactionsAPI.create(tx)
@@ -317,7 +294,6 @@ final class AppState {
         guard let idx = transactions.firstIndex(where: { $0.id == tx.id }) else { return }
         let previous = transactions[idx]
         transactions[idx] = tx
-        guard !isInDemoMode else { return }
         Task {
             do {
                 try await transactionsAPI.update(tx)
@@ -336,7 +312,6 @@ final class AppState {
     /// the row at the end (loses original position — acceptable for v1).
     func deleteTransaction(_ tx: Transaction) {
         transactions.removeAll { $0.id == tx.id }
-        guard !isInDemoMode else { return }
         Task {
             do {
                 try await transactionsAPI.delete(id: tx.id)
@@ -379,13 +354,17 @@ final class AppState {
     /// Ensure the account holder has a Person row, then load the household's people.
     func loadPeopleFromServer() async {
         guard let householdID = currentHouseholdID else { return }
+        // Best-effort: make sure the account holder has a Person row. A failure
+        // here must NOT block loading the (often already-present) people list —
+        // otherwise one bad call leaves `people` empty and every owner renders
+        // as the "Removed" placeholder.
+        let me = users.first { $0.id == currentUserID }
+        try? await householdsAPI.ensureAccountPerson(householdID: householdID,
+                                                     userID: currentUserID,
+                                                     name: me?.name ?? "Me",
+                                                     initial: me?.initial ?? "M",
+                                                     colorKey: me?.colorKey ?? "sage")
         do {
-            let me = users.first { $0.id == currentUserID }
-            try await householdsAPI.ensureAccountPerson(householdID: householdID,
-                                                         userID: currentUserID,
-                                                         name: me?.name ?? "Me",
-                                                         initial: me?.initial ?? "M",
-                                                         colorKey: me?.colorKey ?? "sage")
             let fetched = try await householdsAPI.fetchPeople(householdID: householdID)
             await MainActor.run { people = fetched }
         } catch {
@@ -597,7 +576,6 @@ final class AppState {
 
     func addCard(_ card: Card) {
         cards.append(card)
-        guard !isInDemoMode else { return }
         Task {
             do {
                 try await cardsAPI.create(card)
@@ -612,7 +590,6 @@ final class AppState {
 
     func deleteCard(_ card: Card) {
         cards.removeAll { $0.id == card.id }
-        guard !isInDemoMode else { return }
         Task {
             do {
                 try await cardsAPI.delete(id: card.id)
@@ -650,7 +627,6 @@ final class AppState {
         else { return }
         let previous = households[idx].name
         households[idx].name = name
-        guard !isInDemoMode else { return }
         Task {
             do {
                 try await householdsAPI.updateName(name, householdID: id)
@@ -688,7 +664,6 @@ final class AppState {
         else { return }
         let previousMembers = households[idx].memberIDs
         households[idx].memberIDs.removeAll { $0 == userID }
-        guard !isInDemoMode else { return }
         Task {
             do {
                 try await householdsAPI.removeMember(userID: userID, from: id)
@@ -719,7 +694,6 @@ final class AppState {
 
     func addProperty(_ p: Property) {
         properties.append(p)
-        guard !isInDemoMode else { return }
         Task {
             do {
                 try await propertiesAPI.create(p)
@@ -736,7 +710,6 @@ final class AppState {
         guard let idx = properties.firstIndex(where: { $0.id == p.id }) else { return }
         let previous = properties[idx]
         properties[idx] = p
-        guard !isInDemoMode else { return }
         Task {
             do {
                 try await propertiesAPI.update(p)
@@ -757,7 +730,6 @@ final class AppState {
         let cascadedPayments = rentalPayments.filter { $0.propertyID == p.id }
         properties.removeAll { $0.id == p.id }
         rentalPayments.removeAll { $0.propertyID == p.id }
-        guard !isInDemoMode else { return }
         Task {
             do {
                 try await propertiesAPI.delete(id: p.id)
@@ -788,7 +760,6 @@ final class AppState {
 
     func addRentalPayment(_ payment: RentalPayment) {
         rentalPayments.append(payment)
-        guard !isInDemoMode else { return }
         Task {
             do {
                 try await rentalPaymentsAPI.create(payment)
@@ -803,7 +774,6 @@ final class AppState {
 
     func deleteRentalPayment(_ payment: RentalPayment) {
         rentalPayments.removeAll { $0.id == payment.id }
-        guard !isInDemoMode else { return }
         Task {
             do {
                 try await rentalPaymentsAPI.delete(id: payment.id)
@@ -843,7 +813,6 @@ final class AppState {
         } else {
             budgets.append(budget)
         }
-        guard !isInDemoMode else { return }
         Task {
             do {
                 try await budgetsAPI.upsert(budget)
@@ -864,7 +833,6 @@ final class AppState {
 
     func deleteBudget(_ budget: Budget) {
         budgets.removeAll { $0.id == budget.id }
-        guard !isInDemoMode else { return }
         Task {
             do {
                 try await budgetsAPI.delete(id: budget.id)
@@ -897,54 +865,6 @@ final class AppState {
             .filter { $0.propertyID == propertyID }
             .sorted { $0.date > $1.date }
     }
-
-    // MARK: - Dummy data (DEBUG)
-
-    #if DEBUG
-    /// Replace every domain collection with the large dummy dataset and
-    /// enter **demo mode** — every CRUD method now skips its server-sync
-    /// Task, so the dummy UUIDs (Maya / Jordan / Alex / sample household)
-    /// can't FK-violate against the real Supabase schema. User preferences
-    /// (currency, appearance) are preserved. Call `exitDemoMode()` to
-    /// restore real data from the server.
-    func loadDummyData() {
-        let bundle = DummyData.large
-        users = bundle.users
-        households = bundle.households
-        cards = bundle.cards
-        transactions = bundle.transactions
-        properties = bundle.properties
-        rentalPayments = bundle.rentalPayments
-        budgets = []  // No demo budgets — exercises the empty-state path.
-        currentUserID = bundle.users.first?.id ?? currentUserID
-        currentHouseholdID = bundle.households.first?.id ?? currentHouseholdID
-        isInDemoMode = true
-    }
-
-    /// Leave demo mode. Re-runs `bootstrapUserSession` against the current
-    /// auth session so `currentUserID` snaps back to `auth.uid()`, the
-    /// in-memory dummy data is wiped, and every server-backed collection
-    /// is fetched fresh.
-    func exitDemoMode() async {
-        guard let session else {
-            // No session means there's nothing to restore — just flip the
-            // flag and clear the dummy data manually.
-            await MainActor.run {
-                isInDemoMode = false
-                transactions = []
-                cards = []
-                properties = []
-                rentalPayments = []
-                budgets = []
-            }
-            return
-        }
-        // Force the bootstrap to re-run by clearing the auth-id guard.
-        bootstrappedAuthID = nil
-        await MainActor.run { isInDemoMode = false }
-        await bootstrapUserSession(authID: session.user.id, email: session.user.email)
-    }
-    #endif
 
     // MARK: - FX rates
 
@@ -1098,10 +1018,6 @@ final class AppState {
 
         await MainActor.run {
             isLoadingInitialData = true
-            // Defensive: any prior demo-mode state must clear before real
-            // server data lands, otherwise the new transactions would be
-            // gated from server sync as if they were demo.
-            isInDemoMode = false
         }
 
         do {

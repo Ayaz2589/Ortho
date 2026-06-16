@@ -9,7 +9,13 @@ import SwiftUI
 
 @main
 struct Ortho_iOSApp: App {
-    @State private var appState = AppState()
+    // Start empty — the app holds no seeded/sample data. Every domain
+    // collection is populated only from Supabase once the user signs in
+    // (see `bootstrapUserSession` / `loadAllFromServer`).
+    @State private var appState = AppState(
+        users: [], transactions: [], cards: [],
+        households: [], properties: [], rentalPayments: [], budgets: []
+    )
     @AppStorage("appearance") private var appearanceRaw: String = AppearanceMode.system.rawValue
     @AppStorage("language") private var languageRaw: String = AppLanguage.system.rawValue
 

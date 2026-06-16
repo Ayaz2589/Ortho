@@ -104,15 +104,6 @@ struct RootTabView: View {
         // stack the nested insets cleanly and the banner ended up
         // overlapping the inner titles.
         VStack(spacing: 0) {
-            #if DEBUG
-            if appState.isInDemoMode {
-                DemoModeBanner {
-                    Task { await appState.exitDemoMode() }
-                }
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
-            #endif
-
             // ZStack with an if-ladder shows one tab body at a time. A
             // page-style TabView would give horizontal-swipe paging
             // between tabs, but that adds a third pan-recognizer to the
@@ -145,7 +136,6 @@ struct RootTabView: View {
             .ignoresSafeArea(.keyboard, edges: .bottom)
         }
         .background(AppTheme.bg.ignoresSafeArea())
-        .animation(.easeOut(duration: 0.22), value: appStateIsInDemoMode)
         .onPreferenceChange(HideTabBarPreferenceKey.self) { newValue in
             withAnimation(.easeOut(duration: 0.22)) {
                 tabBarHidden = newValue
@@ -155,15 +145,6 @@ struct RootTabView: View {
             // Fetch live FX rates once per app launch when cache is stale.
             await appState.refreshRatesIfStale()
         }
-    }
-
-    /// Tracked so the VStack animates the banner in/out smoothly.
-    private var appStateIsInDemoMode: Bool {
-        #if DEBUG
-        return appState.isInDemoMode
-        #else
-        return false
-        #endif
     }
 }
 

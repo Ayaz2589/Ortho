@@ -104,7 +104,10 @@ struct HouseholdsAPI {
         initial: String,
         colorKey: String
     ) async throws {
-        let existing: [Person] = try await client
+        // Select only `id` — decode into a minimal row, NOT `Person` (which
+        // requires name/household_id/etc. and would throw keyNotFound on a
+        // partial projection, wiping the whole people load).
+        let existing: [PersonIDRow] = try await client
             .from("household_people")
             .select("id")
             .eq("household_id", value: householdID)
@@ -149,6 +152,12 @@ private struct HouseholdMembershipRow: Decodable {
 
 private struct HouseholdNameRow: Decodable {
     let name: String
+}
+
+/// Minimal projection for existence checks against `household_people` — decodes
+/// a `select("id")` without requiring the full `Person` shape.
+private struct PersonIDRow: Decodable {
+    let id: UUID
 }
 
 private struct HouseholdInsertRow: Encodable {
