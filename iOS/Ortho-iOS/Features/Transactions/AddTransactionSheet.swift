@@ -35,8 +35,12 @@ struct AddTransactionSheet: View {
     @State private var category: TransactionCategory
     @State private var selectedOwners: Set<User.ID>
     /// Per-owner split percentage as user-typed strings. Parsed at submit time.
-    /// Only meaningful when `showsSplit` is true.
+    /// Only meaningful when `showsSplit` is true and the method is `.percent`.
     @State private var splitPercents: [User.ID: String]
+    /// How a multi-owner split is entered: even / by-% / by-amount.
+    @State private var splitMethod: SplitMethod = .even
+    /// Per-owner amount (display-currency) strings for the `.value` method.
+    @State private var splitValues: [User.ID: String] = [:]
     @State private var source: String
     @State private var date: Date
 
@@ -147,10 +151,34 @@ struct AddTransactionSheet: View {
         parsedSplits.values.reduce(0, +)
     }
 
+    /// The transaction's amount in USD cents (from the entered display amount).
+    private var enteredCents: Int64 {
+        guard let parsed = parsedAmount else { return 0 }
+        return Money.toUSDCents(parsed, from: appState.currency, rate: appState.rate(for: appState.currency))
+    }
+
+    /// USD cents parsed from an owner's by-amount field (display currency).
+    private func valueCents(_ id: User.ID) -> Int64 {
+        let raw = (splitValues[id] ?? "").replacingOccurrences(of: ",", with: "").trimmingCharacters(in: .whitespaces)
+        guard let d = Decimal(string: raw), d >= 0 else { return 0 }
+        return Money.toUSDCents(d, from: appState.currency, rate: appState.rate(for: appState.currency))
+    }
+
+    private var splitValueTotalCents: Int64 {
+        sortedSelectedOwners.reduce(0) { $0 + valueCents($1.id) }
+    }
+
     private var splitIsValid: Bool {
-        let diff = splitTotal - 100
-        let abs = diff >= 0 ? diff : -diff
-        return abs <= Self.splitTolerance
+        switch splitMethod {
+        case .even:
+            return true
+        case .percent:
+            let diff = splitTotal - 100
+            let abs = diff >= 0 ? diff : -diff
+            return abs <= Self.splitTolerance
+        case .value:
+            return enteredCents > 0 && splitValueTotalCents == enteredCents
+        }
     }
 
     private var merchantLabel: LocalizedStringKey { kind == .income ? "Source" : "Merchant" }
@@ -399,9 +427,17 @@ struct AddTransactionSheet: View {
         // Owners come straight from the picker; shares are exact cents derived
         // from the per-owner percentages (even when a single owner takes all).
         let owners = Array(selectedOwners).sorted { $0.uuidString < $1.uuidString }
-        let split: SplitInput<Person.ID> = (showsSplit && splitIsValid)
-            ? .percent(Dictionary(uniqueKeysWithValues: parsedSplits.map { ($0.key, NSDecimalNumber(decimal: $0.value).doubleValue) }))
-            : .even
+        var split: SplitInput<Person.ID> = .even
+        if showsSplit && splitIsValid {
+            switch splitMethod {
+            case .even:
+                split = .even
+            case .percent:
+                split = .percent(Dictionary(uniqueKeysWithValues: parsedSplits.map { ($0.key, NSDecimalNumber(decimal: $0.value).doubleValue) }))
+            case .value:
+                split = .value(Dictionary(uniqueKeysWithValues: owners.map { ($0, valueCents($0)) }))
+            }
+        }
         let shares = computeShares(cents, owners, split)
         let tx = Transaction(
             id: editing?.id ?? UUID(),
@@ -717,10 +753,7 @@ struct AddTransactionSheet: View {
                     .textCase(.uppercase)
                     .foregroundStyle(AppTheme.text.opacity(0.58))
                 Spacer()
-                Button("Even", action: resetSplitsToEven)
-                    .font(.lato(size: 13, weight: .medium))
-                    .foregroundStyle(AppTheme.accent)
-                    .buttonStyle(.plain)
+                splitMethodPicker
             }
             .padding(.horizontal, 24)
 
@@ -730,15 +763,37 @@ struct AddTransactionSheet: View {
                     splitRow(for: u)
                     if idx < owners.count - 1 { divider }
                 }
-                divider
-                splitTotalRow
+                if splitMethod != .even {
+                    divider
+                    splitTotalRow
+                }
             }
         }
     }
 
+    /// Even / % / by-amount segmented control.
+    private var splitMethodPicker: some View {
+        HStack(spacing: 2) {
+            ForEach([SplitMethod.even, .percent, .value], id: \.self) { m in
+                Button { setSplitMethod(m) } label: {
+                    Text(m == .even ? "Even" : m == .percent ? "%" : Money.symbol(for: appState.currency))
+                        .font(.lato(size: 13, weight: .semibold))
+                        .foregroundStyle(splitMethod == m ? AppTheme.text : AppTheme.text.opacity(0.5))
+                        .frame(minWidth: 34)
+                        .padding(.vertical, 5)
+                        .background(RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(splitMethod == m ? AppTheme.surface : .clear))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(3)
+        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(AppTheme.text.opacity(0.05)))
+        .animation(.easeOut(duration: 0.12), value: splitMethod)
+    }
+
     private var sortedSelectedOwners: [User] {
-        appState.users
-            .filter { selectedOwners.contains($0.id) }
+        appState.householdMembers.filter { selectedOwners.contains($0.id) }
     }
 
     private func splitRow(for u: User) -> some View {
@@ -749,25 +804,37 @@ struct AddTransactionSheet: View {
                 .tracking(-0.2)
                 .foregroundStyle(AppTheme.text)
             Spacer()
-            TextField("0", text: splitBinding(for: u.id))
-                .font(.lato(size: 17, weight: .medium))
-                .monospacedDigit()
-                .multilineTextAlignment(.trailing)
-                .keyboardType(.decimalPad)
-                .frame(width: 64)
-                .foregroundStyle(AppTheme.text)
-            Text("%")
-                .font(.lato(size: 15))
-                .foregroundStyle(AppTheme.text.opacity(0.58))
+            switch splitMethod {
+            case .even:
+                Text(appState.formatMoney(evenShareCents(for: u.id)))
+                    .font(.lato(size: 17, weight: .medium))
+                    .monospacedDigit()
+                    .foregroundStyle(AppTheme.text.opacity(0.58))
+            case .percent:
+                TextField("0", text: splitBinding(for: u.id))
+                    .font(.lato(size: 17, weight: .medium)).monospacedDigit()
+                    .multilineTextAlignment(.trailing).keyboardType(.decimalPad)
+                    .frame(width: 64).foregroundStyle(AppTheme.text)
+                Text("%").font(.lato(size: 15)).foregroundStyle(AppTheme.text.opacity(0.58))
+            case .value:
+                Text(Money.symbol(for: appState.currency))
+                    .font(.lato(size: 15)).foregroundStyle(AppTheme.text.opacity(0.58))
+                TextField("0", text: valueBinding(for: u.id))
+                    .font(.lato(size: 17, weight: .medium)).monospacedDigit()
+                    .multilineTextAlignment(.trailing).keyboardType(.decimalPad)
+                    .frame(width: 78).foregroundStyle(AppTheme.text)
+            }
         }
         .padding(.horizontal, 16)
         .frame(minHeight: 52)
     }
 
-    /// Binding that writes the user-typed string verbatim, then rebalances the
-    /// other owners so the total stays at 100. The edited owner's string is
-    /// never reformatted mid-typing — so "0.0" doesn't get clobbered into
-    /// "0.00" while you're still typing the trailing digit.
+    private func evenShareCents(for id: User.ID) -> Int64 {
+        let owners = sortedSelectedOwners.map(\.id).sorted { $0.uuidString < $1.uuidString }
+        return computeShares(enteredCents, owners, .even)[id] ?? 0
+    }
+
+    /// Percent binding — writes verbatim, then rebalances other owners to 100.
     private func splitBinding(for id: User.ID) -> Binding<String> {
         Binding(
             get: { splitPercents[id] ?? "" },
@@ -778,19 +845,30 @@ struct AddTransactionSheet: View {
         )
     }
 
+    /// By-amount binding — writes verbatim (no rebalance; the user enters exact
+    /// amounts and the live total shows whether they sum to the transaction).
+    private func valueBinding(for id: User.ID) -> Binding<String> {
+        Binding(get: { splitValues[id] ?? "" }, set: { splitValues[id] = $0 })
+    }
+
     private var splitTotalRow: some View {
         HStack(spacing: 12) {
-            Text("Total")
+            Text(splitMethod == .value ? "Total" : "Total")
                 .font(.lato(size: 15))
                 .foregroundStyle(AppTheme.text.opacity(0.58))
             Spacer()
-            Text(formatPercent(splitTotal))
-                .font(.lato(size: 17, weight: .semibold))
-                .monospacedDigit()
-                .foregroundStyle(splitIsValid ? AppTheme.positive : AppTheme.text.opacity(0.58))
-            Text("%")
-                .font(.lato(size: 15))
-                .foregroundStyle(AppTheme.text.opacity(0.58))
+            if splitMethod == .value {
+                Text(appState.formatMoney(splitValueTotalCents))
+                    .font(.lato(size: 17, weight: .semibold)).monospacedDigit()
+                    .foregroundStyle(splitIsValid ? AppTheme.positive : AppTheme.text.opacity(0.58))
+                Text("/ \(appState.formatMoney(enteredCents))")
+                    .font(.lato(size: 13)).foregroundStyle(AppTheme.text.opacity(0.4))
+            } else {
+                Text(formatPercent(splitTotal))
+                    .font(.lato(size: 17, weight: .semibold)).monospacedDigit()
+                    .foregroundStyle(splitIsValid ? AppTheme.positive : AppTheme.text.opacity(0.58))
+                Text("%").font(.lato(size: 15)).foregroundStyle(AppTheme.text.opacity(0.58))
+            }
         }
         .padding(.horizontal, 16)
         .frame(minHeight: 52)
@@ -799,26 +877,48 @@ struct AddTransactionSheet: View {
 
     // MARK: - Split helpers
 
-    /// Reset splitPercents to an even distribution across `selectedOwners`.
-    /// The last owner absorbs any rounding remainder so the total is exactly
-    /// 100 in the common 3-owner case (33.33 + 33.33 + 33.34).
-    private func resetSplitsToEven() {
-        let owners = sortedSelectedOwners
-        guard !owners.isEmpty else {
-            splitPercents = [:]
-            return
+    private func setSplitMethod(_ m: SplitMethod) {
+        splitMethod = m
+        switch m {
+        case .even:    break
+        case .percent: seedEvenPercents()
+        case .value:   seedEvenValues()
         }
-        let count = owners.count
-        let baseTwoDigit = (100.0 / Double(count) * 100).rounded(.down) / 100  // e.g. 33.33
-        var totals = Array(repeating: baseTwoDigit, count: count)
-        let remainder = 100.0 - baseTwoDigit * Double(count)
-        totals[count - 1] += (remainder * 100).rounded() / 100
+    }
 
+    /// Reset to an even split (used on owner/amount/direction changes).
+    private func resetSplitsToEven() {
+        splitMethod = .even
+        seedEvenPercents()
+    }
+
+    /// Even percentages across owners; the last absorbs the rounding remainder
+    /// (33.33 + 33.33 + 33.34 = 100).
+    private func seedEvenPercents() {
+        let owners = sortedSelectedOwners
+        guard !owners.isEmpty else { splitPercents = [:]; return }
+        let count = owners.count
+        let baseTwoDigit = (100.0 / Double(count) * 100).rounded(.down) / 100
+        var totals = Array(repeating: baseTwoDigit, count: count)
+        totals[count - 1] += ((100.0 - baseTwoDigit * Double(count)) * 100).rounded() / 100
         var next: [User.ID: String] = [:]
-        for (i, u) in owners.enumerated() {
-            next[u.id] = String(format: "%.2f", totals[i])
-        }
+        for (i, u) in owners.enumerated() { next[u.id] = String(format: "%.2f", totals[i]) }
         splitPercents = next
+    }
+
+    /// Even by-amount fields in display currency (a starting point the user edits).
+    private func seedEvenValues() {
+        let owners = sortedSelectedOwners
+        guard !owners.isEmpty, let amt = parsedAmount else { splitValues = [:]; return }
+        let fd = appState.currency.fractionDigits
+        let scale = pow(10.0, Double(fd))
+        let total = NSDecimalNumber(decimal: amt).doubleValue
+        let base = (total / Double(owners.count) * scale).rounded(.down) / scale
+        var amounts = Array(repeating: base, count: owners.count)
+        amounts[owners.count - 1] += ((total - base * Double(owners.count)) * scale).rounded() / scale
+        var next: [User.ID: String] = [:]
+        for (i, u) in owners.enumerated() { next[u.id] = String(format: "%.\(fd)f", amounts[i]) }
+        splitValues = next
     }
 
     private func formatPercent(_ d: Decimal) -> String {
