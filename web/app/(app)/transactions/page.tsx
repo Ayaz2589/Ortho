@@ -1,9 +1,9 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Search, Plus, X, ArrowUpDown, ChevronDown } from 'lucide-react'
+import { Search, Plus, X, ArrowUpDown, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { useApp } from '@/lib/store'
-import { PageHeader, IconButton, Card, Segmented, EmptyState } from '@/components/ui'
+import { PageHeader, IconButton, Card, Segmented, EmptyState, Modal } from '@/components/ui'
 import { useIsExpanded } from '@/lib/useMediaQuery'
 import { groupByDay, groupDaysByMonth, dayLabel, monthYearLong, expenseTotal, startOfMonth } from '@/lib/format'
 import type { Transaction } from '@/lib/types'
@@ -11,77 +11,39 @@ import { TransactionRow } from '@/components/transactions/TransactionRow'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 import { TransactionsDesktop } from '@/components/web/TransactionsDesktop'
 import { TxModalWeb } from '@/components/web/TxModalWeb'
+import { useTransactionFilters } from '@/lib/useTransactionFilters'
+import { FilterPanel } from '@/components/web/FilterPanel'
+import { ActiveFilterChips } from '@/components/web/ActiveFilterChips'
 
 type ScopeFilter = 'all' | 'shared' | 'personal'
 
 export default function TransactionsPage() {
   const isExpanded = useIsExpanded()
-  const {
-    transactions,
-    currentHousehold,
-    resolveUser,
-    formatMoney,
-    deleteTransaction,
-    locale,
-  } = useApp()
+  const { transactions, formatMoney, deleteTransaction, locale } = useApp()
+  const f = useTransactionFilters()
 
   const [searchActive, setSearchActive] = useState(false)
-  const [query, setQuery] = useState('')
-  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all')
+  const [filterOpen, setFilterOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [copySource, setCopySource] = useState<Transaction | null>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
 
   const hasAny = transactions.length > 0
 
-  function inScope(tx: Transaction): boolean {
-    const isShared = tx.household_id !== null && tx.household_id === currentHousehold?.id
-    const isPersonal = tx.household_id === null
-    if (scopeFilter === 'shared') return isShared
-    if (scopeFilter === 'personal') return isPersonal
-    return isShared || isPersonal
-  }
+  const months = useMemo(() => groupDaysByMonth(groupByDay(f.filtered)), [f.filtered])
+  const noMatches = hasAny && f.filtered.length === 0
 
-  function matches(tx: Transaction, q: string): boolean {
-    if (tx.merchant.toLowerCase().includes(q)) return true
-    if (tx.source.toLowerCase().includes(q)) return true
-    if (tx.category.toLowerCase().includes(q)) return true
-    for (const id of tx.owner_ids) {
-      if (resolveUser(id).name.toLowerCase().includes(q)) return true
-    }
-    return false
-  }
-
-  const q = query.trim().toLowerCase()
-  const months = useMemo(() => {
-    const days = groupByDay(transactions)
-      .map((g) => ({
-        day: g.day,
-        items: g.items.filter((tx) => {
-          if (!inScope(tx)) return false
-          if (q === '') return true
-          return matches(tx, q)
-        }),
-      }))
-      .filter((g) => g.items.length > 0)
-    return groupDaysByMonth(days)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transactions, q, scopeFilter, currentHousehold])
-
-  // Collapse every month by default except one: the current month, or — if it
-  // has no transactions — the most recent month that does. An active search
-  // expands all months so matches aren't hidden inside a collapsed section.
+  // Collapse every month by default except the current (or most recent) one; any
+  // active filter expands all so matches aren't hidden inside a collapsed month.
   const currentMonthKey = useMemo(() => startOfMonth(new Date()).getTime(), [])
   const defaultOpenKey = useMemo(() => {
     if (months.some((m) => m.month.getTime() === currentMonthKey)) return currentMonthKey
     return months[0]?.month.getTime() ?? null
   }, [months, currentMonthKey])
 
-  // `null` = untouched, follow the default; once the user toggles we track an
-  // explicit set so the default stops overriding their choices.
   const [openMonths, setOpenMonths] = useState<Set<number> | null>(null)
   const isMonthOpen = (key: number) =>
-    q !== '' || (openMonths === null ? key === defaultOpenKey : openMonths.has(key))
+    f.count > 0 || (openMonths === null ? key === defaultOpenKey : openMonths.has(key))
   function toggleMonth(key: number) {
     setOpenMonths((prev) => {
       const base = prev ?? (defaultOpenKey !== null ? new Set([defaultOpenKey]) : new Set<number>())
@@ -116,7 +78,7 @@ export default function TransactionsPage() {
                 ariaLabel={searchActive ? 'Close search' : 'Search transactions'}
                 onClick={() => {
                   if (searchActive) {
-                    setQuery('')
+                    f.setQuery('')
                     setSearchActive(false)
                   } else {
                     setSearchActive(true)
@@ -125,6 +87,21 @@ export default function TransactionsPage() {
               >
                 {searchActive ? <X size={18} /> : <Search size={18} />}
               </IconButton>
+            )}
+            {hasAny && (
+              <span className="relative">
+                <IconButton ariaLabel={`Filters${f.count > 0 ? ` (${f.count} active)` : ''}`} onClick={() => setFilterOpen(true)}>
+                  <SlidersHorizontal size={18} />
+                </IconButton>
+                {f.count > 0 && (
+                  <span
+                    className="pointer-events-none absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-medium tabular-nums text-white"
+                    style={{ background: 'var(--accent)' }}
+                  >
+                    {f.count}
+                  </span>
+                )}
+              </span>
             )}
             <IconButton ariaLabel="Add transaction" onClick={openAdd}>
               <Plus size={18} />
@@ -138,8 +115,8 @@ export default function TransactionsPage() {
           <input
             type="text"
             autoFocus
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={f.criteria.query}
+            onChange={(e) => f.setQuery(e.target.value)}
             placeholder="Search transactions"
             className="w-full rounded-xl bg-surface px-4 py-2.5 text-[15px] text-text outline-none placeholder:text-text-3"
           />
@@ -149,11 +126,13 @@ export default function TransactionsPage() {
               { value: 'shared', label: 'Shared' },
               { value: 'personal', label: 'Personal' },
             ]}
-            value={scopeFilter}
-            onChange={setScopeFilter}
+            value={f.criteria.scope}
+            onChange={f.setScope}
           />
         </div>
       )}
+
+      {hasAny && <ActiveFilterChips f={f} />}
 
       {!hasAny ? (
         <EmptyState
@@ -168,6 +147,22 @@ export default function TransactionsPage() {
               style={{ background: 'rgba(0,0,0,0.05)' }}
             >
               Add transaction
+            </button>
+          }
+        />
+      ) : noMatches ? (
+        <EmptyState
+          icon={<SlidersHorizontal size={40} />}
+          title="No transactions match your filters"
+          body="Try removing a filter or widening your search."
+          action={
+            <button
+              type="button"
+              onClick={f.clearAll}
+              className="mt-2 rounded-full px-5 py-2.5 text-[15px] font-normal text-accent"
+              style={{ background: 'rgba(0,0,0,0.05)' }}
+            >
+              Clear filters
             </button>
           }
         />
@@ -192,6 +187,9 @@ export default function TransactionsPage() {
                       style={{ transform: open ? undefined : 'rotate(-90deg)' }}
                     />
                     {monthYearLong(m.month, locale)}
+                    <span className="tabular-nums normal-case tracking-normal text-text-3">
+                      ({monthItems.length})
+                    </span>
                   </span>
                   <span className="text-[13px] font-normal tabular-nums text-text-3">
                     {formatMoney(expenseTotal(monthItems))}
@@ -224,11 +222,23 @@ export default function TransactionsPage() {
               </div>
             )
           })}
-          {months.length === 0 && (
-            <p className="py-12 text-center text-sm text-text-3">No matching transactions.</p>
-          )}
         </div>
       )}
+
+      <Modal
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        title="Filters"
+        right={
+          f.count > 0 ? (
+            <button type="button" onClick={f.clearAll} className="text-accent">
+              Clear
+            </button>
+          ) : undefined
+        }
+      >
+        <FilterPanel f={f} />
+      </Modal>
 
       {addOpen && (
         <TxModalWeb

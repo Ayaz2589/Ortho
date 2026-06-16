@@ -15,11 +15,21 @@ no-backend way to keep cross-language parity (see `specs/002-logic-dedup`).
   a snapshot (transactions, budgets, properties) + a pinned `referenceDate`,
   with the expected list of fired insights (`id`, `severity`, `category`,
   `magnitude_cents`).
+- `transaction-filters.json` — `filterTransactions` / `lib/transactionFilters.ts`
+  cases (`{ cases: [...] }`): each case has a `context` (household id +
+  owner-name map), a `criteria` (scope, query, categories, kind, sources,
+  owners, half-open `dateFrom`/`dateTo`), a fixed transaction set, and the
+  `expectedIds` the predicate must return (order-preserved). Covers every
+  dimension in isolation, OR-within / AND-across combinations, the
+  empty-criteria-returns-all and empty-result edges, and a UTC month boundary
+  (`monthBounds('YYYY-MM')`). Transaction `id`s are UUIDs so the iOS `Transaction`
+  decoder accepts them.
 
 All money is USD cents. Dates are timezone-stable: mortgage dates parse as
 **local** calendar dates; insight transaction dates mirror JS `new Date('YYYY-MM-DD')`
 (UTC midnight) and are kept mid-month so the month-boundary timezone edge can't
-flip a result.
+flip a result; transaction-filter dates and `monthBounds` windows are **UTC**
+half-open `[from, to)`.
 
 ## Regenerating
 
@@ -36,8 +46,8 @@ suites so any Swift↔TS divergence surfaces.
 ## Running the suites
 
 - **Web**: `cd web && npm test` (Vitest — `test/*.parity.test.ts`).
-- **iOS**: add `iOS/Ortho-iOSTests/{MortgageParityTests,InsightParityTests}.swift` to
-  an XCTest target and add these two JSON files to that target's
+- **iOS**: add `iOS/Ortho-iOSTests/{MortgageParityTests,InsightParityTests,TransactionFilterParityTests}.swift`
+  to an XCTest target and add these JSON files to that target's
   "Copy Bundle Resources", then run the tests in Xcode. (XCTest can't be built
   off macOS, so the iOS suite ships ready-to-run rather than pre-run.)
 

@@ -1,17 +1,22 @@
 'use client'
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { groupByDay, groupDaysByMonth, dayLabel, monthYearLong, expenseTotal, mediumDate, startOfMonth } from '@/lib/format'
 import { categoryMeta } from '@/lib/categories'
 import type { Transaction } from '@/lib/types'
 import { Avatar } from '@/components/ui'
+import { Drawer, DrawerHeader } from './Drawer'
+import { useTransactionFilters } from '@/lib/useTransactionFilters'
+import { FilterPanel } from './FilterPanel'
+import { ActiveFilterChips } from './ActiveFilterChips'
 import { TxFormContent } from './TxForm'
 import {
   WebPageHeader,
   WebSearchInput,
   ChipIconButton,
+  AccentTextButton,
   PlusGlyph,
   CatTile,
   SourceDot,
@@ -166,11 +171,12 @@ function TxRow({
 }
 
 export function TransactionsDesktop() {
-  const { transactions, formatMoney, resolveUser, deleteTransaction, locale } = useApp()
-  const [query, setQuery] = useState('')
+  const { transactions, formatMoney, deleteTransaction, locale } = useApp()
+  const f = useTransactionFilters()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+  const [filterOpen, setFilterOpen] = useState(false)
 
   const selected = selectedId ? transactions.find((t) => t.id === selectedId) ?? null : null
   const panelOpen = addOpen || !!selected
@@ -227,26 +233,11 @@ export function TransactionsDesktop() {
     setSelectedId(id === selectedId ? null : id)
   }
 
-  const q = query.trim().toLowerCase()
-  const months = useMemo(() => {
-    const days = groupByDay(transactions)
-      .map((g) => ({
-        day: g.day,
-        items: g.items.filter((tx) => {
-          if (!q) return true
-          if (tx.merchant.toLowerCase().includes(q)) return true
-          if (tx.source.toLowerCase().includes(q)) return true
-          if (tx.category.toLowerCase().includes(q)) return true
-          return tx.owner_ids.some((id) => resolveUser(id).name.toLowerCase().includes(q))
-        }),
-      }))
-      .filter((g) => g.items.length > 0)
-    return groupDaysByMonth(days)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transactions, q])
+  const months = useMemo(() => groupDaysByMonth(groupByDay(f.filtered)), [f.filtered])
+  const noMatches = transactions.length > 0 && f.filtered.length === 0
 
   // Collapse every month by default except one: the current month, or — if it
-  // has no transactions — the most recent month that does. An active search
+  // has no transactions — the most recent month that does. Any active filter
   // expands all months so matches aren't hidden inside a collapsed section.
   const currentMonthKey = useMemo(() => startOfMonth(new Date()).getTime(), [])
   const defaultOpenKey = useMemo(() => {
@@ -258,7 +249,7 @@ export function TransactionsDesktop() {
   // explicit set so the default stops overriding their choices.
   const [openMonths, setOpenMonths] = useState<Set<number> | null>(null)
   const isMonthOpen = (key: number) =>
-    q !== '' || (openMonths === null ? key === defaultOpenKey : openMonths.has(key))
+    f.count > 0 || (openMonths === null ? key === defaultOpenKey : openMonths.has(key))
   const toggleMonth = (key: number) =>
     setOpenMonths((prev) => {
       const base = prev ?? (defaultOpenKey !== null ? new Set([defaultOpenKey]) : new Set<number>())
@@ -283,8 +274,37 @@ export function TransactionsDesktop() {
         actions={
           <>
             <div style={{ width: 260 }}>
-              <WebSearchInput value={query} onChange={setQuery} placeholder="Search transactions" />
+              <WebSearchInput value={f.criteria.query} onChange={f.setQuery} placeholder="Search transactions" />
             </div>
+            <span style={{ position: 'relative', display: 'inline-flex' }}>
+              <ChipIconButton label={f.count > 0 ? `Filters (${f.count} active)` : 'Filters'} onClick={() => setFilterOpen(true)}>
+                <SlidersHorizontal size={16} />
+              </ChipIconButton>
+              {f.count > 0 && (
+                <span
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    top: -3,
+                    right: -3,
+                    minWidth: 16,
+                    height: 16,
+                    padding: '0 4px',
+                    borderRadius: 8,
+                    background: 'var(--accent)',
+                    color: '#fff',
+                    fontSize: 10,
+                    fontWeight: 500,
+                    lineHeight: '16px',
+                    textAlign: 'center',
+                    fontVariantNumeric: 'tabular-nums',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {f.count}
+                </span>
+              )}
+            </span>
             <ChipIconButton label="Add transaction" onClick={openNew}>
               <PlusGlyph />
             </ChipIconButton>
@@ -292,10 +312,23 @@ export function TransactionsDesktop() {
         }
       />
 
+      {transactions.length > 0 && (
+        <div style={{ marginBottom: 4 }}>
+          <ActiveFilterChips f={f} />
+        </div>
+      )}
+
       {transactions.length === 0 ? (
         <p style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-2)', fontSize: 14 }}>
           No transactions yet. Add your first one.
         </p>
+      ) : noMatches ? (
+        <div style={{ padding: '56px 0', textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-2)', fontSize: 14, marginBottom: 12 }}>
+            No transactions match your filters.
+          </p>
+          <AccentTextButton onClick={f.clearAll}>Clear filters</AccentTextButton>
+        </div>
       ) : (
         <>
           <div className="ow-tab-row ow-tab-head" style={{ gridTemplateColumns: TX_COLS }}>
@@ -330,6 +363,9 @@ export function TransactionsDesktop() {
                       style={{ color: 'var(--text-3)', transition: 'transform var(--duration-mid) var(--ease-out)', transform: open ? undefined : 'rotate(-90deg)' }}
                     />
                     {monthYearLong(m.month, locale)}
+                    <span style={{ color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>
+                      ({monthItems.length})
+                    </span>
                   </span>
                   <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>
                     {formatMoney(expenseTotal(monthItems))}
@@ -354,11 +390,6 @@ export function TransactionsDesktop() {
               </div>
             )
           })}
-          {months.length === 0 && (
-            <p style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
-              No matching transactions.
-            </p>
-          )}
           <div style={{ height: 48 }} />
         </>
       )}
@@ -392,6 +423,18 @@ export function TransactionsDesktop() {
           ) : null}
         </aside>
       )}
+
+      {/* Filters live in their own right-side drawer, independent of the detail panel. */}
+      <Drawer open={filterOpen} onClose={() => setFilterOpen(false)} label="Filters">
+        <DrawerHeader
+          title="Filters"
+          onClose={() => setFilterOpen(false)}
+          right={f.count > 0 ? <AccentTextButton onClick={f.clearAll}>Clear</AccentTextButton> : undefined}
+        />
+        <div style={{ padding: '18px 20px 28px', overflowY: 'auto' }}>
+          <FilterPanel f={f} />
+        </div>
+      </Drawer>
     </div>
   )
 }

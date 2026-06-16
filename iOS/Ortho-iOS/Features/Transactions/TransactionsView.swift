@@ -27,8 +27,10 @@ struct TransactionsView: View {
 
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var colorScheme
-    @State private var query: String = ""
-    @State private var scopeFilter: TransactionScopeFilter = .all
+    /// The full filter state (scope + search + category/kind/source/owner/date),
+    /// applied by the shared, vector-locked `filterTransactions`.
+    @State private var criteria = FilterCriteria()
+    @State private var filterSheetPresented = false
     @State private var addSheetMode: AddSheetMode?
     @State private var selectedTransaction: Transaction?
     /// Tap the search icon in the title row to reveal the search field.
@@ -53,45 +55,53 @@ struct TransactionsView: View {
         }
     }
 
-    /// Lazily filters each group's items by both the scope filter and the
-    /// merchant search. Drops empty groups so headers never appear orphaned.
+    /// Applies the shared `filterTransactions` to each day group, dropping empty
+    /// groups so headers never appear orphaned. The predicate is identical to
+    /// web's (golden-vector-locked), so the two clients filter in lockstep.
     private var filteredGroups: [TransactionGroup] {
-        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        let groups = appState.groups
-        return groups.compactMap { g in
-            let hits = g.items.filter { tx in
-                guard inScope(tx) else { return false }
-                guard !q.isEmpty else { return true }
-                return matches(tx, query: q)
-            }
+        let ctx = filterContext
+        return appState.groups.compactMap { g in
+            let hits = filterTransactions(g.items, criteria, ctx)
             return hits.isEmpty ? nil : TransactionGroup(day: g.day, items: hits)
         }
     }
 
-    private func inScope(_ tx: Transaction) -> Bool {
-        let householdID = appState.currentHouseholdID
-        let isShared = tx.householdID != nil && tx.householdID == householdID
-        // A transaction is "personal" when it isn't tied to any
-        // household — regardless of how many co-owners (including
-        // local users) it has. The previous check required
-        // `ownerIDs == [myID]` exactly, which silently hid any
-        // personal transaction that included a local user.
-        let isMine = tx.householdID == nil
-        switch scopeFilter {
-        case .all:      return isShared || isMine
-        case .shared:   return isShared
-        case .personal: return isMine
+    /// Household + owner-name context for search-by-owner and scope.
+    private var filterContext: FilterContext {
+        var names: [User.ID: String] = [:]
+        for tx in appState.transactions {
+            for id in tx.ownerIDs where names[id] == nil { names[id] = appState.user(id).name }
         }
+        return FilterContext(householdID: appState.currentHouseholdID, ownerNames: names)
     }
 
-    private func matches(_ tx: Transaction, query q: String) -> Bool {
-        if tx.merchant.lowercased().contains(q) { return true }
-        if tx.source.lowercased().contains(q) { return true }
-        if tx.category.rawValue.lowercased().contains(q) { return true }
-        for owner in appState.resolveOwners(of: tx) {
-            if owner.name.lowercased().contains(q) { return true }
+    private var activeFilterCount_: Int { activeFilterCount(criteria) }
+
+    // MARK: - Derived filter option lists (from the loaded transactions)
+
+    /// Distinct owners present across transactions, resolved + name-sorted.
+    private var ownerOptions: [User] {
+        var seen = Set<User.ID>()
+        var ids: [User.ID] = []
+        for tx in appState.transactions {
+            for id in tx.ownerIDs where !seen.contains(id) { seen.insert(id); ids.append(id) }
         }
-        return false
+        return ids
+            .map { appState.user($0) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private var sourceOptions: [String] { availableSources(appState.transactions) }
+
+    /// Distinct months present, newest first, as UTC "YYYY-MM" keys + labels.
+    private var monthOptions: [FilterMonthOption] {
+        var seen = Set<String>()
+        var keys: [String] = []
+        for tx in appState.transactions {
+            let k = FilterSheet.monthKey(tx.date)
+            if !seen.contains(k) { seen.insert(k); keys.append(k) }
+        }
+        return keys.sorted(by: >).map { FilterMonthOption(key: $0, label: FilterSheet.monthLabel($0)) }
     }
 
     private var hasAnyTransactions: Bool {
@@ -110,13 +120,24 @@ struct TransactionsView: View {
     var body: some View {
         Group {
             switch loadState {
-            case .populated: populatedList
+            case .populated: filteredGroups.isEmpty ? AnyView(noMatchesState) : AnyView(populatedList)
             case .loading:   TransactionSkeletonList()
             case .empty:     emptyState
             }
         }
         .background(AppTheme.bg)
         .safeAreaInset(edge: .top, spacing: 0) { titleAndSearch }
+        .sheet(isPresented: $filterSheetPresented) {
+            FilterSheet(
+                criteria: $criteria,
+                sources: sourceOptions,
+                owners: ownerOptions,
+                months: monthOptions
+            )
+            .environment(appState)
+            .presentationDetents([.medium, .large])
+            .presentationBackground(AppTheme.bg)
+        }
         .sheet(item: $addSheetMode) { mode in
             let copying: Transaction? = {
                 if case .copying(let tx) = mode { return tx }
@@ -248,6 +269,7 @@ struct TransactionsView: View {
                 Spacer()
                 if hasAnyTransactions {
                     searchButton
+                    filterButton
                 }
                 addButton
             }
@@ -257,13 +279,13 @@ struct TransactionsView: View {
 
             if hasAnyTransactions && searchActive {
                 SearchField(
-                    text: $query,
+                    text: $criteria.query,
                     placeholder: "Search transactions",
                     autofocusOnAppear: true,
                     onCancel: {
                         // Cancel inside the field collapses the whole
                         // search panel — single Cancel exits the mode.
-                        query = ""
+                        criteria.query = ""
                         searchActive = false
                     }
                 )
@@ -275,11 +297,18 @@ struct TransactionsView: View {
                     .padding(.bottom, 8)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
+
+            if hasAnyTransactions && activeFilterCount_ > 0 {
+                activeChipsRow
+                    .padding(.bottom, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
         }
         .background(colorScheme == .dark
                     ? AnyShapeStyle(AppTheme.bg)
                     : AnyShapeStyle(.regularMaterial))
         .animation(.easeOut(duration: 0.22), value: searchActive)
+        .animation(.easeOut(duration: 0.18), value: activeFilterCount_)
     }
 
     /// Circular search button next to the "+". Tap to reveal the field
@@ -288,7 +317,7 @@ struct TransactionsView: View {
     private var searchButton: some View {
         Button {
             if searchActive {
-                query = ""
+                criteria.query = ""
                 searchActive = false
             } else {
                 searchActive = true
@@ -343,22 +372,24 @@ struct TransactionsView: View {
     }
 
     /// All | Shared | Personal segmented pill above the transactions list.
+    /// Bridges the display enum to `criteria.scope` via the shared raw values.
     private var scopeFilterPill: some View {
         HStack(spacing: 4) {
             ForEach(TransactionScopeFilter.allCases) { f in
+                let isOn = criteria.scope.rawValue == f.rawValue
                 Button {
-                    scopeFilter = f
+                    criteria.scope = FilterCriteria.Scope(rawValue: f.rawValue) ?? .all
                 } label: {
                     Text(f.label)
                         .font(.lato(size: 13, weight: .semibold))
                         .tracking(-0.1)
-                        .foregroundStyle(scopeFilter == f ? AppTheme.text : AppTheme.text.opacity(0.58))
+                        .foregroundStyle(isOn ? AppTheme.text : AppTheme.text.opacity(0.58))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 6)
                         .background(
                             RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .fill(scopeFilter == f ? AppTheme.surface : .clear)
-                                .shadow(color: scopeFilter == f ? .black.opacity(0.06) : .clear,
+                                .fill(isOn ? AppTheme.surface : .clear)
+                                .shadow(color: isOn ? .black.opacity(0.06) : .clear,
                                         radius: 2, y: 1)
                         )
                 }
@@ -370,7 +401,144 @@ struct TransactionsView: View {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(AppTheme.text.opacity(0.05))
         )
-        .animation(.easeOut(duration: 0.15), value: scopeFilter)
+        .animation(.easeOut(duration: 0.15), value: criteria.scope)
+    }
+
+    /// Circular filter button next to search/"+", with an accent count badge.
+    private var filterButton: some View {
+        Button { filterSheetPresented = true } label: {
+            ZStack(alignment: .topTrailing) {
+                ZStack {
+                    Circle().fill(AppTheme.text.opacity(0.05))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "line.3.horizontal.decrease")
+                        .font(.lato(size: 15, weight: .semibold))
+                        .foregroundStyle(AppTheme.accent)
+                }
+                if activeFilterCount_ > 0 {
+                    Text("\(activeFilterCount_)")
+                        .font(.lato(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(minWidth: 16, minHeight: 16)
+                        .background(Circle().fill(AppTheme.accent))
+                        .offset(x: 4, y: -3)
+                }
+            }
+            .frame(width: 36, height: 36)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(activeFilterCount_ > 0 ? "Filters, \(activeFilterCount_) active" : "Filters")
+    }
+
+    /// Horizontally scrollable removable chips for each active dimension, plus
+    /// a single Clear all. Mirrors web's `ActiveFilterChips`.
+    private var activeChipsRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(activeChips) { chip in
+                    Button(action: chip.remove) {
+                        HStack(spacing: 5) {
+                            Text(chip.label)
+                                .font(.lato(size: 13, weight: .medium))
+                                .tracking(-0.1)
+                                .foregroundStyle(AppTheme.text)
+                            Image(systemName: "xmark")
+                                .font(.lato(size: 9, weight: .bold))
+                                .foregroundStyle(AppTheme.text.opacity(0.4))
+                        }
+                        .padding(.leading, 11)
+                        .padding(.trailing, 9)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(AppTheme.surface))
+                        .overlay(Capsule().strokeBorder(AppTheme.hairline, lineWidth: 0.5))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Remove \(chip.label) filter")
+                }
+                Button { criteria = .empty } label: {
+                    Text("Clear all")
+                        .font(.lato(size: 13, weight: .medium))
+                        .foregroundStyle(AppTheme.accent)
+                        .padding(.horizontal, 6)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 2)
+        }
+    }
+
+    /// One removable active-filter chip — label + the action that clears it.
+    private struct ActiveChip: Identifiable {
+        let id: String
+        let label: String
+        let remove: () -> Void
+    }
+
+    private var activeChips: [ActiveChip] {
+        var out: [ActiveChip] = []
+        if criteria.scope != .all {
+            let label = TransactionScopeFilter(rawValue: criteria.scope.rawValue).map { String(localized: $0.label) } ?? "Scope"
+            out.append(.init(id: "scope", label: label, remove: { criteria.scope = .all }))
+        }
+        let q = criteria.query.trimmingCharacters(in: .whitespaces)
+        if !q.isEmpty {
+            out.append(.init(id: "query", label: "“\(q)”", remove: { criteria.query = "" }))
+        }
+        if criteria.kind != .all {
+            out.append(.init(id: "kind", label: criteria.kind == .income ? "Income" : "Expenses",
+                             remove: { criteria.kind = .all }))
+        }
+        for c in TransactionCategory.allCases where criteria.categories.contains(c) {
+            out.append(.init(id: "cat-\(c.rawValue)", label: c.displayName.string,
+                             remove: { criteria.categories.remove(c) }))
+        }
+        for s in sourceOptions where criteria.sources.contains(s) {
+            out.append(.init(id: "src-\(s)", label: s, remove: { criteria.sources.remove(s) }))
+        }
+        for u in ownerOptions where criteria.owners.contains(u.id) {
+            out.append(.init(id: "own-\(u.id)", label: u.name, remove: { criteria.owners.remove(u.id) }))
+        }
+        if let from = criteria.dateFrom {
+            let key = FilterSheet.monthKey(from)
+            out.append(.init(id: "month", label: FilterSheet.monthLabel(key),
+                             remove: { criteria.dateFrom = nil; criteria.dateTo = nil }))
+        }
+        return out
+    }
+
+    /// Distinct empty state when filters exclude everything — separate from the
+    /// "no transactions yet" state, with a one-tap clear.
+    private var noMatchesState: some View {
+        VStack(alignment: .center, spacing: 14) {
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .font(.lato(size: 40, weight: .regular))
+                .foregroundStyle(AppTheme.text.opacity(0.36))
+                .padding(.top, 60)
+            Text("No transactions match your filters")
+                .font(.lato(size: 17, weight: .semibold))
+                .foregroundStyle(AppTheme.text)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            Text("Try removing a filter or widening your search.")
+                .font(.lato(size: 14))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(AppTheme.text.opacity(0.58))
+                .padding(.horizontal, 40)
+                .lineSpacing(2)
+            Button { criteria = .empty } label: {
+                Text("Clear filters")
+                    .font(.lato(size: 15, weight: .semibold))
+                    .foregroundStyle(AppTheme.accent)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(AppTheme.text.opacity(0.05)))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// Circular "+" button next to the Transactions title.

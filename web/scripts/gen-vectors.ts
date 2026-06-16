@@ -18,6 +18,7 @@ import {
   upcomingAmortization,
 } from '../lib/finance/mortgage'
 import { generateInsights } from '../lib/finance/insights'
+import { filterTransactions, monthBounds, emptyCriteria, type FilterCriteria, type FilterContext } from '../lib/transactionFilters'
 import type { Transaction, Budget, Property } from '../lib/types'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -124,9 +125,61 @@ const insights = SCENARIOS.map((s) => ({
   })),
 }))
 
+// ── Transaction filter vectors ──────────────────────────────────────────────
+
+const ftx = (o: Partial<Transaction>): Transaction =>
+  ({ id: '', household_id: null, merchant: '', category: 'dining', kind: 'expense', scope: 'personal', amount_cents: 0, source: '', date: '2026-05-15T12:00:00.000Z', created_by: '00000000-0000-0000-0000-000000000999', created_at: '', updated_at: '', owner_ids: [], splits: null, ...o }) as Transaction
+
+// UUID-form ids so the iOS suite can decode the vectors straight into `Transaction`
+// (its ids are UUIDs); the web compares strings, so it's agnostic.
+const uid = (n: string) => `00000000-0000-0000-0000-${n.padStart(12, '0')}`
+const A = uid('1'), B = uid('2'), C = uid('3'), D = uid('4')
+const U1 = uid('101'), U2 = uid('102'), H1 = uid('201')
+
+// A fixed, representative set spanning scopes/categories/kinds/sources/owners/dates.
+const FSET: Transaction[] = [
+  ftx({ id: A, merchant: 'Bistro', category: 'dining', kind: 'expense', source: 'Amex Gold', household_id: H1, owner_ids: [U1], date: '2026-05-04T12:00:00.000Z' }),
+  ftx({ id: B, merchant: 'Blue Bottle', category: 'coffee', kind: 'expense', source: 'TD Bank', household_id: null, owner_ids: [U1], date: '2026-05-10T12:00:00.000Z' }),
+  ftx({ id: C, merchant: 'Payroll', category: 'income', kind: 'income', source: 'TD Bank', household_id: H1, owner_ids: [U2], date: '2026-06-01T12:00:00.000Z' }),
+  ftx({ id: D, merchant: 'Whole Foods', category: 'groceries', kind: 'expense', source: 'Chase', household_id: H1, owner_ids: [U1, U2], date: '2026-04-20T12:00:00.000Z' }),
+]
+const FCTX: FilterContext = { householdId: H1, ownerNames: { [U1]: 'Ayaz', [U2]: 'Tasnuva' } }
+const may = monthBounds('2026-05')
+
+const FILTER_CASES: Array<{ name: string; transactions: Transaction[]; context: FilterContext; criteria: FilterCriteria }> = [
+  { name: 'no filters → all', transactions: FSET, context: FCTX, criteria: emptyCriteria() },
+  { name: 'scope personal', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), scope: 'personal' } },
+  { name: 'scope shared', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), scope: 'shared' } },
+  { name: 'search merchant', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), query: 'bistro' } },
+  { name: 'search source', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), query: 'td bank' } },
+  { name: 'search owner name', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), query: 'tasnuva' } },
+  { name: 'search miss → empty', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), query: 'zzz' } },
+  { name: 'category multi (OR)', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), categories: ['dining', 'coffee'] } },
+  { name: 'kind income', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), kind: 'income' } },
+  { name: 'kind expense', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), kind: 'expense' } },
+  { name: 'source multi (OR)', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), sources: ['TD Bank', 'Chase'] } },
+  { name: 'owner single (∩)', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), owners: [U2] } },
+  { name: 'month May (half-open)', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), dateFrom: may.dateFrom, dateTo: may.dateTo } },
+  { name: 'dateFrom only', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), dateFrom: '2026-05-01T00:00:00.000Z' } },
+  { name: 'AND: kind expense ∧ source TD Bank', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), kind: 'expense', sources: ['TD Bank'] } },
+  { name: 'AND: shared ∧ dining ∧ May', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), scope: 'shared', categories: ['dining'], dateFrom: may.dateFrom, dateTo: may.dateTo } },
+  { name: 'absent source → empty', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), sources: ['Wells Fargo'] } },
+]
+
+const filters = {
+  cases: FILTER_CASES.map((c) => ({
+    name: c.name,
+    transactions: c.transactions,
+    context: c.context,
+    criteria: c.criteria,
+    expectedIds: filterTransactions(c.transactions, c.criteria, c.context).map((t) => t.id),
+  })),
+}
+
 // ── Write ───────────────────────────────────────────────────────────────────
 
 mkdirSync(OUT, { recursive: true })
 writeFileSync(resolve(OUT, 'mortgage.json'), JSON.stringify(mortgage, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'insights.json'), JSON.stringify(insights, null, 2) + '\n')
-console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight vectors to ${OUT}`)
+writeFileSync(resolve(OUT, 'transaction-filters.json'), JSON.stringify(filters, null, 2) + '\n')
+console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight + ${filters.cases.length} filter vectors to ${OUT}`)
