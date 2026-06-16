@@ -19,6 +19,7 @@ import {
 } from '../lib/finance/mortgage'
 import { generateInsights } from '../lib/finance/insights'
 import { filterTransactions, monthBounds, emptyCriteria, type FilterCriteria, type FilterContext } from '../lib/transactionFilters'
+import { computeShares, validateSplit, type SplitInput } from '../lib/splits'
 import type { Transaction, Budget, Property } from '../lib/types'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -176,10 +177,56 @@ const filters = {
   })),
 }
 
+// ── Transaction split vectors ───────────────────────────────────────────────
+
+interface SplitCase { name: string; amountCents: number; owners: string[]; split: SplitInput }
+
+const SPLIT_CASES: SplitCase[] = [
+  { name: 'single-full', amountCents: 9999, owners: ['a'], split: { method: 'even' } },
+  { name: 'single-ignores-method', amountCents: 9999, owners: ['a'], split: { method: 'value', values: { a: 5000 } } },
+  { name: 'even-divisible', amountCents: 10000, owners: ['a', 'b'], split: { method: 'even' } },
+  { name: 'even-remainder-1', amountCents: 10001, owners: ['a', 'b'], split: { method: 'even' } },
+  { name: 'even-three-remainder-1', amountCents: 1000, owners: ['a', 'b', 'c'], split: { method: 'even' } },
+  { name: 'even-three-remainder-2', amountCents: 10001, owners: ['a', 'b', 'c'], split: { method: 'even' } },
+  { name: 'percent-clean', amountCents: 10000, owners: ['a', 'b'], split: { method: 'percent', percents: { a: 70, b: 30 } } },
+  { name: 'percent-uneven-remainder', amountCents: 10000, owners: ['a', 'b', 'c'], split: { method: 'percent', percents: { a: 33.33, b: 33.33, c: 33.34 } } },
+  { name: 'percent-remainder-to-first', amountCents: 100, owners: ['a', 'b', 'c'], split: { method: 'percent', percents: { a: 33.33, b: 33.33, c: 33.34 } } },
+  { name: 'value-exact', amountCents: 10000, owners: ['a', 'b'], split: { method: 'value', values: { a: 6000, b: 4000 } } },
+  { name: 'value-uneven', amountCents: 10001, owners: ['a', 'b'], split: { method: 'value', values: { a: 5001, b: 5000 } } },
+  { name: 'order-matters', amountCents: 10001, owners: ['b', 'a'], split: { method: 'even' } },
+]
+
+interface ValCase { name: string; amountCents: number; owners: string[]; split: SplitInput }
+
+const VAL_CASES: ValCase[] = [
+  { name: 'percent-short', amountCents: 10000, owners: ['a', 'b'], split: { method: 'percent', percents: { a: 50, b: 49 } } },
+  { name: 'value-short', amountCents: 10000, owners: ['a', 'b'], split: { method: 'value', values: { a: 6000, b: 3999 } } },
+  { name: 'no-owners', amountCents: 100, owners: [], split: { method: 'even' } },
+  { name: 'percent-within-tolerance', amountCents: 10000, owners: ['a', 'b'], split: { method: 'percent', percents: { a: 50, b: 50.4 } } },
+]
+
+const splits = {
+  cases: SPLIT_CASES.map((c) => ({
+    name: c.name,
+    amountCents: c.amountCents,
+    owners: c.owners,
+    split: c.split,
+    expected: computeShares(c.amountCents, c.owners, c.split),
+  })),
+  validations: VAL_CASES.map((c) => ({
+    name: c.name,
+    amountCents: c.amountCents,
+    owners: c.owners,
+    split: c.split,
+    result: validateSplit(c.amountCents, c.owners, c.split),
+  })),
+}
+
 // ── Write ───────────────────────────────────────────────────────────────────
 
 mkdirSync(OUT, { recursive: true })
 writeFileSync(resolve(OUT, 'mortgage.json'), JSON.stringify(mortgage, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'insights.json'), JSON.stringify(insights, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'transaction-filters.json'), JSON.stringify(filters, null, 2) + '\n')
-console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight + ${filters.cases.length} filter vectors to ${OUT}`)
+writeFileSync(resolve(OUT, 'transaction-splits.json'), JSON.stringify(splits, null, 2) + '\n')
+console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight + ${filters.cases.length} filter + ${splits.cases.length} split vectors to ${OUT}`)

@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/006-transaction-filters/plan.md`
+`specs/007-household-splits/plan.md`
 <!-- SPECKIT END -->
 
 ## Session continuity

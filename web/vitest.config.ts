@@ -31,6 +31,7 @@ export default defineConfig({
         'lib/finance/insights.ts',
         'lib/format.ts',
         'lib/categories.ts',
+        'lib/splits.ts',
         'lib/utils.ts',
         'lib/api/aggregates.ts',
         // Import/transaction CLI: pure logic + DB/IO wrappers. The interactive

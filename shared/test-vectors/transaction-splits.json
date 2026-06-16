@@ -1,0 +1,283 @@
+{
+  "cases": [
+    {
+      "name": "single-full",
+      "amountCents": 9999,
+      "owners": [
+        "a"
+      ],
+      "split": {
+        "method": "even"
+      },
+      "expected": {
+        "a": 9999
+      }
+    },
+    {
+      "name": "single-ignores-method",
+      "amountCents": 9999,
+      "owners": [
+        "a"
+      ],
+      "split": {
+        "method": "value",
+        "values": {
+          "a": 5000
+        }
+      },
+      "expected": {
+        "a": 9999
+      }
+    },
+    {
+      "name": "even-divisible",
+      "amountCents": 10000,
+      "owners": [
+        "a",
+        "b"
+      ],
+      "split": {
+        "method": "even"
+      },
+      "expected": {
+        "a": 5000,
+        "b": 5000
+      }
+    },
+    {
+      "name": "even-remainder-1",
+      "amountCents": 10001,
+      "owners": [
+        "a",
+        "b"
+      ],
+      "split": {
+        "method": "even"
+      },
+      "expected": {
+        "a": 5001,
+        "b": 5000
+      }
+    },
+    {
+      "name": "even-three-remainder-1",
+      "amountCents": 1000,
+      "owners": [
+        "a",
+        "b",
+        "c"
+      ],
+      "split": {
+        "method": "even"
+      },
+      "expected": {
+        "a": 334,
+        "b": 333,
+        "c": 333
+      }
+    },
+    {
+      "name": "even-three-remainder-2",
+      "amountCents": 10001,
+      "owners": [
+        "a",
+        "b",
+        "c"
+      ],
+      "split": {
+        "method": "even"
+      },
+      "expected": {
+        "a": 3334,
+        "b": 3334,
+        "c": 3333
+      }
+    },
+    {
+      "name": "percent-clean",
+      "amountCents": 10000,
+      "owners": [
+        "a",
+        "b"
+      ],
+      "split": {
+        "method": "percent",
+        "percents": {
+          "a": 70,
+          "b": 30
+        }
+      },
+      "expected": {
+        "a": 7000,
+        "b": 3000
+      }
+    },
+    {
+      "name": "percent-uneven-remainder",
+      "amountCents": 10000,
+      "owners": [
+        "a",
+        "b",
+        "c"
+      ],
+      "split": {
+        "method": "percent",
+        "percents": {
+          "a": 33.33,
+          "b": 33.33,
+          "c": 33.34
+        }
+      },
+      "expected": {
+        "a": 3333,
+        "b": 3333,
+        "c": 3334
+      }
+    },
+    {
+      "name": "percent-remainder-to-first",
+      "amountCents": 100,
+      "owners": [
+        "a",
+        "b",
+        "c"
+      ],
+      "split": {
+        "method": "percent",
+        "percents": {
+          "a": 33.33,
+          "b": 33.33,
+          "c": 33.34
+        }
+      },
+      "expected": {
+        "a": 34,
+        "b": 33,
+        "c": 33
+      }
+    },
+    {
+      "name": "value-exact",
+      "amountCents": 10000,
+      "owners": [
+        "a",
+        "b"
+      ],
+      "split": {
+        "method": "value",
+        "values": {
+          "a": 6000,
+          "b": 4000
+        }
+      },
+      "expected": {
+        "a": 6000,
+        "b": 4000
+      }
+    },
+    {
+      "name": "value-uneven",
+      "amountCents": 10001,
+      "owners": [
+        "a",
+        "b"
+      ],
+      "split": {
+        "method": "value",
+        "values": {
+          "a": 5001,
+          "b": 5000
+        }
+      },
+      "expected": {
+        "a": 5001,
+        "b": 5000
+      }
+    },
+    {
+      "name": "order-matters",
+      "amountCents": 10001,
+      "owners": [
+        "b",
+        "a"
+      ],
+      "split": {
+        "method": "even"
+      },
+      "expected": {
+        "b": 5001,
+        "a": 5000
+      }
+    }
+  ],
+  "validations": [
+    {
+      "name": "percent-short",
+      "amountCents": 10000,
+      "owners": [
+        "a",
+        "b"
+      ],
+      "split": {
+        "method": "percent",
+        "percents": {
+          "a": 50,
+          "b": 49
+        }
+      },
+      "result": {
+        "ok": false,
+        "reason": "percent_sum"
+      }
+    },
+    {
+      "name": "value-short",
+      "amountCents": 10000,
+      "owners": [
+        "a",
+        "b"
+      ],
+      "split": {
+        "method": "value",
+        "values": {
+          "a": 6000,
+          "b": 3999
+        }
+      },
+      "result": {
+        "ok": false,
+        "reason": "value_sum"
+      }
+    },
+    {
+      "name": "no-owners",
+      "amountCents": 100,
+      "owners": [],
+      "split": {
+        "method": "even"
+      },
+      "result": {
+        "ok": false,
+        "reason": "no_owners"
+      }
+    },
+    {
+      "name": "percent-within-tolerance",
+      "amountCents": 10000,
+      "owners": [
+        "a",
+        "b"
+      ],
+      "split": {
+        "method": "percent",
+        "percents": {
+          "a": 50,
+          "b": 50.4
+        }
+      },
+      "result": {
+        "ok": true
+      }
+    }
+  ]
+}
