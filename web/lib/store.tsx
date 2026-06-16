@@ -14,6 +14,13 @@ import { formatMoney as fmtMoney, type CurrencyKey } from './finance/money'
 import { FALLBACK_RATE_FROM_USD } from './finance/currency'
 import { effectiveShares } from './format'
 import { paletteFor } from './categories'
+import {
+  DEFAULT_LANGUAGE,
+  DEFAULT_LOCALE,
+  asLanguage,
+  localeForLanguage,
+  type Language,
+} from './language'
 import type {
   User,
   Person,
@@ -54,9 +61,13 @@ interface AppStateValue {
   budgets: Budget[]
   currency: CurrencyKey
   rates: Partial<Record<CurrencyKey, number>>
+  /** Selected language picker option ("System" follows the browser). */
+  language: Language
+  /** BCP-47 locale derived from `language`, driving all Intl formatters. */
   locale: string
 
   setCurrency: (c: CurrencyKey) => void
+  chooseLanguage: (language: Language) => void
   rate: (c: CurrencyKey) => number
   formatMoney: (cents: number, opts?: { leadingPlus?: boolean }) => string
 
@@ -153,18 +164,31 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [currency, setCurrencyState] = useState<CurrencyKey>('usd')
   const [rates, setRates] = useState<Partial<Record<CurrencyKey, number>>>({})
-  const [locale] = useState('en-US')
+  // Language drives the locale. Start at the default so SSR and the first client
+  // paint agree; the persisted choice is adopted (and "System" resolved against
+  // navigator.language) after mount.
+  const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE)
+  const [locale, setLocale] = useState(DEFAULT_LOCALE)
   const booted = useRef(false)
 
   // ---- preferences (localStorage) ----
   useEffect(() => {
     const c = localStorage.getItem('currency') as CurrencyKey | null
     if (c) setCurrencyState(c)
+    const stored = asLanguage(localStorage.getItem('language'))
+    setLanguage(stored)
+    setLocale(localeForLanguage(stored))
   }, [])
 
   const setCurrency = (c: CurrencyKey) => {
     setCurrencyState(c)
     localStorage.setItem('currency', c)
+  }
+
+  const chooseLanguage = (next: Language) => {
+    setLanguage(next)
+    setLocale(localeForLanguage(next))
+    localStorage.setItem('language', next)
   }
 
   // ---- bootstrap ----

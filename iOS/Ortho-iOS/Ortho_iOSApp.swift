@@ -42,10 +42,10 @@ struct Ortho_iOSApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if appState.session != nil {
-                    RootTabView()
-                } else {
-                    SignInView()
+                switch appState.authPhase {
+                case .launching: LaunchView()
+                case .signedIn:  RootTabView()
+                case .signedOut: SignInView()
                 }
             }
             .environment(appState)

@@ -20,6 +20,15 @@ final class AppState {
     /// session via `observeAuthChanges()`.
     var session: Session?
 
+    /// Where launch-time auth resolution stands. The gate in `Ortho_iOSApp`
+    /// renders a neutral launch view while `.launching` so a valid stored
+    /// session never flashes the sign-in screen before the SDK's first auth
+    /// event arrives. Resolves to `.signedIn` / `.signedOut` once the first
+    /// `authStateChanges` emission is handled (with expired sessions
+    /// refreshed, not dropped).
+    enum AuthPhase { case launching, signedIn, signedOut }
+    var authPhase: AuthPhase = .launching
+
     /// Email the user typed during sign-in step 1, carried through to
     /// step 2 (code verification).
     var pendingSignInEmail: String?
@@ -942,36 +951,77 @@ final class AppState {
     func signOut() async {
         do {
             try await supabase.auth.signOut()
-            // session will be cleared by the auth-state listener
         } catch {
-            authError = error.localizedDescription
+            await MainActor.run { authError = error.localizedDescription }
+        }
+        // Full local teardown regardless of the network result: clear every
+        // domain collection, the current-household selection, and the
+        // one-shot bootstrap marker so the next sign-in re-bootstraps from
+        // the server and no prior-account data lingers in memory.
+        await MainActor.run {
+            session = nil
+            authPhase = .signedOut
+            bootstrappedAuthID = nil
+            users = []
+            people = []
+            households = []
+            transactions = []
+            cards = []
+            properties = []
+            rentalPayments = []
+            budgets = []
+            currentHouseholdID = nil
         }
     }
 
     /// Subscribe to auth state changes from the SDK. Call once from the
-    /// app root's `.task`. The first event on subscription is the
-    /// restored session (or `nil`), so this doubles as launch-time
-    /// session restore.
-    ///
-    /// We drop expired sessions because supabase-swift's `INITIAL_SESSION`
-    /// event currently fires with the locally stored session regardless
-    /// of expiration. Treating an expired session as signed-in would let
-    /// the user into the app but every server call would 401. See
-    /// supabase-swift PR #822.
+    /// app root's `.task`. The first event on subscription is the restored
+    /// session (or `nil`), so this doubles as launch-time session restore.
+    /// Until that first event resolves, `authPhase` stays `.launching` and
+    /// the gate shows a neutral launch view — never the sign-in screen.
     func observeAuthChanges() async {
         for await (_, session) in supabase.auth.authStateChanges {
-            if let session, session.isExpired {
+            await resolveAuth(session)
+        }
+    }
+
+    /// Apply one auth-state emission and resolve the launch gate. An expired
+    /// but restorable session is REFRESHED rather than dropped — dropping it
+    /// signs out a user who still has a valid refresh token (the "lands on
+    /// Sign In with empty data" bug). We only fall to `.signedOut` when the
+    /// refresh genuinely fails (revoked / expired refresh token) or there is
+    /// no session at all.
+    private func resolveAuth(_ session: Session?) async {
+        guard let session else {
+            await MainActor.run {
                 self.session = nil
-            } else {
-                if let session {
-                    // Sync local user state first so RootTabView's first
-                    // render after the auth gate flips sees a valid
-                    // `currentUserID`.
-                    ensureCurrentUser(authID: session.user.id,
-                                      email: session.user.email)
-                }
-                self.session = session
+                self.authPhase = .signedOut
             }
+            return
+        }
+        if session.isExpired {
+            do {
+                let refreshed = try await supabase.auth.refreshSession()
+                await applySignedIn(refreshed)
+            } catch {
+                await MainActor.run {
+                    self.session = nil
+                    self.authPhase = .signedOut
+                }
+            }
+            return
+        }
+        await applySignedIn(session)
+    }
+
+    private func applySignedIn(_ session: Session) async {
+        await MainActor.run {
+            // Sync currentUserID before the gate flips so the first
+            // signed-in render sees a valid identity, then kick off the
+            // server bootstrap.
+            self.ensureCurrentUser(authID: session.user.id, email: session.user.email)
+            self.session = session
+            self.authPhase = .signedIn
         }
     }
 

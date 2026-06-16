@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { useApp } from '@/lib/store'
-import { groupByDay, groupDaysByMonth, dayLabel, monthYearLong, expenseTotal, mediumDate, startOfMonth } from '@/lib/format'
-import { categoryMeta } from '@/lib/categories'
+import { groupByDay, groupDaysByMonth, dayLabel, monthYearLong, expenseTotal, startOfMonth } from '@/lib/format'
 import type { Transaction } from '@/lib/types'
 import { Avatar, StackedAvatars } from '@/components/ui'
+import { TransactionDetailBody } from '@/components/transactions/TransactionDetailBody'
 import { Drawer, DrawerHeader } from './Drawer'
 import { useTransactionFilters } from '@/lib/useTransactionFilters'
 import { FilterPanel } from './FilterPanel'
@@ -24,27 +24,10 @@ import {
 
 const TX_COLS = '1.7fr 1fr 1.2fr 0.9fr'
 
-function TxDetailRow({ label, children, first = false }: { label: string; children: ReactNode; first?: boolean }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '13px 20px',
-        minHeight: 50,
-        borderTop: first ? 'none' : '0.5px solid var(--hairline)',
-      }}
-    >
-      <div style={{ flex: '0 0 110px', fontSize: 14, color: 'var(--text-2)', letterSpacing: '-0.1px' }}>{label}</div>
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 400, letterSpacing: '-0.2px', color: 'var(--text)' }}>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-/** Read-only detail content shown inside the shared slide-out panel. */
+/** Read-only detail content shown inside the shared slide-out panel. The body
+ *  reuses the shared <TransactionDetailBody> (per-owner cents + percent for
+ *  split/household transactions); the desktop drawer keeps its own header +
+ *  Edit/Delete actions around it. */
 function TxDetailContent({
   tx,
   onClose,
@@ -56,12 +39,7 @@ function TxDetailContent({
   onEdit: () => void
   onDelete: () => void
 }) {
-  const { formatMoney, resolveUser, locale } = useApp()
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const isIncome = tx.kind === 'income'
-  const meta = categoryMeta(tx.category)
-  const ownerUsers = tx.owner_ids.map(resolveUser)
-  const date = new Date(tx.date)
 
   return (
     <>
@@ -76,31 +54,8 @@ function TxDetailContent({
         </button>
       </div>
 
-      <div style={{ padding: '20px 20px 22px', textAlign: 'center' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
-          <CatTile category={tx.category} size={52} />
-        </div>
-        <div style={{ fontSize: 17, fontWeight: 400, letterSpacing: '-0.3px' }}>{tx.merchant}</div>
-        <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>
-          {meta.label} · {mediumDate(date, locale)}
-        </div>
-        <div style={{ fontSize: 32, fontWeight: 300, letterSpacing: '-0.6px', marginTop: 14, fontVariantNumeric: 'tabular-nums', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
-          {formatMoney(tx.amount_cents, { leadingPlus: isIncome })}
-        </div>
-      </div>
-
-      <div className="ow-card" style={{ margin: '0 16px' }}>
-        <TxDetailRow label={ownerUsers.length > 1 ? 'Owners' : 'Owner'} first>
-          <StackedAvatars users={ownerUsers} size={22} ring="var(--surface)" />
-          <span>{ownerUsers.map((u) => u.name).join(', ')}</span>
-        </TxDetailRow>
-        <TxDetailRow label={isIncome ? 'Deposit to' : 'Paid with'}>
-          <SourceDot size={8} />
-          <span>{tx.source}</span>
-        </TxDetailRow>
-        <TxDetailRow label="Date">
-          <span style={{ fontVariantNumeric: 'tabular-nums' }}>{mediumDate(date, locale)}</span>
-        </TxDetailRow>
+      <div style={{ padding: '18px 20px 22px', overflowY: 'auto' }}>
+        <TransactionDetailBody tx={tx} />
       </div>
 
       <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px 18px', borderTop: '0.5px solid var(--hairline)' }}>

@@ -4,7 +4,6 @@ import { useMemo } from 'react'
 import Link from 'next/link'
 import { useApp } from '@/lib/store'
 import { useDashboardRange } from '@/lib/useDashboardRange'
-import { categoryMeta, paletteFor } from '@/lib/categories'
 import { generateInsights } from '@/lib/finance/insights'
 import {
   monthlyPaymentCents,
@@ -15,16 +14,10 @@ import {
   rangeInterval,
   DASHBOARD_RANGES,
 } from '@/components/dashboard/range'
-import type { Transaction, TransactionCategory } from '@/lib/types'
-import { WebPageHeader, Seg, CardLabel, CatTile } from './kit'
-
-function ShareBar({ pct, color }: { pct: number; color: string }) {
-  return (
-    <div style={{ height: 6, borderRadius: 6, background: 'var(--surface-2)', overflow: 'hidden' }}>
-      <div style={{ width: `${Math.min(100, Math.max(0, pct))}%`, height: '100%', background: color }} />
-    </div>
-  )
-}
+import { InsightsCardStack } from '@/components/dashboard/InsightsCardStack'
+import { SpendByCategoryCard } from '@/components/dashboard/SpendByCategoryCard'
+import { PerOwnerBreakdownCard } from '@/components/dashboard/PerOwnerBreakdownCard'
+import { WebPageHeader, Seg, CardLabel } from './kit'
 
 function Sparkline({ points, height = 64 }: { points: number[]; height?: number }) {
   const max = Math.max(1, ...points)
@@ -46,15 +39,7 @@ const inRange = (iso: string, s: Date, e: Date) => {
 }
 
 export function DashboardDesktop() {
-  const {
-    transactions,
-    properties,
-    budgets,
-    householdMembers,
-    formatMoney,
-    spentBy,
-    currentUserId,
-  } = useApp()
+  const { transactions, properties, budgets, formatMoney } = useApp()
   const now = useMemo(() => new Date(), [])
   const ranges = useMemo(() => availableRanges(transactions, now), [transactions, now])
   const [range, setRange] = useDashboardRange()
@@ -75,31 +60,6 @@ export function DashboardDesktop() {
     .reduce((s, t) => s + t.amount_cents, 0)
   const expenseTotalC = expenses.reduce((s, t) => s + t.amount_cents, 0)
   const net = income - expenseTotalC
-
-  // Spend by category (top 6)
-  const catTotals = useMemo(() => {
-    const m = new Map<TransactionCategory, number>()
-    for (const t of expenses) m.set(t.category, (m.get(t.category) ?? 0) + t.amount_cents)
-    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)
-  }, [expenses])
-  const catMax = Math.max(1, ...catTotals.map(([, v]) => v))
-
-  // Per owner (capped: totals + share bar + top merchants line)
-  const owners = useMemo(() => {
-    return householdMembers
-      .map((u) => {
-        const amount = spentBy(u.id, interval.start, interval.end)
-        const merch = new Map<string, number>()
-        for (const t of expenses) {
-          if (t.owner_ids.includes(u.id)) merch.set(t.merchant, (merch.get(t.merchant) ?? 0) + t.amount_cents)
-        }
-        const top = [...merch.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([m]) => m).join(' · ')
-        return { user: u, amount, top }
-      })
-      .filter((o) => o.amount > 0)
-      .sort((a, b) => b.amount - a.amount)
-  }, [householdMembers, expenses, interval, spentBy])
-  const ownerTotal = Math.max(1, owners.reduce((s, o) => s + o.amount, 0))
 
   // Top merchants (top 5)
   const merchants = useMemo(() => {
@@ -225,91 +185,24 @@ export function DashboardDesktop() {
           )}
         </div>
 
-        {/* Insights — quiet rows */}
+        {/* Insights — shared card stack (full insight set, not trimmed). */}
         {insights.length > 0 && (
-          <div className="ow-card ow-s12">
-            {insights.map((ins, i) => (
-              <div key={ins.id} className="ow-insight-row" style={i === 0 ? undefined : { borderTop: '0.5px solid var(--hairline)' }}>
-                <div className="ow-insight-tile" style={{ background: ins.category ? categoryMeta(ins.category).tint : 'var(--cat-income)' }}>
-                  {ins.category ? (
-                    (() => {
-                      const Icon = categoryMeta(ins.category).icon
-                      return <Icon size={14} color="#fff" />
-                    })()
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path d="M2 4l4 5 2.5-3L12 10.5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ fontWeight: 400 }}>{ins.title}.</span>{' '}
-                  <span style={{ color: 'var(--text-2)' }}>{ins.body}</span>
-                </div>
-              </div>
-            ))}
+          <div className="ow-s12">
+            <InsightsCardStack />
           </div>
         )}
 
-        {/* Spend by category */}
-        <div className="ow-card ow-s6" style={{ padding: 24 }}>
-          <CardLabel hint="Share of spend">Spend by category</CardLabel>
-          {catTotals.length === 0 ? (
-            <div style={{ fontSize: 13, color: 'var(--text-3)' }}>No expenses in this period yet.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {catTotals.map(([cat, amt]) => (
-                <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <CatTile category={cat} size={28} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
-                      <span style={{ fontSize: 14, fontWeight: 400, letterSpacing: '-0.1px' }}>{categoryMeta(cat).label}</span>
-                      <span style={{ fontSize: 14, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.2px' }}>{formatMoney(amt)}</span>
-                    </div>
-                    <ShareBar pct={(amt / catMax) * 100} color={categoryMeta(cat).tint} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        {/* Spend by category — shared card (with per-category transaction drill-down). */}
+        <div className="ow-s6">
+          <SpendByCategoryCard range={activeRange} interval={interval} />
         </div>
 
-        {/* Per owner — capped */}
-        <div className="ow-card ow-s6" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
-          <CardLabel hint="Share of spend">Per owner</CardLabel>
-          {owners.length === 0 ? (
-            <div style={{ fontSize: 13, color: 'var(--text-3)' }}>No household spending yet.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              {owners.map((o) => {
-                const pal = paletteFor(o.user.color_key)
-                return (
-                  <div key={o.user.id} style={{ display: 'flex', gap: 12 }}>
-                    <div className="flex shrink-0 items-center justify-center rounded-full" style={{ width: 32, height: 32, background: pal.bg, color: pal.fg, fontWeight: 400, fontSize: 14 }}>
-                      {o.user.initial}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
-                        <span style={{ fontSize: 14, fontWeight: 400, letterSpacing: '-0.1px' }}>
-                          {o.user.id === currentUserId ? `${o.user.name} (you)` : o.user.name}
-                        </span>
-                        <span style={{ fontSize: 14, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.2px' }}>{formatMoney(o.amount)}</span>
-                      </div>
-                      <ShareBar pct={(o.amount / ownerTotal) * 100} color={pal.bg} />
-                      {o.top && (
-                        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 5, letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.top}</div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-          <div style={{ marginTop: 'auto', paddingTop: 16 }}>
-            <Link href="/transactions" className="ow-quiet-link">
-              See all activity →
-            </Link>
-          </div>
+        {/* Per owner — shared card (with per-member split breakdown drill-down). */}
+        <div className="ow-s6" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <PerOwnerBreakdownCard range={activeRange} interval={interval} />
+          <Link href="/transactions" className="ow-quiet-link">
+            See all activity →
+          </Link>
         </div>
 
         {/* Top merchants */}
