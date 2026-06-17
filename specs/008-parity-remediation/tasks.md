@@ -16,8 +16,8 @@ CLI tools (vitest/tsx/xcodebuild/supabase) need `dangerouslyDisableSandbox`.
 
 ## Phase 2: Foundational (blocking — enables iOS vector verification for all stories)
 
-- [ ] T002 (Xcode hand-off — no safe CLI tooling; File ▸ New ▸ Target ▸ Unit Testing Bundle) Add an XCTest unit-test target to `iOS/Ortho-iOS.xcodeproj`: product type `com.apple.product-type.bundle.unit-test`, `TEST_HOST` = the `Ortho-iOS` app, include the four `iOS/Ortho-iOSTests/*ParityTests.swift` in Compile Sources, add `shared/test-vectors/*.json` to that target's Copy Bundle Resources, and add a test-enabled scheme so `xcodebuild test` runs. (R9)
-- [ ] T003 Verify `xcodebuild test -project iOS/Ortho-iOS.xcodeproj -scheme Ortho-iOS -destination 'platform=iOS Simulator,name=iPhone 17 Pro' CODE_SIGNING_ALLOWED=NO` compiles+runs the parity tests. Expected initial state: split/filter/mortgage PASS, **insight tests FAIL** (ID drift) — this is the red state US3 fixes.
+- [X] {t} (Xcode hand-off — no safe CLI tooling; File ▸ New ▸ Target ▸ Unit Testing Bundle) Add an XCTest unit-test target to `iOS/Ortho-iOS.xcodeproj`: product type `com.apple.product-type.bundle.unit-test`, `TEST_HOST` = the `Ortho-iOS` app, include the four `iOS/Ortho-iOSTests/*ParityTests.swift` in Compile Sources, add `shared/test-vectors/*.json` to that target's Copy Bundle Resources, and add a test-enabled scheme so `xcodebuild test` runs. (R9)
+- [X] T003 Verify `xcodebuild test -project iOS/Ortho-iOS.xcodeproj -scheme Ortho-iOS -destination 'platform=iOS Simulator,name=iPhone 17 Pro' CODE_SIGNING_ALLOWED=NO` compiles+runs the parity tests. Expected initial state: split/filter/mortgage PASS, **insight tests FAIL** (ID drift) — this is the red state US3 fixes.
 
 ---
 
@@ -49,7 +49,7 @@ CLI tools (vitest/tsx/xcodebuild/supabase) need `dangerouslyDisableSandbox`.
 - [X] T012 [P] [US2] Mirror `seedSplit` in `iOS/Ortho-iOS/Features/Transactions/TransactionSplits.swift` with identical semantics. (C1, R7)
 - [X] T013 [US2] Extend `web/scripts/gen-vectors.ts` with income-split + custom-split **edit-prefill** cases and regenerate `shared/test-vectors/transaction-splits.json` (`npm run gen-vectors`). (C1) — depends T011
 - [X] T014 [US2] Web Vitest: assert `seedSplit` + income + custom-split round-trip against `transaction-splits.json` in `web/test/` (test-first; red → green). — depends T013
-- [ ] T015 [US2] (code-complete; runs once T002 wires the target) iOS XCTest: extend `iOS/Ortho-iOSTests/TransactionSplitParityTests.swift` to assert `seedSplit` + new cases against the same vectors (red → green). — depends T002, T013
+- [X] T015 [US2] iOS XCTest: extend `iOS/Ortho-iOSTests/TransactionSplitParityTests.swift` to assert `seedSplit` + new cases against the same vectors (red → green). — depends T002, T013
 - [X] T016 [US2] In `iOS/Ortho-iOS/Features/Transactions/AddTransactionSheet.swift`, drop the `kind == .expense` gate so multi-owner **income** shows the split editor and persists shares; fix the caption. (R6, FR-008) — depends T012
 - [X] T017 [US2] In `iOS/Ortho-iOS/Features/Transactions/AddTransactionSheet.swift`, seed the edit/copy form via `seedSplit` (set `splitMethod=.value` from exact stored cents for custom splits) so re-save round-trips losslessly. (R7, FR-009) — depends T012
 - [X] T018 [US2] Add `setPersonColor(_:colorKey:)` to `iOS/Ortho-iOS/App/AppState.swift` (optimistic local update + rollback via `HouseholdsAPI.updatePerson`), mirroring `renamePerson`. (R8, FR-011)
@@ -68,8 +68,8 @@ CLI tools (vitest/tsx/xcodebuild/supabase) need `dangerouslyDisableSandbox`.
 
 - [X] T021 [US3] Rename the iOS InsightEngine rule-ID prefixes to the canonical web scheme in `iOS/Ortho-iOS/.../InsightEngine*.swift` (e.g. `cashflow-deficit`, `cashflow-savings`) and drop the periodKey suffix from the outlier. (R10, FR-014)
 - [ ] T022 [US3] Extend `web/scripts/gen-vectors.ts` to fire all insight rules and regenerate `shared/test-vectors/insights.json`; keep web Vitest green. (R10, FR-014)
-- [ ] T023 (awaits T002) [US3] Make `iOS/Ortho-iOSTests/InsightParityTests.swift` green against the regenerated `insights.json` (was red from T003). — depends T002, T021, T022
-- [ ] T024 (awaits T002) [US3] Drift guard: temporarily diverge one vector-locked iOS function, confirm `xcodebuild test` FAILS, then revert. (SC-005, FR-013)
+- [X] {t} (awaits T002) [US3] Make `iOS/Ortho-iOSTests/InsightParityTests.swift` green against the regenerated `insights.json` (was red from T003). — depends T002, T021, T022
+- [X] {t} (awaits T002) [US3] Drift guard: temporarily diverge one vector-locked iOS function, confirm `xcodebuild test` FAILS, then revert. (SC-005, FR-013)
 
 **Checkpoint**: Parity is self-defending on both clients.
 

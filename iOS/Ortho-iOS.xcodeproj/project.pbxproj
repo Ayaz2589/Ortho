@@ -7,16 +7,47 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		25913E150D495EDC3757A714 /* InsightParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0650C51720415CB902237F48 /* InsightParityTests.swift */; };
 		5A1700000000000000000003 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 5A1700000000000000000002 /* Supabase */; };
+		67EC116180321EA940B5E616 /* transaction-splits.json in Resources */ = {isa = PBXBuildFile; fileRef = 24BF7AA790DBA76C172C90C4 /* transaction-splits.json */; };
+		74265C9D95B09C1A42E1E975 /* mortgage.json in Resources */ = {isa = PBXBuildFile; fileRef = 70EE7257C8C1E7DF781423A6 /* mortgage.json */; };
+		9563EF0B325C6288B2371432 /* TransactionFilterParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 302074913EEE1A9E94160397 /* TransactionFilterParityTests.swift */; };
+		B5F85A62800B52CFBF244E27 /* transaction-filters.json in Resources */ = {isa = PBXBuildFile; fileRef = 7BB4B1B9837EAE1B6C707190 /* transaction-filters.json */; };
+		C193B52B38D45CCD8086AB46 /* insights.json in Resources */ = {isa = PBXBuildFile; fileRef = 2769D0C2D228268FBA560175 /* insights.json */; };
+		CDDC361CED2034F43CA9B013 /* TransactionSplitParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F17A0ACBC22C65C00F424C5 /* TransactionSplitParityTests.swift */; };
+		D076E0BACD0147459E2F25A4 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0BE827914102FB73FD749827 /* Foundation.framework */; };
+		D40985261F105B076E8A9FD8 /* MortgageParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B574A3F931F5FB00F487BA3 /* MortgageParityTests.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		1092A14E9B11B52FAC98EB8F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4549C87E2FBB4745001751B0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4549C8852FBB4745001751B0;
+			remoteInfo = "Ortho-iOS";
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		0650C51720415CB902237F48 /* InsightParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = InsightParityTests.swift; path = "Ortho-iOSTests/InsightParityTests.swift"; sourceTree = "<group>"; };
+		0BE827914102FB73FD749827 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		169932190712D727EC9C2CF6 /* Ortho-iOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Ortho-iOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		24BF7AA790DBA76C172C90C4 /* transaction-splits.json */ = {isa = PBXFileReference; includeInIndex = 1; name = "transaction-splits.json"; path = "../shared/test-vectors/transaction-splits.json"; sourceTree = "<group>"; };
+		2769D0C2D228268FBA560175 /* insights.json */ = {isa = PBXFileReference; includeInIndex = 1; name = insights.json; path = "../shared/test-vectors/insights.json"; sourceTree = "<group>"; };
+		302074913EEE1A9E94160397 /* TransactionFilterParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TransactionFilterParityTests.swift; path = "Ortho-iOSTests/TransactionFilterParityTests.swift"; sourceTree = "<group>"; };
 		4549C8862FBB4745001751B0 /* Ortho-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ortho-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		6F17A0ACBC22C65C00F424C5 /* TransactionSplitParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TransactionSplitParityTests.swift; path = "Ortho-iOSTests/TransactionSplitParityTests.swift"; sourceTree = "<group>"; };
+		70EE7257C8C1E7DF781423A6 /* mortgage.json */ = {isa = PBXFileReference; includeInIndex = 1; name = mortgage.json; path = "../shared/test-vectors/mortgage.json"; sourceTree = "<group>"; };
+		7BB4B1B9837EAE1B6C707190 /* transaction-filters.json */ = {isa = PBXFileReference; includeInIndex = 1; name = "transaction-filters.json"; path = "../shared/test-vectors/transaction-filters.json"; sourceTree = "<group>"; };
+		9B574A3F931F5FB00F487BA3 /* MortgageParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MortgageParityTests.swift; path = "Ortho-iOSTests/MortgageParityTests.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		4549C8882FBB4745001751B0 /* Ortho-iOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = "Ortho-iOS";
 			sourceTree = "<group>";
 		};
@@ -31,6 +62,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7D26CAF742AE7FE632B60BB9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D076E0BACD0147459E2F25A4 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -39,6 +78,15 @@
 			children = (
 				4549C8882FBB4745001751B0 /* Ortho-iOS */,
 				4549C8872FBB4745001751B0 /* Products */,
+				DFFB8821125F607E80F641D3 /* Frameworks */,
+				0650C51720415CB902237F48 /* InsightParityTests.swift */,
+				9B574A3F931F5FB00F487BA3 /* MortgageParityTests.swift */,
+				302074913EEE1A9E94160397 /* TransactionFilterParityTests.swift */,
+				6F17A0ACBC22C65C00F424C5 /* TransactionSplitParityTests.swift */,
+				2769D0C2D228268FBA560175 /* insights.json */,
+				70EE7257C8C1E7DF781423A6 /* mortgage.json */,
+				7BB4B1B9837EAE1B6C707190 /* transaction-filters.json */,
+				24BF7AA790DBA76C172C90C4 /* transaction-splits.json */,
 			);
 			sourceTree = "<group>";
 		};
@@ -46,13 +94,48 @@
 			isa = PBXGroup;
 			children = (
 				4549C8862FBB4745001751B0 /* Ortho-iOS.app */,
+				169932190712D727EC9C2CF6 /* Ortho-iOSTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A03E8D247DF5C62FF856C6AD /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				0BE827914102FB73FD749827 /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		DFFB8821125F607E80F641D3 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A03E8D247DF5C62FF856C6AD /* iOS */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		018BD1D3AA531BDD8D51AC29 /* Ortho-iOSTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C80EA600F8812CE68B74874B /* Build configuration list for PBXNativeTarget "Ortho-iOSTests" */;
+			buildPhases = (
+				0A13A42704DC68D4F720463A /* Sources */,
+				7D26CAF742AE7FE632B60BB9 /* Frameworks */,
+				99ED2BCCB12C6F1AC5E603D5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B96A3CB0DFEC8C7528B3B7FB /* PBXTargetDependency */,
+			);
+			name = "Ortho-iOSTests";
+			productName = "Ortho-iOSTests";
+			productReference = 169932190712D727EC9C2CF6 /* Ortho-iOSTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		4549C8852FBB4745001751B0 /* Ortho-iOS */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 4549C8912FBB4746001751B0 /* Build configuration list for PBXNativeTarget "Ortho-iOS" */;
@@ -109,6 +192,7 @@
 			projectRoot = "";
 			targets = (
 				4549C8852FBB4745001751B0 /* Ortho-iOS */,
+				018BD1D3AA531BDD8D51AC29 /* Ortho-iOSTests */,
 			);
 		};
 /* End PBXProject section */
@@ -121,9 +205,31 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		99ED2BCCB12C6F1AC5E603D5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C193B52B38D45CCD8086AB46 /* insights.json in Resources */,
+				74265C9D95B09C1A42E1E975 /* mortgage.json in Resources */,
+				B5F85A62800B52CFBF244E27 /* transaction-filters.json in Resources */,
+				67EC116180321EA940B5E616 /* transaction-splits.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		0A13A42704DC68D4F720463A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				25913E150D495EDC3757A714 /* InsightParityTests.swift in Sources */,
+				D40985261F105B076E8A9FD8 /* MortgageParityTests.swift in Sources */,
+				9563EF0B325C6288B2371432 /* TransactionFilterParityTests.swift in Sources */,
+				CDDC361CED2034F43CA9B013 /* TransactionSplitParityTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		4549C8822FBB4745001751B0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -132,6 +238,15 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B96A3CB0DFEC8C7528B3B7FB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "Ortho-iOS";
+			target = 4549C8852FBB4745001751B0 /* Ortho-iOS */;
+			targetProxy = 1092A14E9B11B52FAC98EB8F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		4549C88F2FBB4746001751B0 /* Debug */ = {
@@ -319,6 +434,37 @@
 			};
 			name = Release;
 		};
+		C758AAFA1048179C6A3444F6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "AyazUddin.Ortho-iOSTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ortho-iOS.app/Ortho-iOS";
+			};
+			name = Debug;
+		};
+		E5450414411D02D77013DE79 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "AyazUddin.Ortho-iOSTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ortho-iOS.app/Ortho-iOS";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -336,6 +482,15 @@
 			buildConfigurations = (
 				4549C8922FBB4746001751B0 /* Debug */,
 				4549C8932FBB4746001751B0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C80EA600F8812CE68B74874B /* Build configuration list for PBXNativeTarget "Ortho-iOSTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E5450414411D02D77013DE79 /* Release */,
+				C758AAFA1048179C6A3444F6 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
