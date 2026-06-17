@@ -55,10 +55,20 @@ private struct SeedCaseJSON: Decodable {
     let roundTrip: [String: Int64]
 }
 
+private struct OrderCaseJSON: Decodable {
+    let name: String
+    let amountCents: Int64
+    let owners: [String]
+    let ordered: [String]
+    let split: SplitJSON
+    let expected: [String: Int64]
+}
+
 private struct SplitVectors: Decodable {
     let cases: [SplitCaseJSON]
     let validations: [ValCaseJSON]
     let seeds: [SeedCaseJSON]
+    let ownerOrdering: [OrderCaseJSON]
 }
 
 final class TransactionSplitParityTests: XCTestCase {
@@ -110,6 +120,21 @@ final class TransactionSplitParityTests: XCTestCase {
             let rt = computeShares(c.amountCents, c.owners, seed)
             XCTAssertEqual(rt, c.roundTrip, "seedSplit round-trip: \(c.name)")
             XCTAssertEqual(rt, c.storedCents, "seedSplit lossless: \(c.name)")
+        }
+    }
+
+    /// Locks the canonical owner ordering: the (scrambled) owners must sort the
+    /// same way on both clients, so the leftover cent lands on the same owner.
+    func testOwnerOrderingParity() throws {
+        let vectors = try loadVectors()
+        for c in vectors.ownerOrdering {
+            let ordered = orderedOwnerIds(c.owners)
+            XCTAssertEqual(ordered, c.ordered, "orderedOwnerIds: \(c.name)")
+            let shares = computeShares(c.amountCents, ordered, c.split.toInput())
+            XCTAssertEqual(shares, c.expected, "ownerOrdering shares: \(c.name)")
+            if c.split.method != "value" {
+                XCTAssertEqual(c.expected.values.reduce(0, +), c.amountCents, "ownerOrdering sum: \(c.name)")
+            }
         }
     }
 }

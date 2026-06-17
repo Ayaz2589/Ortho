@@ -1,0 +1,692 @@
+{
+  "toDisplay": [
+    {
+      "name": "usd-8742",
+      "cents": 8742,
+      "currency": "usd",
+      "rate": 1,
+      "expected": 87.42
+    },
+    {
+      "name": "usd-575",
+      "cents": 575,
+      "currency": "usd",
+      "rate": 1,
+      "expected": 5.75
+    },
+    {
+      "name": "usd-100000",
+      "cents": 100000,
+      "currency": "usd",
+      "rate": 1,
+      "expected": 1000
+    },
+    {
+      "name": "usd-999",
+      "cents": 999,
+      "currency": "usd",
+      "rate": 1,
+      "expected": 9.99
+    },
+    {
+      "name": "usd-1",
+      "cents": 1,
+      "currency": "usd",
+      "rate": 1,
+      "expected": 0.01
+    },
+    {
+      "name": "usd-123456",
+      "cents": 123456,
+      "currency": "usd",
+      "rate": 1,
+      "expected": 1234.56
+    },
+    {
+      "name": "usd-50050",
+      "cents": 50050,
+      "currency": "usd",
+      "rate": 1,
+      "expected": 500.5
+    },
+    {
+      "name": "cad-8742",
+      "cents": 8742,
+      "currency": "cad",
+      "rate": 1.35,
+      "expected": 118.02
+    },
+    {
+      "name": "cad-575",
+      "cents": 575,
+      "currency": "cad",
+      "rate": 1.35,
+      "expected": 7.76
+    },
+    {
+      "name": "cad-100000",
+      "cents": 100000,
+      "currency": "cad",
+      "rate": 1.35,
+      "expected": 1350
+    },
+    {
+      "name": "cad-999",
+      "cents": 999,
+      "currency": "cad",
+      "rate": 1.35,
+      "expected": 13.49
+    },
+    {
+      "name": "cad-1",
+      "cents": 1,
+      "currency": "cad",
+      "rate": 1.35,
+      "expected": 0.01
+    },
+    {
+      "name": "cad-123456",
+      "cents": 123456,
+      "currency": "cad",
+      "rate": 1.35,
+      "expected": 1666.66
+    },
+    {
+      "name": "cad-50050",
+      "cents": 50050,
+      "currency": "cad",
+      "rate": 1.35,
+      "expected": 675.68
+    },
+    {
+      "name": "gbp-8742",
+      "cents": 8742,
+      "currency": "gbp",
+      "rate": 0.78,
+      "expected": 68.19
+    },
+    {
+      "name": "gbp-575",
+      "cents": 575,
+      "currency": "gbp",
+      "rate": 0.78,
+      "expected": 4.49
+    },
+    {
+      "name": "gbp-100000",
+      "cents": 100000,
+      "currency": "gbp",
+      "rate": 0.78,
+      "expected": 780
+    },
+    {
+      "name": "gbp-999",
+      "cents": 999,
+      "currency": "gbp",
+      "rate": 0.78,
+      "expected": 7.79
+    },
+    {
+      "name": "gbp-1",
+      "cents": 1,
+      "currency": "gbp",
+      "rate": 0.78,
+      "expected": 0.01
+    },
+    {
+      "name": "gbp-123456",
+      "cents": 123456,
+      "currency": "gbp",
+      "rate": 0.78,
+      "expected": 962.96
+    },
+    {
+      "name": "gbp-50050",
+      "cents": 50050,
+      "currency": "gbp",
+      "rate": 0.78,
+      "expected": 390.39
+    },
+    {
+      "name": "eur-8742",
+      "cents": 8742,
+      "currency": "eur",
+      "rate": 0.92,
+      "expected": 80.43
+    },
+    {
+      "name": "eur-575",
+      "cents": 575,
+      "currency": "eur",
+      "rate": 0.92,
+      "expected": 5.29
+    },
+    {
+      "name": "eur-100000",
+      "cents": 100000,
+      "currency": "eur",
+      "rate": 0.92,
+      "expected": 920
+    },
+    {
+      "name": "eur-999",
+      "cents": 999,
+      "currency": "eur",
+      "rate": 0.92,
+      "expected": 9.19
+    },
+    {
+      "name": "eur-1",
+      "cents": 1,
+      "currency": "eur",
+      "rate": 0.92,
+      "expected": 0.01
+    },
+    {
+      "name": "eur-123456",
+      "cents": 123456,
+      "currency": "eur",
+      "rate": 0.92,
+      "expected": 1135.8
+    },
+    {
+      "name": "eur-50050",
+      "cents": 50050,
+      "currency": "eur",
+      "rate": 0.92,
+      "expected": 460.46
+    },
+    {
+      "name": "jpy-8742",
+      "cents": 8742,
+      "currency": "jpy",
+      "rate": 150,
+      "expected": 13113
+    },
+    {
+      "name": "jpy-575",
+      "cents": 575,
+      "currency": "jpy",
+      "rate": 150,
+      "expected": 863
+    },
+    {
+      "name": "jpy-100000",
+      "cents": 100000,
+      "currency": "jpy",
+      "rate": 150,
+      "expected": 150000
+    },
+    {
+      "name": "jpy-999",
+      "cents": 999,
+      "currency": "jpy",
+      "rate": 150,
+      "expected": 1499
+    },
+    {
+      "name": "jpy-1",
+      "cents": 1,
+      "currency": "jpy",
+      "rate": 150,
+      "expected": 2
+    },
+    {
+      "name": "jpy-123456",
+      "cents": 123456,
+      "currency": "jpy",
+      "rate": 150,
+      "expected": 185184
+    },
+    {
+      "name": "jpy-50050",
+      "cents": 50050,
+      "currency": "jpy",
+      "rate": 150,
+      "expected": 75075
+    },
+    {
+      "name": "cny-8742",
+      "cents": 8742,
+      "currency": "cny",
+      "rate": 7.2,
+      "expected": 629.42
+    },
+    {
+      "name": "cny-575",
+      "cents": 575,
+      "currency": "cny",
+      "rate": 7.2,
+      "expected": 41.4
+    },
+    {
+      "name": "cny-100000",
+      "cents": 100000,
+      "currency": "cny",
+      "rate": 7.2,
+      "expected": 7200
+    },
+    {
+      "name": "cny-999",
+      "cents": 999,
+      "currency": "cny",
+      "rate": 7.2,
+      "expected": 71.93
+    },
+    {
+      "name": "cny-1",
+      "cents": 1,
+      "currency": "cny",
+      "rate": 7.2,
+      "expected": 0.07
+    },
+    {
+      "name": "cny-123456",
+      "cents": 123456,
+      "currency": "cny",
+      "rate": 7.2,
+      "expected": 8888.83
+    },
+    {
+      "name": "cny-50050",
+      "cents": 50050,
+      "currency": "cny",
+      "rate": 7.2,
+      "expected": 3603.6
+    },
+    {
+      "name": "bdt-8742",
+      "cents": 8742,
+      "currency": "bdt",
+      "rate": 110,
+      "expected": 9616.2
+    },
+    {
+      "name": "bdt-575",
+      "cents": 575,
+      "currency": "bdt",
+      "rate": 110,
+      "expected": 632.5
+    },
+    {
+      "name": "bdt-100000",
+      "cents": 100000,
+      "currency": "bdt",
+      "rate": 110,
+      "expected": 110000
+    },
+    {
+      "name": "bdt-999",
+      "cents": 999,
+      "currency": "bdt",
+      "rate": 110,
+      "expected": 1098.9
+    },
+    {
+      "name": "bdt-1",
+      "cents": 1,
+      "currency": "bdt",
+      "rate": 110,
+      "expected": 1.1
+    },
+    {
+      "name": "bdt-123456",
+      "cents": 123456,
+      "currency": "bdt",
+      "rate": 110,
+      "expected": 135801.6
+    },
+    {
+      "name": "bdt-50050",
+      "cents": 50050,
+      "currency": "bdt",
+      "rate": 110,
+      "expected": 55055
+    }
+  ],
+  "toUsdCents": [
+    {
+      "name": "usd-disp-87.42",
+      "amount": 87.42,
+      "currency": "usd",
+      "rate": 1,
+      "expected": 8742
+    },
+    {
+      "name": "usd-disp-5.75",
+      "amount": 5.75,
+      "currency": "usd",
+      "rate": 1,
+      "expected": 575
+    },
+    {
+      "name": "usd-disp-1000",
+      "amount": 1000,
+      "currency": "usd",
+      "rate": 1,
+      "expected": 100000
+    },
+    {
+      "name": "usd-disp-9.99",
+      "amount": 9.99,
+      "currency": "usd",
+      "rate": 1,
+      "expected": 999
+    },
+    {
+      "name": "usd-disp-0.01",
+      "amount": 0.01,
+      "currency": "usd",
+      "rate": 1,
+      "expected": 1
+    },
+    {
+      "name": "usd-disp-1234.56",
+      "amount": 1234.56,
+      "currency": "usd",
+      "rate": 1,
+      "expected": 123456
+    },
+    {
+      "name": "usd-disp-500.5",
+      "amount": 500.5,
+      "currency": "usd",
+      "rate": 1,
+      "expected": 50050
+    },
+    {
+      "name": "cad-disp-118.02",
+      "amount": 118.02,
+      "currency": "cad",
+      "rate": 1.35,
+      "expected": 8742
+    },
+    {
+      "name": "cad-disp-7.76",
+      "amount": 7.76,
+      "currency": "cad",
+      "rate": 1.35,
+      "expected": 575
+    },
+    {
+      "name": "cad-disp-1350",
+      "amount": 1350,
+      "currency": "cad",
+      "rate": 1.35,
+      "expected": 100000
+    },
+    {
+      "name": "cad-disp-13.49",
+      "amount": 13.49,
+      "currency": "cad",
+      "rate": 1.35,
+      "expected": 999
+    },
+    {
+      "name": "cad-disp-0.01",
+      "amount": 0.01,
+      "currency": "cad",
+      "rate": 1.35,
+      "expected": 1
+    },
+    {
+      "name": "cad-disp-1666.66",
+      "amount": 1666.66,
+      "currency": "cad",
+      "rate": 1.35,
+      "expected": 123456
+    },
+    {
+      "name": "cad-disp-675.68",
+      "amount": 675.68,
+      "currency": "cad",
+      "rate": 1.35,
+      "expected": 50050
+    },
+    {
+      "name": "gbp-disp-68.19",
+      "amount": 68.19,
+      "currency": "gbp",
+      "rate": 0.78,
+      "expected": 8742
+    },
+    {
+      "name": "gbp-disp-4.49",
+      "amount": 4.49,
+      "currency": "gbp",
+      "rate": 0.78,
+      "expected": 576
+    },
+    {
+      "name": "gbp-disp-780",
+      "amount": 780,
+      "currency": "gbp",
+      "rate": 0.78,
+      "expected": 100000
+    },
+    {
+      "name": "gbp-disp-7.79",
+      "amount": 7.79,
+      "currency": "gbp",
+      "rate": 0.78,
+      "expected": 999
+    },
+    {
+      "name": "gbp-disp-0.01",
+      "amount": 0.01,
+      "currency": "gbp",
+      "rate": 0.78,
+      "expected": 1
+    },
+    {
+      "name": "gbp-disp-962.96",
+      "amount": 962.96,
+      "currency": "gbp",
+      "rate": 0.78,
+      "expected": 123456
+    },
+    {
+      "name": "gbp-disp-390.39",
+      "amount": 390.39,
+      "currency": "gbp",
+      "rate": 0.78,
+      "expected": 50050
+    },
+    {
+      "name": "eur-disp-80.43",
+      "amount": 80.43,
+      "currency": "eur",
+      "rate": 0.92,
+      "expected": 8742
+    },
+    {
+      "name": "eur-disp-5.29",
+      "amount": 5.29,
+      "currency": "eur",
+      "rate": 0.92,
+      "expected": 575
+    },
+    {
+      "name": "eur-disp-920",
+      "amount": 920,
+      "currency": "eur",
+      "rate": 0.92,
+      "expected": 100000
+    },
+    {
+      "name": "eur-disp-9.19",
+      "amount": 9.19,
+      "currency": "eur",
+      "rate": 0.92,
+      "expected": 999
+    },
+    {
+      "name": "eur-disp-0.01",
+      "amount": 0.01,
+      "currency": "eur",
+      "rate": 0.92,
+      "expected": 1
+    },
+    {
+      "name": "eur-disp-1135.8",
+      "amount": 1135.8,
+      "currency": "eur",
+      "rate": 0.92,
+      "expected": 123457
+    },
+    {
+      "name": "eur-disp-460.46",
+      "amount": 460.46,
+      "currency": "eur",
+      "rate": 0.92,
+      "expected": 50050
+    },
+    {
+      "name": "jpy-disp-13113",
+      "amount": 13113,
+      "currency": "jpy",
+      "rate": 150,
+      "expected": 8742
+    },
+    {
+      "name": "jpy-disp-863",
+      "amount": 863,
+      "currency": "jpy",
+      "rate": 150,
+      "expected": 575
+    },
+    {
+      "name": "jpy-disp-150000",
+      "amount": 150000,
+      "currency": "jpy",
+      "rate": 150,
+      "expected": 100000
+    },
+    {
+      "name": "jpy-disp-1499",
+      "amount": 1499,
+      "currency": "jpy",
+      "rate": 150,
+      "expected": 999
+    },
+    {
+      "name": "jpy-disp-2",
+      "amount": 2,
+      "currency": "jpy",
+      "rate": 150,
+      "expected": 1
+    },
+    {
+      "name": "jpy-disp-185184",
+      "amount": 185184,
+      "currency": "jpy",
+      "rate": 150,
+      "expected": 123456
+    },
+    {
+      "name": "jpy-disp-75075",
+      "amount": 75075,
+      "currency": "jpy",
+      "rate": 150,
+      "expected": 50050
+    },
+    {
+      "name": "cny-disp-629.42",
+      "amount": 629.42,
+      "currency": "cny",
+      "rate": 7.2,
+      "expected": 8742
+    },
+    {
+      "name": "cny-disp-41.4",
+      "amount": 41.4,
+      "currency": "cny",
+      "rate": 7.2,
+      "expected": 575
+    },
+    {
+      "name": "cny-disp-7200",
+      "amount": 7200,
+      "currency": "cny",
+      "rate": 7.2,
+      "expected": 100000
+    },
+    {
+      "name": "cny-disp-71.93",
+      "amount": 71.93,
+      "currency": "cny",
+      "rate": 7.2,
+      "expected": 999
+    },
+    {
+      "name": "cny-disp-0.07",
+      "amount": 0.07,
+      "currency": "cny",
+      "rate": 7.2,
+      "expected": 1
+    },
+    {
+      "name": "cny-disp-8888.83",
+      "amount": 8888.83,
+      "currency": "cny",
+      "rate": 7.2,
+      "expected": 123456
+    },
+    {
+      "name": "cny-disp-3603.6",
+      "amount": 3603.6,
+      "currency": "cny",
+      "rate": 7.2,
+      "expected": 50050
+    },
+    {
+      "name": "bdt-disp-9616.2",
+      "amount": 9616.2,
+      "currency": "bdt",
+      "rate": 110,
+      "expected": 8742
+    },
+    {
+      "name": "bdt-disp-632.5",
+      "amount": 632.5,
+      "currency": "bdt",
+      "rate": 110,
+      "expected": 575
+    },
+    {
+      "name": "bdt-disp-110000",
+      "amount": 110000,
+      "currency": "bdt",
+      "rate": 110,
+      "expected": 100000
+    },
+    {
+      "name": "bdt-disp-1098.9",
+      "amount": 1098.9,
+      "currency": "bdt",
+      "rate": 110,
+      "expected": 999
+    },
+    {
+      "name": "bdt-disp-1.1",
+      "amount": 1.1,
+      "currency": "bdt",
+      "rate": 110,
+      "expected": 1
+    },
+    {
+      "name": "bdt-disp-135801.6",
+      "amount": 135801.6,
+      "currency": "bdt",
+      "rate": 110,
+      "expected": 123456
+    },
+    {
+      "name": "bdt-disp-55055",
+      "amount": 55055,
+      "currency": "bdt",
+      "rate": 110,
+      "expected": 50050
+    }
+  ]
+}

@@ -51,8 +51,9 @@ struct Transaction: Identifiable, Hashable, Codable {
 
     var isIncome: Bool { kind == .income }
 
-    /// Deterministic owner order (for even-split remainder placement).
-    private var orderedOwners: [Person.ID] { ownerIDs.sorted { $0.uuidString < $1.uuidString } }
+    /// Deterministic owner order (for even-split remainder placement) — the
+    /// shared canonical sort, mirrored by web `orderedOwnerIds`.
+    private var orderedOwners: [Person.ID] { orderedOwnerIds(Array(ownerIDs)) }
 
     /// Per-owner cents — the stored shares, or an even split when absent.
     var effectiveShares: [Person.ID: Int64] {
@@ -135,7 +136,7 @@ extension Transaction {
             kind: kind,
             amount: cents,
             ownerIDs: ownerIDs,
-            shares: computeShares(cents, ownerIDs.sorted { $0.uuidString < $1.uuidString }, .even),
+            shares: computeShares(cents, orderedOwnerIds(Array(ownerIDs)), .even),
             source: source,
             date: date,
             householdID: householdID,

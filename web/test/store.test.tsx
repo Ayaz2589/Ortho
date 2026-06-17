@@ -138,6 +138,25 @@ describe('store (AppStateProvider)', () => {
     expect(h.mock!.callsFor('transactions').some((c) => c.op === 'delete')).toBe(true)
   })
 
+  it('addTransaction rolls back the parent when the shares write fails (no share-less row)', async () => {
+    // Force the transaction_shares insert to fail (e.g. an RLS denial). The
+    // transaction+shares write must be atomic: no parent may survive without
+    // its shares (it would rehydrate as a single-owner "creator owns all").
+    h.mock = makeSupabaseMock({ ...dataset(), insertErrors: { transaction_shares: 'shares RLS denied' } })
+    await renderStore()
+    const startLen = api.transactions.length
+
+    const tx = makeTx({ id: 'tx-fail', merchant: 'Bistro', amount_cents: 1000, owner_ids: ['u-me', 'u-jordan'], household_id: 'hh-1' })
+    await act(async () => { api.addTransaction(tx) })
+
+    // The optimistic row is rolled back and an error is surfaced.
+    await waitFor(() => expect(api.error).not.toBeNull())
+    expect(api.transactions.find((t) => t.id === 'tx-fail')).toBeUndefined()
+    expect(api.transactions).toHaveLength(startLen)
+    // The parent was deleted so no share-less transaction remains.
+    expect(h.mock!.callsFor('transactions').some((c) => c.op === 'delete')).toBe(true)
+  })
+
   it('spentBy returns each person\'s exact cents share, reconciling to the total', async () => {
     await renderStore()
     // The seeded shared expense ($50.00) is split 50/50 across the two people.

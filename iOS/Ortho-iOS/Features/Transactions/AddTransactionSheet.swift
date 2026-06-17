@@ -426,9 +426,9 @@ struct AddTransactionSheet: View {
                                      from: appState.currency,
                                      rate: appState.rate(for: appState.currency))
         }
-        // Owners come straight from the picker; shares are exact cents derived
-        // from the per-owner percentages (even when a single owner takes all).
-        let owners = Array(selectedOwners).sorted { $0.uuidString < $1.uuidString }
+        // Owners in canonical order (shared `orderedOwnerIds`); shares are exact
+        // cents derived from the per-owner percentages (even when one owner takes all).
+        let owners = orderedOwnerIds(Array(selectedOwners))
         var split: SplitInput<Person.ID> = .even
         if showsSplit && splitIsValid {
             switch splitMethod {
@@ -468,10 +468,10 @@ struct AddTransactionSheet: View {
     /// Seed the by-value split fields from stored per-owner cents so a custom
     /// (non-even) split edit/copy round-trips losslessly — no silent
     /// re-even-split on save. No-op for an even split (the editor keeps `.even`).
-    /// Owner order matches submit's `uuidString` sort so the even-comparison is
-    /// exact. Mirrors web's seedSplit-driven form seeding.
+    /// Owner order matches submit's canonical `orderedOwnerIds` sort so the
+    /// even-comparison is exact. Mirrors web's seedSplit-driven form seeding.
     private func seedSplitFields(amount: Int64, ownerIDs: Set<User.ID>, shares: [User.ID: Int64]) {
-        let owners = Array(ownerIDs).sorted { $0.uuidString < $1.uuidString }
+        let owners = orderedOwnerIds(Array(ownerIDs))
         guard owners.count >= 2 else { return }
         guard case .value(let values) = seedSplit(amount, owners, shares) else { return }
         let currency = appState.currency
@@ -856,7 +856,7 @@ struct AddTransactionSheet: View {
     }
 
     private func evenShareCents(for id: User.ID) -> Int64 {
-        let owners = sortedSelectedOwners.map(\.id).sorted { $0.uuidString < $1.uuidString }
+        let owners = orderedOwnerIds(sortedSelectedOwners.map(\.id))
         return computeShares(enteredCents, owners, .even)[id] ?? 0
     }
 

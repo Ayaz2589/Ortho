@@ -1,17 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
-import { computeShares, validateSplit, seedSplit, type SplitInput, type SplitSeed } from '@/lib/splits'
+import { computeShares, validateSplit, seedSplit, orderedOwnerIds, type SplitInput, type SplitSeed } from '@/lib/splits'
 
 // Locks computeShares/validateSplit/seedSplit against the shared golden vectors
 // that the iOS XCTest suite also asserts — neither language can drift.
 interface SplitCase { name: string; amountCents: number; owners: string[]; split: SplitInput; expected: Record<string, number> }
 interface ValCase { name: string; amountCents: number; owners: string[]; split: SplitInput; result: { ok: boolean; reason?: string } }
 interface SeedCase { name: string; amountCents: number; owners: string[]; storedCents: Record<string, number>; expected: SplitSeed; roundTrip: Record<string, number> }
+interface OrderCase { name: string; amountCents: number; owners: string[]; ordered: string[]; split: SplitInput; expected: Record<string, number> }
 
 const vectors = JSON.parse(
   readFileSync(resolve(__dirname, '../../shared/test-vectors/transaction-splits.json'), 'utf8')
-) as { cases: SplitCase[]; validations: ValCase[]; seeds: SeedCase[] }
+) as { cases: SplitCase[]; validations: ValCase[]; seeds: SeedCase[]; ownerOrdering: OrderCase[] }
 
 describe('transaction-splits golden vectors — computeShares', () => {
   for (const c of vectors.cases) {
@@ -43,6 +44,22 @@ describe('transaction-splits golden vectors — seedSplit (lossless edit prefill
         seed.method === 'even' ? { method: 'even' } : { method: 'value', values: seed.values }
       expect(computeShares(c.amountCents, c.owners, split)).toEqual(c.roundTrip)
       expect(c.roundTrip).toEqual(c.storedCents)
+    })
+  }
+})
+
+describe('transaction-splits golden vectors — ownerOrdering (canonical leftover cent)', () => {
+  for (const c of vectors.ownerOrdering) {
+    it(c.name, () => {
+      // Canonicalize the (scrambled) owners, then compute — the leftover cent
+      // lands on the same owner on both clients regardless of input order.
+      const ordered = orderedOwnerIds(c.owners)
+      expect(ordered).toEqual(c.ordered)
+      expect(computeShares(c.amountCents, ordered, c.split)).toEqual(c.expected)
+      if (c.split.method !== 'value') {
+        const sum = Object.values(c.expected).reduce((a, b) => a + b, 0)
+        expect(sum).toBe(c.amountCents)
+      }
     })
   }
 })

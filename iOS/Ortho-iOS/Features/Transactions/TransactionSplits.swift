@@ -19,6 +19,20 @@ enum SplitInput<ID: Hashable> {
 /// Percentages may total 100 ± this and still be accepted (matches the TS).
 let percentTolerance = 0.5
 
+/// Canonical owner order for share *computation*: owner ids sorted ascending by
+/// their string form. Mirror of web `orderedOwnerIds`; the leftover cent
+/// (even/percent) lands on the same owner on both clients regardless of the
+/// order owners were entered/stored in. Locked by the `ownerOrdering` golden
+/// vectors. `computeShares` stays order-sensitive — callers canonicalize first.
+func orderedOwnerIds(_ ids: [UUID]) -> [UUID] {
+    ids.sorted { $0.uuidString < $1.uuidString }
+}
+
+/// String overload used by the parity vectors (owners are plain strings there).
+func orderedOwnerIds(_ ids: [String]) -> [String] {
+    ids.sorted()
+}
+
 /// Cents per owner. `owners` is ordered (count ≥ 1). Always sums to `amountCents`
 /// for `.even`/`.percent`; `.value` returns the entered cents (validate first).
 /// Leftover cents from flooring are handed out one per owner in list order.

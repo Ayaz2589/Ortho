@@ -7,6 +7,19 @@
 
 export type SplitMethod = 'even' | 'percent' | 'value'
 
+/**
+ * Canonical owner order for share *computation*: owner-id strings sorted
+ * ascending. Both clients sort identically (iOS sorts `Person.ID.uuidString`;
+ * the relative order of two hex UUID strings is the same regardless of case),
+ * so the deterministic leftover cent (even/percent) lands on the same owner
+ * regardless of the order owners were entered or stored in. `computeShares`
+ * stays order-sensitive — callers canonicalize before computing shares for
+ * storage or the even fallback. Locked by the `ownerOrdering` golden vectors.
+ */
+export function orderedOwnerIds(ids: string[]): string[] {
+  return [...ids].sort()
+}
+
 export type SplitInput =
   | { method: 'even' }
   | { method: 'percent'; percents: Record<string, number> }

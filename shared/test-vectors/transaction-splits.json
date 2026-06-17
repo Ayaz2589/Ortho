@@ -408,5 +408,109 @@
         "a": 9999
       }
     }
+  ],
+  "ownerOrdering": [
+    {
+      "name": "even-three-remainder-2-scrambled",
+      "amountCents": 10001,
+      "owners": [
+        "c",
+        "a",
+        "b"
+      ],
+      "ordered": [
+        "a",
+        "b",
+        "c"
+      ],
+      "split": {
+        "method": "even"
+      },
+      "expected": {
+        "a": 3334,
+        "b": 3334,
+        "c": 3333
+      }
+    },
+    {
+      "name": "even-two-remainder-1-scrambled",
+      "amountCents": 10001,
+      "owners": [
+        "b",
+        "a"
+      ],
+      "ordered": [
+        "a",
+        "b"
+      ],
+      "split": {
+        "method": "even"
+      },
+      "expected": {
+        "a": 5001,
+        "b": 5000
+      }
+    },
+    {
+      "name": "percent-leftover-scrambled",
+      "amountCents": 10001,
+      "owners": [
+        "b",
+        "a"
+      ],
+      "ordered": [
+        "a",
+        "b"
+      ],
+      "split": {
+        "method": "percent",
+        "percents": {
+          "a": 50,
+          "b": 50
+        }
+      },
+      "expected": {
+        "a": 5001,
+        "b": 5000
+      }
+    },
+    {
+      "name": "single-owner",
+      "amountCents": 9999,
+      "owners": [
+        "x"
+      ],
+      "ordered": [
+        "x"
+      ],
+      "split": {
+        "method": "even"
+      },
+      "expected": {
+        "x": 9999
+      }
+    },
+    {
+      "name": "uuid-even-remainder-1-scrambled",
+      "amountCents": 100,
+      "owners": [
+        "00000000-0000-0000-0000-000000000003",
+        "00000000-0000-0000-0000-000000000001",
+        "00000000-0000-0000-0000-000000000002"
+      ],
+      "ordered": [
+        "00000000-0000-0000-0000-000000000001",
+        "00000000-0000-0000-0000-000000000002",
+        "00000000-0000-0000-0000-000000000003"
+      ],
+      "split": {
+        "method": "even"
+      },
+      "expected": {
+        "00000000-0000-0000-0000-000000000001": 34,
+        "00000000-0000-0000-0000-000000000002": 33,
+        "00000000-0000-0000-0000-000000000003": 33
+      }
+    }
   ]
 }

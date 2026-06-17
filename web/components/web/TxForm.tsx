@@ -7,7 +7,7 @@ import { currencySymbol, fractionDigits } from '@/lib/finance/currency'
 import { groupByDay, dayLabel } from '@/lib/format'
 import { parseMoney, DatePicker } from '@/components/inputs'
 import { Avatar } from '@/components/ui'
-import { computeShares, validateSplit, type SplitInput, type SplitMethod } from '@/lib/splits'
+import { computeShares, validateSplit, orderedOwnerIds, type SplitInput, type SplitMethod } from '@/lib/splits'
 import type { Transaction, TransactionCategory, TransactionKind } from '@/lib/types'
 import { Seg, CatTile, SourceDot } from './kit'
 
@@ -49,7 +49,7 @@ function Row({ label, children, first = false }: { label: string; children: Reac
 /** Is this transaction's stored split just an even one? (for inferring the editor mode) */
 function isEvenSplit(tx: Transaction): boolean {
   if (tx.owner_ids.length < 2) return true
-  const even = computeShares(tx.amount_cents, tx.owner_ids, { method: 'even' })
+  const even = computeShares(tx.amount_cents, orderedOwnerIds(tx.owner_ids), { method: 'even' })
   return tx.owner_ids.every((id) => (tx.shares[id] ?? 0) === even[id])
 }
 
@@ -114,7 +114,7 @@ export function useTxForm({ editing, copying }: { editing?: Transaction | null; 
   }
 
   const splitInput = buildSplit()
-  const shares = cents ? computeShares(cents, owners, splitInput) : {}
+  const shares = cents ? computeShares(cents, orderedOwnerIds(owners), splitInput) : {}
   const splitValidation = cents ? validateSplit(cents, owners, splitInput) : ({ ok: true } as const)
   const splitOk = owners.length < 2 || splitValidation.ok
   const splitReason = splitValidation.ok ? null : splitValidation.reason
@@ -163,7 +163,7 @@ export function useTxForm({ editing, copying }: { editing?: Transaction | null; 
       created_at: editing?.created_at ?? new Date().toISOString(),
       updated_at: new Date().toISOString(),
       owner_ids: owners,
-      shares: computeShares(cents, owners, splitInput),
+      shares: computeShares(cents, orderedOwnerIds(owners), splitInput),
     }
     if (editing) updateTransaction(tx)
     else addTransaction(tx)

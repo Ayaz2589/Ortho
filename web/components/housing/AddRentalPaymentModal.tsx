@@ -18,8 +18,8 @@ function todayISO(): string {
 /** Convert USD cents to a display-currency string for prefilling MoneyInput. */
 function centsToDisplay(cents: number, currency: ReturnType<typeof useApp>['currency'], rate: number): string {
   const digits = fractionDigits(currency)
-  const divisor = digits === 0 ? 1 : 100
-  const value = (cents / divisor) * rate
+  // USD-cents storage invariant: always divide by 100, then apply the FX rate.
+  const value = (cents / 100) * rate
   return value.toFixed(digits)
 }
 

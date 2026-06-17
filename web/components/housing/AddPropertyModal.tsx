@@ -43,8 +43,8 @@ function plusOneYearISO(): string {
 function centsToDisplay(cents: number, currency: ReturnType<typeof useApp>['currency'], rate: number): string {
   if (cents <= 0) return ''
   const digits = fractionDigits(currency)
-  const divisor = digits === 0 ? 1 : 100
-  return ((cents / divisor) * rate).toFixed(digits)
+  // USD-cents storage invariant: always divide by 100, then apply the FX rate.
+  return ((cents / 100) * rate).toFixed(digits)
 }
 
 interface DraftUnit {

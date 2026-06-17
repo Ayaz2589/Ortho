@@ -18,6 +18,9 @@ export interface SupabaseMockDataset {
   rpc?: Record<string, unknown>
   /** RPC name -> Error, to exercise error propagation. */
   rpcErrors?: Record<string, Error>
+  /** Table name -> error message, to make `.insert()` on that table fail
+   *  (exercises the atomic transaction+shares write rollback). */
+  insertErrors?: Record<string, string>
 }
 
 export interface RecordedCall {
@@ -40,6 +43,9 @@ export interface SupabaseClientLike {
   rpc: (name: string, params?: unknown) => Promise<{ data: unknown; error: Error | null }>
 }
 
+/** Writes may surface an error (used to exercise rollback paths). */
+type MutationResult = { data: null; error: { message: string } | null }
+
 interface QueryBuilder extends PromiseLike<{ data: unknown[]; error: null }> {
   select: (cols?: string) => QueryBuilder
   eq: (col: string, val: unknown) => QueryBuilder
@@ -47,10 +53,10 @@ interface QueryBuilder extends PromiseLike<{ data: unknown[]; error: null }> {
   order: (col: string, opts?: unknown) => QueryBuilder
   limit: (n: number) => QueryBuilder
   single: () => Promise<{ data: unknown; error: null }>
-  insert: (payload?: unknown) => Promise<{ data: null; error: null }>
-  update: (payload?: unknown) => QueryBuilder & Promise<{ data: null; error: null }>
-  delete: () => QueryBuilder & Promise<{ data: null; error: null }>
-  upsert: (payload?: unknown, opts?: unknown) => Promise<{ data: null; error: null }>
+  insert: (payload?: unknown) => Promise<MutationResult>
+  update: (payload?: unknown) => QueryBuilder & Promise<MutationResult>
+  delete: () => QueryBuilder & Promise<MutationResult>
+  upsert: (payload?: unknown, opts?: unknown) => Promise<MutationResult>
 }
 
 export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMock {
@@ -63,7 +69,10 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
     const resolved = { data: rows, error: null as null }
     const record = (op: RecordedCall['op'], payload?: unknown) => {
       calls.push({ table, op, payload })
-      return Promise.resolve({ data: null, error: null as null })
+      const msg = op === 'insert' ? dataset.insertErrors?.[table] : undefined
+      return Promise.resolve(
+        msg ? { data: null, error: { message: msg } } : { data: null, error: null as null }
+      )
     }
     const b: QueryBuilder = {
       select: () => b,

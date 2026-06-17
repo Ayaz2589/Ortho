@@ -393,7 +393,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const rate = (c: CurrencyKey) => rates[c] ?? FALLBACK_RATE_FROM_USD[c]
   const formatMoney = (cents: number, opts?: { leadingPlus?: boolean }) =>
-    fmtMoney(cents, currency, rate(currency), opts?.leadingPlus ?? false)
+    fmtMoney(cents, currency, rate(currency), opts?.leadingPlus ?? false, locale)
 
   // ---- owner (person) resolution ----
   const resolveUser = (id: string): User => {
@@ -470,15 +470,23 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }
 
   // ---- mutations (optimistic) ----
-  const writeShares = async (tx: Transaction) => {
-    await supabase.from('transaction_shares').delete().eq('transaction_id', tx.id)
+  /** Replace a transaction's owner-share rows. Returns whether the write fully
+   *  succeeded so callers can keep the parent + shares atomic (a partial failure
+   *  must never leave a share-less parent — see `addTransaction`/`updateTransaction`). */
+  const writeShares = async (tx: Transaction): Promise<{ ok: boolean; error?: string }> => {
+    const { error: delErr } = await supabase.from('transaction_shares').delete().eq('transaction_id', tx.id)
+    if (delErr) return { ok: false, error: delErr.message }
     const shares = effectiveShares(tx)
     const rows = tx.owner_ids.map((pid) => ({
       transaction_id: tx.id,
       person_id: pid,
       amount_cents: shares[pid] ?? 0,
     }))
-    if (rows.length) await supabase.from('transaction_shares').insert(rows)
+    if (rows.length) {
+      const { error: insErr } = await supabase.from('transaction_shares').insert(rows)
+      if (insErr) return { ok: false, error: insErr.message }
+    }
+    return { ok: true }
   }
 
   const txRecord = (tx: Transaction) => ({
@@ -502,7 +510,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         setError(e.message)
         return
       }
-      await writeShares(tx)
+      const res = await writeShares(tx)
+      if (!res.ok) {
+        // Shares failed to write — roll back the parent so no share-less
+        // transaction survives (it would rehydrate as "creator owns all").
+        // Matches iOS's all-or-nothing write.
+        await supabase.from('transactions').delete().eq('id', tx.id)
+        setTransactions((prev) => prev.filter((t) => t.id !== tx.id))
+        setError(res.error ?? 'Could not save who this transaction is split between.')
+      }
     })()
   }
 
@@ -519,7 +535,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         setError(e.message)
         return
       }
-      await writeShares(tx)
+      const res = await writeShares(tx)
+      if (!res.ok) {
+        // Shares failed to write — restore the prior transaction locally and
+        // re-write its shares so the row never ends up share-less (atomic with iOS).
+        if (prevTx) {
+          setTransactions((prev) => prev.map((t) => (t.id === tx.id ? prevTx! : t)))
+          await supabase.from('transactions').update(txRecord(prevTx)).eq('id', tx.id)
+          await writeShares(prevTx)
+        }
+        setError(res.error ?? 'Could not save who this transaction is split between.')
+      }
     })()
   }
 

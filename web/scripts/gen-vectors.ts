@@ -19,7 +19,9 @@ import {
 } from '../lib/finance/mortgage'
 import { generateInsights } from '../lib/finance/insights'
 import { filterTransactions, monthBounds, emptyCriteria, type FilterCriteria, type FilterContext } from '../lib/transactionFilters'
-import { computeShares, validateSplit, seedSplit, type SplitInput } from '../lib/splits'
+import { computeShares, validateSplit, seedSplit, orderedOwnerIds, type SplitInput } from '../lib/splits'
+import { toDisplayAmount, toUSDCents } from '../lib/finance/money'
+import { CURRENCIES, FALLBACK_RATE_FROM_USD } from '../lib/finance/currency'
 import type { Transaction, Budget, Property } from '../lib/types'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -267,6 +269,33 @@ const SEED_CASES: SeedCase[] = [
   { name: 'single-owner-seeds-even', amountCents: 9999, owners: ['a'], storedCents: { a: 9999 } },
 ]
 
+// ownerOrdering: the canonical owner sort that decides the leftover cent. Inputs
+// are SCRAMBLED on purpose; both clients must canonicalize via `orderedOwnerIds`
+// before `computeShares`, so the leftover cent lands on the same owner regardless
+// of entry/storage order. Locks the C1 contract. (R1)
+interface OrderCase { name: string; amountCents: number; owners: string[]; split: SplitInput }
+
+const ORDER_CASES: OrderCase[] = [
+  { name: 'even-three-remainder-2-scrambled', amountCents: 10001, owners: ['c', 'a', 'b'], split: { method: 'even' } },
+  { name: 'even-two-remainder-1-scrambled', amountCents: 10001, owners: ['b', 'a'], split: { method: 'even' } },
+  { name: 'percent-leftover-scrambled', amountCents: 10001, owners: ['b', 'a'], split: { method: 'percent', percents: { a: 50, b: 50 } } },
+  { name: 'single-owner', amountCents: 9999, owners: ['x'], split: { method: 'even' } },
+  // UUID-form ids (lowercase) in non-sorted order — mirrors real person ids.
+  { name: 'uuid-even-remainder-1-scrambled', amountCents: 100, owners: [uid('3'), uid('1'), uid('2')], split: { method: 'even' } },
+]
+
+const ownerOrdering = ORDER_CASES.map((c) => {
+  const ordered = orderedOwnerIds(c.owners)
+  return {
+    name: c.name,
+    amountCents: c.amountCents,
+    owners: c.owners,
+    ordered,
+    split: c.split,
+    expected: computeShares(c.amountCents, ordered, c.split),
+  }
+})
+
 const splits = {
   cases: SPLIT_CASES.map((c) => ({
     name: c.name,
@@ -295,6 +324,29 @@ const splits = {
       roundTrip: computeShares(c.amountCents, c.owners, split),
     }
   }),
+  ownerOrdering,
+}
+
+// ── Currency conversion vectors ─────────────────────────────────────────────
+// Locks toDisplayAmount / toUSDCents across all 7 currencies at the fallback
+// rates (C2/C3). Money is always USD cents; zero-fraction currencies render at
+// the correct magnitude. Display *strings* are locale-dependent and NOT vectored.
+const CURRENCY_CENTS = [8742, 575, 100000, 999, 1, 123456, 50050]
+
+const currency = {
+  toDisplay: CURRENCIES.flatMap((cur) =>
+    CURRENCY_CENTS.map((cents) => {
+      const rate = FALLBACK_RATE_FROM_USD[cur]
+      return { name: `${cur}-${cents}`, cents, currency: cur, rate, expected: toDisplayAmount(cents, cur, rate) }
+    })
+  ),
+  toUsdCents: CURRENCIES.flatMap((cur) => {
+    const rate = FALLBACK_RATE_FROM_USD[cur]
+    return CURRENCY_CENTS.map((cents) => {
+      const amount = toDisplayAmount(cents, cur, rate)
+      return { name: `${cur}-disp-${amount}`, amount, currency: cur, rate, expected: toUSDCents(amount, cur, rate) }
+    })
+  }),
 }
 
 // ── Write ───────────────────────────────────────────────────────────────────
@@ -304,4 +356,5 @@ writeFileSync(resolve(OUT, 'mortgage.json'), JSON.stringify(mortgage, null, 2) +
 writeFileSync(resolve(OUT, 'insights.json'), JSON.stringify(insights, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'transaction-filters.json'), JSON.stringify(filters, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'transaction-splits.json'), JSON.stringify(splits, null, 2) + '\n')
-console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight + ${filters.cases.length} filter + ${splits.cases.length} split vectors to ${OUT}`)
+writeFileSync(resolve(OUT, 'currency.json'), JSON.stringify(currency, null, 2) + '\n')
+console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight + ${filters.cases.length} filter + ${splits.cases.length} split + ${splits.ownerOrdering.length} ownerOrdering + ${currency.toDisplay.length} currency vectors to ${OUT}`)

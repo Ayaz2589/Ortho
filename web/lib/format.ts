@@ -1,12 +1,13 @@
 import type { Transaction } from './types'
-import { evenShares } from './splits'
+import { evenShares, orderedOwnerIds } from './splits'
 
 /** Per-owner cents for a transaction. Falls back to an even split when shares
  *  are absent (defensive — persisted transactions always carry materialized
- *  cents shares that sum to the amount). */
+ *  cents shares that sum to the amount). The fallback computes over the
+ *  canonical owner order so the leftover cent matches iOS (see `orderedOwnerIds`). */
 export function effectiveShares(tx: Transaction): Record<string, number> {
   if (tx.shares && Object.keys(tx.shares).length > 0) return tx.shares
-  return evenShares(tx.amount_cents, tx.owner_ids)
+  return evenShares(tx.amount_cents, orderedOwnerIds(tx.owner_ids))
 }
 
 export function startOfDay(d: Date): Date {

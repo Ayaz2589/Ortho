@@ -37,19 +37,23 @@ describe('formatMoney', () => {
     })
   })
 
-  describe('JPY (0 fraction digits, divisor 1, no decimals)', () => {
-    it('treats cents value as whole yen (divisor 1)', () => {
-      // divisor is 1 for zero-fraction currency, so 1234 -> ¥1,234
-      expect(formatMoney(1234, 'jpy')).toBe('¥1,234')
+  describe('JPY (0 fraction digits, no decimals — USD-cents invariant)', () => {
+    it('divides USD cents by 100 then applies the rate (1234 cents = $12.34 = ¥12 at rate 1)', () => {
+      // Storage is always USD cents; JPY just renders 0 decimals. No special divisor.
+      expect(formatMoney(1234, 'jpy')).toBe('¥12')
     })
     it('formats zero without decimals', () => {
       expect(formatMoney(0, 'jpy')).toBe('¥0')
     })
     it('formats negative without decimals', () => {
-      expect(formatMoney(-1234, 'jpy')).toBe('-¥1,234')
+      expect(formatMoney(-1234, 'jpy')).toBe('-¥12')
     })
     it('adds leading plus for positive', () => {
-      expect(formatMoney(1234, 'jpy', 1, true)).toBe('+¥1,234')
+      expect(formatMoney(1234, 'jpy', 1, true)).toBe('+¥12')
+    })
+    it('renders a realistic JPY rate at the correct magnitude', () => {
+      // $87.42 (8742 cents) at 1 USD = 150 JPY -> ¥13,113
+      expect(formatMoney(8742, 'jpy', 150)).toBe('¥13,113')
     })
   })
 
@@ -62,10 +66,22 @@ describe('formatMoney', () => {
       // (1000 / 100) * 0.92 = 9.20
       expect(formatMoney(1000, 'eur', 0.92)).toBe('€9.20')
     })
-    it('scales JPY with divisor 1', () => {
-      // (100 / 1) * 1.5 = 150
-      expect(formatMoney(100, 'jpy', 1.5)).toBe('¥150')
+    it('scales JPY by rate on the USD-cents value', () => {
+      // (100 / 100) * 1.5 = 1.5 -> ¥2 (0-decimal, rounded half away from zero)
+      expect(formatMoney(100, 'jpy', 1.5)).toBe('¥2')
     })
+  })
+})
+
+describe('locale-aware formatting (FR-004)', () => {
+  it('uses the provided locale for grouping + decimal separators', () => {
+    // de-DE groups with '.' and uses ',' as the decimal separator.
+    expect(formatMoney(123456, 'eur', 1, false, 'de-DE')).toContain('1.234,56')
+    // fr-FR uses ',' as the decimal separator (and a space for grouping).
+    expect(formatMoney(123456, 'eur', 1, false, 'fr-FR')).toContain('234,56')
+  })
+  it('defaults to en-US grouping when no locale is given', () => {
+    expect(formatMoney(123456, 'usd')).toBe('$1,234.56')
   })
 })
 
@@ -92,13 +108,13 @@ describe('toUSDCents', () => {
     expect(toUSDCents(20, 'eur', 2)).toBe(1000)
   })
 
-  it('JPY (0-fraction) conversion uses divisor 1', () => {
-    // config jpy: divisor 1. usdAmount = 150 / 150 = 1; 1 * (100/1) * 1 = 100
+  it('JPY conversion is currency-agnostic (USD cents)', () => {
+    // usdAmount = 150 / 150 = 1 USD; 1 * 100 = 100 cents
     expect(toUSDCents(150, 'jpy', 150)).toBe(100)
   })
 
-  it('JPY round value at rate 1', () => {
-    // usdAmount = 1234; 1234 * (100/1) * 1 = 123400
+  it('JPY at rate 1', () => {
+    // usdAmount = 1234 / 1 = 1234 USD; 1234 * 100 = 123400 cents
     expect(toUSDCents(1234, 'jpy', 1)).toBe(123400)
   })
 
