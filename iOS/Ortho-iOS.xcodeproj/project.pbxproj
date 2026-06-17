@@ -33,21 +33,19 @@
 		0650C51720415CB902237F48 /* InsightParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = InsightParityTests.swift; path = "Ortho-iOSTests/InsightParityTests.swift"; sourceTree = "<group>"; };
 		0BE827914102FB73FD749827 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		169932190712D727EC9C2CF6 /* Ortho-iOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Ortho-iOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		24BF7AA790DBA76C172C90C4 /* transaction-splits.json */ = {isa = PBXFileReference; includeInIndex = 1; name = "transaction-splits.json"; path = "../shared/test-vectors/transaction-splits.json"; sourceTree = "<group>"; };
-		2769D0C2D228268FBA560175 /* insights.json */ = {isa = PBXFileReference; includeInIndex = 1; name = insights.json; path = "../shared/test-vectors/insights.json"; sourceTree = "<group>"; };
+		24BF7AA790DBA76C172C90C4 /* transaction-splits.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; name = "transaction-splits.json"; path = "../shared/test-vectors/transaction-splits.json"; sourceTree = "<group>"; };
+		2769D0C2D228268FBA560175 /* insights.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; name = insights.json; path = "../shared/test-vectors/insights.json"; sourceTree = "<group>"; };
 		302074913EEE1A9E94160397 /* TransactionFilterParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TransactionFilterParityTests.swift; path = "Ortho-iOSTests/TransactionFilterParityTests.swift"; sourceTree = "<group>"; };
 		4549C8862FBB4745001751B0 /* Ortho-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ortho-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6F17A0ACBC22C65C00F424C5 /* TransactionSplitParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TransactionSplitParityTests.swift; path = "Ortho-iOSTests/TransactionSplitParityTests.swift"; sourceTree = "<group>"; };
-		70EE7257C8C1E7DF781423A6 /* mortgage.json */ = {isa = PBXFileReference; includeInIndex = 1; name = mortgage.json; path = "../shared/test-vectors/mortgage.json"; sourceTree = "<group>"; };
-		7BB4B1B9837EAE1B6C707190 /* transaction-filters.json */ = {isa = PBXFileReference; includeInIndex = 1; name = "transaction-filters.json"; path = "../shared/test-vectors/transaction-filters.json"; sourceTree = "<group>"; };
+		70EE7257C8C1E7DF781423A6 /* mortgage.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; name = mortgage.json; path = "../shared/test-vectors/mortgage.json"; sourceTree = "<group>"; };
+		7BB4B1B9837EAE1B6C707190 /* transaction-filters.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; name = "transaction-filters.json"; path = "../shared/test-vectors/transaction-filters.json"; sourceTree = "<group>"; };
 		9B574A3F931F5FB00F487BA3 /* MortgageParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MortgageParityTests.swift; path = "Ortho-iOSTests/MortgageParityTests.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		4549C8882FBB4745001751B0 /* Ortho-iOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "Ortho-iOS";
 			sourceTree = "<group>";
 		};
