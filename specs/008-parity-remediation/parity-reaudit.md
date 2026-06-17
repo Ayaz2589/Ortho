@@ -8,6 +8,28 @@
 - **Verified divergences:** 50 (high **5**, medium **11**, low **25**, cosmetic **9**) — out of 51 raw findings (1 refuted on verification).
 - **Spec 008 closure:** 19 of 32 commitments fully closed, 11 partial, 2 runtime-only.
 
+## Remediated in feature 009 (2026-06-17)
+
+The actionable findings below were closed in `specs/009-parity-remediation-2/` (vector-first; both
+suites green after — web 545, iOS 9; FR-013 drift check confirmed both suites fail on divergence):
+
+- **HIGH** Web money hardcoded en-US → now honors the selected locale (FR-004). [US2]
+- **HIGH** JPY/zero-fraction ~100× magnitude bug → web always divides USD cents by 100 (FR-005). [US2]
+- **HIGH** Desktop dashboard missing Budget Progress widget → restored in `DashboardDesktop`. [US4]
+- **HIGH** Desktop housing missing lease-renewal banner → restored in `HousingDesktop`. [US4]
+- **Critic/silent** Owner-ordering leftover cent → canonical `orderedOwnerIds` on both clients + `ownerOrdering` vectors. [US1]
+- **Critic/silent** Currency conversion had no vector coverage + float/Decimal rounding → new `currency.json` (×7 currencies) asserted by both suites; web `roundHalfAwayFromZero`. [US1]
+- **Critic/silent** Web `writeShares` fire-and-forget → atomic rollback so no share-less "creator-owns-all" parent. [US1]
+- **MEDIUM** Recurring-subscription average web `round` vs iOS truncate → web `Math.trunc`; non-divisible recurring vector. [US3]
+- **MEDIUM** Mortgage `monthsElapsed` day-29–31 off-by-one → web clamps closing day to the asOf month length (matches iOS `Calendar`); boundary vectors. [US3]
+- **MEDIUM** Outlier insight rule had no vector → added scenario; tx id threaded through the insight vector + iOS test → 8/8 rule coverage (FR-014). [US3]
+- **FR-005 residual** Web sign-in copy now states the 8-digit length. [US5]
+- **DX** `npm test` failed under default Node → `.nvmrc` + `engines` pin (`>=20.19 || >=22.12`). [US5]
+
+**Deferred (not in 009):** the copy-from-recent re-even-split (web) and the `%`-editor auto-seed
+mediums, plus the ~25 low / 9 cosmetic differences and the capability-equivalent housing-detail IA
+difference — a separate polish pass.
+
 ## Per-dimension parity estimate
 
 | Dimension | Est. parity | Verified gaps |
