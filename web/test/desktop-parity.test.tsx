@@ -20,6 +20,8 @@ vi.mock('@/lib/supabase/client', () => ({ createClient: () => h.mock!.client }))
 
 import { AppStateProvider, useApp } from '@/lib/store'
 import { TransactionsDesktop } from '@/components/web/TransactionsDesktop'
+import { DashboardDesktop } from '@/components/web/DashboardDesktop'
+import { HousingDesktop } from '@/components/web/HousingDesktop'
 
 // A household with a 70/30 split expense in the CURRENT month (so the desktop
 // ledger leaves that month expanded by default and the row is clickable).
@@ -109,6 +111,50 @@ describe('desktop transaction detail — per-owner shares (US4 / T025)', () => {
     // Both owners are still named in the detail pane.
     expect(screen.getByText('Maya')).toBeInTheDocument()
     expect(screen.getByText('Jordan')).toBeInTheDocument()
+  })
+})
+
+// Base tables (no budgets / no properties) reused by the capability tests below.
+function baseTables() {
+  const d = dataset(thisMonthISO())
+  return d.tables
+}
+
+describe('desktop dashboard — Budget Progress widget (US4 / T021)', () => {
+  it('renders the Budget Progress card on the wide dashboard when budgets are set', async () => {
+    h.mock = makeSupabaseMock({
+      authUser: { id: 'u-me', email: 'maya@example.com' },
+      tables: {
+        ...baseTables(),
+        budgets: [{ id: 'b-groceries', household_id: 'hh-1', category: 'groceries', monthly_limit_cents: 50000 }],
+      },
+    })
+    render(<AppStateProvider><DashboardDesktop /></AppStateProvider>)
+    // The shared BudgetProgressCard (its "Budgets" section label) is present on
+    // the ≥1024px layout — it used to be dropped by DashboardDesktop.
+    expect(await screen.findByText('Budgets')).toBeInTheDocument()
+  })
+})
+
+describe('desktop housing — lease-renewal banner (US4 / T021)', () => {
+  it('shows the renewal banner on the wide housing view when a lease renews soon', async () => {
+    const soon = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    h.mock = makeSupabaseMock({
+      authUser: { id: 'u-me', email: 'maya@example.com' },
+      tables: {
+        ...baseTables(),
+        properties: [
+          { id: 'prop-1', household_id: 'hh-1', kind: 'rental', address: '12 Oak St', nickname: 'Oak St', created_at: '2026-01-01T00:00:00Z' },
+        ],
+        lease_info: [
+          { property_id: 'prop-1', monthly_rent_cents: 200000, lease_start: '2025-07-01', lease_end: soon, security_deposit_cents: 200000, paid_with_source: 'Checking' },
+        ],
+      },
+    })
+    render(<AppStateProvider><HousingDesktop /></AppStateProvider>)
+    // The shared RenewalBanner is rendered for a soon-ending lease — it used to be
+    // dropped by HousingDesktop.
+    expect(await screen.findByText('Time to renew or plan a move.')).toBeInTheDocument()
   })
 })
 

@@ -72,7 +72,7 @@ function SignIn() {
           >
             <h2 className="text-lg font-normal text-text">Sign in</h2>
             <p className="-mt-2 text-sm text-text-2">
-              We&apos;ll email you a code. No password, no fuss.
+              We&apos;ll email you an 8-digit code. No password, no fuss.
             </p>
             <input
               type="email"

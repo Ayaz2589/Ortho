@@ -17,6 +17,8 @@ import { kindMeta } from '@/components/housing/kinds'
 import { PropertyTypePicker } from '@/components/housing/PropertyTypePicker'
 import { AddPropertyModal } from '@/components/housing/AddPropertyModal'
 import { AddRentalPaymentModal } from '@/components/housing/AddRentalPaymentModal'
+import { RenewalBanner } from '@/components/housing/RentalCards'
+import { isRenewalSoon } from '@/components/housing/lease'
 import type { PropertyKind } from '@/lib/types'
 import { WebPageHeader, CardLabel, AccentTextButton, ChipIconButton, PlusGlyph } from './kit'
 
@@ -111,6 +113,9 @@ function MortgageColumns({ property }: { property: Property }) {
               <CardLabel>Monthly rent</CardLabel>
               <div style={{ fontSize: 34, fontWeight: 300, letterSpacing: '-0.7px', fontVariantNumeric: 'tabular-nums', lineHeight: 1.05 }}>{formatMoney(property.lease.monthly_rent_cents)}</div>
             </div>
+            {/* Lease-renewal banner — matches the phone view / iOS (shown when the
+                lease ends within 60 days). */}
+            {isRenewalSoon(property.lease) && <RenewalBanner lease={property.lease} />}
             <div className="ow-card">
               <HStatRow first label="Lease start" value={mediumDate(new Date(property.lease.lease_start), locale)} />
               <HStatRow label="Lease end" value={mediumDate(new Date(property.lease.lease_end), locale)} />

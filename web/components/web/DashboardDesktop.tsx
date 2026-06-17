@@ -15,6 +15,7 @@ import {
   DASHBOARD_RANGES,
 } from '@/components/dashboard/range'
 import { InsightsCardStack } from '@/components/dashboard/InsightsCardStack'
+import { BudgetProgressCard } from '@/components/dashboard/BudgetProgressCard'
 import { SpendByCategoryCard } from '@/components/dashboard/SpendByCategoryCard'
 import { PerOwnerBreakdownCard } from '@/components/dashboard/PerOwnerBreakdownCard'
 import { WebPageHeader, Seg, CardLabel } from './kit'
@@ -189,6 +190,14 @@ export function DashboardDesktop() {
         {insights.length > 0 && (
           <div className="ow-s12">
             <InsightsCardStack />
+          </div>
+        )}
+
+        {/* Budget progress — shared card (per-category spend vs limit), matching
+            the phone view; the card self-hides when no budgets have a positive limit. */}
+        {budgets.some((b) => b.monthly_limit_cents > 0) && (
+          <div className="ow-s12">
+            <BudgetProgressCard />
           </div>
         )}
 
