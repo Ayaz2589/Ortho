@@ -279,5 +279,134 @@
         "ok": true
       }
     }
+  ],
+  "seeds": [
+    {
+      "name": "even-divisible-seeds-even",
+      "amountCents": 10000,
+      "owners": [
+        "a",
+        "b"
+      ],
+      "storedCents": {
+        "a": 5000,
+        "b": 5000
+      },
+      "expected": {
+        "method": "even"
+      },
+      "roundTrip": {
+        "a": 5000,
+        "b": 5000
+      }
+    },
+    {
+      "name": "even-remainder-seeds-even",
+      "amountCents": 10001,
+      "owners": [
+        "a",
+        "b"
+      ],
+      "storedCents": {
+        "a": 5001,
+        "b": 5000
+      },
+      "expected": {
+        "method": "even"
+      },
+      "roundTrip": {
+        "a": 5001,
+        "b": 5000
+      }
+    },
+    {
+      "name": "custom-5050-of-odd-seeds-value",
+      "amountCents": 10001,
+      "owners": [
+        "a",
+        "b"
+      ],
+      "storedCents": {
+        "a": 5000,
+        "b": 5001
+      },
+      "expected": {
+        "method": "value",
+        "values": {
+          "a": 5000,
+          "b": 5001
+        }
+      },
+      "roundTrip": {
+        "a": 5000,
+        "b": 5001
+      }
+    },
+    {
+      "name": "custom-7030-seeds-value",
+      "amountCents": 10000,
+      "owners": [
+        "a",
+        "b"
+      ],
+      "storedCents": {
+        "a": 7000,
+        "b": 3000
+      },
+      "expected": {
+        "method": "value",
+        "values": {
+          "a": 7000,
+          "b": 3000
+        }
+      },
+      "roundTrip": {
+        "a": 7000,
+        "b": 3000
+      }
+    },
+    {
+      "name": "custom-three-uneven-seeds-value",
+      "amountCents": 10000,
+      "owners": [
+        "a",
+        "b",
+        "c"
+      ],
+      "storedCents": {
+        "a": 5000,
+        "b": 3000,
+        "c": 2000
+      },
+      "expected": {
+        "method": "value",
+        "values": {
+          "a": 5000,
+          "b": 3000,
+          "c": 2000
+        }
+      },
+      "roundTrip": {
+        "a": 5000,
+        "b": 3000,
+        "c": 2000
+      }
+    },
+    {
+      "name": "single-owner-seeds-even",
+      "amountCents": 9999,
+      "owners": [
+        "a"
+      ],
+      "storedCents": {
+        "a": 9999
+      },
+      "expected": {
+        "method": "even"
+      },
+      "roundTrip": {
+        "a": 9999
+      }
+    }
   ]
 }

@@ -19,7 +19,7 @@ import {
 } from '../lib/finance/mortgage'
 import { generateInsights } from '../lib/finance/insights'
 import { filterTransactions, monthBounds, emptyCriteria, type FilterCriteria, type FilterContext } from '../lib/transactionFilters'
-import { computeShares, validateSplit, type SplitInput } from '../lib/splits'
+import { computeShares, validateSplit, seedSplit, type SplitInput } from '../lib/splits'
 import type { Transaction, Budget, Property } from '../lib/types'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -203,6 +203,22 @@ const VAL_CASES: ValCase[] = [
   { name: 'percent-within-tolerance', amountCents: 10000, owners: ['a', 'b'], split: { method: 'percent', percents: { a: 50, b: 50.4 } } },
 ]
 
+// seedSplit: reconstruct the edit-form seed from stored cents. Locks the
+// lossless custom-split edit/copy round-trip on both clients (R7). The
+// `custom-5050-of-odd` case is the silent-loss scenario: stored a:5000/b:5001
+// of 10001 is NOT the even split (even → a:5001/b:5000), so it must seed as
+// `value` with the exact cents, not re-even-split on resave.
+interface SeedCase { name: string; amountCents: number; owners: string[]; storedCents: Record<string, number> }
+
+const SEED_CASES: SeedCase[] = [
+  { name: 'even-divisible-seeds-even', amountCents: 10000, owners: ['a', 'b'], storedCents: { a: 5000, b: 5000 } },
+  { name: 'even-remainder-seeds-even', amountCents: 10001, owners: ['a', 'b'], storedCents: { a: 5001, b: 5000 } },
+  { name: 'custom-5050-of-odd-seeds-value', amountCents: 10001, owners: ['a', 'b'], storedCents: { a: 5000, b: 5001 } },
+  { name: 'custom-7030-seeds-value', amountCents: 10000, owners: ['a', 'b'], storedCents: { a: 7000, b: 3000 } },
+  { name: 'custom-three-uneven-seeds-value', amountCents: 10000, owners: ['a', 'b', 'c'], storedCents: { a: 5000, b: 3000, c: 2000 } },
+  { name: 'single-owner-seeds-even', amountCents: 9999, owners: ['a'], storedCents: { a: 9999 } },
+]
+
 const splits = {
   cases: SPLIT_CASES.map((c) => ({
     name: c.name,
@@ -218,6 +234,19 @@ const splits = {
     split: c.split,
     result: validateSplit(c.amountCents, c.owners, c.split),
   })),
+  seeds: SEED_CASES.map((c) => {
+    const seed = seedSplit(c.amountCents, c.owners, c.storedCents)
+    // Round-trip: applying the seed re-derives the exact stored cents.
+    const split: SplitInput = seed.method === 'even' ? { method: 'even' } : { method: 'value', values: seed.values }
+    return {
+      name: c.name,
+      amountCents: c.amountCents,
+      owners: c.owners,
+      storedCents: c.storedCents,
+      expected: seed,
+      roundTrip: computeShares(c.amountCents, c.owners, split),
+    }
+  }),
 }
 
 // ── Write ───────────────────────────────────────────────────────────────────

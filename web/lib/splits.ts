@@ -82,3 +82,31 @@ export function sharePercent(shareCents: number, amountCents: number): number {
   if (amountCents === 0) return 0
   return Math.round((shareCents / amountCents) * 100)
 }
+
+export type SplitSeed =
+  | { method: 'even' }
+  | { method: 'value'; values: Record<string, number> }
+
+/**
+ * Reconstruct the split-editor seed for an existing transaction's stored
+ * per-owner cents, so editing/copying round-trips losslessly. Returns
+ * `{method:'even'}` when the stored shares already equal an even split (the
+ * editor keeps its even default); otherwise `{method:'value', values}` with the
+ * EXACT stored cents, so a custom split reopens showing the real per-owner
+ * amounts and a no-op re-save preserves them to the cent. The invariant
+ * `computeShares(amount, owners, asSplitInput(seedSplit(...))) === storedCents`
+ * holds. Mirrored by iOS `TransactionSplits.seedSplit` and locked by the shared
+ * golden vectors.
+ */
+export function seedSplit(
+  amountCents: number,
+  owners: string[],
+  storedCents: Record<string, number>
+): SplitSeed {
+  const even = computeShares(amountCents, owners, { method: 'even' })
+  const isEven = owners.every((id) => (storedCents[id] ?? 0) === even[id])
+  if (isEven) return { method: 'even' }
+  const values: Record<string, number> = {}
+  for (const id of owners) values[id] = storedCents[id] ?? 0
+  return { method: 'value', values }
+}

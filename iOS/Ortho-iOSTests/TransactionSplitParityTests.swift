@@ -41,9 +41,24 @@ private struct ValCaseJSON: Decodable {
     let result: ValResultJSON
 }
 
+private struct SeedJSON: Decodable {
+    let method: String
+    let values: [String: Int64]?
+}
+
+private struct SeedCaseJSON: Decodable {
+    let name: String
+    let amountCents: Int64
+    let owners: [String]
+    let storedCents: [String: Int64]
+    let expected: SeedJSON
+    let roundTrip: [String: Int64]
+}
+
 private struct SplitVectors: Decodable {
     let cases: [SplitCaseJSON]
     let validations: [ValCaseJSON]
+    let seeds: [SeedCaseJSON]
 }
 
 final class TransactionSplitParityTests: XCTestCase {
@@ -73,6 +88,28 @@ final class TransactionSplitParityTests: XCTestCase {
             let result = validateSplit(c.amountCents, c.owners, c.split.toInput())
             let expected: SplitValidation = c.result.ok ? .ok : .invalid(reason: c.result.reason ?? "")
             XCTAssertEqual(result, expected, "validateSplit case: \(c.name)")
+        }
+    }
+
+    /// Locks the lossless custom-split edit-prefill: a non-even stored split
+    /// seeds as `.value` with the exact cents, and applying the seed re-derives
+    /// the stored cents (no silent re-even-split on save).
+    func testSeedSplitParity() throws {
+        let vectors = try loadVectors()
+        for c in vectors.seeds {
+            let seed = seedSplit(c.amountCents, c.owners, c.storedCents)
+            switch seed {
+            case .even:
+                XCTAssertEqual(c.expected.method, "even", "seedSplit method: \(c.name)")
+            case .value(let values):
+                XCTAssertEqual(c.expected.method, "value", "seedSplit method: \(c.name)")
+                XCTAssertEqual(values, c.expected.values, "seedSplit values: \(c.name)")
+            case .percent:
+                XCTFail("seedSplit must never return .percent (\(c.name))")
+            }
+            let rt = computeShares(c.amountCents, c.owners, seed)
+            XCTAssertEqual(rt, c.roundTrip, "seedSplit round-trip: \(c.name)")
+            XCTAssertEqual(rt, c.storedCents, "seedSplit lossless: \(c.name)")
         }
     }
 }

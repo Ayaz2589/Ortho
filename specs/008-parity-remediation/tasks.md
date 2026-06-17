@@ -45,13 +45,13 @@ CLI tools (vitest/tsx/xcodebuild/supabase) need `dangerouslyDisableSandbox`.
 
 **Independent test**: Custom income split entered on web reads to the cent on iOS and survives a no-op resave; iOS can rename+recolor a person.
 
-- [ ] T011 [P] [US2] Add a pure `seedSplit(amountCents, orderedOwners, storedCents) -> {method, values}` to `web/lib/splits.ts` (method=even iff stored == even computeShares, else value with exact cents). (C1, R7)
-- [ ] T012 [P] [US2] Mirror `seedSplit` in `iOS/Ortho-iOS/Features/Transactions/TransactionSplits.swift` with identical semantics. (C1, R7)
-- [ ] T013 [US2] Extend `web/scripts/gen-vectors.ts` with income-split + custom-split **edit-prefill** cases and regenerate `shared/test-vectors/transaction-splits.json` (`npm run gen-vectors`). (C1) — depends T011
-- [ ] T014 [US2] Web Vitest: assert `seedSplit` + income + custom-split round-trip against `transaction-splits.json` in `web/test/` (test-first; red → green). — depends T013
-- [ ] T015 [US2] iOS XCTest: extend `iOS/Ortho-iOSTests/TransactionSplitParityTests.swift` to assert `seedSplit` + new cases against the same vectors (red → green). — depends T002, T013
-- [ ] T016 [US2] In `iOS/Ortho-iOS/Features/Transactions/AddTransactionSheet.swift`, drop the `kind == .expense` gate so multi-owner **income** shows the split editor and persists shares; fix the caption. (R6, FR-008) — depends T012
-- [ ] T017 [US2] In `iOS/Ortho-iOS/Features/Transactions/AddTransactionSheet.swift`, seed the edit/copy form via `seedSplit` (set `splitMethod=.value` from exact stored cents for custom splits) so re-save round-trips losslessly. (R7, FR-009) — depends T012
+- [X] T011 [P] [US2] Add a pure `seedSplit(amountCents, orderedOwners, storedCents) -> {method, values}` to `web/lib/splits.ts` (method=even iff stored == even computeShares, else value with exact cents). (C1, R7)
+- [X] T012 [P] [US2] Mirror `seedSplit` in `iOS/Ortho-iOS/Features/Transactions/TransactionSplits.swift` with identical semantics. (C1, R7)
+- [X] T013 [US2] Extend `web/scripts/gen-vectors.ts` with income-split + custom-split **edit-prefill** cases and regenerate `shared/test-vectors/transaction-splits.json` (`npm run gen-vectors`). (C1) — depends T011
+- [X] T014 [US2] Web Vitest: assert `seedSplit` + income + custom-split round-trip against `transaction-splits.json` in `web/test/` (test-first; red → green). — depends T013
+- [ ] T015 [US2] (code-complete; runs once T002 wires the target) iOS XCTest: extend `iOS/Ortho-iOSTests/TransactionSplitParityTests.swift` to assert `seedSplit` + new cases against the same vectors (red → green). — depends T002, T013
+- [X] T016 [US2] In `iOS/Ortho-iOS/Features/Transactions/AddTransactionSheet.swift`, drop the `kind == .expense` gate so multi-owner **income** shows the split editor and persists shares; fix the caption. (R6, FR-008) — depends T012
+- [X] T017 [US2] In `iOS/Ortho-iOS/Features/Transactions/AddTransactionSheet.swift`, seed the edit/copy form via `seedSplit` (set `splitMethod=.value` from exact stored cents for custom splits) so re-save round-trips losslessly. (R7, FR-009) — depends T012
 - [X] T018 [US2] Add `setPersonColor(_:colorKey:)` to `iOS/Ortho-iOS/App/AppState.swift` (optimistic local update + rollback via `HouseholdsAPI.updatePerson`), mirroring `renamePerson`. (R8, FR-011)
 - [X] T019 [US2] Add an edit affordance in `iOS/Ortho-iOS/Features/Settings/HouseholdView.swift`: give `UserRowView` an `onTap` opening an edit sheet (reuse `AddUserSheet` name+swatch UI seeded from the person) whose Save calls `renamePerson`/`setPersonColor`. (R8, FR-011) — depends T018
 - [ ] T020 [US2] Validate: both suites green on the new split vectors; manual custom-split round-trip + person rename/recolor per quickstart Story 2. (SC-003/004)

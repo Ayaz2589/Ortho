@@ -130,10 +130,11 @@ struct AddTransactionSheet: View {
         appState.householdMembers
     }
 
-    /// Split editor appears for any multi-owner expense. Income with multiple
-    /// owners stays equal-split per the footer caption.
+    /// Split editor appears for any multi-owner transaction (income or expense).
     private var showsSplit: Bool {
-        kind == .expense && selectedOwners.count >= 2
+        // Any multi-owner transaction can be split — income too, matching web.
+        // `computeShares` is kind-agnostic; only this gate differed.
+        selectedOwners.count >= 2
     }
 
     /// Parsed [User.ID: Decimal] of the current splitPercents map, restricted
@@ -271,6 +272,9 @@ struct AddTransactionSheet: View {
                 )
                 amountText = formatted
                 originalAmountText = editing != nil ? formatted : ""
+                // Reopen a custom (non-even) split as a by-value split with the
+                // exact stored cents so a no-op re-save preserves it.
+                seedSplitFields(amount: tx.amount, ownerIDs: tx.ownerIDs, shares: tx.effectiveShares)
             } else {
                 // Add mode: seed the current person (or first member) + first card.
                 if selectedOwners.isEmpty {
@@ -372,9 +376,7 @@ struct AddTransactionSheet: View {
 
     private var footerCaption: LocalizedStringKey {
         if selectedOwners.count >= 2 {
-            return kind == .income
-                ? "Income with multiple owners is attributed to all of them."
-                : "Split this transaction between its owners by percentage below."
+            return "Split this transaction between its owners below — evenly, by percentage, or by amount."
         }
         return "Pick more than one owner to split this transaction."
     }
@@ -463,6 +465,27 @@ struct AddTransactionSheet: View {
     /// similar transaction now," not "duplicate the same one at the same
     /// historical moment." Owner set is intersected with current household
     /// membership so a removed member doesn't get re-added as an owner.
+    /// Seed the by-value split fields from stored per-owner cents so a custom
+    /// (non-even) split edit/copy round-trips losslessly — no silent
+    /// re-even-split on save. No-op for an even split (the editor keeps `.even`).
+    /// Owner order matches submit's `uuidString` sort so the even-comparison is
+    /// exact. Mirrors web's seedSplit-driven form seeding.
+    private func seedSplitFields(amount: Int64, ownerIDs: Set<User.ID>, shares: [User.ID: Int64]) {
+        let owners = Array(ownerIDs).sorted { $0.uuidString < $1.uuidString }
+        guard owners.count >= 2 else { return }
+        guard case .value(let values) = seedSplit(amount, owners, shares) else { return }
+        let currency = appState.currency
+        let rate = appState.rate(for: currency)
+        var seeded: [User.ID: String] = [:]
+        for id in owners {
+            let disp = Money.toDisplayAmount(cents: values[id] ?? 0, in: currency, rate: rate)
+            seeded[id] = String(format: "%.\(currency.fractionDigits)f",
+                                NSDecimalNumber(decimal: disp).doubleValue)
+        }
+        splitMethod = .value
+        splitValues = seeded
+    }
+
     private func prefill(from source: Transaction) {
         merchant = source.merchant
         kind = source.kind
@@ -503,6 +526,9 @@ struct AddTransactionSheet: View {
             splitPercents = Dictionary(uniqueKeysWithValues:
                 validOwners.map { ($0, Self.formatPercentForField(Decimal(sharePercent(shares[$0] ?? 0, of: source.amount)))) }
             )
+            // Preserve a custom split exactly (by-value), not just its rounded
+            // percentages, so the copy round-trips losslessly.
+            seedSplitFields(amount: source.amount, ownerIDs: validOwners, shares: shares)
         } else {
             resetSplitsToEven()
         }

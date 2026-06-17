@@ -85,3 +85,17 @@ func sharePercent(_ shareCents: Int64, of amountCents: Int64) -> Int {
     if amountCents == 0 { return 0 }
     return Int((Double(shareCents) / Double(amountCents) * 100).rounded())
 }
+
+/// Reconstruct the split-editor input for a stored split so editing/copying
+/// round-trips losslessly: `.even` when the stored shares already equal an even
+/// split, otherwise `.value` with the EXACT stored cents (so a custom split
+/// reopens showing real per-owner amounts and a no-op re-save preserves them).
+/// Mirror of web `seedSplit`; locked by the shared golden vectors.
+func seedSplit<ID: Hashable>(_ amountCents: Int64, _ owners: [ID], _ storedCents: [ID: Int64]) -> SplitInput<ID> {
+    let even = computeShares(amountCents, owners, .even)
+    let isEven = owners.allSatisfy { (storedCents[$0] ?? 0) == (even[$0] ?? 0) }
+    if isEven { return .even }
+    var values: [ID: Int64] = [:]
+    for id in owners { values[id] = storedCents[id] ?? 0 }
+    return .value(values)
+}
