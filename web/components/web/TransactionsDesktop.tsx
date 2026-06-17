@@ -96,7 +96,7 @@ function TxRow({
   const single = ownerUsers.length === 1 ? ownerUsers[0] : null
   return (
     <button
-      className={'ow-btn ow-tab-row ow-tab-tr' + (selected ? ' is-selected' : '')}
+      className={'ow-btn ow-tab-row ow-tab-tr cv-row' + (selected ? ' is-selected' : '')}
       style={{ gridTemplateColumns: TX_COLS }}
       onClick={onClick}
       aria-current={selected ? 'true' : undefined}

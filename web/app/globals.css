@@ -370,6 +370,20 @@ body {
 .ow-tab-tr:hover { background: var(--chip-bg); }
 .ow-tab-tr.is-selected { background: var(--surface-2); }
 
+/* Transaction lists render every visible row as real DOM, and after a large
+   import the list (or any "all months open" filtered view) can be hundreds of
+   rows — enough to make scrolling janky. `content-visibility: auto` lets the
+   browser skip layout, paint, AND the row's per-render work (e.g. formatMoney)
+   for rows outside the viewport, so only the on-screen rows cost anything.
+   `contain-intrinsic-size: auto <h>` reserves a placeholder box so the
+   scrollbar stays stable; the `auto` keyword makes the browser remember each
+   row's real height after first paint, so the 54px fallback only matters for
+   never-yet-rendered rows. Degrades to "render everything" on older browsers. */
+.cv-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 54px;
+}
+
 .ow-drawer {
   position: fixed;
   top: 0;

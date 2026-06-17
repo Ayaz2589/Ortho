@@ -41,7 +41,7 @@ export function TransactionRow({
 
   return (
     <div
-      className="group ortho-interactive relative flex items-center gap-3 px-4 py-3"
+      className="group ortho-interactive cv-row relative flex items-center gap-3 px-4 py-3"
       aria-current={selected ? 'true' : undefined}
       style={
         selected
