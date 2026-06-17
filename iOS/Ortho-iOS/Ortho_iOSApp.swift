@@ -18,7 +18,6 @@ struct Ortho_iOSApp: App {
     )
     @AppStorage("appearance") private var appearanceRaw: String = AppearanceMode.system.rawValue
     @AppStorage("language") private var languageRaw: String = AppLanguage.system.rawValue
-    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         AppFont.register()
@@ -56,13 +55,6 @@ struct Ortho_iOSApp: App {
                 // First emission carries the SDK's restored session (or
                 // nil), so this doubles as launch-time session restore.
                 await appState.observeAuthChanges()
-            }
-            .onChange(of: scenePhase) { _, phase in
-                // On foreground, yield the single-active-platform lock if web
-                // has taken it since we claimed it.
-                if phase == .active {
-                    Task { await appState.checkPlatformLockYield() }
-                }
             }
             .task(id: languageRaw) {
                 // Mirror the environment locale into Localizer for any

@@ -963,9 +963,6 @@ final class AppState {
     }
 
     func signOut() async {
-        // Release the single-active-platform lock before tearing down (uses
-        // the still-valid currentUserID).
-        try? await platformLocksAPI.release(userID: currentUserID)
         do {
             try await supabase.auth.signOut()
         } catch {
@@ -1071,22 +1068,6 @@ final class AppState {
         HouseholdsAPI(client: supabase)
     }
 
-    private var platformLocksAPI: PlatformLocksAPI {
-        PlatformLocksAPI(client: supabase)
-    }
-
-    /// Yield to web if it has taken the single-active-platform lock since we
-    /// claimed it (e.g. the user signed in on web). Called when the app
-    /// foregrounds. Signs out cleanly — matching web's middleware, which signs
-    /// web out when the lock reads `ios`.
-    func checkPlatformLockYield() async {
-        guard session != nil else { return }
-        let uid = currentUserID
-        guard let owner = try? await platformLocksAPI.current(userID: uid),
-              owner != PlatformLocksAPI.platform else { return }
-        await signOut()
-    }
-
     private func bootstrapUserSession(authID: UUID, email: String?) async {
         let displayName = email?
             .components(separatedBy: "@").first?
@@ -1137,9 +1118,9 @@ final class AppState {
             // 4. Load live data from the server.
             await loadAllFromServer()
 
-            // 5. Claim the single-active-platform lock for iOS (best-effort)
-            //    so web yields to this device, matching web's own claim.
-            try? await platformLocksAPI.claim(userID: authID)
+            // No single-active-platform lock (feature 010): iOS and web may be
+            // signed in at once. The 30-day session cap is enforced server-side
+            // by the Supabase session timebox.
             await MainActor.run { isLoadingInitialData = false }
         } catch {
             await MainActor.run {

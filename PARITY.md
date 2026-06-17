@@ -34,7 +34,8 @@ a few unintended divergences (below).
 | Insights engine | ✅ | ✅ | — | `insights.json` (8/8 rules) |
 | Mortgage / housing math | ✅ | ✅ | — | `lib/finance/mortgage.ts` → `mortgage.json` |
 | Auth (email-OTP, 8-digit) | ✅ | ✅ | ⚠️ | — (each calls Supabase SDK) |
-| Single-active-platform lock | ✅ | ✅ | ⛔️ | `platform_locks` (CLI doesn't participate) |
+| Concurrent iOS + web sessions | ✅ | ✅ | — | single-active-platform lock **removed** (feature 010) |
+| Max session length (30-day cap) | ✅ | ✅ | ✅ | Supabase session timebox (720h) — clients sign out → sign-in on expiry |
 | Golden-vector enforcement | ✅ (generator) | ✅ (asserts) | — | `shared/test-vectors/` + `gen-vectors.ts` |
 
 ## The parity core (genuinely shared & locked)
@@ -91,9 +92,6 @@ others are real gaps:`
   writes noon in the **browser's local** time. Both apps then bucket "Today/Yesterday" by the viewer's local
   day, so far-from-UTC viewers can see a CLI-imported row land on an adjacent calendar day. The cents/owners
   are unaffected.
-- ⚠️ **No single-active-platform lock (MEDIUM):** the CLI never reads/claims/releases `platform_locks`, so an
-  import won't yield to (or be evicted by) an active app session. By-design for a short-lived tool, but it
-  means the "one active platform" guarantee isn't universal.
 - ⚠️ **`--admin` bypasses RLS (MEDIUM, by-design):** admin mode uses the service-role key and attributes
   `created_by` by name-matching the statement holder rather than an authenticated session — powerful, and
   outside the household RLS the apps rely on.
@@ -108,7 +106,14 @@ others are real gaps:`
 scrambled-owner case in `web/test/import/toTransaction.test.ts`. The stale "6-digit" OTP copy is corrected
 to "8-digit" across `cli.ts`, `tx.ts`, `db/client.ts`, the import README, and the `make ingest-help` text
 (and the iOS `AppState` doc comment). Still open: the cross-cutting atomic-write gap (iOS/CLI), CLI
-filtering reimplementation, the noon-UTC date convention, `platform_locks`, and `--admin` RLS bypass.
+filtering reimplementation, the noon-UTC date convention, and `--admin` RLS bypass.
+
+**Auth model change (2026-06-17, feature 010):** the single-active-platform lock was **removed** — iOS and
+web may be signed in simultaneously (neither signs the other out; `platform_locks` is no longer read or
+written by either client, though the table is retained, unused). Session lifetime is now capped at **30
+days** via the Supabase server-side session timebox (`720h`, set in `supabase/config.toml` and enabled on
+the production project); on expiry both clients sign out → sign-in via their existing failed-refresh
+handling. See `specs/010-multi-device-sessions/`.
 
 ### CLI-only data paths the apps then read (no app equivalent, untested by vectors)
 
@@ -138,6 +143,6 @@ These shape which rows exist and what the apps display, but have no cross-surfac
 ## Surface-specific by design (not parity gaps)
 
 - **Apps only:** Dashboard, Insights, Budgets, Housing/mortgage UI, Settings, navigation (tab bar vs sidebar),
-  display-currency conversion, the single-active-platform lock.
+  display-currency conversion.
 - **CLI only:** bank detection + per-bank PDF/CSV parsers (`profiles/*`), statement reconciliation, dedupe,
   merchant→category heuristics, exclusions, and `--admin` service-role mode.

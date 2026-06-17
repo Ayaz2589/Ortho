@@ -50,8 +50,6 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		4549C8882FBB4745001751B0 /* Ortho-iOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = "Ortho-iOS";
 			sourceTree = "<group>";
 		};

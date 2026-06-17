@@ -206,11 +206,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         }
         setCurrentUserId(authUser.id)
 
-        // claim the web session
-        await supabase
-          .from('platform_locks')
-          .upsert({ user_id: authUser.id, platform: 'web', locked_at: new Date().toISOString() })
-
         // ensure profile row
         const email = authUser.email ?? ''
         const local = email.split('@')[0] || 'Me'
@@ -834,7 +829,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    await supabase.from('platform_locks').delete().eq('user_id', currentUserId)
     await supabase.auth.signOut()
     window.location.href = '/sign-in'
   }

@@ -43,22 +43,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Platform lock check: if locked to iOS, redirect to sign-in with message
-  if (user && !isAuthRoute && !isApiRoute) {
-    const { data: lock } = await supabase
-      .from('platform_locks')
-      .select('platform')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (lock?.platform === 'ios') {
-      await supabase.auth.signOut()
-      const url = request.nextUrl.clone()
-      url.pathname = '/sign-in'
-      url.searchParams.set('reason', 'ios_active')
-      return NextResponse.redirect(url)
-    }
-  }
+  // No single-active-platform lock: iOS and web may be signed in at once
+  // (feature 010). The 30-day session cap is enforced by the Supabase session
+  // timebox; an expired session yields no `user` above and is redirected to
+  // /sign-in like any other signed-out request.
 
   return supabaseResponse
 }

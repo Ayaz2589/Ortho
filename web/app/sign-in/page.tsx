@@ -1,13 +1,12 @@
 'use client'
 
-import { Suspense, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PrimaryButton } from '@/components/ui'
 
 function SignIn() {
   const router = useRouter()
-  const params = useSearchParams()
   const supabase = createClient()
 
   const [email, setEmail] = useState('')
@@ -16,7 +15,6 @@ function SignIn() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const iosActive = params.get('reason') === 'ios_active'
   const validEmail = email.includes('@') && email.includes('.')
 
   async function sendCode(target: string) {
@@ -31,34 +29,16 @@ function SignIn() {
   async function verify() {
     setLoading(true)
     setError(null)
-    const { data, error: e } = await supabase.auth.verifyOtp({
+    const { error: e } = await supabase.auth.verifyOtp({
       email: pendingEmail!,
       token: code.trim(),
       type: 'email',
     })
+    setLoading(false)
     if (e) {
-      setLoading(false)
       setError(e.message)
       return
     }
-    // Claim the active-platform lock for web BEFORE navigating. The proxy
-    // middleware yields to an 'ios' lock (signs out + redirects here), and it
-    // runs before the client store can claim 'web' — so without claiming now, a
-    // user whose last active platform was iOS would verify successfully and then
-    // be bounced straight back to sign-in. Signing in on web makes web the
-    // active platform; iOS yields on its next foreground.
-    const userId = data.user?.id
-    if (userId) {
-      const { error: lockErr } = await supabase
-        .from('platform_locks')
-        .upsert({ user_id: userId, platform: 'web', locked_at: new Date().toISOString() })
-      if (lockErr) {
-        setLoading(false)
-        setError(lockErr.message)
-        return
-      }
-    }
-    setLoading(false)
     router.replace('/dashboard')
     router.refresh()
   }
@@ -73,12 +53,6 @@ function SignIn() {
           <h1 className="text-2xl font-light tracking-tight text-text">Ortho</h1>
           <p className="mt-1 text-sm text-text-2">Household finance, in order.</p>
         </div>
-
-        {iosActive && !pendingEmail && (
-          <div className="mb-4 rounded-xl bg-[var(--destructive)]/10 px-4 py-3 text-sm text-destructive">
-            Your account is active on iOS. Sign in again to continue on web.
-          </div>
-        )}
 
         {!pendingEmail ? (
           <form
@@ -155,9 +129,5 @@ function SignIn() {
 }
 
 export default function SignInPage() {
-  return (
-    <Suspense fallback={null}>
-      <SignIn />
-    </Suspense>
-  )
+  return <SignIn />
 }

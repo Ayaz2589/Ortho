@@ -264,10 +264,14 @@ max_frequency = "5s"
 # 4152127777 = "123456"
 
 # Configure logged in session timeouts.
-# [auth.sessions]
-# Force log out after the specified duration.
-# timebox = "24h"
-# Force log out if the user has been inactive longer than the specified duration.
+[auth.sessions]
+# Absolute 30-day max session (feature 010): force log out 30 days after sign-in.
+# NOTE: this must also be enabled on the production project (Dashboard → Auth →
+# Sessions → "Time-box user sessions" = 720h, or `supabase config push`) — that
+# setting is the actual enforcement; the clients surface it via their existing
+# failed-refresh → sign-in handling.
+timebox = "720h"
+# No inactivity/idle timeout — the cap is absolute from sign-in, not rolling.
 # inactivity_timeout = "8h"
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
