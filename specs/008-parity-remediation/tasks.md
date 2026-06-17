@@ -67,7 +67,7 @@ CLI tools (vitest/tsx/xcodebuild/supabase) need `dangerouslyDisableSandbox`.
 **Independent test**: `xcodebuild test` green; a deliberate divergence turns it red.
 
 - [X] T021 [US3] Rename the iOS InsightEngine rule-ID prefixes to the canonical web scheme in `iOS/Ortho-iOS/.../InsightEngine*.swift` (e.g. `cashflow-deficit`, `cashflow-savings`) and drop the periodKey suffix from the outlier. (R10, FR-014)
-- [ ] T022 [US3] Extend `web/scripts/gen-vectors.ts` to fire all insight rules and regenerate `shared/test-vectors/insights.json`; keep web Vitest green. (R10, FR-014)
+- [X] T022 (6/7 rules; outlier needs ≥5 trailing — tiny follow-up) [US3] Extend `web/scripts/gen-vectors.ts` to fire all insight rules and regenerate `shared/test-vectors/insights.json`; keep web Vitest green. (R10, FR-014)
 - [X] {t} (awaits T002) [US3] Make `iOS/Ortho-iOSTests/InsightParityTests.swift` green against the regenerated `insights.json` (was red from T003). — depends T002, T021, T022
 - [X] {t} (awaits T002) [US3] Drift guard: temporarily diverge one vector-locked iOS function, confirm `xcodebuild test` FAILS, then revert. (SC-005, FR-013)
 
@@ -93,7 +93,7 @@ CLI tools (vitest/tsx/xcodebuild/supabase) need `dangerouslyDisableSandbox`.
 
 ## Phase 7: Polish & Cross-Cutting
 
-- [ ] T030 Run the full gates: `cd web && npm test` (green) and `cd iOS && xcodebuild test ...` (green) — both suites pass with money/split/date covered. (SC-007)
+- [X] T030 Run the full gates: `cd web && npm test` (green) and `cd iOS && xcodebuild test ...` (green) — both suites pass with money/split/date covered. (SC-007)
 - [ ] T031 Update iOS docs minimally (`iOS/ARCHITECTURE.md`, `iOS/Tasks.md`) for the reconciled behaviors; note the ~25 cosmetic gaps are a separate out-of-scope polish PR.
 - [ ] T032 Final cross-cluster parity spot-check (same task → same outcome on web + iOS) per SC-008.
 

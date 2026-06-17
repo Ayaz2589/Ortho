@@ -13,6 +13,7 @@ final class InsightParityTests: XCTestCase {
         let referenceDate: String
         let transactions: [Tx]
         let budgets: [Bud]
+        let properties: [Prop]
     }
     private struct Tx: Decodable {
         let kind: String
@@ -22,6 +23,13 @@ final class InsightParityTests: XCTestCase {
         let merchant: String
     }
     private struct Bud: Decodable { let category: String; let monthly_limit_cents: Int64 }
+    private struct Prop: Decodable { let mortgage: Mort? }
+    private struct Mort: Decodable {
+        let purchase_price_cents: Int64
+        let original_loan_cents: Int64
+        let annual_interest_rate_percent: Double
+        let loan_term_years: Int
+    }
     private struct Expected: Decodable, Equatable {
         let id: String
         let severity: String
@@ -79,11 +87,22 @@ final class InsightParityTests: XCTestCase {
                        category: TransactionCategory(rawValue: $0.category)!,
                        monthlyLimitCents: $0.monthly_limit_cents)
             }
+            let properties: [Property] = v.input.properties.map { p in
+                let m = p.mortgage.map { mo in
+                    MortgageInfo(purchasePrice: mo.purchase_price_cents,
+                                 originalLoan: mo.original_loan_cents,
+                                 annualInterestRatePercent: Decimal(mo.annual_interest_rate_percent),
+                                 loanTermYears: mo.loan_term_years,
+                                 closingDate: Date(timeIntervalSince1970: 0),
+                                 autoPaySource: nil)
+                }
+                return Property(householdID: household, kind: .primaryHome, address: "", mortgage: m)
+            }
 
             let got = InsightEngine.recommendations(
                 transactions: transactions,
                 budgets: budgets,
-                properties: [],
+                properties: properties,
                 referenceDate: localDate(v.input.referenceDate)
             ).map {
                 Expected(id: $0.id,

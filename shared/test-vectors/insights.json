@@ -132,6 +132,291 @@
   },
   {
     "input": {
+      "name": "month-over-month rise + approaching budget",
+      "referenceDate": "2026-06-15",
+      "transactions": [
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "dining",
+          "amount_cents": 10000,
+          "date": "2026-05-10",
+          "merchant": "Bistro"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "dining",
+          "amount_cents": 27000,
+          "date": "2026-06-08",
+          "merchant": "Bistro"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "income",
+          "category": "income",
+          "amount_cents": 100000,
+          "date": "2026-06-02",
+          "merchant": "Payroll"
+        }
+      ],
+      "budgets": [
+        {
+          "id": "b",
+          "household_id": "h",
+          "category": "dining",
+          "monthly_limit_cents": 30000
+        }
+      ],
+      "properties": []
+    },
+    "expected": [
+      {
+        "id": "budget-near-dining-2026-06",
+        "severity": "warning",
+        "category": "dining",
+        "magnitude_cents": 27000
+      },
+      {
+        "id": "mom-dining-2026-06",
+        "severity": "warning",
+        "category": "dining",
+        "magnitude_cents": 17000
+      },
+      {
+        "id": "trend30-2026-06",
+        "severity": "warning",
+        "category": null,
+        "magnitude_cents": 17000
+      },
+      {
+        "id": "top-category-dining-2026-06",
+        "severity": "info",
+        "category": "dining",
+        "magnitude_cents": 27000
+      },
+      {
+        "id": "cashflow-savings-2026-06",
+        "severity": "positive",
+        "category": null,
+        "magnitude_cents": 73000
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "under budget late in month + mortgage ratio",
+      "referenceDate": "2026-06-25",
+      "transactions": [
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "dining",
+          "amount_cents": 10000,
+          "date": "2026-06-05",
+          "merchant": "Bistro"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "income",
+          "category": "income",
+          "amount_cents": 500000,
+          "date": "2026-06-02",
+          "merchant": "Payroll"
+        }
+      ],
+      "budgets": [
+        {
+          "id": "b",
+          "household_id": "h",
+          "category": "dining",
+          "monthly_limit_cents": 30000
+        }
+      ],
+      "properties": [
+        {
+          "id": "p",
+          "household_id": "h",
+          "kind": "primary_home",
+          "address": "",
+          "nickname": "",
+          "mortgage": {
+            "property_id": "p",
+            "purchase_price_cents": 40000000,
+            "original_loan_cents": 30000000,
+            "annual_interest_rate_percent": 6,
+            "loan_term_years": 30,
+            "closing_date": "2024-01-01",
+            "auto_pay_source": null
+          }
+        }
+      ]
+    },
+    "expected": [
+      {
+        "id": "mortgage-ratio-2026-06",
+        "severity": "warning",
+        "category": null,
+        "magnitude_cents": 179865
+      },
+      {
+        "id": "top-category-dining-2026-06",
+        "severity": "info",
+        "category": "dining",
+        "magnitude_cents": 10000
+      },
+      {
+        "id": "cashflow-savings-2026-06",
+        "severity": "positive",
+        "category": null,
+        "magnitude_cents": 490000
+      },
+      {
+        "id": "budget-under-dining-2026-06",
+        "severity": "positive",
+        "category": "dining",
+        "magnitude_cents": 20000
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "recurring charges + 30-day spending trend up",
+      "referenceDate": "2026-06-15",
+      "transactions": [
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 1500,
+          "date": "2026-04-05",
+          "merchant": "Netflix"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 1500,
+          "date": "2026-05-05",
+          "merchant": "Netflix"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 1500,
+          "date": "2026-06-05",
+          "merchant": "Netflix"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "entertainment",
+          "amount_cents": 20000,
+          "date": "2026-06-01",
+          "merchant": "Amazon"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "entertainment",
+          "amount_cents": 10000,
+          "date": "2026-05-01",
+          "merchant": "Amazon"
+        }
+      ],
+      "budgets": [],
+      "properties": []
+    },
+    "expected": [
+      {
+        "id": "cashflow-deficit-2026-06",
+        "severity": "critical",
+        "category": null,
+        "magnitude_cents": 1500
+      },
+      {
+        "id": "trend30-2026-06",
+        "severity": "warning",
+        "category": null,
+        "magnitude_cents": 10000
+      },
+      {
+        "id": "top-category-subs-2026-06",
+        "severity": "info",
+        "category": "subs",
+        "magnitude_cents": 1500
+      },
+      {
+        "id": "recurring-2026-06",
+        "severity": "info",
+        "category": null,
+        "magnitude_cents": 1500
+      }
+    ]
+  },
+  {
+    "input": {
       "name": "no qualifying data",
       "referenceDate": "2026-06-15",
       "transactions": [],

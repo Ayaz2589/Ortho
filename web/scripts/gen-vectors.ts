@@ -76,6 +76,8 @@ const mortgage = MORTGAGE_INPUTS.map((i) => {
 const tx = (o: Partial<Transaction>): Transaction =>
   ({ owner_ids: [], shares: {}, household_id: 'h', source: '', created_by: 'u', created_at: '', updated_at: '', ...o }) as Transaction
 const budget = (o: Partial<Budget>): Budget => ({ id: 'b', household_id: 'h', ...o }) as Budget
+const property = (o: Partial<Property>): Property =>
+  ({ id: 'p', household_id: 'h', kind: 'primary_home', address: '', nickname: '', ...o }) as Property
 
 interface InsightScenario {
   name: string
@@ -103,6 +105,52 @@ const SCENARIOS: InsightScenario[] = [
     transactions: [
       tx({ kind: 'income', category: 'income', amount_cents: 100000, date: '2026-06-03', merchant: 'Payroll' }),
       tx({ kind: 'expense', category: 'groceries', amount_cents: 40000, date: '2026-06-05', merchant: 'Whole Foods' }),
+    ],
+    budgets: [],
+    properties: [],
+  },
+  {
+    name: 'month-over-month rise + approaching budget',
+    referenceDate: '2026-06-15',
+    transactions: [
+      tx({ kind: 'expense', category: 'dining', amount_cents: 10000, date: '2026-05-10', merchant: 'Bistro' }),
+      tx({ kind: 'expense', category: 'dining', amount_cents: 27000, date: '2026-06-08', merchant: 'Bistro' }),
+      tx({ kind: 'income', category: 'income', amount_cents: 100000, date: '2026-06-02', merchant: 'Payroll' }),
+    ],
+    budgets: [budget({ category: 'dining', monthly_limit_cents: 30000 })],
+    properties: [],
+  },
+  {
+    name: 'under budget late in month + mortgage ratio',
+    referenceDate: '2026-06-25',
+    transactions: [
+      tx({ kind: 'expense', category: 'dining', amount_cents: 10000, date: '2026-06-05', merchant: 'Bistro' }),
+      tx({ kind: 'income', category: 'income', amount_cents: 500000, date: '2026-06-02', merchant: 'Payroll' }),
+    ],
+    budgets: [budget({ category: 'dining', monthly_limit_cents: 30000 })],
+    properties: [
+      property({
+        mortgage: {
+          property_id: 'p',
+          purchase_price_cents: 40000000,
+          original_loan_cents: 30000000,
+          annual_interest_rate_percent: 6,
+          loan_term_years: 30,
+          closing_date: '2024-01-01',
+          auto_pay_source: null,
+        },
+      }),
+    ],
+  },
+  {
+    name: 'recurring charges + 30-day spending trend up',
+    referenceDate: '2026-06-15',
+    transactions: [
+      tx({ kind: 'expense', category: 'subs', amount_cents: 1500, date: '2026-04-05', merchant: 'Netflix' }),
+      tx({ kind: 'expense', category: 'subs', amount_cents: 1500, date: '2026-05-05', merchant: 'Netflix' }),
+      tx({ kind: 'expense', category: 'subs', amount_cents: 1500, date: '2026-06-05', merchant: 'Netflix' }),
+      tx({ kind: 'expense', category: 'entertainment', amount_cents: 20000, date: '2026-06-01', merchant: 'Amazon' }),
+      tx({ kind: 'expense', category: 'entertainment', amount_cents: 10000, date: '2026-05-01', merchant: 'Amazon' }),
     ],
     budgets: [],
     properties: [],
