@@ -3,6 +3,7 @@
 import { useApp } from '@/lib/store'
 import { Card, SectionLabel } from '@/components/ui'
 import { categoryMeta } from '@/lib/categories'
+import type { Interval } from './range'
 
 /** Sage under, accent in the warning band, destructive at/over limit. */
 function barColor(fraction: number): string {
@@ -12,15 +13,23 @@ function barColor(fraction: number): string {
 }
 
 /**
- * Month-to-date spend vs monthly limit, one row per budgeted category.
+ * Spend vs monthly limit, one row per budgeted category. Defaults to the current
+ * month; when a specific month is selected on the dashboard, `interval` scopes it
+ * to that month and `label` overrides the "This month" caption.
  * Hides itself when no budgets with a positive limit are set.
  */
-export function BudgetProgressCard() {
+export function BudgetProgressCard({
+  interval,
+  label,
+}: {
+  interval?: Interval
+  label?: string
+} = {}) {
   const { budgets, categoryExpenseTotal, formatMoney } = useApp()
 
   const now = new Date()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const monthStart = interval ? interval.start : new Date(now.getFullYear(), now.getMonth(), 1)
+  const monthEnd = interval ? interval.end : new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
   const rows = budgets
     .filter((b) => b.monthly_limit_cents > 0)
@@ -34,7 +43,7 @@ export function BudgetProgressCard() {
 
   return (
     <Card className="p-5">
-      <SectionLabel right="This month">Budgets</SectionLabel>
+      <SectionLabel right={label ?? 'This month'}>Budgets</SectionLabel>
       <div className="mt-3 flex flex-col gap-3.5">
         {rows.map((row) => {
           const meta = categoryMeta(row.budget.category)

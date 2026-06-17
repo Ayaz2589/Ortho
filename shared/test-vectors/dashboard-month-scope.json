@@ -1,0 +1,140 @@
+{
+  "availableMonths": [
+    {
+      "name": "empty",
+      "dates": [],
+      "expected": []
+    },
+    {
+      "name": "single month",
+      "dates": [
+        "2026-06-15T12:00:00.000Z"
+      ],
+      "expected": [
+        "2026-06"
+      ]
+    },
+    {
+      "name": "multiple months unsorted",
+      "dates": [
+        "2026-04-20T12:00:00.000Z",
+        "2026-06-01T09:00:00.000Z",
+        "2026-05-10T12:00:00.000Z"
+      ],
+      "expected": [
+        "2026-06",
+        "2026-05",
+        "2026-04"
+      ]
+    },
+    {
+      "name": "duplicate days same month",
+      "dates": [
+        "2026-06-05T12:00:00.000Z",
+        "2026-06-30T23:00:00.000Z"
+      ],
+      "expected": [
+        "2026-06"
+      ]
+    },
+    {
+      "name": "month boundary keyed by string slice",
+      "dates": [
+        "2026-05-31T23:59:59.000Z",
+        "2026-06-01T00:00:00.000Z"
+      ],
+      "expected": [
+        "2026-06",
+        "2026-05"
+      ]
+    },
+    {
+      "name": "year boundary Dec to Jan",
+      "dates": [
+        "2025-12-15T12:00:00.000Z",
+        "2026-01-10T12:00:00.000Z"
+      ],
+      "expected": [
+        "2026-01",
+        "2025-12"
+      ]
+    }
+  ],
+  "monthReferenceDate": [
+    {
+      "name": "2026-06",
+      "month": "2026-06",
+      "expected": "2026-06-15T12:00:00.000Z"
+    },
+    {
+      "name": "2026-01",
+      "month": "2026-01",
+      "expected": "2026-01-15T12:00:00.000Z"
+    },
+    {
+      "name": "2025-12",
+      "month": "2025-12",
+      "expected": "2025-12-15T12:00:00.000Z"
+    },
+    {
+      "name": "2026-02",
+      "month": "2026-02",
+      "expected": "2026-02-15T12:00:00.000Z"
+    }
+  ],
+  "stepMonth": [
+    {
+      "name": "prev to older",
+      "months": [
+        "2026-06",
+        "2026-05",
+        "2026-04"
+      ],
+      "current": "2026-06",
+      "direction": "prev",
+      "expected": "2026-05"
+    },
+    {
+      "name": "next to newer",
+      "months": [
+        "2026-06",
+        "2026-05",
+        "2026-04"
+      ],
+      "current": "2026-05",
+      "direction": "next",
+      "expected": "2026-06"
+    },
+    {
+      "name": "prev at earliest edge",
+      "months": [
+        "2026-06",
+        "2026-05",
+        "2026-04"
+      ],
+      "current": "2026-04",
+      "direction": "prev",
+      "expected": null
+    },
+    {
+      "name": "next at latest edge",
+      "months": [
+        "2026-06",
+        "2026-05",
+        "2026-04"
+      ],
+      "current": "2026-06",
+      "direction": "next",
+      "expected": null
+    },
+    {
+      "name": "current not in list",
+      "months": [
+        "2026-06"
+      ],
+      "current": "2025-01",
+      "direction": "prev",
+      "expected": null
+    }
+  ]
+}

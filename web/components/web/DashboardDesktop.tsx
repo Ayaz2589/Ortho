@@ -3,21 +3,17 @@
 import { useMemo } from 'react'
 import Link from 'next/link'
 import { useApp } from '@/lib/store'
-import { useDashboardRange } from '@/lib/useDashboardRange'
+import type { DashboardScope } from '@/lib/useDashboardRange'
 import { generateInsights } from '@/lib/finance/insights'
 import {
   monthlyPaymentCents,
   currentEquityCents,
 } from '@/lib/finance/mortgage'
-import {
-  availableRanges,
-  rangeInterval,
-  DASHBOARD_RANGES,
-} from '@/components/dashboard/range'
 import { InsightsCardStack } from '@/components/dashboard/InsightsCardStack'
 import { BudgetProgressCard } from '@/components/dashboard/BudgetProgressCard'
 import { SpendByCategoryCard } from '@/components/dashboard/SpendByCategoryCard'
 import { PerOwnerBreakdownCard } from '@/components/dashboard/PerOwnerBreakdownCard'
+import { MonthPicker } from '@/components/dashboard/MonthPicker'
 import { WebPageHeader, Seg, CardLabel } from './kit'
 
 function Sparkline({ points, height = 64 }: { points: number[]; height?: number }) {
@@ -39,15 +35,23 @@ const inRange = (iso: string, s: Date, e: Date) => {
   return t >= s.getTime() && t < e.getTime()
 }
 
-export function DashboardDesktop() {
+export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
   const { transactions, properties, budgets, formatMoney } = useApp()
-  const now = useMemo(() => new Date(), [])
-  const ranges = useMemo(() => availableRanges(transactions, now), [transactions, now])
-  const [range, setRange] = useDashboardRange()
-  const activeRange = ranges.includes(range) ? range : ranges[0] ?? 'thisMonth'
-  const interval = useMemo(() => rangeInterval(activeRange, now), [activeRange, now])
+  const {
+    now,
+    range: activeRange,
+    interval,
+    setRange,
+    referenceDate,
+    periodLabel,
+    isSpecificMonth,
+    selectedMonth,
+    availableMonths,
+    setMonth,
+    clearMonth,
+  } = scope
 
-  const rangeOptions = DASHBOARD_RANGES.filter((r) => ranges.includes(r)).map((r) => ({
+  const rangeOptions = scope.rangeOptions.map((r) => ({
     value: r,
     label: r === 'thisMonth' ? 'Month' : r === 'last3Months' ? '3M' : r === 'last6Months' ? '6M' : '1Y',
   }))
@@ -120,18 +124,29 @@ export function DashboardDesktop() {
   }, [properties])
 
   const insights = useMemo(
-    () => generateInsights(transactions, budgets, properties, now, 2),
-    [transactions, budgets, properties, now]
+    () => generateInsights(transactions, budgets, properties, referenceDate, 2),
+    [transactions, budgets, properties, referenceDate]
   )
 
-  const rangeLabel =
-    activeRange === 'thisMonth' ? 'This month' : activeRange === 'last3Months' ? 'Last 3 months' : activeRange === 'last6Months' ? 'Last 6 months' : 'Last 12 months'
+  const rangeLabel = periodLabel
 
   return (
     <div className="ow-page-inner" style={{ maxWidth: 1080, paddingTop: 0, paddingBottom: 0 }}>
       <WebPageHeader
         title="Dashboard"
-        actions={rangeOptions.length > 1 ? <Seg size="sm" value={activeRange} onChange={setRange} options={rangeOptions} /> : undefined}
+        actions={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {rangeOptions.length > 1 && (
+              <Seg size="sm" value={activeRange} onChange={setRange} options={rangeOptions} />
+            )}
+            <MonthPicker
+              availableMonths={availableMonths}
+              selectedMonth={selectedMonth}
+              onSelectMonth={setMonth}
+              onClear={clearMonth}
+            />
+          </div>
+        }
       />
 
       <div className="ow-grid">
@@ -189,7 +204,7 @@ export function DashboardDesktop() {
         {/* Insights — shared card stack (full insight set, not trimmed). */}
         {insights.length > 0 && (
           <div className="ow-s12">
-            <InsightsCardStack />
+            <InsightsCardStack now={referenceDate} />
           </div>
         )}
 
@@ -197,18 +212,21 @@ export function DashboardDesktop() {
             the phone view; the card self-hides when no budgets have a positive limit. */}
         {budgets.some((b) => b.monthly_limit_cents > 0) && (
           <div className="ow-s12">
-            <BudgetProgressCard />
+            <BudgetProgressCard
+              interval={isSpecificMonth ? interval : undefined}
+              label={isSpecificMonth ? periodLabel : undefined}
+            />
           </div>
         )}
 
         {/* Spend by category — shared card (with per-category transaction drill-down). */}
         <div className="ow-s6">
-          <SpendByCategoryCard range={activeRange} interval={interval} />
+          <SpendByCategoryCard range={activeRange} interval={interval} label={isSpecificMonth ? periodLabel : undefined} />
         </div>
 
         {/* Per owner — shared card (with per-member split breakdown drill-down). */}
         <div className="ow-s6" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <PerOwnerBreakdownCard range={activeRange} interval={interval} />
+          <PerOwnerBreakdownCard range={activeRange} interval={interval} label={isSpecificMonth ? periodLabel : undefined} />
           <Link href="/transactions" className="ow-quiet-link">
             See all activity →
           </Link>

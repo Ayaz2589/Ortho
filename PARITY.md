@@ -14,9 +14,9 @@ test suites assert. The **CLI** writes to the same tables and reuses the shared 
 functions where it can, but it is **not** part of the golden-vector harness and has a few intentional and
 a few unintended divergences (below).
 
-> Last audited: **2026-06-17** (post feature `009-parity-remediation-2`). Method: 10-capability
-> tri-surface audit, every divergence adversarially re-verified against the code. Apps: web **545** tests
-> green, iOS **9** green. Legend: ✅ in parity · ⚠️ partial / known gap · ⛔️ diverges · — not applicable.
+> Last audited: **2026-06-17** (post feature `011-dashboard-month-picker`). Method: 10-capability
+> tri-surface audit, every divergence adversarially re-verified against the code. Apps: web **575** tests
+> green, iOS **17** green. Legend: ✅ in parity · ⚠️ partial / known gap · ⛔️ diverges · — not applicable.
 
 ## Parity matrix
 
@@ -31,6 +31,7 @@ a few unintended divergences (below).
 | Category / kind / source taxonomy | ✅ | ✅ | ✅ | Postgres `transaction_category` enum / `lib/types.ts` |
 | Date storage & timezone | ✅ | ✅ | ⚠️ | — (convention, not shared code) |
 | Transaction filtering / listing | ✅ | ✅ | ⚠️ | `lib/transactionFilters.ts` → `transaction-filters.json` |
+| Dashboard month selection | ✅ | ✅ | — | `components/dashboard/range.ts` ↔ `DashboardRange.swift` (+ `monthBounds` → `dashboard-month-scope.json` / `transaction-filters.json`) |
 | Insights engine | ✅ | ✅ | — | `insights.json` (8/8 rules) |
 | Mortgage / housing math | ✅ | ✅ | — | `lib/finance/mortgage.ts` → `mortgage.json` |
 | Auth (email-OTP, 8-digit) | ✅ | ✅ | ⚠️ | — (each calls Supabase SDK) |
@@ -57,6 +58,9 @@ neither language can silently drift:
   `TransactionFilters.swift`), vectored.
 - **Insights** (apps) — `generateInsights` ↔ `InsightEngine`, 8/8 rules vectored.
 - **Mortgage** (apps) — `lib/finance/mortgage.ts` ↔ iOS `MortgageInfo.swift`, vectored.
+- **Dashboard month scope** (apps) — `availableMonths` / `monthReferenceDate` / `stepMonth`
+  (`components/dashboard/range.ts` ↔ `DashboardRange.swift`), vectored by `dashboard-month-scope.json`;
+  the selected-month window reuses the already-vectored `monthBounds`. (Feature `011`.)
 
 ## Known divergences
 
@@ -143,6 +147,9 @@ These shape which rows exist and what the apps display, but have no cross-surfac
 ## Surface-specific by design (not parity gaps)
 
 - **Apps only:** Dashboard, Insights, Budgets, Housing/mortgage UI, Settings, navigation (tab bar vs sidebar),
-  display-currency conversion.
+  display-currency conversion. *Note:* the dashboard's time-scoping is no longer purely surface-specific —
+  its specific-month selection is a parity-locked sub-capability (the chosen-month window reuses the vectored
+  `monthBounds`, and the new `availableMonths` / reference-date / stepper logic is locked by
+  `dashboard-month-scope.json`; see feature `011`).
 - **CLI only:** bank detection + per-bank PDF/CSV parsers (`profiles/*`), statement reconciliation, dedupe,
   merchant→category heuristics, exclusions, and `--admin` service-role mode.

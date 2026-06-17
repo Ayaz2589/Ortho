@@ -24,9 +24,11 @@ interface LegendEntry {
 export function SpendByCategoryCard({
   range,
   interval,
+  label,
 }: {
   range: DashboardRange
   interval: Interval
+  label?: string
 }) {
   const { transactions, formatMoney, ownersDisplay, locale } = useApp()
   const [expanded, setExpanded] = useState<TransactionCategory | null>(null)
@@ -68,7 +70,7 @@ export function SpendByCategoryCard({
 
   return (
     <Card className="p-5">
-      <SectionLabel right={longLabel(range)}>Spend by category</SectionLabel>
+      <SectionLabel right={label ?? longLabel(range)}>Spend by category</SectionLabel>
 
       {entries.length === 0 ? (
         <p className="py-5 text-[13px] text-text-3">No expenses in this period yet.</p>

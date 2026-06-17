@@ -107,11 +107,23 @@ final class AppState {
     }
 
     /// User-selected dashboard time range, remembered across launches.
+    /// Setting a relative range is mutually exclusive with a specific-month
+    /// selection — assigning here clears `dashboardSelectedMonth`.
     var dashboardRange: DashboardRange {
         didSet {
             UserDefaults.standard.set(dashboardRange.rawValue, forKey: Self.dashboardRangeKey)
+            // Mutual exclusivity: choosing a relative range returns to the
+            // anchored-to-now view and drops any transient month override.
+            if dashboardSelectedMonth != nil { dashboardSelectedMonth = nil }
         }
     }
+
+    /// Transient specific-month override of `dashboardRange` (`'YYYY-MM'`),
+    /// or `nil` for the relative range. **Not persisted** — a relaunch always
+    /// returns to the persisted `dashboardRange`. When non-nil it wins:
+    /// `activeInterval`/`referenceDate` resolve to the selected month. Always a
+    /// member of `availableMonths` when set (set only via the month control).
+    var dashboardSelectedMonth: String? = nil
 
     /// Live rates fetched from floatrates.com. Empty until first successful
     /// fetch — `rate(for:)` falls back to `Currency.fallbackRateFromUSD` in
@@ -589,6 +601,43 @@ final class AppState {
         let earliestStart = cal.startOfDay(for: earliest)
         let monthsBack = cal.dateComponents([.month], from: earliestStart, to: .now).month ?? 0
         return DashboardRange.allCases.filter { monthsBack >= $0.monthCount - 1 }
+    }
+
+    // MARK: - Dashboard scope (relative range + transient selected month)
+
+    /// Distinct calendar months (`'YYYY-MM'`, newest first) the data spans —
+    /// the set the month control may navigate. Parity-locked via
+    /// `availableMonths(_:)` (DashboardRange.swift). Empty for a fresh account.
+    var dashboardAvailableMonths: [String] {
+        availableMonths(transactions)
+    }
+
+    /// The dashboard's active window. `dashboardSelectedMonth` wins when set
+    /// (its UTC `monthBounds`); otherwise the persisted relative range
+    /// anchored to now. Threaded into every month-aware card. Delegates to the
+    /// pure, unit-tested `dashboardScopeInterval`.
+    var activeInterval: DateInterval {
+        dashboardScopeInterval(range: dashboardRange, selectedMonth: dashboardSelectedMonth)
+    }
+
+    /// Reference date for Budget/Insights. When a month is selected it's the
+    /// 15th-at-noon-UTC of that month (so each platform's calendar math lands
+    /// on the selected month); otherwise `now`.
+    var dashboardReferenceDate: Date {
+        dashboardScopeReferenceDate(selectedMonth: dashboardSelectedMonth)
+    }
+
+    /// Select a specific month (transient override). Ignores months not in the
+    /// available set so `dashboardSelectedMonth` stays a valid member.
+    func selectDashboardMonth(_ yyyymm: String) {
+        guard dashboardAvailableMonths.contains(yyyymm) else { return }
+        dashboardSelectedMonth = yyyymm
+    }
+
+    /// Return to the relative range view ("Latest") — clears the month override
+    /// without touching the persisted `dashboardRange`.
+    func clearDashboardMonth() {
+        dashboardSelectedMonth = nil
     }
 
     // MARK: - Cards

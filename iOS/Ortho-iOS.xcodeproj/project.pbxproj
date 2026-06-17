@@ -15,6 +15,8 @@
 		9563EF0B325C6288B2371432 /* TransactionFilterParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 302074913EEE1A9E94160397 /* TransactionFilterParityTests.swift */; };
 		9B0ECD5B6B941029E99E638F /* currency.json in Resources */ = {isa = PBXBuildFile; fileRef = 98A34CBADC26530952D14D2B /* currency.json */; };
 		B5F85A62800B52CFBF244E27 /* transaction-filters.json in Resources */ = {isa = PBXBuildFile; fileRef = 7BB4B1B9837EAE1B6C707190 /* transaction-filters.json */; };
+		A1D7E0010B011000000000A1 /* DashboardScopeParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D7E0000B011000000000A0 /* DashboardScopeParityTests.swift */; };
+		A1D7E0030B011000000000A3 /* dashboard-month-scope.json in Resources */ = {isa = PBXBuildFile; fileRef = A1D7E0020B011000000000A2 /* dashboard-month-scope.json */; };
 		C193B52B38D45CCD8086AB46 /* insights.json in Resources */ = {isa = PBXBuildFile; fileRef = 2769D0C2D228268FBA560175 /* insights.json */; };
 		CDDC361CED2034F43CA9B013 /* TransactionSplitParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F17A0ACBC22C65C00F424C5 /* TransactionSplitParityTests.swift */; };
 		D076E0BACD0147459E2F25A4 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0BE827914102FB73FD749827 /* Foundation.framework */; };
@@ -43,6 +45,8 @@
 		6F17A0ACBC22C65C00F424C5 /* TransactionSplitParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TransactionSplitParityTests.swift; path = "Ortho-iOSTests/TransactionSplitParityTests.swift"; sourceTree = "<group>"; };
 		70EE7257C8C1E7DF781423A6 /* mortgage.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; name = mortgage.json; path = "../shared/test-vectors/mortgage.json"; sourceTree = "<group>"; };
 		7BB4B1B9837EAE1B6C707190 /* transaction-filters.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; name = "transaction-filters.json"; path = "../shared/test-vectors/transaction-filters.json"; sourceTree = "<group>"; };
+		A1D7E0000B011000000000A0 /* DashboardScopeParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DashboardScopeParityTests.swift; path = "Ortho-iOSTests/DashboardScopeParityTests.swift"; sourceTree = "<group>"; };
+		A1D7E0020B011000000000A2 /* dashboard-month-scope.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; name = "dashboard-month-scope.json"; path = "../shared/test-vectors/dashboard-month-scope.json"; sourceTree = "<group>"; };
 		98A34CBADC26530952D14D2B /* currency.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; name = currency.json; path = "../shared/test-vectors/currency.json"; sourceTree = "<group>"; };
 		9B574A3F931F5FB00F487BA3 /* MortgageParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MortgageParityTests.swift; path = "Ortho-iOSTests/MortgageParityTests.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -91,6 +95,8 @@
 				24BF7AA790DBA76C172C90C4 /* transaction-splits.json */,
 				4170D916278A21738E8E9201 /* CurrencyParityTests.swift */,
 				98A34CBADC26530952D14D2B /* currency.json */,
+				A1D7E0000B011000000000A0 /* DashboardScopeParityTests.swift */,
+				A1D7E0020B011000000000A2 /* dashboard-month-scope.json */,
 			);
 			sourceTree = "<group>";
 		};
@@ -218,6 +224,7 @@
 				B5F85A62800B52CFBF244E27 /* transaction-filters.json in Resources */,
 				67EC116180321EA940B5E616 /* transaction-splits.json in Resources */,
 				9B0ECD5B6B941029E99E638F /* currency.json in Resources */,
+				A1D7E0030B011000000000A3 /* dashboard-month-scope.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -233,6 +240,7 @@
 				9563EF0B325C6288B2371432 /* TransactionFilterParityTests.swift in Sources */,
 				CDDC361CED2034F43CA9B013 /* TransactionSplitParityTests.swift in Sources */,
 				56F9A5351754B3502C7B5BA0 /* CurrencyParityTests.swift in Sources */,
+				A1D7E0010B011000000000A1 /* DashboardScopeParityTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -4,11 +4,14 @@ import SwiftUI
 /// shows merchant name, visit count badge, and total. "Which places are
 /// eating the money?"
 struct TopMerchantsCard: View {
-    let range: DashboardRange
+    /// Header caption — relative range long label or a selected month.
+    let title: LocalizedStringResource
+    /// The window all aggregations compute over.
+    let interval: DateInterval
     @Environment(AppState.self) private var appState
 
     private var entries: [(merchant: String, cents: Int64, count: Int)] {
-        appState.topMerchantsByExpense(in: range.interval(), limit: 5)
+        appState.topMerchantsByExpense(in: interval, limit: 5)
     }
 
     var body: some View {
@@ -20,7 +23,7 @@ struct TopMerchantsCard: View {
                     .textCase(.uppercase)
                     .foregroundStyle(AppTheme.text.opacity(0.58))
                 Spacer()
-                Text(range.longLabel)
+                Text(title)
                     .font(.lato(size: 12))
                     .foregroundStyle(AppTheme.text3)
             }

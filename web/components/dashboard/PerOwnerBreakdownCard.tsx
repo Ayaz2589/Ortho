@@ -15,9 +15,11 @@ const MAX_ROWS = 25
 export function PerOwnerBreakdownCard({
   range,
   interval,
+  label,
 }: {
   range: DashboardRange
   interval: Interval
+  label?: string
 }) {
   const { householdMembers, spentBy, currentPersonId, transactions, formatMoney, locale } =
     useApp()
@@ -44,7 +46,7 @@ export function PerOwnerBreakdownCard({
 
   return (
     <Card className="p-5">
-      <SectionLabel right={longLabel(range)}>Per owner</SectionLabel>
+      <SectionLabel right={label ?? longLabel(range)}>Per owner</SectionLabel>
 
       {entries.length === 0 ? (
         <p className="py-2 text-[13px] text-text-3">No household members yet.</p>

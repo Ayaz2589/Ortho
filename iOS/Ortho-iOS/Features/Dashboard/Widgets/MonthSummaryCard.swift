@@ -5,10 +5,16 @@ import SwiftUI
 /// total expenses (graphite). For `.thisMonth` we add a muted progress
 /// bar showing days-into-month elapsed (decorative — not a budget burn).
 struct MonthSummaryCard: View {
-    let range: DashboardRange
+    /// Header label — the relative range's long label, or a selected month
+    /// ("June 2026"). The window itself is `interval`.
+    let title: LocalizedStringResource
+    let interval: DateInterval
+    /// True only for the live current-month relative view (`.thisMonth` with no
+    /// month selected) — drives the "Day X of Y" caption + progress bar, which
+    /// are anchored to *now* and meaningless for a selected past month.
+    let isLiveMonth: Bool
     @Environment(AppState.self) private var appState
 
-    private var interval: DateInterval { range.interval() }
     private var income: Int64 { appState.incomeTotal(in: interval) }
     private var expenses: Int64 { appState.expenseTotal(in: interval) }
     private var net: Int64 { income - expenses }
@@ -16,7 +22,7 @@ struct MonthSummaryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(range.longLabel)
+                Text(title)
                     .textCase(.uppercase)
                     .font(.lato(size: 13, weight: .semibold))
                     .kerning(0.6)
@@ -46,7 +52,7 @@ struct MonthSummaryCard: View {
             }
             .padding(.top, 2)
 
-            if range == .thisMonth {
+            if isLiveMonth {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule().fill(AppTheme.text.opacity(0.05))
@@ -84,20 +90,18 @@ struct MonthSummaryCard: View {
         return "\(prefix)\(body)"
     }
 
-    /// Right side of the header. For .thisMonth shows "Day X of Y";
+    /// Right side of the header. For the live current month shows "Day X of Y";
     /// otherwise the date range as "Mar 1 – May 31".
     private var rightCaption: String {
-        switch range {
-        case .thisMonth:
+        if isLiveMonth {
             let cal = Calendar.current
             let day = cal.component(.day, from: .now)
             let range = cal.range(of: .day, in: .month, for: .now)?.count ?? 30
             return Localizer.tr("Day \(day) of \(range)")
-        case .last3Months, .last6Months, .last12Months:
-            let f = DateFormatter.localized(pattern: "MMM d", locale: Localizer.currentLocale)
-            let endDate = Calendar.current.date(byAdding: .day, value: -1, to: interval.end) ?? interval.end
-            return "\(f.string(from: interval.start)) – \(f.string(from: endDate))"
         }
+        let f = DateFormatter.localized(pattern: "MMM d", locale: Localizer.currentLocale)
+        let endDate = Calendar.current.date(byAdding: .day, value: -1, to: interval.end) ?? interval.end
+        return "\(f.string(from: interval.start)) – \(f.string(from: endDate))"
     }
 
     private var monthProgress: CGFloat {

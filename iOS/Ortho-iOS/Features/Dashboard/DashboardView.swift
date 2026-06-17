@@ -19,13 +19,39 @@ struct DashboardView: View {
         appState.availableRanges
     }
 
+    private var availableMonths: [String] {
+        appState.dashboardAvailableMonths
+    }
+
+    /// The active window for every month-aware card — the selected month's
+    /// UTC bounds, or the relative range. Single source: `AppState`.
+    private var activeInterval: DateInterval {
+        appState.activeInterval
+    }
+
+    /// Header caption for the scoped cards — the selected month's name
+    /// ("June 2026") or the relative range's long label.
+    private var scopedTitle: LocalizedStringResource {
+        if let month = appState.dashboardSelectedMonth {
+            return LocalizedStringResource(stringLiteral: FilterSheet.monthLabel(month))
+        }
+        return appState.dashboardRange.longLabel
+    }
+
+    /// True only for the live current month (no selection + `.thisMonth`).
+    private var isLiveMonth: Bool {
+        appState.dashboardSelectedMonth == nil && appState.dashboardRange == .thisMonth
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                if availableRanges.count > 1 {
-                    rangePicker
+                if availableRanges.count > 1 || !availableMonths.isEmpty {
+                    scopeControls
                 }
-                MonthSummaryCard(range: appState.dashboardRange)
+                MonthSummaryCard(title: scopedTitle,
+                                 interval: activeInterval,
+                                 isLiveMonth: isLiveMonth)
                 // Insights sit just below the month summary so the user
                 // first sees the headline number ("+$X this month"), then
                 // the prescriptive cards (over-budget, savings rate, top
@@ -35,9 +61,9 @@ struct DashboardView: View {
                 // Budget progress sits with the rest of this-month
                 // context. Card hides itself when no budgets are set.
                 BudgetProgressCard()
-                SpendByCategoryCard(range: appState.dashboardRange)
-                PerOwnerBreakdownCard(range: appState.dashboardRange)
-                TopMerchantsCard(range: appState.dashboardRange)
+                SpendByCategoryCard(title: scopedTitle, interval: activeInterval)
+                PerOwnerBreakdownCard(title: scopedTitle, interval: activeInterval)
+                TopMerchantsCard(title: scopedTitle, interval: activeInterval)
                 HousingSnapshotCard()
                 DailySpendTrendCard()
                 Color.clear.frame(height: 60)
@@ -63,6 +89,37 @@ struct DashboardView: View {
             // so only `.thisMonth` is left), fall back to a valid one.
             if !newValue.contains(appState.dashboardRange), let fallback = newValue.first {
                 appState.dashboardRange = fallback
+            }
+        }
+        .onChange(of: availableMonths) { _, newValue in
+            // If the selected month no longer has data (its transactions were
+            // deleted), drop the override and return to the relative view.
+            if let selected = appState.dashboardSelectedMonth,
+               !newValue.contains(selected) {
+                appState.clearDashboardMonth()
+            }
+        }
+    }
+
+    /// The dashboard's time-scope row: the relative range picker plus the
+    /// specific-month control beside it. The month control overrides the
+    /// relative range (transiently) until cleared via "Latest".
+    @ViewBuilder
+    private var scopeControls: some View {
+        VStack(spacing: 8) {
+            if availableRanges.count > 1 {
+                rangePicker
+            }
+            if !availableMonths.isEmpty {
+                HStack {
+                    MonthPicker(
+                        months: availableMonths,
+                        selectedMonth: appState.dashboardSelectedMonth,
+                        onSelect: { appState.selectDashboardMonth($0) },
+                        onClear: { appState.clearDashboardMonth() }
+                    )
+                    Spacer(minLength: 0)
+                }
             }
         }
     }

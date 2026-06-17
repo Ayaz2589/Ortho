@@ -8,7 +8,10 @@ import Charts
 /// categories expands the row to show its transactions in the range
 /// (newest first, capped at 25).
 struct SpendByCategoryCard: View {
-    let range: DashboardRange
+    /// Header caption — relative range long label or a selected month.
+    let title: LocalizedStringResource
+    /// The window all aggregations compute over.
+    let interval: DateInterval
     @Environment(AppState.self) private var appState
 
     /// Accordion: at most one category expanded at a time. `nil` = none.
@@ -19,7 +22,7 @@ struct SpendByCategoryCard: View {
     /// All categories with non-zero spend in the range, sorted descending.
     /// Used both for the chart (all wedges) and the legend (top 5 + Other).
     private var entries: [(category: TransactionCategory, cents: Int64)] {
-        appState.topCategoriesByExpense(in: range.interval(), limit: 99)
+        appState.topCategoriesByExpense(in: interval, limit: 99)
     }
 
     private var legendEntries: [LegendEntry] {
@@ -42,7 +45,7 @@ struct SpendByCategoryCard: View {
                     .textCase(.uppercase)
                     .foregroundStyle(AppTheme.text.opacity(0.58))
                 Spacer()
-                Text(range.longLabel)
+                Text(title)
                     .font(.lato(size: 12))
                     .foregroundStyle(AppTheme.text3)
             }
@@ -153,7 +156,7 @@ struct SpendByCategoryCard: View {
     @ViewBuilder
     private func expandedTransactions(for category: TransactionCategory,
                                       tint: Color) -> some View {
-        let all = appState.categoryExpenses(category, in: range.interval())
+        let all = appState.categoryExpenses(category, in: interval)
         let displayed = Array(all.prefix(maxRowsWhenExpanded))
         let remaining = max(0, all.count - displayed.count)
 

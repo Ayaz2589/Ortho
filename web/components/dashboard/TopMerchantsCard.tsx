@@ -8,9 +8,11 @@ import { longLabel, type DashboardRange, type Interval } from './range'
 export function TopMerchantsCard({
   range,
   interval,
+  label,
 }: {
   range: DashboardRange
   interval: Interval
+  label?: string
 }) {
   const { transactions, formatMoney } = useApp()
 
@@ -32,7 +34,7 @@ export function TopMerchantsCard({
 
   return (
     <Card className="p-5">
-      <SectionLabel right={longLabel(range)}>Top merchants</SectionLabel>
+      <SectionLabel right={label ?? longLabel(range)}>Top merchants</SectionLabel>
 
       {entries.length === 0 ? (
         <p className="py-2 text-[13px] text-text-3">No expenses in this period yet.</p>

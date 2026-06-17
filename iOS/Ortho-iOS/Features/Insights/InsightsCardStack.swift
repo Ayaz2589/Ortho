@@ -13,7 +13,8 @@ struct InsightsCardStack: View {
         InsightEngine.recommendations(
             transactions: appState.transactions,
             budgets: appState.budgets,
-            properties: appState.properties
+            properties: appState.properties,
+            referenceDate: appState.dashboardReferenceDate
         )
     }
 

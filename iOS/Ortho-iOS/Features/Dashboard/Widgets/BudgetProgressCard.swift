@@ -10,9 +10,25 @@ import SwiftUI
 struct BudgetProgressCard: View {
     @Environment(AppState.self) private var appState
 
+    /// The budget month — the selected month's UTC `monthBounds` when one is
+    /// set, otherwise the current calendar month. Budgets are inherently a
+    /// single-month concept, so this never widens to a multi-month range.
     private var monthInterval: DateInterval {
-        Calendar.current.dateInterval(of: .month, for: .now)
+        if let month = appState.dashboardSelectedMonth,
+           let (from, to) = monthBounds(month) {
+            return DateInterval(start: from, end: to)
+        }
+        return Calendar.current.dateInterval(of: .month, for: .now)
             ?? DateInterval(start: .now, duration: 0)
+    }
+
+    /// Header caption — "This month" for the live view, or the selected
+    /// month's name ("June 2026").
+    private var caption: String {
+        if let month = appState.dashboardSelectedMonth {
+            return FilterSheet.monthLabel(month)
+        }
+        return Localizer.tr("This month")
     }
 
     /// Budgets with a positive limit, sorted by % spent descending so the
@@ -44,7 +60,7 @@ struct BudgetProgressCard: View {
                         .textCase(.uppercase)
                         .foregroundStyle(AppTheme.text.opacity(0.58))
                     Spacer()
-                    Text("This month")
+                    Text(caption)
                         .font(.lato(size: 12))
                         .foregroundStyle(AppTheme.text3)
                 }

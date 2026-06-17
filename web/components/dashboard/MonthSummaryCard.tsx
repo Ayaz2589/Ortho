@@ -14,12 +14,19 @@ export function MonthSummaryCard({
   range,
   interval,
   now,
+  label,
+  isSpecificMonth = false,
 }: {
   range: DashboardRange
   interval: Interval
   now: Date
+  /** Period label override (e.g. "June 2026" when a month is selected). */
+  label?: string
+  /** True when a specific month is selected — suppresses the this-month capsule. */
+  isSpecificMonth?: boolean
 }) {
   const { transactions, formatMoney, locale } = useApp()
+  const isThisMonth = range === 'thisMonth' && !isSpecificMonth
 
   const inRange = (date: string) => {
     const t = new Date(date).getTime()
@@ -43,7 +50,7 @@ export function MonthSummaryCard({
   const monthProgress = dayOfMonth / daysInMonth
 
   let rightCaption: string
-  if (range === 'thisMonth') {
+  if (isThisMonth) {
     rightCaption = `Day ${dayOfMonth} of ${daysInMonth}`
   } else {
     const endDate = new Date(interval.end.getTime() - 1)
@@ -55,7 +62,7 @@ export function MonthSummaryCard({
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <span className="text-[13px] font-normal uppercase tracking-[0.6px] text-text-2">
-            {longLabel(range)}
+            {label ?? longLabel(range)}
           </span>
           <span className="text-xs text-text-3 tabular-nums">{rightCaption}</span>
         </div>
@@ -72,7 +79,7 @@ export function MonthSummaryCard({
           <StatColumn label="Expenses" amount={formatMoney(expenses)} tint="var(--text)" />
         </div>
 
-        {range === 'thisMonth' && (
+        {isThisMonth && (
           <div
             className="mt-1.5 h-1 w-full overflow-hidden rounded-full"
             style={{ background: 'rgba(0,0,0,0.05)' }}

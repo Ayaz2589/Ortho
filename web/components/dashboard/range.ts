@@ -97,3 +97,49 @@ export function availableRanges(
     (now.getMonth() - earliestDate.getMonth())
   return DASHBOARD_RANGES.filter((r) => monthsBack >= monthCount(r) - 1)
 }
+
+// ── Specific-month selection (parity-locked) ────────────────────────────────
+// These three are pure and golden-vectored (`dashboard-month-scope.json`) so the
+// month list, reference date, and stepping match iOS exactly. The selected-month
+// → window conversion itself reuses the already-vectored `monthBounds` and lives
+// in the dashboard scope hook (it needs a runtime import; these stay import-free
+// so the vector generator can load this module under tsx).
+
+/**
+ * Distinct calendar months (`'YYYY-MM'`) present in the data, **newest first**.
+ * The key is the first 7 chars of the stored ISO `date` (a string slice, not a
+ * local-calendar re-bucket) so web and iOS list the same months — including rows
+ * whose timestamp sits on a month boundary.
+ */
+export function availableMonths(transactions: Transaction[]): string[] {
+  const set = new Set<string>()
+  for (const t of transactions) set.add(t.date.slice(0, 7))
+  return [...set].sort((a, b) => b.localeCompare(a))
+}
+
+/**
+ * A reference date safely inside `yyyymm` — the 15th at 12:00 UTC. Feeds the
+ * budget/insight engines when a month is selected so their calendar math lands
+ * on that month (and its prior month) in every timezone.
+ */
+export function monthReferenceDate(yyyymm: string): Date {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(yyyymm)) {
+    throw new Error(`INVALID_MONTH: ${JSON.stringify(yyyymm)}`)
+  }
+  return new Date(`${yyyymm}-15T12:00:00.000Z`)
+}
+
+/**
+ * Step to the chronologically adjacent month within `months` (which is
+ * newest-first), or `null` at the data edge. `'prev'` = older, `'next'` = newer.
+ */
+export function stepMonth(
+  months: string[],
+  current: string,
+  direction: 'prev' | 'next'
+): string | null {
+  const i = months.indexOf(current)
+  if (i < 0) return null
+  const j = direction === 'prev' ? i + 1 : i - 1
+  return j >= 0 && j < months.length ? months[j] : null
+}

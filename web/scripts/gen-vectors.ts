@@ -22,6 +22,7 @@ import { filterTransactions, monthBounds, emptyCriteria, type FilterCriteria, ty
 import { computeShares, validateSplit, seedSplit, orderedOwnerIds, type SplitInput } from '../lib/splits'
 import { toDisplayAmount, toUSDCents } from '../lib/finance/money'
 import { CURRENCIES, FALLBACK_RATE_FROM_USD } from '../lib/finance/currency'
+import { availableMonths, monthReferenceDate, stepMonth } from '../components/dashboard/range'
 import type { Transaction, Budget, Property } from '../lib/types'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -389,6 +390,52 @@ const currency = {
   }),
 }
 
+// ── Dashboard month-scope vectors ───────────────────────────────────────────
+// Locks the NEW pure date logic behind the dashboard's specific-month picker so
+// iOS and web derive the same month list, reference date, and stepping. The
+// selected-month → window conversion is NOT vectored here because it reuses the
+// already-vectored `monthBounds` (transaction-filters.json).
+
+const AVAILABLE_MONTHS_CASES: Array<{ name: string; dates: string[] }> = [
+  { name: 'empty', dates: [] },
+  { name: 'single month', dates: ['2026-06-15T12:00:00.000Z'] },
+  { name: 'multiple months unsorted', dates: ['2026-04-20T12:00:00.000Z', '2026-06-01T09:00:00.000Z', '2026-05-10T12:00:00.000Z'] },
+  { name: 'duplicate days same month', dates: ['2026-06-05T12:00:00.000Z', '2026-06-30T23:00:00.000Z'] },
+  // String-slice keys these to May and June — a local-calendar re-bucket could disagree.
+  { name: 'month boundary keyed by string slice', dates: ['2026-05-31T23:59:59.000Z', '2026-06-01T00:00:00.000Z'] },
+  { name: 'year boundary Dec to Jan', dates: ['2025-12-15T12:00:00.000Z', '2026-01-10T12:00:00.000Z'] },
+]
+
+const REF_MONTHS = ['2026-06', '2026-01', '2025-12', '2026-02']
+
+const STEP_CASES: Array<{ name: string; months: string[]; current: string; direction: 'prev' | 'next' }> = [
+  { name: 'prev to older', months: ['2026-06', '2026-05', '2026-04'], current: '2026-06', direction: 'prev' },
+  { name: 'next to newer', months: ['2026-06', '2026-05', '2026-04'], current: '2026-05', direction: 'next' },
+  { name: 'prev at earliest edge', months: ['2026-06', '2026-05', '2026-04'], current: '2026-04', direction: 'prev' },
+  { name: 'next at latest edge', months: ['2026-06', '2026-05', '2026-04'], current: '2026-06', direction: 'next' },
+  { name: 'current not in list', months: ['2026-06'], current: '2025-01', direction: 'prev' },
+]
+
+const dashboardMonthScope = {
+  availableMonths: AVAILABLE_MONTHS_CASES.map((c) => ({
+    name: c.name,
+    dates: c.dates,
+    expected: availableMonths(c.dates.map((date) => tx({ date }))),
+  })),
+  monthReferenceDate: REF_MONTHS.map((m) => ({
+    name: m,
+    month: m,
+    expected: monthReferenceDate(m).toISOString(),
+  })),
+  stepMonth: STEP_CASES.map((c) => ({
+    name: c.name,
+    months: c.months,
+    current: c.current,
+    direction: c.direction,
+    expected: stepMonth(c.months, c.current, c.direction),
+  })),
+}
+
 // ── Write ───────────────────────────────────────────────────────────────────
 
 mkdirSync(OUT, { recursive: true })
@@ -397,4 +444,5 @@ writeFileSync(resolve(OUT, 'insights.json'), JSON.stringify(insights, null, 2) +
 writeFileSync(resolve(OUT, 'transaction-filters.json'), JSON.stringify(filters, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'transaction-splits.json'), JSON.stringify(splits, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'currency.json'), JSON.stringify(currency, null, 2) + '\n')
-console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight + ${filters.cases.length} filter + ${splits.cases.length} split + ${splits.ownerOrdering.length} ownerOrdering + ${currency.toDisplay.length} currency vectors to ${OUT}`)
+writeFileSync(resolve(OUT, 'dashboard-month-scope.json'), JSON.stringify(dashboardMonthScope, null, 2) + '\n')
+console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight + ${filters.cases.length} filter + ${splits.cases.length} split + ${splits.ownerOrdering.length} ownerOrdering + ${currency.toDisplay.length} currency + ${dashboardMonthScope.availableMonths.length} availableMonths/${dashboardMonthScope.stepMonth.length} stepMonth dashboard-scope vectors to ${OUT}`)

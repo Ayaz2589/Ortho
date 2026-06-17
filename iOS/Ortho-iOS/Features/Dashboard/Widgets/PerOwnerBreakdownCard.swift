@@ -6,7 +6,10 @@ import SwiftUI
 /// joint expenses show a percentage badge and the user's split-weighted
 /// share amount, not the full transaction amount.
 struct PerOwnerBreakdownCard: View {
-    let range: DashboardRange
+    /// Header caption — relative range long label or a selected month.
+    let title: LocalizedStringResource
+    /// The window all aggregations compute over.
+    let interval: DateInterval
     @Environment(AppState.self) private var appState
 
     /// At most one row expanded at a time (accordion behavior).
@@ -17,8 +20,7 @@ struct PerOwnerBreakdownCard: View {
     private let maxRowsWhenExpanded = 25
 
     private var entries: [Entry] {
-        let interval = range.interval()
-        return appState.householdMembers.map {
+        appState.householdMembers.map {
             Entry(user: $0, cents: appState.spent(by: $0.id, in: interval))
         }
         .sorted { $0.cents > $1.cents }
@@ -37,7 +39,7 @@ struct PerOwnerBreakdownCard: View {
                     .textCase(.uppercase)
                     .foregroundStyle(AppTheme.text.opacity(0.58))
                 Spacer()
-                Text(range.longLabel)
+                Text(title)
                     .font(.lato(size: 12))
                     .foregroundStyle(AppTheme.text3)
             }
@@ -124,7 +126,7 @@ struct PerOwnerBreakdownCard: View {
 
     @ViewBuilder
     private func expandedTransactions(for user: User) -> some View {
-        let allShares = appState.expenseShares(by: user.id, in: range.interval())
+        let allShares = appState.expenseShares(by: user.id, in: interval)
         let displayed = Array(allShares.prefix(maxRowsWhenExpanded))
         let remaining = max(0, allShares.count - displayed.count)
 
