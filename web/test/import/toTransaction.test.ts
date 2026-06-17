@@ -49,6 +49,16 @@ describe('toTransaction', () => {
     expect(tx.shares).toEqual({ p1: 4500, p2: 4499 }) // 8999 even → leftover cent to first
   })
 
+  it('canonicalizes owner order so the leftover cent matches the apps (scrambled input)', () => {
+    // Owners given in reverse order. orderedOwnerIds sorts them to [p1, p2], so the
+    // leftover cent of the odd amount lands on p1 — the same owner web/iOS would
+    // pick — not on whoever was parsed/typed first. Without canonicalization this
+    // would be { p2: 4500, p1: 4499 }.
+    const tx = toTransaction({ ...base, ownerIds: ['p2', 'p1'] }, 'TD Bank', CTX, 'id-order', NOW)
+    expect(tx.shares).toEqual({ p1: 4500, p2: 4499 })
+    expect(Object.values(tx.shares).reduce((a, b) => a + b, 0)).toBe(8999)
+  })
+
   it('converts custom percent splits to cents (remainder to first owner)', () => {
     const tx = toTransaction(
       { ...base, ownerIds: ['p1', 'p2'], splits: { p1: 70, p2: 30 } },

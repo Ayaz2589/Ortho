@@ -27,7 +27,7 @@ ingest-help:
 	@echo '  ADMIN=1   use SUPABASE_SERVICE_ROLE_KEY instead of sign-in'
 	@echo ''
 	@echo 'Env (web/.env.local): NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,'
-	@echo '  IMPORT_EMAIL (sign-in; emails a 6-digit OTP code you enter at the prompt — no password);'
+	@echo '  IMPORT_EMAIL (sign-in; emails an 8-digit OTP code you enter at the prompt — no password);'
 	@echo '  SUPABASE_SERVICE_ROLE_KEY (ADMIN=1 only)'
 
 # Transaction CRUD (see specs/005-transaction-crud-cli). Same OTP/ADMIN auth as ingest.

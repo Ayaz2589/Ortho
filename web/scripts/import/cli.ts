@@ -127,7 +127,7 @@ async function run(): Promise<void> {
         admin: opts.admin,
         email,
         onCodeSent: (e) => console.log(`\nVerification code sent to ${e} — check your email.`),
-        requestCode: async () => rl.question('Enter the 6-digit code: '),
+        requestCode: async () => rl.question('Enter the 8-digit code: '),
       })
     } catch (e) {
       die(5, `Auth/DB error: ${e instanceof Error ? e.message : String(e)}`)

@@ -933,7 +933,7 @@ final class AppState {
         }
     }
 
-    /// Step 2: verify the 6-digit code from the email. On success the
+    /// Step 2: verify the 8-digit code from the email. On success the
     /// SDK persists the session in the keychain and our
     /// `observeAuthChanges()` listener updates `self.session`.
     func verifyCode(email: String, code: String) async {

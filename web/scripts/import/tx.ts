@@ -11,7 +11,7 @@ import { parseFilters, CATEGORY_LIST } from './engine/filters'
 import { renderTable, renderDetail } from './engine/render'
 import { validateAmount, validateMerchant, validateCategory, parseDay, todayISO } from './engine/validate'
 import { validateCustomSplit } from './engine/split'
-import { computeShares, type SplitInput } from '../../lib/splits'
+import { computeShares, orderedOwnerIds, type SplitInput } from '../../lib/splits'
 import { parseFlags, flagStr as str, type Flags } from './engine/args'
 import type { Transaction, TransactionCategory, TransactionKind, Person } from '../../lib/types'
 
@@ -27,7 +27,7 @@ async function authenticate(rl: readline.Interface, admin: boolean): Promise<Aut
       admin,
       email,
       onCodeSent: (e) => console.log(`\nVerification code sent to ${e} — check your email.`),
-      requestCode: async () => rl.question('Enter the 6-digit code: '),
+      requestCode: async () => rl.question('Enter the 8-digit code: '),
     })
   } catch (e) {
     die(5, `Auth error: ${e instanceof Error ? e.message : String(e)}`)
@@ -57,7 +57,7 @@ async function pickOwnersAndSplit(
 
   let split: SplitInput = { method: 'even' }
   if (ownerIds.length >= 2) {
-    console.log(`Even split = ${JSON.stringify(computeShares(amountCents, ownerIds, { method: 'even' }))} cents; leave blank for even.`)
+    console.log(`Even split = ${JSON.stringify(computeShares(amountCents, orderedOwnerIds(ownerIds), { method: 'even' }))} cents; leave blank for even.`)
     const raw = await rl.question(`Percentages for ${ownerIds.join(', ')} (e.g. 70 30): `)
     if (raw.trim()) {
       const nums = raw.trim().split(/[\s,]+/).map(Number)
@@ -68,7 +68,7 @@ async function pickOwnersAndSplit(
       split = { method: 'percent', percents }
     }
   }
-  return { ownerIds, shares: computeShares(amountCents, ownerIds, split) }
+  return { ownerIds, shares: computeShares(amountCents, orderedOwnerIds(ownerIds), split) }
 }
 
 async function cmdList(flags: Flags, rl: readline.Interface): Promise<void> {
@@ -117,7 +117,7 @@ async function cmdAdd(flags: Flags, rl: readline.Interface): Promise<void> {
   const defaultOwnerId = household.defaultPersonId || createdBy
 
   let ownerIds = [defaultOwnerId]
-  let shares = computeShares(amountCents, ownerIds, { method: 'even' })
+  let shares = computeShares(amountCents, orderedOwnerIds(ownerIds), { method: 'even' })
   if (household.people.length >= 2) {
     const yn = (await rl.question('Split with other household people? [y/N] ')).trim()
     if (/^y/i.test(yn)) {
@@ -187,7 +187,7 @@ async function cmdEdit(flags: Flags, rl: readline.Interface): Promise<void> {
     tx.shares = picked.shares
   } else {
     // Re-derive an even split so shares always sum to the (possibly edited) amount.
-    tx.shares = computeShares(tx.amount_cents, tx.owner_ids, { method: 'even' })
+    tx.shares = computeShares(tx.amount_cents, orderedOwnerIds(tx.owner_ids), { method: 'even' })
   }
   tx.updated_at = new Date().toISOString()
 

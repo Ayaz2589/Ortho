@@ -2,7 +2,7 @@
 // Every transaction belongs to the household and carries cents-per-owner shares,
 // so imported rows are indistinguishable from app-entered ones (FR-021).
 import type { Transaction } from '../../../lib/types'
-import { computeShares, type SplitInput } from '../../../lib/splits'
+import { computeShares, orderedOwnerIds, type SplitInput } from '../../../lib/splits'
 import type { ParsedTransaction } from './types'
 
 export interface OwnerContext {
@@ -27,7 +27,9 @@ export function toTransaction(
   }
   const owners = p.ownerIds.length ? p.ownerIds : [ctx.defaultOwnerId]
   const split: SplitInput = p.splits ? { method: 'percent', percents: p.splits } : { method: 'even' }
-  const shares = computeShares(p.amountCents, owners, split)
+  // Canonicalize owner order before computing shares so the deterministic
+  // leftover cent lands on the same owner as the apps (see lib/splits.orderedOwnerIds).
+  const shares = computeShares(p.amountCents, orderedOwnerIds(owners), split)
   return {
     id,
     household_id: ctx.householdId,

@@ -24,8 +24,8 @@ a few unintended divergences (below).
 |---|:--:|:--:|:--:|---|
 | Money / USD-cents invariant | ✅ | ✅ | ✅ | `lib/finance/money.ts` + `currency.ts` → `currency.json` |
 | Currency conversion (display) | ✅ | ✅ | — (USD-only) | same as above |
-| Splits & owner shares | ✅ | ✅ | ⚠️ | `lib/splits.ts` → `transaction-splits.json` |
-| Canonical leftover-cent order | ✅ | ✅ | ⛔️ | `orderedOwnerIds` (not used by CLI) |
+| Splits & owner shares | ✅ | ✅ | ✅ | `lib/splits.ts` → `transaction-splits.json` |
+| Canonical leftover-cent order | ✅ | ✅ | ✅ | `orderedOwnerIds` (now used by all three) |
 | Transaction + shares data contract | ✅ | ✅ | ✅ | columns mirrored across all three |
 | Atomic parent+shares write | ✅ (rollback) | ⚠️ | ⚠️ | — (only web compensates) |
 | Category / kind / source taxonomy | ✅ | ✅ | ✅ | Postgres `transaction_category` enum / `lib/types.ts` |
@@ -45,7 +45,8 @@ neither language can silently drift:
 - **USD-cents storage invariant** — every surface stores `transactions.amount_cents` as integer cents and
   materializes per-owner `transaction_shares` (`person_id` + `amount_cents`) that sum to the total.
 - **Split math** — `computeShares` / `validateSplit` / `seedSplit` (`lib/splits.ts`, mirrored in iOS
-  `TransactionSplits.swift`). The CLI imports and reuses `computeShares` directly.
+  `TransactionSplits.swift`). The CLI imports and reuses `computeShares`, and (since this pass)
+  canonicalizes owner order through `orderedOwnerIds` first, so the leftover cent matches the apps.
 - **Currency** — `toUSDCents` / `toDisplayAmount` / `formatMoney` with round-half-away-from-zero
   (`lib/finance/money.ts` ↔ iOS `Money.swift`), vectored across all 7 currencies. The CLI reuses
   `formatMoney` for display.
@@ -79,13 +80,8 @@ truncation, mortgage months-elapsed boundary, the outlier insight). Residual, lo
 ### CLI — shares the backend, diverges in places
 
 The CLI is a trusted local tool; some differences are by-design (it's USD-only, headless, operator-driven),
-others are real gaps:
+others are real gaps:`
 
-- ⛔️ **Leftover-cent owner order (MEDIUM):** the CLI calls `computeShares` with owner ids in operator/parse
-  order, **not** through `orderedOwnerIds` (`tx.ts:60/71/120/190`, `engine/toTransaction.ts:30`).
-  `computeShares` is order-sensitive, so a multi-owner even/percent split of an odd amount can hand the
-  leftover cent to a *different* person than the apps would for the same owners. *(One-line fix: sort owner
-  ids via `orderedOwnerIds` before `computeShares`.)*
 - ⚠️ **Filtering reimplemented (MEDIUM):** `tx list` builds SQL `WHERE` clauses (`db/transactions.ts` +
   `engine/filters.ts`) rather than the shared `filterTransactions`. Consequences: no free-text query or
   owner filter; single-value (not multi-select OR) for category/source/kind; a silent **200-row cap**;
@@ -95,8 +91,6 @@ others are real gaps:
   writes noon in the **browser's local** time. Both apps then bucket "Today/Yesterday" by the viewer's local
   day, so far-from-UTC viewers can see a CLI-imported row land on an adjacent calendar day. The cents/owners
   are unaffected.
-- low **OTP copy stale:** the CLI prompts "Enter the **6-digit** code" (`cli.ts:130`, `tx.ts:30`,
-  `db/client.ts`) while production + both apps use **8**. Copy only — the prompt accepts any length.
 - ⚠️ **No single-active-platform lock (MEDIUM):** the CLI never reads/claims/releases `platform_locks`, so an
   import won't yield to (or be evicted by) an active app session. By-design for a short-lived tool, but it
   means the "one active platform" guarantee isn't universal.
@@ -108,6 +102,13 @@ others are real gaps:
 - low **Type/category duplication:** `engine/filters.ts` hardcodes its own `CATEGORY_LIST` and month-window
   helper instead of deriving from `lib/types.ts` / `transactionFilters.ts` — they match today but drift if a
   category is added.
+
+**Resolved (2026-06-17):** the CLI now canonicalizes owner order via `orderedOwnerIds` before
+`computeShares` (`tx.ts`, `engine/toTransaction.ts`), so the leftover cent matches the apps — locked by a
+scrambled-owner case in `web/test/import/toTransaction.test.ts`. The stale "6-digit" OTP copy is corrected
+to "8-digit" across `cli.ts`, `tx.ts`, `db/client.ts`, the import README, and the `make ingest-help` text
+(and the iOS `AppState` doc comment). Still open: the cross-cutting atomic-write gap (iOS/CLI), CLI
+filtering reimplementation, the noon-UTC date convention, `platform_locks`, and `--admin` RLS bypass.
 
 ### CLI-only data paths the apps then read (no app equivalent, untested by vectors)
 

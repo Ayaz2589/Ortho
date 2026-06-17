@@ -37,7 +37,7 @@ Always start with `DRY_RUN=1` to verify the parse and reconciliation before writ
 
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — required.
 - `IMPORT_EMAIL` — sign-in mode (default). Auth is **email OTP**, same as the apps: the
-  tool emails you a 6-digit code and prompts for it at runtime. **No password is stored.**
+  tool emails you an 8-digit code and prompts for it at runtime. **No password is stored.**
   If `IMPORT_EMAIL` is unset you're prompted for the email too.
 - `SUPABASE_SERVICE_ROLE_KEY` — only for `ADMIN=1` (cross-account attribution).
 

@@ -1,6 +1,6 @@
 // Supabase client for the CLI. Two modes (research.md D10):
 //   sign-in (default): email OTP — exactly like the web/iOS apps (signInWithOtp →
-//     emailed 6-digit code → verifyOtp). Yields correct created_by; RLS applies.
+//     emailed 8-digit code → verifyOtp). Yields correct created_by; RLS applies.
 //   admin (--admin):   service-role key, bypasses RLS for cross-account attribution.
 // Plain @supabase/supabase-js (not the @supabase/ssr browser/server clients).
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
