@@ -31,16 +31,34 @@ function SignIn() {
   async function verify() {
     setLoading(true)
     setError(null)
-    const { error: e } = await supabase.auth.verifyOtp({
+    const { data, error: e } = await supabase.auth.verifyOtp({
       email: pendingEmail!,
       token: code.trim(),
       type: 'email',
     })
-    setLoading(false)
     if (e) {
+      setLoading(false)
       setError(e.message)
       return
     }
+    // Claim the active-platform lock for web BEFORE navigating. The proxy
+    // middleware yields to an 'ios' lock (signs out + redirects here), and it
+    // runs before the client store can claim 'web' — so without claiming now, a
+    // user whose last active platform was iOS would verify successfully and then
+    // be bounced straight back to sign-in. Signing in on web makes web the
+    // active platform; iOS yields on its next foreground.
+    const userId = data.user?.id
+    if (userId) {
+      const { error: lockErr } = await supabase
+        .from('platform_locks')
+        .upsert({ user_id: userId, platform: 'web', locked_at: new Date().toISOString() })
+      if (lockErr) {
+        setLoading(false)
+        setError(lockErr.message)
+        return
+      }
+    }
+    setLoading(false)
     router.replace('/dashboard')
     router.refresh()
   }
