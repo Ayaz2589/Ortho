@@ -147,7 +147,7 @@ enum InsightEngine {
             // an arrow + punctuation. Skip the catalog round-trip.
             let body = "\(formatMoney(priorTotal)) → \(formatMoney(currentTotal))."
             out.append(Insight(
-                id: "category-delta-\(category.rawValue)-\(periodKey)",
+                id: "mom-\(category.rawValue)-\(periodKey)",
                 title: title,
                 body: body,
                 severity: severity,
@@ -206,7 +206,7 @@ enum InsightEngine {
             } else if fraction >= 0.85 {
                 let remaining = budget.monthlyLimitCents - spent
                 out.append(Insight(
-                    id: "budget-warning-\(category.rawValue)-\(periodKey)",
+                    id: "budget-near-\(category.rawValue)-\(periodKey)",
                     title: tr("Approaching \(categoryName) limit"),
                     body: tr("\(formatMoney(remaining)) left of \(limitStr) with \(daysLeft) days to go."),
                     severity: .warning,
@@ -252,7 +252,7 @@ enum InsightEngine {
         if net < 0 {
             let shortfall = -net
             return [Insight(
-                id: "cashflow-negative-\(periodKey)",
+                id: "cashflow-deficit-\(periodKey)",
                 title: tr("Spending exceeds income"),
                 body: tr("You're \(formatMoney(shortfall)) over this month: \(formatMoney(expenses)) out vs \(formatMoney(income)) in."),
                 severity: .critical,
@@ -266,7 +266,7 @@ enum InsightEngine {
         if savingsRate >= 0.20 {
             let pct = Int((savingsRate * 100).rounded())
             return [Insight(
-                id: "savings-rate-strong-\(periodKey)",
+                id: "cashflow-savings-\(periodKey)",
                 title: tr("Saving \(pct)% of income"),
                 body: tr("Net \(formatMoney(net)) saved this month — well above the 20% benchmark."),
                 severity: .positive,
@@ -330,7 +330,7 @@ enum InsightEngine {
         // localized strings. The wrapper is just punctuation.
         let body = "\(countPhrase): \(preview)\(extra)."
         return [Insight(
-            id: "subscriptions-monthly-\(periodKey)",
+            id: "recurring-\(periodKey)",
             title: tr("Recurring monthly: ~\(formatMoney(monthlyBurnCents))"),
             body: body,
             severity: .info,
@@ -382,7 +382,7 @@ enum InsightEngine {
         let severity: InsightSeverity = outlier.tx.amount >= 50_000 ? .warning : .info
         let categoryName = outlier.tx.category.displayName.string
         return [Insight(
-            id: "outlier-\(outlier.tx.id.uuidString)-\(periodKey)",
+            id: "outlier-\(outlier.tx.id.uuidString.lowercased())",
             title: tr("Unusual \(categoryName) charge"),
             body: tr("\(formatMoney(outlier.tx.amount)) at \(outlier.tx.merchant) on \(dateString) — \(multipleString) the typical amount."),
             severity: severity,
@@ -420,7 +420,7 @@ enum InsightEngine {
 
         if delta > 0 {
             return [Insight(
-                id: "trend-up-\(periodKey)",
+                id: "trend30-\(periodKey)",
                 title: tr("Spending up \(pct)% over 30 days"),
                 body: body,
                 severity: .warning,
@@ -430,7 +430,7 @@ enum InsightEngine {
             )]
         } else {
             return [Insight(
-                id: "trend-down-\(periodKey)",
+                id: "trend30-\(periodKey)",
                 title: tr("Spending down \(pct)% over 30 days"),
                 body: body,
                 severity: .positive,
@@ -476,7 +476,7 @@ enum InsightEngine {
             title    = tr("Mortgage at \(pct)% of income — high")
         }
         return [Insight(
-            id: "mortgage-affordability-\(periodKey)",
+            id: "mortgage-ratio-\(periodKey)",
             title: title,
             body: tr("\(formatMoney(mortgage.monthlyPaymentCents)) P&I vs \(formatMoney(monthlyIncome)) income this month. Lenders typically target below 28%."),
             severity: severity,
