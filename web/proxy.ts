@@ -49,7 +49,7 @@ export async function proxy(request: NextRequest) {
       .from('platform_locks')
       .select('platform')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (lock?.platform === 'ios') {
       await supabase.auth.signOut()
