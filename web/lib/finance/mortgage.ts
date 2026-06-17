@@ -59,7 +59,14 @@ function parseLocalDate(s: string): Date {
 export function monthsElapsed(closingDate: string, asOf: Date, totalMonths: number): number {
   const closing = parseLocalDate(closingDate)
   let months = (asOf.getFullYear() - closing.getFullYear()) * 12 + (asOf.getMonth() - closing.getMonth())
-  if (asOf.getDate() < closing.getDate()) months -= 1
+  // Clamp the closing day to the asOf month's length before deciding whether the
+  // final partial month counts. A month-end closing (e.g. Jan 31) reaches its
+  // monthiversary at a shorter month's end (Feb 28), so that counts as a full
+  // month — matching Swift `Calendar.dateComponents([.month])`. (Without the
+  // clamp, `28 < 31` would wrongly drop a month.)
+  const daysInAsOfMonth = new Date(asOf.getFullYear(), asOf.getMonth() + 1, 0).getDate()
+  const effectiveClosingDay = Math.min(closing.getDate(), daysInAsOfMonth)
+  if (asOf.getDate() < effectiveClosingDay) months -= 1
   return Math.max(0, Math.min(totalMonths, months))
 }
 

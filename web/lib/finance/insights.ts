@@ -214,7 +214,8 @@ export function generateInsights(
       if (days >= 28 && days <= 35) monthlyHits++
     }
     if (gaps === 0 || monthlyHits / gaps < 0.8) continue
-    recurring.push({ merchant: group[0].merchant, avg: Math.round(sumCents(group) / group.length) })
+    // Truncate toward zero to match iOS `Int64` integer division (InsightEngine.swift).
+    recurring.push({ merchant: group[0].merchant, avg: Math.trunc(sumCents(group) / group.length) })
   }
   if (recurring.length > 0) {
     const burn = recurring.reduce((s, r) => s + r.avg, 0)

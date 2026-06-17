@@ -52,6 +52,13 @@ const MORTGAGE_INPUTS: MortgageInput[] = [
   { name: 'zero interest 10yr', purchasePriceCents: 15_000_000, originalLoanCents: 12_000_000, annualRatePercent: 0, termYears: 10, closingDate: '2024-01-10', asOf: '2026-01-10' },
   { name: 'asOf before closing day-of-month', purchasePriceCents: 60_000_000, originalLoanCents: 50_000_000, annualRatePercent: 6.0, termYears: 30, closingDate: '2023-08-20', asOf: '2025-03-10' },
   { name: 'maturity / years-remaining', purchasePriceCents: 40_000_000, originalLoanCents: 32_000_000, annualRatePercent: 5.25, termYears: 15, closingDate: '2020-02-01', asOf: '2026-06-15' },
+  // Month-end closing (day 31) viewed near a shorter month's end — the day-29–31
+  // boundary where the old web `day <` check undercounted by a month (R7). iOS
+  // Calendar gives 0 / 1 / 1 / 2 months elapsed for Feb 27 / Feb 28 / Mar 1 / Mar 31.
+  { name: 'month-end closing boundary — Feb 27 (incomplete month)', purchasePriceCents: 60_000_000, originalLoanCents: 50_000_000, annualRatePercent: 6.0, termYears: 30, closingDate: '2026-01-31', asOf: '2026-02-27' },
+  { name: 'month-end closing boundary — Feb 28 (full month)', purchasePriceCents: 60_000_000, originalLoanCents: 50_000_000, annualRatePercent: 6.0, termYears: 30, closingDate: '2026-01-31', asOf: '2026-02-28' },
+  { name: 'month-end closing boundary — Mar 1', purchasePriceCents: 60_000_000, originalLoanCents: 50_000_000, annualRatePercent: 6.0, termYears: 30, closingDate: '2026-01-31', asOf: '2026-03-01' },
+  { name: 'month-end closing boundary — Mar 31 (two months)', purchasePriceCents: 60_000_000, originalLoanCents: 50_000_000, annualRatePercent: 6.0, termYears: 30, closingDate: '2026-01-31', asOf: '2026-03-31' },
 ]
 
 const mortgage = MORTGAGE_INPUTS.map((i) => {
@@ -153,6 +160,39 @@ const SCENARIOS: InsightScenario[] = [
       tx({ kind: 'expense', category: 'subs', amount_cents: 1500, date: '2026-06-05', merchant: 'Netflix' }),
       tx({ kind: 'expense', category: 'entertainment', amount_cents: 20000, date: '2026-06-01', merchant: 'Amazon' }),
       tx({ kind: 'expense', category: 'entertainment', amount_cents: 10000, date: '2026-05-01', merchant: 'Amazon' }),
+    ],
+    budgets: [],
+    properties: [],
+  },
+  {
+    // Locks Rule 6 (outlier) — previously UNvectored. A category with ≥5 trailing
+    // expenses establishes a median; a current-month charge ≥2× it fires the rule.
+    // The outlier tx carries a fixed lowercase UUID so `outlier-<id>` matches iOS's
+    // `outlier-<uuidString.lowercased()>`. (R8)
+    name: 'outlier transaction (≥2× category median)',
+    referenceDate: '2026-06-15',
+    transactions: [
+      tx({ kind: 'expense', category: 'dining', amount_cents: 1000, date: '2026-01-15', merchant: 'Cafe A' }),
+      tx({ kind: 'expense', category: 'dining', amount_cents: 1100, date: '2026-02-15', merchant: 'Cafe B' }),
+      tx({ kind: 'expense', category: 'dining', amount_cents: 1200, date: '2026-03-15', merchant: 'Cafe C' }),
+      tx({ kind: 'expense', category: 'dining', amount_cents: 1300, date: '2026-04-15', merchant: 'Cafe D' }),
+      tx({ kind: 'expense', category: 'dining', amount_cents: 1400, date: '2026-05-15', merchant: 'Cafe E' }),
+      tx({ id: 'a1a2a3a4-0000-4000-8000-000000000001', kind: 'expense', category: 'dining', amount_cents: 3000, date: '2026-06-10', merchant: 'Fancy Dinner' }),
+      tx({ kind: 'income', category: 'income', amount_cents: 600000, date: '2026-06-02', merchant: 'Payroll' }),
+    ],
+    budgets: [],
+    properties: [],
+  },
+  {
+    // Locks the recurring-average rounding (R6): 3002/3 = 1000.67 → truncates to
+    // 1000 (iOS Int64 division), NOT 1001 (the old web Math.round).
+    name: 'recurring non-divisible average (truncates toward zero)',
+    referenceDate: '2026-06-15',
+    transactions: [
+      tx({ kind: 'expense', category: 'subs', amount_cents: 1000, date: '2026-04-05', merchant: 'Streamly' }),
+      tx({ kind: 'expense', category: 'subs', amount_cents: 1001, date: '2026-05-05', merchant: 'Streamly' }),
+      tx({ kind: 'expense', category: 'subs', amount_cents: 1001, date: '2026-06-05', merchant: 'Streamly' }),
+      tx({ kind: 'income', category: 'income', amount_cents: 500000, date: '2026-06-02', merchant: 'Payroll' }),
     ],
     budgets: [],
     properties: [],

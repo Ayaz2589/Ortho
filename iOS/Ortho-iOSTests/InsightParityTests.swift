@@ -16,6 +16,7 @@ final class InsightParityTests: XCTestCase {
         let properties: [Prop]
     }
     private struct Tx: Decodable {
+        let id: String?
         let kind: String
         let category: String
         let amount_cents: Int64
@@ -70,6 +71,9 @@ final class InsightParityTests: XCTestCase {
         for v in vectors {
             let transactions = v.input.transactions.map { t in
                 Transaction(
+                    // Use the vector's id when present so id-bearing insights (the
+                    // outlier rule's `outlier-<uuid>`) match across clients; else random.
+                    id: t.id.flatMap { UUID(uuidString: $0) } ?? UUID(),
                     merchant: t.merchant,
                     category: TransactionCategory(rawValue: t.category)!,
                     kind: TransactionKind(rawValue: t.kind)!,

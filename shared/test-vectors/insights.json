@@ -417,6 +417,221 @@
   },
   {
     "input": {
+      "name": "outlier transaction (≥2× category median)",
+      "referenceDate": "2026-06-15",
+      "transactions": [
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "dining",
+          "amount_cents": 1000,
+          "date": "2026-01-15",
+          "merchant": "Cafe A"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "dining",
+          "amount_cents": 1100,
+          "date": "2026-02-15",
+          "merchant": "Cafe B"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "dining",
+          "amount_cents": 1200,
+          "date": "2026-03-15",
+          "merchant": "Cafe C"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "dining",
+          "amount_cents": 1300,
+          "date": "2026-04-15",
+          "merchant": "Cafe D"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "dining",
+          "amount_cents": 1400,
+          "date": "2026-05-15",
+          "merchant": "Cafe E"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "id": "a1a2a3a4-0000-4000-8000-000000000001",
+          "kind": "expense",
+          "category": "dining",
+          "amount_cents": 3000,
+          "date": "2026-06-10",
+          "merchant": "Fancy Dinner"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "income",
+          "category": "income",
+          "amount_cents": 600000,
+          "date": "2026-06-02",
+          "merchant": "Payroll"
+        }
+      ],
+      "budgets": [],
+      "properties": []
+    },
+    "expected": [
+      {
+        "id": "top-category-dining-2026-06",
+        "severity": "info",
+        "category": "dining",
+        "magnitude_cents": 3000
+      },
+      {
+        "id": "outlier-a1a2a3a4-0000-4000-8000-000000000001",
+        "severity": "info",
+        "category": "dining",
+        "magnitude_cents": 3000
+      },
+      {
+        "id": "cashflow-savings-2026-06",
+        "severity": "positive",
+        "category": null,
+        "magnitude_cents": 597000
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "recurring non-divisible average (truncates toward zero)",
+      "referenceDate": "2026-06-15",
+      "transactions": [
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 1000,
+          "date": "2026-04-05",
+          "merchant": "Streamly"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 1001,
+          "date": "2026-05-05",
+          "merchant": "Streamly"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 1001,
+          "date": "2026-06-05",
+          "merchant": "Streamly"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "income",
+          "category": "income",
+          "amount_cents": 500000,
+          "date": "2026-06-02",
+          "merchant": "Payroll"
+        }
+      ],
+      "budgets": [],
+      "properties": []
+    },
+    "expected": [
+      {
+        "id": "top-category-subs-2026-06",
+        "severity": "info",
+        "category": "subs",
+        "magnitude_cents": 1001
+      },
+      {
+        "id": "recurring-2026-06",
+        "severity": "info",
+        "category": null,
+        "magnitude_cents": 1000
+      },
+      {
+        "id": "cashflow-savings-2026-06",
+        "severity": "positive",
+        "category": null,
+        "magnitude_cents": 498999
+      }
+    ]
+  },
+  {
+    "input": {
       "name": "no qualifying data",
       "referenceDate": "2026-06-15",
       "transactions": [],
