@@ -94,7 +94,7 @@ function SignIn() {
           <form
             onSubmit={(e) => {
               e.preventDefault()
-              if (code.length >= 6) verify()
+              if (code.length >= 8) verify()
             }}
             className="flex flex-col gap-4"
           >
@@ -107,11 +107,11 @@ function SignIn() {
               autoFocus
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
-              placeholder="123456"
+              placeholder="12345678"
               className="rounded-xl border border-hairline bg-surface px-4 py-3 text-center font-mono text-lg tracking-[0.3em] text-text outline-none focus:border-accent"
             />
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <PrimaryButton type="submit" disabled={code.length < 6 || loading}>
+            <PrimaryButton type="submit" disabled={code.length < 8 || loading}>
               {loading ? 'Verifying…' : 'Verify'}
             </PrimaryButton>
             <div className="flex items-center justify-between text-xs text-text-2">

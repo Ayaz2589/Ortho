@@ -12,7 +12,7 @@ CLI tools (vitest/tsx/xcodebuild/supabase) need `dangerouslyDisableSandbox`.
 
 ## Phase 1: Setup
 
-- [ ] T001 Confirm the **production** Supabase email OTP code length (Supabase dashboard → Auth → Email, or the length of a real emailed code) and record the canonical value in `specs/008-parity-remediation/research.md` (R4). Local `supabase/config.toml` says 6 but the working iOS 8-digit gate implies otherwise — DO NOT change any gate until this is confirmed.
+- [X] T001 (production OTP length = 8) Confirm the **production** Supabase email OTP code length (Supabase dashboard → Auth → Email, or the length of a real emailed code) and record the canonical value in `specs/008-parity-remediation/research.md` (R4). Local `supabase/config.toml` says 6 but the working iOS 8-digit gate implies otherwise — DO NOT change any gate until this is confirmed.
 
 ## Phase 2: Foundational (blocking — enables iOS vector verification for all stories)
 
@@ -32,7 +32,7 @@ CLI tools (vitest/tsx/xcodebuild/supabase) need `dangerouslyDisableSandbox`.
 - [X] T006 [US1] In `iOS/Ortho-iOS/App/AppState.swift` `observeAuthChanges`, replace the `isExpired → session=nil` drop with `try await supabase.auth.refreshSession()`; only go `signedOut` when refresh fails. (R2, FR-002)
 - [X] T007 [US1] In `iOS/Ortho-iOS/App/AppState.swift` `signOut()`, after `auth.signOut()` clear all domain arrays (`transactions/cards/properties/rentalPayments/budgets/people/households`), `currentHouseholdID`, and `bootstrappedAuthID`. (R3, FR-004)
 - [X] T008 [US1] Add `iOS/Ortho-iOS/Services/PlatformLocksAPI.swift` (upsert `platform='ios'` at bootstrap, delete on sign-out, detect an active `web` lock) and wire it into `AppState` bootstrap + `signOut` + a calm "active on another device" state, mirroring web. (R5, FR-006)
-- [ ] T009 [US1] (BLOCKED on T001 — production OTP length unconfirmed; iOS left at working 8-gate) Reconcile OTP length: source the verify-gate length/clamp/placeholder/subtitle from one constant == the T001-confirmed length in `iOS/Ortho-iOS/Features/Auth/SignInView.swift` and the web sign-in (`web/app/(app-or-auth path)/.../page.tsx`); fix the iOS subtitle to state the real length. (R4, FR-005) — depends T001
+- [X] T009 [US1] Reconcile OTP length: source the verify-gate length/clamp/placeholder/subtitle from one constant == the T001-confirmed length in `iOS/Ortho-iOS/Features/Auth/SignInView.swift` and the web sign-in (`web/app/(app-or-auth path)/.../page.tsx`); fix the iOS subtitle to state the real length. (R4, FR-005) — depends T001
 - [ ] T010 [US1] (MANUAL — needs simulator sign-in) Build (`xcodebuild build`) and run quickstart Story 1 scenarios on the simulator: cold-launch restore, expired-refresh, sign-out teardown, OTP, platform-lock. (SC-001/002, FR-007)
 
 **Checkpoint**: Returning users reach their data on cold launch; sign-out is clean. MVP deliverable.

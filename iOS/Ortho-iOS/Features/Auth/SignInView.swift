@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Two-step magic-link sign-in: email entry → 6-digit code from the email.
+/// Two-step magic-link sign-in: email entry → 8-digit code from the email.
 /// Success drives `AppState.session` non-nil; the auth gate in
 /// `Ortho_iOSApp` then swaps in `RootTabView`.
 ///
@@ -113,7 +113,7 @@ struct SignInView: View {
                 .font(.lato(size: 24, weight: .bold))
                 .tracking(-0.3)
                 .foregroundStyle(AppTheme.text)
-            Text("We'll email you a 6-digit code. No password, no fuss.")
+            Text("We'll email you an 8-digit code. No password, no fuss.")
                 .font(.lato(size: 14))
                 .foregroundStyle(AppTheme.text2)
                 .lineSpacing(2)
