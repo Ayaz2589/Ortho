@@ -3,38 +3,42 @@
 import { useState } from 'react'
 import type { Transaction } from '@/lib/types'
 import { WebModal } from './WebModal'
-import { useTxForm, TxFormFields, TxCopyList, CopyFromRecentButton } from './TxForm'
+import { useTxForm, TxFormFields, TxCopyList, CopyFromRecentButton, type TransferPrefill } from './TxForm'
 
 /**
  * New / Edit transaction as a centered modal. Used on the mobile/medium
  * transactions surfaces (the desktop ledger uses the slide-out drawer form).
- * New mode offers "Copy from recent" as an in-modal sub-view.
+ * New mode offers "Copy from recent" as an in-modal sub-view. When opened with
+ * `initialTransfer` it starts in "Settle up" (reimbursement) mode, pre-filled.
  */
 export function TxModalWeb({
   open,
   onClose,
   editing,
   copying,
+  initialTransfer,
 }: {
   open: boolean
   onClose: () => void
   editing?: Transaction | null
   copying?: Transaction | null
+  initialTransfer?: TransferPrefill | null
 }) {
-  const form = useTxForm({ editing, copying })
+  const form = useTxForm({ editing, copying, initialTransfer })
   const [picking, setPicking] = useState(false)
   if (!open) return null
-  const allowCopy = !editing
+  const allowCopy = !editing && !initialTransfer
+  const title = editing ? 'Edit transaction' : initialTransfer ? 'Settle up' : 'New transaction'
 
   return (
     <WebModal
-      title={editing ? 'Edit transaction' : 'New transaction'}
+      title={title}
       onClose={onClose}
       onSave={picking ? undefined : () => {
         if (form.submit()) onClose()
       }}
       canSave={form.canSave}
-      saveLabel={editing ? 'Save' : 'Add'}
+      saveLabel={editing ? 'Save' : initialTransfer ? 'Record' : 'Add'}
       hideHeader={picking}
     >
       {picking ? (

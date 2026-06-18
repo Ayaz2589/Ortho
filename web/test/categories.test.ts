@@ -23,6 +23,7 @@ const ALL_CATEGORIES: TransactionCategory[] = [
   'transit',
   'utilities',
   'entertainment',
+  'transfer',
 ]
 
 const ALL_SEVERITIES: InsightSeverity[] = ['critical', 'warning', 'info', 'positive']
@@ -74,9 +75,9 @@ describe('SPEND_CATEGORIES', () => {
     ])
   })
 
-  it('contains exactly every category except income', () => {
+  it('contains exactly every category except income and transfer', () => {
     expect([...SPEND_CATEGORIES].sort()).toEqual(
-      ALL_CATEGORIES.filter((c) => c !== 'income').sort()
+      ALL_CATEGORIES.filter((c) => c !== 'income' && c !== 'transfer').sort()
     )
   })
 })

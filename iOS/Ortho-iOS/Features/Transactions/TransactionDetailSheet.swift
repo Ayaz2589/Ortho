@@ -58,9 +58,14 @@ struct TransactionDetailSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     amountHero(for: tx)
-                    merchantCard(for: tx)
-                    ownersCard(for: tx)
-                    metaCard(for: tx)
+                    if tx.isTransfer {
+                        transferCard(for: tx)
+                        transferMetaCard(for: tx)
+                    } else {
+                        merchantCard(for: tx)
+                        ownersCard(for: tx)
+                        metaCard(for: tx)
+                    }
                     deleteButton
                 }
                 .padding(.top, 8)
@@ -179,6 +184,32 @@ struct TransactionDetailSheet: View {
                 label: tx.kind == .income ? "Deposit to" : "Paid with",
                 value: tx.source
             )
+            // Who fronted the expense (the payer). Only meaningful for expenses.
+            if tx.kind == .expense, let payer = tx.paidBy {
+                divider
+                staticRow(label: "Paid by", value: appState.user(payer).name)
+            }
+            divider
+            staticRow(label: "Date", value: Self.dateFormatter.string(from: tx.date))
+        }
+    }
+
+    // MARK: - Transfer (reimbursement) cards
+
+    /// From → To member rows for a reimbursement.
+    private func transferCard(for tx: Transaction) -> some View {
+        let senderName = tx.paidBy.map { appState.user($0).name } ?? "—"
+        let recipientName = tx.ownerIDs.first.map { appState.user($0).name } ?? "—"
+        return formGroup {
+            staticRow(label: "From", value: senderName)
+            divider
+            staticRow(label: "To", value: recipientName)
+        }
+    }
+
+    private func transferMetaCard(for tx: Transaction) -> some View {
+        formGroup {
+            staticRow(label: "Type", value: Localizer.tr("Reimbursement"))
             divider
             staticRow(label: "Date", value: Self.dateFormatter.string(from: tx.date))
         }
@@ -253,9 +284,14 @@ struct TransactionDetailSheet: View {
         return f
     }
 
-    /// Nav title — "Expense · Home" / "Income · Home".
+    /// Nav title — "Expense · Home" / "Income · Home" / "Reimbursement · Home".
     private func navTitle(for tx: Transaction) -> String {
-        let kindLabel = Localizer.tr(tx.kind == .income ? "Income" : "Expense")
+        let kindLabel: String
+        switch tx.kind {
+        case .income:   kindLabel = Localizer.tr("Income")
+        case .transfer: kindLabel = Localizer.tr("Reimbursement")
+        case .expense:  kindLabel = Localizer.tr("Expense")
+        }
         if let h = appState.households.first(where: { $0.id == tx.householdID }) {
             return "\(kindLabel) · \(h.name)"
         }

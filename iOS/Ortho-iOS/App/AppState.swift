@@ -310,6 +310,14 @@ final class AppState {
     /// On failure we remove the local row and surface `dataError`. In
     /// demo mode the server hop is skipped — local-only by design.
     func addTransaction(_ tx: Transaction) {
+        var tx = tx
+        // Default the payer of an expense to the current person when the caller
+        // didn't set one — the everyday "I entered and paid it" case needs no
+        // extra step. Income/transfer keep whatever the caller supplied
+        // (transfers always carry an explicit sender; income stays nil).
+        if tx.kind == .expense, tx.paidBy == nil {
+            tx.paidBy = currentPersonID
+        }
         transactions.append(tx)
         Task {
             do {
@@ -409,6 +417,25 @@ final class AppState {
 
     var groups: [TransactionGroup] {
         TransactionGroup.group(transactions)
+    }
+
+    // MARK: - Member balances (reimbursement / settle-up)
+
+    /// Net cents owed between the current person and `other` (positive ⇒ `other`
+    /// owes you). Pure, golden-vector-locked — see `Balances.swift`.
+    func balance(with other: Person.ID) -> Int64 {
+        guard let me = currentPersonID else { return 0 }
+        return balanceBetween(viewer: me, other: other, transactions: transactions)
+    }
+
+    /// Per-other-member net balance for the current person, over active members
+    /// only. Positive ⇒ they owe you. Drives the balance line + Settle-up in
+    /// the transactions section.
+    var memberBalances: [(person: User, net: Int64)] {
+        guard let me = currentPersonID else { return [] }
+        return activePeople
+            .filter { $0.id != me }
+            .map { (person: $0.asUser, net: balanceBetween(viewer: me, other: $0.id, transactions: transactions)) }
     }
 
     /// Sum (USD cents) of this user's share of all expense transactions whose

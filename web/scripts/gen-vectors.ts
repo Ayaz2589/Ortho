@@ -23,6 +23,7 @@ import { computeShares, validateSplit, seedSplit, orderedOwnerIds, type SplitInp
 import { toDisplayAmount, toUSDCents } from '../lib/finance/money'
 import { CURRENCIES, FALLBACK_RATE_FROM_USD } from '../lib/finance/currency'
 import { availableMonths, monthReferenceDate, stepMonth } from '../components/dashboard/range'
+import { balanceBetween } from '../lib/balances'
 import type { Transaction, Budget, Property } from '../lib/types'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -436,6 +437,38 @@ const dashboardMonthScope = {
   })),
 }
 
+// ── Member balance (reimbursement / settle-up) vectors ──────────────────────
+// Locks balanceBetween(viewer, other) — net cents owed, + => other owes viewer.
+// Transfers store paid_by = sender, owner_ids = [recipient], shares = {recipient: amount}.
+const MB_V = uid('101'), MB_OTHER = uid('102'), MB_THIRD = uid('103')
+const btx = (o: Partial<Transaction>): Transaction =>
+  ({ id: '', household_id: 'h', merchant: '', category: 'groceries', kind: 'expense', amount_cents: 0, source: '', date: '2026-06-15T12:00:00.000Z', created_by: 'u', created_at: '', updated_at: '', paid_by: null, owner_ids: [], shares: {}, ...o }) as Transaction
+const expTx = (paidBy: string, shares: Record<string, number>): Transaction =>
+  btx({ kind: 'expense', paid_by: paidBy, owner_ids: Object.keys(shares), shares, amount_cents: Object.values(shares).reduce((s, n) => s + n, 0) })
+const xferTx = (from: string, to: string, amount: number): Transaction =>
+  btx({ kind: 'transfer', category: 'transfer', paid_by: from, owner_ids: [to], shares: { [to]: amount }, amount_cents: amount })
+
+const MEMBER_BALANCE_CASES: Array<{ name: string; viewer: string; other: string; transactions: Transaction[] }> = [
+  { name: 'worked example: 150 split 100/50, you paid', viewer: MB_V, other: MB_OTHER, transactions: [expTx(MB_V, { [MB_V]: 10000, [MB_OTHER]: 5000 })] },
+  { name: 'reverse: other paid, you owe your share', viewer: MB_V, other: MB_OTHER, transactions: [expTx(MB_OTHER, { [MB_V]: 10000, [MB_OTHER]: 5000 })] },
+  { name: 'payer not an owner: other-only expense you paid', viewer: MB_V, other: MB_OTHER, transactions: [expTx(MB_V, { [MB_OTHER]: 8000 })] },
+  { name: 'reimbursement settles to zero', viewer: MB_V, other: MB_OTHER, transactions: [expTx(MB_V, { [MB_V]: 10000, [MB_OTHER]: 5000 }), xferTx(MB_OTHER, MB_V, 5000)] },
+  { name: 'partial reimbursement', viewer: MB_V, other: MB_OTHER, transactions: [expTx(MB_V, { [MB_V]: 10000, [MB_OTHER]: 5000 }), xferTx(MB_OTHER, MB_V, 2000)] },
+  { name: 'over-reimbursement flips sign', viewer: MB_V, other: MB_OTHER, transactions: [expTx(MB_V, { [MB_V]: 10000, [MB_OTHER]: 5000 }), xferTx(MB_OTHER, MB_V, 7000)] },
+  { name: 'multi-expense mixed payers net', viewer: MB_V, other: MB_OTHER, transactions: [expTx(MB_V, { [MB_V]: 10000, [MB_OTHER]: 4000 }), expTx(MB_OTHER, { [MB_V]: 3000, [MB_OTHER]: 9000 })] },
+  { name: 'third member tx does not affect viewer<->other', viewer: MB_V, other: MB_OTHER, transactions: [expTx(MB_V, { [MB_V]: 5000, [MB_THIRD]: 5000 })] },
+  { name: 'viewer pays other with no prior debt (other now owes viewer)', viewer: MB_V, other: MB_OTHER, transactions: [xferTx(MB_V, MB_OTHER, 3000)] },
+]
+const memberBalance = {
+  cases: MEMBER_BALANCE_CASES.map((c) => ({
+    name: c.name,
+    viewer: c.viewer,
+    other: c.other,
+    transactions: c.transactions,
+    expected: balanceBetween(c.viewer, c.other, c.transactions),
+  })),
+}
+
 // ── Write ───────────────────────────────────────────────────────────────────
 
 mkdirSync(OUT, { recursive: true })
@@ -445,4 +478,5 @@ writeFileSync(resolve(OUT, 'transaction-filters.json'), JSON.stringify(filters, 
 writeFileSync(resolve(OUT, 'transaction-splits.json'), JSON.stringify(splits, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'currency.json'), JSON.stringify(currency, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'dashboard-month-scope.json'), JSON.stringify(dashboardMonthScope, null, 2) + '\n')
-console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight + ${filters.cases.length} filter + ${splits.cases.length} split + ${splits.ownerOrdering.length} ownerOrdering + ${currency.toDisplay.length} currency + ${dashboardMonthScope.availableMonths.length} availableMonths/${dashboardMonthScope.stepMonth.length} stepMonth dashboard-scope vectors to ${OUT}`)
+writeFileSync(resolve(OUT, 'member-balance.json'), JSON.stringify(memberBalance, null, 2) + '\n')
+console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight + ${filters.cases.length} filter + ${splits.cases.length} split + ${splits.ownerOrdering.length} ownerOrdering + ${currency.toDisplay.length} currency + ${dashboardMonthScope.availableMonths.length} availableMonths/${dashboardMonthScope.stepMonth.length} stepMonth + ${memberBalance.cases.length} member-balance vectors to ${OUT}`)

@@ -14,9 +14,9 @@ test suites assert. The **CLI** writes to the same tables and reuses the shared 
 functions where it can, but it is **not** part of the golden-vector harness and has a few intentional and
 a few unintended divergences (below).
 
-> Last audited: **2026-06-17** (post feature `011-dashboard-month-picker`). Method: 10-capability
-> tri-surface audit, every divergence adversarially re-verified against the code. Apps: web **575** tests
-> green, iOS **17** green. Legend: ✅ in parity · ⚠️ partial / known gap · ⛔️ diverges · — not applicable.
+> Last audited: **2026-06-18** (post feature `012-household-reimbursement`). Method: 10-capability
+> tri-surface audit, every divergence adversarially re-verified against the code. Apps: web **593** tests
+> green, iOS **21** green. Legend: ✅ in parity · ⚠️ partial / known gap · ⛔️ diverges · — not applicable.
 
 ## Parity matrix
 
@@ -26,9 +26,10 @@ a few unintended divergences (below).
 | Currency conversion (display) | ✅ | ✅ | — (USD-only) | same as above |
 | Splits & owner shares | ✅ | ✅ | ✅ | `lib/splits.ts` → `transaction-splits.json` |
 | Canonical leftover-cent order | ✅ | ✅ | ✅ | `orderedOwnerIds` (now used by all three) |
-| Transaction + shares data contract | ✅ | ✅ | ✅ | columns mirrored across all three |
+| Transaction + shares data contract | ✅ | ✅ | ✅ | columns mirrored across all three (incl. `paid_by`) |
+| Member reimbursement / settle-up balance | ✅ | ✅ | — | `lib/balances.ts` ↔ `Balances.swift` → `member-balance.json` (+ `paid_by`, `transfer` kind) |
 | Atomic parent+shares write | ✅ (rollback) | ⚠️ | ⚠️ | — (only web compensates) |
-| Category / kind / source taxonomy | ✅ | ✅ | ✅ | Postgres `transaction_category` enum / `lib/types.ts` |
+| Category / kind / source taxonomy | ✅ | ✅ | ✅ | Postgres `transaction_category`/`transaction_kind` enums (+ `transfer`) / `lib/types.ts` |
 | Date storage & timezone | ✅ | ✅ | ⚠️ | — (convention, not shared code) |
 | Transaction filtering / listing | ✅ | ✅ | ⚠️ | `lib/transactionFilters.ts` → `transaction-filters.json` |
 | Dashboard month selection | ✅ | ✅ | — | `components/dashboard/range.ts` ↔ `DashboardRange.swift` (+ `monthBounds` → `dashboard-month-scope.json` / `transaction-filters.json`) |
@@ -61,6 +62,11 @@ neither language can silently drift:
 - **Dashboard month scope** (apps) — `availableMonths` / `monthReferenceDate` / `stepMonth`
   (`components/dashboard/range.ts` ↔ `DashboardRange.swift`), vectored by `dashboard-month-scope.json`;
   the selected-month window reuses the already-vectored `monthBounds`. (Feature `011`.)
+- **Member balance** (apps) — `balanceBetween` (`lib/balances.ts` ↔ `Balances.swift`), vectored by
+  `member-balance.json`. The net "who owes whom" = each non-payer owner's share of expenses the other
+  paid, minus reimbursements. A reimbursement is a directional `transfer` (`paid_by` = sender,
+  `owner_ids = [recipient]`) that bypasses `computeShares` and is excluded from every spend/income
+  aggregate. Expenses now carry `paid_by`. (Feature `012`.)
 
 ## Known divergences
 

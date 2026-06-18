@@ -38,7 +38,7 @@ export function MonthSummaryCard({
   for (const t of transactions) {
     if (!inRange(t.date)) continue
     if (t.kind === 'income') income += t.amount_cents
-    else expenses += t.amount_cents
+    else if (t.kind === 'expense') expenses += t.amount_cents
   }
   const net = income - expenses
 

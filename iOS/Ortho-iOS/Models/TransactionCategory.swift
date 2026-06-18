@@ -3,6 +3,9 @@ import SwiftUI
 enum TransactionCategory: String, CaseIterable, Hashable, Codable, Identifiable {
     case coffee, groceries, dining, subs, fuel
     case rent, health, income, transit, utilities, entertainment
+    /// Member-to-member reimbursement (settle-up). Never spend or income; the
+    /// `category` column is NOT NULL so a `transfer` row carries this value.
+    case transfer
 
     var id: String { rawValue }
 
@@ -22,6 +25,7 @@ enum TransactionCategory: String, CaseIterable, Hashable, Codable, Identifiable 
         case .transit:       "Transit"
         case .utilities:     "Utilities"
         case .entertainment: "Entertainment"
+        case .transfer:      "Reimbursement"
         }
     }
 
@@ -39,6 +43,7 @@ enum TransactionCategory: String, CaseIterable, Hashable, Codable, Identifiable 
         case .transit:       "tram.fill"
         case .utilities:     "bolt.fill"
         case .entertainment: "theatermasks.fill"
+        case .transfer:      "arrow.left.arrow.right"
         }
     }
 
@@ -56,6 +61,7 @@ enum TransactionCategory: String, CaseIterable, Hashable, Codable, Identifiable 
         case .transit:       Color(red: 0.706, green: 0.659, blue: 0.565)
         case .utilities:     Color(red: 0.753, green: 0.690, blue: 0.502)
         case .entertainment: Color(red: 0.498, green: 0.612, blue: 0.722)
+        case .transfer:      Color(red: 0.565, green: 0.635, blue: 0.698)
         }
     }
 }

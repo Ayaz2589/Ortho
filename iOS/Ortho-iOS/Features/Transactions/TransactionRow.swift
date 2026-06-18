@@ -22,7 +22,7 @@ struct TransactionRow: View {
             categoryTile
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(tx.merchant)
+                Text(titleText)
                     .font(.lato(size: density.titleSize, weight: .medium))
                     .foregroundStyle(AppTheme.text)
                     .lineLimit(1)
@@ -31,6 +31,8 @@ struct TransactionRow: View {
 
             Spacer(minLength: 8)
 
+            // Transfers are neutral (a reimbursement is neither spend nor
+            // income; owing is never red, and money returned isn't "+").
             Text(appState.formatMoney(tx.amount, leadingPlus: tx.isIncome))
                 .font(.lato(size: density.amountSize, weight: .semibold))
                 .monospacedDigit()
@@ -42,6 +44,17 @@ struct TransactionRow: View {
         .padding(.vertical, density.pad - 4)
         .frame(minHeight: density.rowMinHeight)
         .contentShape(Rectangle())
+    }
+
+    /// A transfer reads as a directed "Sender → Recipient"; otherwise the
+    /// merchant/source.
+    private var titleText: String {
+        if tx.isTransfer {
+            let sender = tx.paidBy.map { appState.user($0).name } ?? "—"
+            let recipient = tx.ownerIDs.first.map { appState.user($0).name } ?? "—"
+            return "\(sender) → \(recipient)"
+        }
+        return tx.merchant
     }
 
     private var categoryTile: some View {
@@ -79,14 +92,22 @@ struct TransactionRow: View {
         }
     }
 
+    @ViewBuilder
     private var meta: some View {
-        HStack(spacing: 6) {
-            Text(display.label)
-            Text("·").opacity(0.45)
-            Text(tx.source).lineLimit(1)
+        if tx.isTransfer {
+            Text("Reimbursement")
+                .font(.lato(size: density.metaSize))
+                .foregroundStyle(AppTheme.text2)
+                .lineLimit(1)
+        } else {
+            HStack(spacing: 6) {
+                Text(display.label)
+                Text("·").opacity(0.45)
+                Text(tx.source).lineLimit(1)
+            }
+            .font(.lato(size: density.metaSize))
+            .foregroundStyle(AppTheme.text2)
         }
-        .font(.lato(size: density.metaSize))
-        .foregroundStyle(AppTheme.text2)
     }
 
 }

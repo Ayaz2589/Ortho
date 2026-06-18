@@ -112,7 +112,12 @@ struct TransactionsAPI {
     }
 
     /// Stitch transaction rows back together with their cents shares. A row with
-    /// no shares falls back to its creator's person at the full amount.
+    /// no shares falls back to its creator's person at the full amount — EXCEPT
+    /// a `transfer`, whose single owner is the recipient (the payer being
+    /// reimbursed), not the creator. Treating a share-less transfer as
+    /// "creator owns all" would corrupt the balance, so the fallback is
+    /// transfer-aware: it prefers `paid_by`'s counterpart and never invents a
+    /// creator-owned expense for a transfer.
     private static func rehydrate(
         rows: [TransactionRecord],
         shares: [TransactionShareRow]
@@ -123,8 +128,16 @@ struct TransactionsAPI {
             let ownerIDs: Set<Person.ID>
             let shareMap: [Person.ID: Int64]
             if txShares.isEmpty {
-                ownerIDs = [row.createdBy]
-                shareMap = [row.createdBy: row.amountCents]
+                if row.kind == .transfer {
+                    // A transfer with no share rows is a malformed/legacy row.
+                    // Keep it owner-less (and balance-inert) rather than minting
+                    // a phantom "creator owns the full amount" expense-shaped row.
+                    ownerIDs = []
+                    shareMap = [:]
+                } else {
+                    ownerIDs = [row.createdBy]
+                    shareMap = [row.createdBy: row.amountCents]
+                }
             } else {
                 ownerIDs = Set(txShares.map(\.personID))
                 shareMap = Dictionary(uniqueKeysWithValues: txShares.map { ($0.personID, $0.amountCents) })
@@ -140,7 +153,8 @@ struct TransactionsAPI {
                 source: row.source,
                 date: row.date,
                 householdID: row.householdID,
-                createdBy: row.createdBy
+                createdBy: row.createdBy,
+                paidBy: row.paidBy
             )
         }
     }
@@ -161,6 +175,7 @@ private struct TransactionRecord: Codable {
     let source: String
     let date: Date
     let createdBy: UUID
+    let paidBy: UUID?
 
     static func from(_ tx: Transaction) -> TransactionRecord {
         TransactionRecord(
@@ -172,7 +187,8 @@ private struct TransactionRecord: Codable {
             amountCents: tx.amount,
             source: tx.source,
             date: tx.date,
-            createdBy: tx.createdBy
+            createdBy: tx.createdBy,
+            paidBy: tx.paidBy
         )
     }
 
@@ -186,6 +202,7 @@ private struct TransactionRecord: Codable {
         case source
         case date
         case createdBy = "created_by"
+        case paidBy = "paid_by"
     }
 }
 

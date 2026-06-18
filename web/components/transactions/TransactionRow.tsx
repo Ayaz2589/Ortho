@@ -38,6 +38,10 @@ export function TransactionRow({
   const ownerUsers = tx.owner_ids.map(resolveUser)
   const ownerLabel = ownerUsers.map((u) => u.name).join(', ')
   const isIncome = tx.kind === 'income'
+  const isTransfer = tx.kind === 'transfer'
+  const transferTitle = isTransfer
+    ? `${tx.paid_by ? resolveUser(tx.paid_by).name : '—'} → ${tx.owner_ids[0] ? resolveUser(tx.owner_ids[0]).name : '—'}`
+    : null
 
   return (
     <div
@@ -73,13 +77,19 @@ export function TransactionRow({
           </div>
         </div>
 
-        {/* Merchant + meta */}
+        {/* Merchant + meta (or "From → To · Reimbursement" for a transfer) */}
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[15px] font-normal text-text">{tx.merchant}</div>
+          <div className="truncate text-[15px] font-normal text-text">{transferTitle ?? tx.merchant}</div>
           <div className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-text-3">
-            <span className="truncate">{ownerLabel}</span>
-            <span className="opacity-50">·</span>
-            <span className="truncate">{tx.source}</span>
+            {isTransfer ? (
+              <span className="truncate">Reimbursement</span>
+            ) : (
+              <>
+                <span className="truncate">{ownerLabel}</span>
+                <span className="opacity-50">·</span>
+                <span className="truncate">{tx.source}</span>
+              </>
+            )}
           </div>
         </div>
 

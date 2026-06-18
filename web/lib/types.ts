@@ -1,5 +1,6 @@
 export type Role = 'owner' | 'member'
-export type TransactionKind = 'expense' | 'income'
+/** `transfer` = a member-to-member reimbursement (settle-up); never spend or income. */
+export type TransactionKind = 'expense' | 'income' | 'transfer'
 export type PropertyKind = 'primary_home' | 'multifamily' | 'rental'
 export type TransactionCategory =
   | 'coffee'
@@ -13,6 +14,7 @@ export type TransactionCategory =
   | 'transit'
   | 'utilities'
   | 'entertainment'
+  | 'transfer'
 export type InsightSeverity = 'critical' | 'warning' | 'info' | 'positive'
 
 export interface User {
@@ -72,7 +74,13 @@ export interface Transaction {
   created_by: string
   created_at: string
   updated_at: string
-  /** Person ids that own/share this transaction (ordered). Derived from shares. */
+  /** Person who paid the money out. For an expense: who fronted it (defaults to
+   *  the creator). For a `transfer`: the sender (the ower paying back). Null for
+   *  income and legacy expenses whose creator has no linked person; optional so
+   *  existing fixtures/importers need not set it (the DB column is nullable). */
+  paid_by?: string | null
+  /** Person ids that own/share this transaction (ordered). Derived from shares.
+   *  For a `transfer` this is `[recipient]` (the member being reimbursed). */
   owner_ids: string[]
   /** Per-owner amount in cents; the values sum to `amount_cents`. */
   shares: Record<string, number>

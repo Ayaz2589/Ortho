@@ -5,7 +5,7 @@ import Foundation
 // see Ortho-iOSTests/TransactionFilterParityTests.swift. See specs/006-transaction-filters.
 
 struct FilterCriteria: Equatable {
-    enum Kind: String, CaseIterable { case all, expense, income }
+    enum Kind: String, CaseIterable { case all, expense, income, transfer }
 
     var query: String = ""
     var categories: Set<TransactionCategory> = []

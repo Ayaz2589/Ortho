@@ -19,6 +19,8 @@ struct TransactionsView: View {
     @State private var filterSheetPresented = false
     @State private var addSheetMode: AddSheetMode?
     @State private var selectedTransaction: Transaction?
+    /// Drives the Settle-up transfer form, pre-filled with the owed amount.
+    @State private var settleUpPrefill: AddTransactionSheet.SettleUpPrefill?
     /// Tap the search icon in the title row to reveal the search field.
     /// When false, the field + scope-filter pills are hidden to give the
     /// transactions list more vertical real estate. Closing also clears
@@ -145,6 +147,91 @@ struct TransactionsView: View {
                 .presentationDetents([.large])
                 .presentationBackground(AppTheme.bg)
         }
+        .sheet(item: $settleUpPrefill) { prefill in
+            AddTransactionSheet(settleUp: prefill) { tx, keepOpen in
+                appState.addTransaction(tx)
+                if !keepOpen { settleUpPrefill = nil }
+            }
+            .environment(appState)
+            .presentationDetents([.large])
+            .presentationBackground(AppTheme.bg)
+        }
+    }
+
+    // MARK: - Member balance line + Settle up
+
+    /// Non-settled member balances (viewer-relative; positive ⇒ they owe you).
+    /// Mirrors web `BalanceSummary` — the card is hidden entirely when everyone
+    /// is settled (net 0).
+    private var unsettledBalances: [(person: User, net: Int64)] {
+        appState.memberBalances.filter { $0.net != 0 }
+    }
+
+    @ViewBuilder
+    private var balanceBanner: some View {
+        let rows = unsettledBalances
+        if !rows.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Balances")
+                    .font(.lato(size: 13, weight: .semibold))
+                    .kerning(0.6)
+                    .textCase(.uppercase)
+                    .foregroundStyle(AppTheme.text2)
+                ForEach(rows, id: \.person.id) { bal in
+                    HStack(spacing: 12) {
+                        // Owing is NEVER red — neutral text only.
+                        Text(balanceTitle(person: bal.person, net: bal.net))
+                            .font(.lato(size: 15, weight: .medium))
+                            .tracking(-0.1)
+                            .foregroundStyle(AppTheme.text)
+                        Spacer(minLength: 8)
+                        settleUpButton(for: bal)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppTheme.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(AppTheme.hairline, lineWidth: 0.5)
+            )
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+        }
+    }
+
+    /// "Tasnuva owes you $50" / "You owe Tasnuva $50". (Settled rows are filtered
+    /// out before display, matching web.)
+    private func balanceTitle(person: User, net: Int64) -> String {
+        let amount = appState.formatMoney(abs(net))
+        if net > 0 { return Localizer.tr("\(person.name) owes you \(amount)") }
+        return Localizer.tr("You owe \(person.name) \(amount)")
+    }
+
+    /// Opens the Transfer form pre-filled: From = the ower, To = the payer,
+    /// amount = the owed cents.
+    private func settleUpButton(for bal: (person: User, net: Int64)) -> some View {
+        Button {
+            guard let me = appState.currentPersonID else { return }
+            let other = bal.person.id
+            // net > 0 ⇒ other owes you ⇒ from = other, to = you.
+            // net < 0 ⇒ you owe other  ⇒ from = you,  to = other.
+            let from = bal.net > 0 ? other : me
+            let to = bal.net > 0 ? me : other
+            settleUpPrefill = .init(from: from, to: to, amountCents: abs(bal.net))
+        } label: {
+            Text("Settle up")
+                .font(.lato(size: 13, weight: .semibold))
+                .foregroundStyle(AppTheme.accent)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(AppTheme.text.opacity(0.05)))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Settle up with \(bal.person.name)")
     }
 
     // MARK: - Populated list
@@ -262,6 +349,12 @@ struct TransactionsView: View {
             .padding(.horizontal, 20)
             .padding(.top, 4)
             .padding(.bottom, hasAnyTransactions && searchActive ? 6 : 8)
+
+            // Member balance ("X owes you" / "You owe X" / "Settled") + Settle
+            // up. Hidden during search to keep that panel focused.
+            if hasAnyTransactions && !searchActive {
+                balanceBanner
+            }
 
             if hasAnyTransactions && searchActive {
                 SearchField(
@@ -430,7 +523,14 @@ struct TransactionsView: View {
             out.append(.init(id: "query", label: "“\(q)”", remove: { criteria.query = "" }))
         }
         if criteria.kind != .all {
-            out.append(.init(id: "kind", label: criteria.kind == .income ? "Income" : "Expenses",
+            let kindLabel: String
+            switch criteria.kind {
+            case .income:   kindLabel = "Income"
+            case .transfer: kindLabel = "Transfers"
+            case .expense:  kindLabel = "Expenses"
+            case .all:      kindLabel = ""
+            }
+            out.append(.init(id: "kind", label: kindLabel,
                              remove: { criteria.kind = .all }))
         }
         for c in TransactionCategory.allCases where criteria.categories.contains(c) {

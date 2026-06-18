@@ -10,6 +10,7 @@ import {
   Train,
   Zap,
   Clapperboard,
+  ArrowLeftRight,
   type LucideIcon,
 } from 'lucide-react'
 import type { TransactionCategory, InsightSeverity } from './types'
@@ -36,6 +37,8 @@ export const CATEGORIES: Record<TransactionCategory, CategoryMeta> = {
   transit: { label: 'Transit', icon: Train, tint: rgb(0.706, 0.659, 0.565) },
   utilities: { label: 'Utilities', icon: Zap, tint: rgb(0.753, 0.69, 0.502) },
   entertainment: { label: 'Entertainment', icon: Clapperboard, tint: rgb(0.498, 0.612, 0.722) },
+  // Member-to-member reimbursement (not a spend category; excluded from SPEND_CATEGORIES).
+  transfer: { label: 'Transfer', icon: ArrowLeftRight, tint: rgb(0.55, 0.55, 0.6) },
 }
 
 /** All spend categories (excludes income), in enum order. */

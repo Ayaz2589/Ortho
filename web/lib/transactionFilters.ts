@@ -7,7 +7,7 @@ import type { Transaction, TransactionCategory } from './types'
 export interface FilterCriteria {
   query: string
   categories: TransactionCategory[]
-  kind: 'all' | 'expense' | 'income'
+  kind: 'all' | 'expense' | 'income' | 'transfer'
   sources: string[]
   owners: string[]
   /** Inclusive ISO lower bound (`date >= from`). */

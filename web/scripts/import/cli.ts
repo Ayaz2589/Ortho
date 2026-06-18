@@ -16,7 +16,7 @@ import { listUsers, resolveHousehold, fetchExistingForDedupe } from './db/lookup
 import { persist } from './db/persist'
 import { formatMoney } from '../../lib/finance/money'
 import type { RunOptions, ParsedTransaction } from './engine/types'
-import type { TransactionCategory, User } from '../../lib/types'
+import type { TransactionCategory, TransactionKind, User } from '../../lib/types'
 
 const CATEGORIES: TransactionCategory[] = [
   'coffee', 'groceries', 'dining', 'subs', 'fuel', 'rent',
@@ -39,7 +39,7 @@ function parseArgs(argv: string[]): RunOptions {
 const isoDay = (d: Date) => d.toISOString().slice(0, 10)
 
 /** Money for the preview: income gets +$, expense gets −$ (Unicode minus). */
-function money(cents: number, kind: 'income' | 'expense'): string {
+function money(cents: number, kind: TransactionKind): string {
   return kind === 'income' ? formatMoney(cents, 'usd', 1, true) : `−${formatMoney(cents)}`
 }
 

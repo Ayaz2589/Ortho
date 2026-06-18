@@ -49,6 +49,7 @@ export function FilterPanel({ f }: { f: TxFilters }) {
             { value: 'all', label: 'All' },
             { value: 'expense', label: 'Expenses' },
             { value: 'income', label: 'Income' },
+            { value: 'transfer', label: 'Transfers' },
           ]}
           value={f.criteria.kind}
           onChange={f.setKind}

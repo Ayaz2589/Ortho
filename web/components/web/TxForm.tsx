@@ -13,6 +13,13 @@ import { Seg, CatTile, SourceDot } from './kit'
 
 const INCOME_SOURCES = ['ACH · Checking', 'ACH · Joint', 'Wire']
 
+/** Prefill for opening the form directly in transfer ("Settle up") mode. */
+export interface TransferPrefill {
+  from: string
+  to: string
+  amountCents: number
+}
+
 function centsToDisplay(cents: number, rate: number, fd: number): string {
   if (!cents) return ''
   return ((cents / 100) * rate).toFixed(fd)
@@ -53,7 +60,15 @@ function isEvenSplit(tx: Transaction): boolean {
   return tx.owner_ids.every((id) => (tx.shares[id] ?? 0) === even[id])
 }
 
-export function useTxForm({ editing, copying }: { editing?: Transaction | null; copying?: Transaction | null }) {
+export function useTxForm({
+  editing,
+  copying,
+  initialTransfer,
+}: {
+  editing?: Transaction | null
+  copying?: Transaction | null
+  initialTransfer?: TransferPrefill | null
+}) {
   const {
     currency,
     rate,
@@ -69,16 +84,30 @@ export function useTxForm({ editing, copying }: { editing?: Transaction | null; 
   const fd = fractionDigits(currency)
   const r = rate(currency)
   const src = editing ?? copying ?? null
-  const initialKind: TransactionKind = src?.kind ?? 'expense'
+  const initialKind: TransactionKind = initialTransfer ? 'transfer' : src?.kind ?? 'expense'
   const defaultOwner = currentPersonId || householdMembers[0]?.id || currentUserId
+  const otherMember = (notId: string) => householdMembers.find((m) => m.id !== notId)?.id ?? notId
 
   const [direction, setDirection] = useState<TransactionKind>(initialKind)
-  const [amount, setAmount] = useState(src ? centsToDisplay(src.amount_cents, r, fd) : '')
+  const [amount, setAmount] = useState(
+    initialTransfer ? centsToDisplay(initialTransfer.amountCents, r, fd) : src ? centsToDisplay(src.amount_cents, r, fd) : ''
+  )
   const [merchant, setMerchant] = useState(src?.merchant ?? '')
   const [category, setCategory] = useState<TransactionCategory>(
     src && src.kind === 'expense' ? src.category : 'groceries'
   )
   const [owners, setOwners] = useState<string[]>(src && src.owner_ids.length ? src.owner_ids : [defaultOwner])
+  // Who paid an expense — defaults to the creator/current person, editable.
+  const [paidBy, setPaidBy] = useState<string>(
+    src && src.kind === 'expense' && src.paid_by ? src.paid_by : defaultOwner
+  )
+  // Transfer parties: from = the ower/sender, to = the payer/recipient.
+  const [transferFrom, setTransferFrom] = useState<string>(
+    initialTransfer?.from ?? (src?.kind === 'transfer' && src.paid_by ? src.paid_by : defaultOwner)
+  )
+  const [transferTo, setTransferTo] = useState<string>(
+    initialTransfer?.to ?? (src?.kind === 'transfer' ? src.owner_ids[0] ?? otherMember(defaultOwner) : otherMember(defaultOwner))
+  )
   const expenseSources = useMemo(() => cards.map((c) => c.name), [cards])
   const [source, setSource] = useState(
     src?.source ?? (initialKind === 'income' ? INCOME_SOURCES[0] : expenseSources[0] ?? '')
@@ -98,6 +127,7 @@ export function useTxForm({ editing, copying }: { editing?: Transaction | null; 
   })
 
   const isIncome = direction === 'income'
+  const isTransfer = direction === 'transfer'
   const sources = isIncome ? INCOME_SOURCES : expenseSources
   const cents = parseMoney(amount, currency, r)
 
@@ -119,12 +149,14 @@ export function useTxForm({ editing, copying }: { editing?: Transaction | null; 
   const splitOk = owners.length < 2 || splitValidation.ok
   const splitReason = splitValidation.ok ? null : splitValidation.reason
 
-  const canSave = !!cents && cents > 0 && merchant.trim() !== '' && owners.length > 0 && splitOk
+  const canSave = isTransfer
+    ? !!cents && cents > 0 && !!transferFrom && !!transferTo && transferFrom !== transferTo
+    : !!cents && cents > 0 && merchant.trim() !== '' && owners.length > 0 && splitOk
 
   function setDir(d: TransactionKind) {
     setDirection(d)
     if (d === 'income') setSource((s) => (INCOME_SOURCES.includes(s) ? s : INCOME_SOURCES[0]))
-    else setSource((s) => (expenseSources.includes(s) ? s : expenseSources[0] ?? ''))
+    else if (d === 'expense') setSource((s) => (expenseSources.includes(s) ? s : expenseSources[0] ?? ''))
   }
   function toggleOwner(id: string) {
     setOwners((prev) => (prev.includes(id) ? (prev.length > 1 ? prev.filter((x) => x !== id) : prev) : [...prev, id]))
@@ -140,9 +172,15 @@ export function useTxForm({ editing, copying }: { editing?: Transaction | null; 
   function loadFrom(tx: Transaction) {
     setDir(tx.kind)
     setAmount(centsToDisplay(tx.amount_cents, r, fd))
+    if (tx.kind === 'transfer') {
+      setTransferFrom(tx.paid_by ?? defaultOwner)
+      setTransferTo(tx.owner_ids[0] ?? otherMember(defaultOwner))
+      return
+    }
     setMerchant(tx.merchant)
     setCategory(tx.kind === 'expense' ? tx.category : 'groceries')
     setOwners(tx.owner_ids.length ? tx.owner_ids : [defaultOwner])
+    setPaidBy(tx.kind === 'expense' && tx.paid_by ? tx.paid_by : defaultOwner)
     setSource(tx.source)
     setSplitMethod('even')
     setSplitText({})
@@ -150,20 +188,39 @@ export function useTxForm({ editing, copying }: { editing?: Transaction | null; 
 
   function submit(): boolean {
     if (!canSave || !cents) return false
-    const tx: Transaction = {
+    const base = {
       id: editing?.id ?? crypto.randomUUID(),
       household_id: currentHousehold?.id ?? '',
-      merchant: merchant.trim(),
-      category: isIncome ? 'income' : category,
-      kind: direction,
       amount_cents: cents,
-      source,
       date: new Date(date + 'T12:00:00').toISOString(),
       created_by: editing?.created_by ?? currentUserId,
       created_at: editing?.created_at ?? new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      owner_ids: owners,
-      shares: computeShares(cents, orderedOwnerIds(owners), splitInput),
+    }
+    let tx: Transaction
+    if (isTransfer) {
+      // A reimbursement: paid_by = sender, the single owner = recipient.
+      tx = {
+        ...base,
+        merchant: '',
+        category: 'transfer',
+        kind: 'transfer',
+        source: '',
+        paid_by: transferFrom,
+        owner_ids: [transferTo],
+        shares: { [transferTo]: cents },
+      }
+    } else {
+      tx = {
+        ...base,
+        merchant: merchant.trim(),
+        category: isIncome ? 'income' : category,
+        kind: direction,
+        source,
+        paid_by: isIncome ? null : paidBy,
+        owner_ids: owners,
+        shares: computeShares(cents, orderedOwnerIds(owners), splitInput),
+      }
     }
     if (editing) updateTransaction(tx)
     else addTransaction(tx)
@@ -182,11 +239,18 @@ export function useTxForm({ editing, copying }: { editing?: Transaction | null; 
     setCategory,
     owners,
     toggleOwner,
+    paidBy,
+    setPaidBy,
+    transferFrom,
+    setTransferFrom,
+    transferTo,
+    setTransferTo,
     source,
     setSource,
     date,
     setDate,
     isIncome,
+    isTransfer,
     members: householdMembers,
     sources,
     fd,
@@ -208,18 +272,42 @@ export function useTxForm({ editing, copying }: { editing?: Transaction | null; 
 
 export type TxFormApi = ReturnType<typeof useTxForm>
 
+/** A member `<select>` used for "Paid by" and the transfer From/To rows. */
+function MemberSelect({
+  value,
+  onChange,
+  members,
+  ariaLabel,
+}: {
+  value: string
+  onChange: (id: string) => void
+  members: { id: string; name: string }[]
+  ariaLabel: string
+}) {
+  return (
+    <select aria-label={ariaLabel} value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle()}>
+      {members.map((m) => (
+        <option key={m.id} value={m.id}>
+          {m.name}
+        </option>
+      ))}
+    </select>
+  )
+}
+
 /** The shared field stack (amount hero, toggles, rows) used by both the modal and the drawer. */
 export function TxFormFields({ form }: { form: TxFormApi }) {
-  const { currency, isIncome } = form
+  const { currency, isIncome, isTransfer } = form
   const { formatMoney } = useApp()
-  // Owner picker appears whenever the household has more than one person.
+  // Owner / payer pickers appear whenever the household has more than one person.
   const showOwners = form.members.length > 1
   const multi = form.owners.length >= 2
+  const heroColor = isIncome ? 'var(--positive)' : 'var(--text)'
   return (
     <>
       {/* Amount hero */}
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: 4, padding: '10px 24px 18px' }}>
-        <span style={{ fontSize: 26, fontWeight: 300, letterSpacing: '-0.4px', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
+        <span style={{ fontSize: 26, fontWeight: 300, letterSpacing: '-0.4px', color: heroColor }}>
           {currencySymbol(currency)}
         </span>
         <input
@@ -229,142 +317,179 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
           autoFocus
           placeholder={form.fd === 0 ? '0' : '0.00'}
           onChange={(e) => form.setAmount(e.target.value.replace(/[^\d.,]/g, ''))}
-          style={{ color: isIncome ? 'var(--positive)' : 'var(--text)', width: `${Math.max(2, form.amount.length || 4)}ch`, textAlign: 'left' }}
+          style={{ color: heroColor, width: `${Math.max(2, form.amount.length || 4)}ch`, textAlign: 'left' }}
         />
       </div>
 
       {/* Direction */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 10, paddingBottom: 18, flexWrap: 'wrap' }}>
-        <Seg value={form.direction} onChange={form.setDir} options={[{ value: 'expense', label: 'Expense' }, { value: 'income', label: 'Income' }]} />
+        <Seg
+          value={form.direction}
+          onChange={form.setDir}
+          options={[
+            { value: 'expense', label: 'Expense' },
+            { value: 'income', label: 'Income' },
+            { value: 'transfer', label: 'Transfer' },
+          ]}
+        />
       </div>
 
-      {/* Merchant + category */}
-      <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-        <Row label={isIncome ? 'Source' : 'Merchant'} first>
-          <input className="ow-row-input" value={form.merchant} onChange={(e) => form.setMerchant(e.target.value)} placeholder={isIncome ? 'e.g. Acme payroll' : 'e.g. Whole Foods'} />
-        </Row>
-        {!isIncome && (
-          <Row label="Category">
-            <CatTile category={form.category} size={22} />
-            <select value={form.category} onChange={(e) => form.setCategory(e.target.value as TransactionCategory)} style={selectStyle()}>
-              {SPEND_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {categoryMeta(c).label}
-                </option>
-              ))}
-            </select>
-          </Row>
-        )}
-      </div>
+      {isTransfer ? (
+        /* Reimbursement: From -> To + date. No merchant/category/split/source. */
+        <>
+          <div className="ow-card" style={{ margin: '0 20px 14px' }}>
+            <Row label="From" first>
+              <MemberSelect value={form.transferFrom} onChange={form.setTransferFrom} members={form.members} ariaLabel="Transfer from" />
+            </Row>
+            <Row label="To">
+              <MemberSelect value={form.transferTo} onChange={form.setTransferTo} members={form.members} ariaLabel="Transfer to" />
+            </Row>
+            <Row label="Date">
+              <DatePicker value={form.date} onChange={form.setDate} ariaLabel="Transfer date" />
+            </Row>
+          </div>
+          <div style={{ padding: '2px 28px 16px', fontSize: 12.5, lineHeight: 1.45, color: 'var(--text-3)' }}>
+            {form.transferFrom === form.transferTo
+              ? 'Pick two different members.'
+              : 'Records a reimbursement between members. It does not count as spending or income.'}
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Merchant + category */}
+          <div className="ow-card" style={{ margin: '0 20px 14px' }}>
+            <Row label={isIncome ? 'Source' : 'Merchant'} first>
+              <input className="ow-row-input" value={form.merchant} onChange={(e) => form.setMerchant(e.target.value)} placeholder={isIncome ? 'e.g. Acme payroll' : 'e.g. Whole Foods'} />
+            </Row>
+            {!isIncome && (
+              <Row label="Category">
+                <CatTile category={form.category} size={22} />
+                <select value={form.category} onChange={(e) => form.setCategory(e.target.value as TransactionCategory)} style={selectStyle()}>
+                  {SPEND_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {categoryMeta(c).label}
+                    </option>
+                  ))}
+                </select>
+              </Row>
+            )}
+          </div>
 
-      {/* Owners */}
-      {showOwners && (
-        <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-          <Row label="Owners" first>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              {form.members.map((u) => {
-                const on = form.owners.includes(u.id)
+          {/* Owners + who paid */}
+          {showOwners && (
+            <div className="ow-card" style={{ margin: '0 20px 14px' }}>
+              <Row label="Owners" first>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  {form.members.map((u) => {
+                    const on = form.owners.includes(u.id)
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        aria-pressed={on}
+                        className="ow-btn"
+                        onClick={() => form.toggleOwner(u.id)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 9px 3px 4px', borderRadius: 999, background: 'var(--chip-bg)', boxShadow: on ? 'inset 0 0 0 1.5px var(--text)' : 'none' }}
+                      >
+                        <Avatar user={u} size={20} />
+                        <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text)' }}>{u.name}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </Row>
+              {!isIncome && (
+                <Row label="Paid by">
+                  <MemberSelect value={form.paidBy} onChange={form.setPaidBy} members={form.members} ariaLabel="Paid by" />
+                </Row>
+              )}
+            </div>
+          )}
+
+          {/* Split editor (multi-owner only) */}
+          {multi && (
+            <div className="ow-card" style={{ margin: '0 20px 14px' }}>
+              <Row label="Split" first>
+                <Seg
+                  value={form.splitMethod}
+                  onChange={form.setSplitMethod}
+                  options={[{ value: 'even', label: 'Even' }, { value: 'percent', label: '%' }, { value: 'value', label: currencySymbol(currency) }]}
+                />
+              </Row>
+              {form.owners.map((id) => {
+                const name = form.members.find((m) => m.id === id)?.name ?? '—'
                 return (
-                  <button
-                    key={u.id}
-                    type="button"
-                    aria-pressed={on}
-                    className="ow-btn"
-                    onClick={() => form.toggleOwner(u.id)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 9px 3px 4px', borderRadius: 999, background: 'var(--chip-bg)', boxShadow: on ? 'inset 0 0 0 1.5px var(--text)' : 'none' }}
-                  >
-                    <Avatar user={u} size={20} />
-                    <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text)' }}>{u.name}</span>
-                  </button>
+                  <Row key={id} label={name}>
+                    {form.splitMethod === 'even' ? (
+                      <span style={{ color: 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>{formatMoney(form.shares[id] ?? 0)}</span>
+                    ) : form.splitMethod === 'percent' ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <input
+                          className="ow-row-input"
+                          style={{ textAlign: 'right', width: 56 }}
+                          inputMode="decimal"
+                          aria-label={`${name} percent`}
+                          value={form.splitText[id] ?? ''}
+                          onChange={(e) => form.setSplit(id, e.target.value.replace(/[^\d.]/g, ''))}
+                        />
+                        <span style={{ color: 'var(--text-3)' }}>%</span>
+                        <span style={{ color: 'var(--text-3)', minWidth: 70, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                          {formatMoney(form.shares[id] ?? 0)}
+                        </span>
+                      </span>
+                    ) : (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ color: 'var(--text-3)' }}>{currencySymbol(currency)}</span>
+                        <input
+                          className="ow-row-input"
+                          style={{ textAlign: 'right', width: 78 }}
+                          inputMode="decimal"
+                          aria-label={`${name} amount`}
+                          value={form.splitText[id] ?? ''}
+                          onChange={(e) => form.setSplit(id, e.target.value.replace(/[^\d.,]/g, ''))}
+                        />
+                      </span>
+                    )}
+                  </Row>
                 )
               })}
-            </div>
-          </Row>
-        </div>
-      )}
-
-      {/* Split editor (multi-owner only) */}
-      {multi && (
-        <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-          <Row label="Split" first>
-            <Seg
-              value={form.splitMethod}
-              onChange={form.setSplitMethod}
-              options={[{ value: 'even', label: 'Even' }, { value: 'percent', label: '%' }, { value: 'value', label: currencySymbol(currency) }]}
-            />
-          </Row>
-          {form.owners.map((id) => {
-            const name = form.members.find((m) => m.id === id)?.name ?? '—'
-            return (
-              <Row key={id} label={name}>
-                {form.splitMethod === 'even' ? (
-                  <span style={{ color: 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>{formatMoney(form.shares[id] ?? 0)}</span>
-                ) : form.splitMethod === 'percent' ? (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <input
-                      className="ow-row-input"
-                      style={{ textAlign: 'right', width: 56 }}
-                      inputMode="decimal"
-                      aria-label={`${name} percent`}
-                      value={form.splitText[id] ?? ''}
-                      onChange={(e) => form.setSplit(id, e.target.value.replace(/[^\d.]/g, ''))}
-                    />
-                    <span style={{ color: 'var(--text-3)' }}>%</span>
-                    <span style={{ color: 'var(--text-3)', minWidth: 70, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                      {formatMoney(form.shares[id] ?? 0)}
-                    </span>
-                  </span>
-                ) : (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ color: 'var(--text-3)' }}>{currencySymbol(currency)}</span>
-                    <input
-                      className="ow-row-input"
-                      style={{ textAlign: 'right', width: 78 }}
-                      inputMode="decimal"
-                      aria-label={`${name} amount`}
-                      value={form.splitText[id] ?? ''}
-                      onChange={(e) => form.setSplit(id, e.target.value.replace(/[^\d.,]/g, ''))}
-                    />
-                  </span>
-                )}
-              </Row>
-            )
-          })}
-          {!form.splitOk && (
-            <div style={{ padding: '6px 20px 12px', fontSize: 12.5, lineHeight: 1.45, color: 'var(--text-2)' }}>
-              {form.splitReason === 'percent_sum'
-                ? 'Percentages must total 100%.'
-                : `Amounts must add up to ${formatMoney(form.cents ?? 0)}.`}
+              {!form.splitOk && (
+                <div style={{ padding: '6px 20px 12px', fontSize: 12.5, lineHeight: 1.45, color: 'var(--text-2)' }}>
+                  {form.splitReason === 'percent_sum'
+                    ? 'Percentages must total 100%.'
+                    : `Amounts must add up to ${formatMoney(form.cents ?? 0)}.`}
+                </div>
+              )}
             </div>
           )}
-        </div>
+
+          {/* Source + date */}
+          <div className="ow-card" style={{ margin: '0 20px 14px' }}>
+            <Row label={isIncome ? 'Deposit to' : 'Paid with'} first>
+              {form.sources.length === 0 ? (
+                <span style={{ color: 'var(--text-3)' }}>No cards yet</span>
+              ) : (
+                <select value={form.source} onChange={(e) => form.setSource(e.target.value)} style={selectStyle()}>
+                  {form.sources.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Row>
+            <Row label="Date">
+              <DatePicker value={form.date} onChange={form.setDate} ariaLabel="Transaction date" />
+            </Row>
+          </div>
+
+          <div style={{ padding: '2px 28px 16px', fontSize: 12.5, lineHeight: 1.45, color: 'var(--text-3)' }}>
+            {multi
+              ? 'Split this transaction between its owners by even shares, percentage, or amount.'
+              : 'Pick more than one owner to split this transaction.'}
+          </div>
+        </>
       )}
-
-      {/* Source + date */}
-      <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-        <Row label={isIncome ? 'Deposit to' : 'Paid with'} first>
-          {form.sources.length === 0 ? (
-            <span style={{ color: 'var(--text-3)' }}>No cards yet</span>
-          ) : (
-            <select value={form.source} onChange={(e) => form.setSource(e.target.value)} style={selectStyle()}>
-              {form.sources.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          )}
-        </Row>
-        <Row label="Date">
-          <DatePicker value={form.date} onChange={form.setDate} ariaLabel="Transaction date" />
-        </Row>
-      </div>
-
-      <div style={{ padding: '2px 28px 16px', fontSize: 12.5, lineHeight: 1.45, color: 'var(--text-3)' }}>
-        {multi
-          ? 'Split this transaction between its owners by even shares, percentage, or amount.'
-          : 'Pick more than one owner to split this transaction.'}
-      </div>
     </>
   )
 }
@@ -425,10 +550,10 @@ export function TxCopyList({ onPick, onBack }: { onPick: (tx: Transaction) => vo
                   <button key={tx.id} className="ow-btn ow-row" onClick={() => onPick(tx)} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '10px 20px', textAlign: 'left' }}>
                     <CatTile category={tx.category} size={34} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14.5, fontWeight: 400, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.merchant}</div>
+                      <div style={{ fontSize: 14.5, fontWeight: 400, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.merchant || (tx.kind === 'transfer' ? 'Transfer' : '')}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, fontSize: 12.5, color: 'var(--text-3)' }}>
                         <SourceDot size={6} />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{owners.label} · {tx.source}</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{owners.label}{tx.source ? ` · ${tx.source}` : ''}</span>
                       </div>
                     </div>
                     <span style={{ fontSize: 14.5, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
@@ -454,6 +579,7 @@ export function TxFormContent({
   title,
   editing,
   copying,
+  initialTransfer,
   onDone,
   onCancel,
   saveLabel = 'Add',
@@ -461,13 +587,14 @@ export function TxFormContent({
   title: string
   editing?: Transaction | null
   copying?: Transaction | null
+  initialTransfer?: TransferPrefill | null
   onDone: () => void
   onCancel: () => void
   saveLabel?: string
 }) {
-  const form = useTxForm({ editing, copying })
+  const form = useTxForm({ editing, copying, initialTransfer })
   const [picking, setPicking] = useState(false)
-  const allowCopy = !editing
+  const allowCopy = !editing && !initialTransfer
 
   if (picking) {
     return (

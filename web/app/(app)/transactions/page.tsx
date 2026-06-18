@@ -9,8 +9,10 @@ import { groupByDay, groupDaysByMonth, dayLabel, monthYearLong, expenseTotal, st
 import type { Transaction } from '@/lib/types'
 import { TransactionRow } from '@/components/transactions/TransactionRow'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
+import { BalanceSummary } from '@/components/transactions/BalanceSummary'
 import { TransactionsDesktop } from '@/components/web/TransactionsDesktop'
 import { TxModalWeb } from '@/components/web/TxModalWeb'
+import type { TransferPrefill } from '@/components/web/TxForm'
 import { useTransactionFilters } from '@/lib/useTransactionFilters'
 import { FilterPanel } from '@/components/web/FilterPanel'
 import { ActiveFilterChips } from '@/components/web/ActiveFilterChips'
@@ -24,6 +26,7 @@ export default function TransactionsPage() {
   const [filterOpen, setFilterOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [copySource, setCopySource] = useState<Transaction | null>(null)
+  const [settlePrefill, setSettlePrefill] = useState<TransferPrefill | null>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
 
   const hasAny = transactions.length > 0
@@ -54,10 +57,17 @@ export default function TransactionsPage() {
 
   function openAdd() {
     setCopySource(null)
+    setSettlePrefill(null)
     setAddOpen(true)
   }
   function openCopy(tx: Transaction) {
     setCopySource(tx)
+    setSettlePrefill(null)
+    setAddOpen(true)
+  }
+  function openSettle(prefill: TransferPrefill) {
+    setCopySource(null)
+    setSettlePrefill(prefill)
     setAddOpen(true)
   }
 
@@ -122,6 +132,8 @@ export default function TransactionsPage() {
       )}
 
       {hasAny && <ActiveFilterChips f={f} />}
+
+      <BalanceSummary onSettle={openSettle} />
 
       {!hasAny ? (
         <EmptyState
@@ -235,8 +247,10 @@ export default function TransactionsPage() {
           onClose={() => {
             setAddOpen(false)
             setCopySource(null)
+            setSettlePrefill(null)
           }}
           copying={copySource}
+          initialTransfer={settlePrefill}
         />
       )}
 

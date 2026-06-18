@@ -11,7 +11,8 @@ import { Drawer, DrawerHeader } from './Drawer'
 import { useTransactionFilters } from '@/lib/useTransactionFilters'
 import { FilterPanel } from './FilterPanel'
 import { ActiveFilterChips } from './ActiveFilterChips'
-import { TxFormContent } from './TxForm'
+import { TxFormContent, type TransferPrefill } from './TxForm'
+import { BalanceSummary } from '@/components/transactions/BalanceSummary'
 import {
   WebPageHeader,
   WebSearchInput,
@@ -92,8 +93,12 @@ function TxRow({
 }) {
   const { formatMoney, resolveUser } = useApp()
   const isIncome = tx.kind === 'income'
+  const isTransfer = tx.kind === 'transfer'
   const ownerUsers = tx.owner_ids.map(resolveUser)
   const single = ownerUsers.length === 1 ? ownerUsers[0] : null
+  const title = isTransfer
+    ? `${tx.paid_by ? resolveUser(tx.paid_by).name : '—'} → ${tx.owner_ids[0] ? resolveUser(tx.owner_ids[0]).name : '—'}`
+    : tx.merchant
   return (
     <button
       className={'ow-btn ow-tab-row ow-tab-tr cv-row' + (selected ? ' is-selected' : '')}
@@ -104,7 +109,7 @@ function TxRow({
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
         <CatTile category={tx.category} size={30} />
         <span style={{ fontSize: 14.5, fontWeight: 400, letterSpacing: '-0.15px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {tx.merchant}
+          {title}
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
@@ -124,7 +129,7 @@ function TxRow({
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
         <SourceDot />
         <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {tx.source}
+          {isTransfer ? 'Reimbursement' : tx.source}
         </span>
       </div>
       <div style={{ fontSize: 14.5, fontWeight: 400, textAlign: 'right', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px', whiteSpace: 'nowrap', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
@@ -140,6 +145,7 @@ export function TransactionsDesktop() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+  const [settlePrefill, setSettlePrefill] = useState<TransferPrefill | null>(null)
   const [filterOpen, setFilterOpen] = useState(false)
 
   const selected = selectedId ? transactions.find((t) => t.id === selectedId) ?? null : null
@@ -157,6 +163,7 @@ export function TransactionsDesktop() {
     setAddOpen(false)
     setEditing(false)
     setSelectedId(null)
+    setSettlePrefill(null)
   }
 
   // Lock background scroll while the panel is open. `main` has `scrollbar-gutter:
@@ -189,6 +196,13 @@ export function TransactionsDesktop() {
   const openNew = () => {
     setSelectedId(null)
     setEditing(false)
+    setSettlePrefill(null)
+    setAddOpen(true)
+  }
+  const openSettle = (prefill: TransferPrefill) => {
+    setSelectedId(null)
+    setEditing(false)
+    setSettlePrefill(prefill)
     setAddOpen(true)
   }
   const selectRow = (id: string) => {
@@ -282,6 +296,8 @@ export function TransactionsDesktop() {
         </div>
       )}
 
+      <BalanceSummary onSettle={openSettle} />
+
       {transactions.length === 0 ? (
         <p style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-2)', fontSize: 14 }}>
           No transactions yet. Add your first one.
@@ -365,7 +381,19 @@ export function TransactionsDesktop() {
       {panelOpen && (
         <aside className="ow-drawer" aria-label="Transaction">
           {addOpen ? (
-            <TxFormContent title="New transaction" saveLabel="Add" onDone={() => setAddOpen(false)} onCancel={() => setAddOpen(false)} />
+            <TxFormContent
+              title={settlePrefill ? 'Settle up' : 'New transaction'}
+              saveLabel={settlePrefill ? 'Record' : 'Add'}
+              initialTransfer={settlePrefill}
+              onDone={() => {
+                setAddOpen(false)
+                setSettlePrefill(null)
+              }}
+              onCancel={() => {
+                setAddOpen(false)
+                setSettlePrefill(null)
+              }}
+            />
           ) : editing && selected ? (
             <TxFormContent
               title="Edit transaction"

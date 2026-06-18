@@ -12,10 +12,49 @@ import type { Transaction } from '@/lib/types'
 export function TransactionDetailBody({ tx }: { tx: Transaction }) {
   const { formatMoney, resolveUser, locale } = useApp()
   const isIncome = tx.kind === 'income'
+  const isTransfer = tx.kind === 'transfer'
+
+  // A reimbursement: directional From (paid_by/sender) → To (recipient). Neutral
+  // amount (not spend/income), no category/split/source.
+  if (isTransfer) {
+    const fromU = tx.paid_by ? resolveUser(tx.paid_by) : null
+    const toU = tx.owner_ids[0] ? resolveUser(tx.owner_ids[0]) : null
+    return (
+      <div className="flex flex-col gap-5">
+        <div className="flex items-center justify-center py-2">
+          <span className="text-[40px] font-light tabular-nums text-text">{formatMoney(tx.amount_cents)}</span>
+        </div>
+        <FormGroup>
+          <FieldRow label="From">
+            <span className="flex items-center gap-2 text-[15px] font-normal text-text">
+              {fromU && <Avatar user={fromU} size={22} />}
+              {fromU?.name ?? '—'}
+            </span>
+          </FieldRow>
+          <FieldRow label="To">
+            <span className="flex items-center gap-2 text-[15px] font-normal text-text">
+              {toU && <Avatar user={toU} size={22} />}
+              {toU?.name ?? '—'}
+            </span>
+          </FieldRow>
+        </FormGroup>
+        <FormGroup>
+          <FieldRow label="Type">
+            <span className="text-[15px] font-normal text-text">Reimbursement</span>
+          </FieldRow>
+          <FieldRow label="Date">
+            <span className="text-[15px] font-normal text-text">{mediumDate(new Date(tx.date), locale)}</span>
+          </FieldRow>
+        </FormGroup>
+      </div>
+    )
+  }
+
   const meta = categoryMeta(tx.category)
   const CatIcon = meta.icon
   const shares = effectiveShares(tx)
   const multi = tx.owner_ids.length > 1
+  const payer = tx.paid_by ? resolveUser(tx.paid_by) : null
 
   return (
     <div className="flex flex-col gap-5">
@@ -68,6 +107,14 @@ export function TransactionDetailBody({ tx }: { tx: Transaction }) {
 
       {/* Meta */}
       <FormGroup>
+        {!isIncome && payer && (
+          <FieldRow label="Paid by">
+            <span className="flex items-center gap-2 text-[15px] font-normal text-text">
+              <Avatar user={payer} size={22} />
+              {payer.name}
+            </span>
+          </FieldRow>
+        )}
         <FieldRow label={isIncome ? 'Deposit to' : 'Paid with'}>
           <span className="text-[15px] font-normal text-text">{tx.source}</span>
         </FieldRow>

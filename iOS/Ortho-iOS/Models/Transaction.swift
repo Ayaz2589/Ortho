@@ -2,6 +2,9 @@ import Foundation
 
 enum TransactionKind: String, CaseIterable, Hashable, Codable {
     case expense, income
+    /// A member-to-member reimbursement (settle-up). Never counted as spend or
+    /// income; reduces the derived member balance. See `Balances.swift`.
+    case transfer
 }
 
 struct Transaction: Identifiable, Hashable, Codable {
@@ -24,6 +27,11 @@ struct Transaction: Identifiable, Hashable, Codable {
     /// Auth UUID of the user who created the transaction. Drives the
     /// "creator can update/delete" RLS policy.
     var createdBy: User.ID
+    /// The member who paid the money out. For an **expense**: who fronted it
+    /// (defaults to the creator). For a **transfer**: the SENDER (the ower
+    /// paying back). `nil` for income and legacy expenses whose creator has no
+    /// linked person. Mirrors web `Transaction.paid_by`.
+    var paidBy: Person.ID?
 
     init(id: UUID = UUID(),
          merchant: String,
@@ -35,7 +43,8 @@ struct Transaction: Identifiable, Hashable, Codable {
          source: String,
          date: Date,
          householdID: Household.ID? = nil,
-         createdBy: User.ID) {
+         createdBy: User.ID,
+         paidBy: Person.ID? = nil) {
         self.id = id
         self.merchant = merchant
         self.category = category
@@ -47,9 +56,13 @@ struct Transaction: Identifiable, Hashable, Codable {
         self.date = date
         self.householdID = householdID
         self.createdBy = createdBy
+        self.paidBy = paidBy
     }
 
     var isIncome: Bool { kind == .income }
+
+    /// A member-to-member reimbursement (settle-up).
+    var isTransfer: Bool { kind == .transfer }
 
     /// Deterministic owner order (for even-split remainder placement) — the
     /// shared canonical sort, mirrored by web `orderedOwnerIds`.
@@ -72,6 +85,7 @@ struct Transaction: Identifiable, Hashable, Codable {
         case source, date
         case householdID  = "household_id"
         case createdBy    = "created_by"
+        case paidBy       = "paid_by"
     }
 
     init(from decoder: Decoder) throws {
@@ -90,6 +104,7 @@ struct Transaction: Identifiable, Hashable, Codable {
         date = try c.decode(Date.self, forKey: .date)
         householdID = try c.decodeIfPresent(UUID.self, forKey: .householdID)
         createdBy = try c.decode(UUID.self, forKey: .createdBy)
+        paidBy = try c.decodeIfPresent(UUID.self, forKey: .paidBy)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -105,6 +120,7 @@ struct Transaction: Identifiable, Hashable, Codable {
         try c.encode(date, forKey: .date)
         try c.encodeIfPresent(householdID, forKey: .householdID)
         try c.encode(createdBy, forKey: .createdBy)
+        try c.encodeIfPresent(paidBy, forKey: .paidBy)
     }
 }
 

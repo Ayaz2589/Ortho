@@ -140,6 +140,9 @@ function rehydrateTransactions(
   return rows.map((r) => {
     const sh = byTx.get(r.id) ?? []
     if (sh.length === 0) {
+      // A transfer (reimbursement) is directional, not co-owned — never synthesize
+      // creator-owns-all for it (that would misread it as an expense).
+      if (r.kind === 'transfer') return { ...r, owner_ids: [], shares: {} }
       const pid = personForUser(r.created_by)
       return { ...r, owner_ids: [pid], shares: { [pid]: r.amount_cents } }
     }
@@ -494,6 +497,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     source: tx.source,
     date: tx.date,
     created_by: tx.created_by,
+    paid_by: tx.paid_by ?? null,
   })
 
   const addTransaction = (tx: Transaction) => {

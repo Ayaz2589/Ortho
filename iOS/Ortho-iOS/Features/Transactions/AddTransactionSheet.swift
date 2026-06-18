@@ -21,6 +21,18 @@ struct AddTransactionSheet: View {
     /// parent should NOT dismiss the sheet — we'll reset the form internally
     /// for the next entry. Edit mode ignores the flag (single-tx by nature).
     let onSubmit: (Transaction, _ keepOpen: Bool) -> Void
+    /// When non-nil, the sheet opens in **Transfer** mode pre-filled from a
+    /// "Settle up" action: From = the ower, To = the payer, amount = the owed
+    /// cents (editable). Mutually exclusive with `editing`/`copying`.
+    let settleUp: SettleUpPrefill?
+
+    /// A Settle-up pre-fill: who owes (from), who's owed (to), and how much.
+    struct SettleUpPrefill: Identifiable {
+        let from: Person.ID
+        let to: Person.ID
+        let amountCents: Int64
+        var id: String { "\(from.uuidString)-\(to.uuidString)-\(amountCents)" }
+    }
 
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
@@ -44,6 +56,13 @@ struct AddTransactionSheet: View {
     @State private var source: String
     @State private var date: Date
 
+    /// Expense payer (the member who fronted it). Defaults to the current
+    /// person on appear; shown as a picker only when the household has >1 member.
+    @State private var paidBy: User.ID? = nil
+    /// Transfer (reimbursement) parties — sender (ower) → recipient (payer).
+    @State private var transferFrom: User.ID? = nil
+    @State private var transferTo: User.ID? = nil
+
     /// Drives the "Copy from recent" picker sheet. Add-mode only.
     @State private var showingCopyPicker: Bool = false
 
@@ -51,16 +70,43 @@ struct AddTransactionSheet: View {
 
     init(editing: Transaction? = nil,
          copying: Transaction? = nil,
+         settleUp: SettleUpPrefill? = nil,
          onSubmit: @escaping (Transaction, _ keepOpen: Bool) -> Void) {
         self.editing = editing
         self.copying = copying
+        self.settleUp = settleUp
         self.onSubmit = onSubmit
+
+        // Settle-up: open straight into Transfer mode pre-filled with the owed
+        // amount + parties. The amount field is seeded on appear (needs the
+        // currency/rate). Wins over copying; editing still wins overall.
+        if editing == nil, let s = settleUp {
+            _kind = State(initialValue: .transfer)
+            _amountText = State(initialValue: "")
+            _merchant = State(initialValue: "")
+            _category = State(initialValue: .transfer)
+            _selectedOwners = State(initialValue: [])
+            _splitPercents = State(initialValue: [:])
+            _source = State(initialValue: "")
+            _date = State(initialValue: .now)
+            _transferFrom = State(initialValue: s.from)
+            _transferTo = State(initialValue: s.to)
+            _paidBy = State(initialValue: nil)
+            return
+        }
 
         // editing wins over copying if both are passed (defensive — not
         // expected). The prefill source for non-amount fields is the same
         // shape either way; the only difference is the date.
         if let tx = editing ?? copying {
             _kind = State(initialValue: tx.kind)
+            _paidBy = State(initialValue: tx.paidBy)
+            // Edit/copy of a transfer keeps its sender (paid_by) and recipient
+            // (single owner) so the From→To form re-fills.
+            if tx.kind == .transfer {
+                _transferFrom = State(initialValue: tx.paidBy)
+                _transferTo = State(initialValue: tx.ownerIDs.first)
+            }
             // Amount text is filled in on appear once we can read appState's
             // currency + rate. Start blank so the first frame doesn't show a
             // USD-formatted value when the user is on a different currency.
@@ -92,7 +138,13 @@ struct AddTransactionSheet: View {
     }
 
     private var isEditing: Bool { editing != nil }
-    private var navTitle: LocalizedStringKey { isEditing ? "Edit transaction" : "New transaction" }
+    private var navTitle: LocalizedStringKey {
+        if kind == .transfer {
+            if isEditing { return "Edit reimbursement" }
+            return settleUp != nil ? "Settle up" : "Reimbursement"
+        }
+        return isEditing ? "Edit transaction" : "New transaction"
+    }
     private var actionLabel: LocalizedStringKey { isEditing ? "Save" : "Add" }
 
     /// 0.5% tolerance so display rounding (e.g. 33.33 + 33.33 + 33.34 = 100)
@@ -117,12 +169,21 @@ struct AddTransactionSheet: View {
     }
 
     private var canAdd: Bool {
-        guard parsedAmount != nil,
-              !merchant.trimmingCharacters(in: .whitespaces).isEmpty
-        else { return false }
+        guard parsedAmount != nil else { return false }
+        if kind == .transfer {
+            // Transfer: amount > 0, both parties chosen, sender ≠ recipient.
+            guard let from = transferFrom, let to = transferTo, from != to else { return false }
+            return true
+        }
+        guard !merchant.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
         if selectedOwners.isEmpty { return false }
         if showsSplit && !splitIsValid { return false }
         return true
+    }
+
+    /// Whether the "Paid by" picker should appear (expenses, >1 member).
+    private var showsPaidBy: Bool {
+        kind == .expense && availableOwners.count > 1
     }
 
     /// The single household people list — every transaction's owners come from here.
@@ -201,45 +262,61 @@ struct AddTransactionSheet: View {
                     amountHero
                     directionToggle
 
-                    formGroup {
-                        textRow(
-                            label: merchantLabel,
-                            placeholder: kind == .income ? "e.g. Acme Co. payroll" : "e.g. Whole Foods",
-                            text: $merchant
-                        )
-                        if kind == .expense {
-                            divider
-                            categoryRow
+                    if kind == .transfer {
+                        transferSection
+                        Text(transferFooterCaption)
+                            .font(.lato(size: 13))
+                            .foregroundStyle(AppTheme.text.opacity(0.36))
+                            .lineSpacing(2)
+                            .padding(.horizontal, 24)
+                            .padding(.top, 4)
+                            .padding(.bottom, isEditing ? 24 : 12)
+                            .frame(maxWidth: 360, alignment: .leading)
+                    } else {
+                        formGroup {
+                            textRow(
+                                label: merchantLabel,
+                                placeholder: kind == .income ? "e.g. Acme Co. payroll" : "e.g. Whole Foods",
+                                text: $merchant
+                            )
+                            if kind == .expense {
+                                divider
+                                categoryRow
+                            }
                         }
-                    }
 
-                    formGroup {
-                        // Owner picker shows for both scopes now. Shared
-                        // picks from Supabase household members; personal
-                        // picks from `[you] + local users` so personal
-                        // expenses can be split with non-Ortho people
-                        // (roommates, partners) tracked locally.
-                        if !availableOwners.isEmpty {
-                            ownerRow
+                        formGroup {
+                            // Owner picker shows for both scopes now. Shared
+                            // picks from Supabase household members; personal
+                            // picks from `[you] + local users` so personal
+                            // expenses can be split with non-Ortho people
+                            // (roommates, partners) tracked locally.
+                            if !availableOwners.isEmpty {
+                                ownerRow
+                                divider
+                            }
+                            if showsPaidBy {
+                                paidByRow
+                                divider
+                            }
+                            sourceRow
                             divider
+                            dateRow
                         }
-                        sourceRow
-                        divider
-                        dateRow
-                    }
 
-                    if showsSplit {
-                        splitSection
-                    }
+                        if showsSplit {
+                            splitSection
+                        }
 
-                    Text(footerCaption)
-                        .font(.lato(size: 13))
-                        .foregroundStyle(AppTheme.text.opacity(0.36))
-                        .lineSpacing(2)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 4)
-                        .padding(.bottom, isEditing ? 24 : 12)
-                        .frame(maxWidth: 360, alignment: .leading)
+                        Text(footerCaption)
+                            .font(.lato(size: 13))
+                            .foregroundStyle(AppTheme.text.opacity(0.36))
+                            .lineSpacing(2)
+                            .padding(.horizontal, 24)
+                            .padding(.top, 4)
+                            .padding(.bottom, isEditing ? 24 : 12)
+                            .frame(maxWidth: 360, alignment: .leading)
+                    }
 
                     // Add-mode only: secondary affordance for batch entry.
                     // Submits the current form and resets it for another
@@ -261,20 +338,16 @@ struct AddTransactionSheet: View {
                 // un-touched amount round-trips through Save without FX
                 // drift; copy leaves it empty since the user is creating a
                 // brand-new row that should always re-encode.
-                let currency = appState.currency
-                let rate = appState.rate(for: currency)
-                let display = Money.toDisplayAmount(cents: tx.amount,
-                                                   in: currency,
-                                                   rate: rate)
-                let formatted = String(
-                    format: "%.\(currency.fractionDigits)f",
-                    NSDecimalNumber(decimal: display).doubleValue
-                )
-                amountText = formatted
-                originalAmountText = editing != nil ? formatted : ""
+                amountText = displayAmountString(cents: tx.amount)
+                originalAmountText = editing != nil ? amountText : ""
                 // Reopen a custom (non-even) split as a by-value split with the
                 // exact stored cents so a no-op re-save preserves it.
                 seedSplitFields(amount: tx.amount, ownerIDs: tx.ownerIDs, shares: tx.effectiveShares)
+            } else if let s = settleUp {
+                // Settle-up: seed the owed amount (editable). Parties already set
+                // in init. No owners/source/split for a transfer.
+                amountText = displayAmountString(cents: s.amountCents)
+                originalAmountText = ""
             } else {
                 // Add mode: seed the current person (or first member) + first card.
                 if selectedOwners.isEmpty {
@@ -287,6 +360,12 @@ struct AddTransactionSheet: View {
                 if source.isEmpty, let firstCard = sources.first {
                     source = firstCard
                 }
+                // Default the expense payer to the current person.
+                if paidBy == nil {
+                    paidBy = appState.currentPersonID ?? appState.householdMembers.first?.id
+                }
+                // Default transfer parties (used if the user flips to Transfer).
+                seedDefaultTransferParties()
                 resetSplitsToEven()
             }
             // Delay focus so sheet finishes presenting before the keyboard rises.
@@ -295,12 +374,18 @@ struct AddTransactionSheet: View {
             }
         }
         .onChange(of: kind) { _, newKind in
+            if newKind == .transfer {
+                // Transfer has no source/category/owners/split — just seed the
+                // From→To parties if not already chosen.
+                seedDefaultTransferParties()
+                return
+            }
             // Keep the source valid when direction flips.
             if !sources.contains(source) { source = sources.first ?? "" }
-            // Income's category is locked; if the user came from expense, the
-            // stored category may already be valid — fall back to .groceries
-            // when flipping back to expense if it's somehow .income.
-            if newKind == .expense && category == .income { category = .groceries }
+            // Income's category is locked; expense can't carry .income/.transfer.
+            if newKind == .expense && (category == .income || category == .transfer) {
+                category = .groceries
+            }
             resetSplitsToEven()
         }
         .onChange(of: selectedOwners) { _, _ in
@@ -381,6 +466,31 @@ struct AddTransactionSheet: View {
         return "Pick more than one owner to split this transaction."
     }
 
+    private var transferFooterCaption: LocalizedStringKey {
+        "A reimbursement records one member paying another back. It doesn't count as spending or income."
+    }
+
+    /// Format USD cents as a display-currency string for the amount field.
+    private func displayAmountString(cents: Int64) -> String {
+        let currency = appState.currency
+        let rate = appState.rate(for: currency)
+        let display = Money.toDisplayAmount(cents: cents, in: currency, rate: rate)
+        return String(format: "%.\(currency.fractionDigits)f",
+                      NSDecimalNumber(decimal: display).doubleValue)
+    }
+
+    /// Seed transfer From/To when not yet chosen: From = current person (or
+    /// first member), To = the first *other* member.
+    private func seedDefaultTransferParties() {
+        let members = availableOwners
+        guard !members.isEmpty else { return }
+        let me = appState.currentPersonID ?? members.first?.id
+        if transferFrom == nil { transferFrom = me }
+        if transferTo == nil {
+            transferTo = members.first(where: { $0.id != transferFrom })?.id
+        }
+    }
+
     // MARK: - Sheet nav
 
     private var sheetNav: some View {
@@ -426,6 +536,33 @@ struct AddTransactionSheet: View {
                                      from: appState.currency,
                                      rate: appState.rate(for: appState.currency))
         }
+
+        // Transfer (reimbursement) builds the reused-share row shape: paid_by =
+        // sender, owner_ids = [recipient], shares = { recipient: amount },
+        // category = transfer. No merchant/source/category/split. Never routes
+        // through computeShares/validateSplit. Bypassed entirely by the balance
+        // math except via balanceBetween.
+        if kind == .transfer {
+            guard let from = transferFrom, let to = transferTo, from != to else { return }
+            let tx = Transaction(
+                id: editing?.id ?? UUID(),
+                merchant: "",
+                category: .transfer,
+                kind: .transfer,
+                amount: cents,
+                ownerIDs: [to],
+                shares: [to: cents],
+                source: "",
+                date: date,
+                householdID: appState.currentHouseholdID,
+                createdBy: editing?.createdBy ?? appState.currentUserID,
+                paidBy: from
+            )
+            onSubmit(tx, keepOpen)
+            if keepOpen { resetFormForAnotherEntry() }
+            return
+        }
+
         // Owners in canonical order (shared `orderedOwnerIds`); shares are exact
         // cents derived from the per-owner percentages (even when one owner takes all).
         let owners = orderedOwnerIds(Array(selectedOwners))
@@ -441,6 +578,11 @@ struct AddTransactionSheet: View {
             }
         }
         let shares = computeShares(cents, owners, split)
+        // Expense payer defaults to the current person when not chosen; income
+        // carries no payer.
+        let resolvedPaidBy: Person.ID? = kind == .expense
+            ? (paidBy ?? appState.currentPersonID)
+            : nil
         let tx = Transaction(
             id: editing?.id ?? UUID(),
             merchant: merchant.trimmingCharacters(in: .whitespaces),
@@ -452,7 +594,8 @@ struct AddTransactionSheet: View {
             source: source,
             date: date,
             householdID: appState.currentHouseholdID,
-            createdBy: editing?.createdBy ?? appState.currentUserID
+            createdBy: editing?.createdBy ?? appState.currentUserID,
+            paidBy: resolvedPaidBy
         )
         onSubmit(tx, keepOpen)
         if keepOpen {
@@ -487,28 +630,30 @@ struct AddTransactionSheet: View {
     }
 
     private func prefill(from source: Transaction) {
-        merchant = source.merchant
         kind = source.kind
+        date = .now
+        amountText = displayAmountString(cents: source.amount)
+        originalAmountText = ""
+
+        // Transfer copy: carry over the sender/recipient (validated against
+        // current membership) and nothing else.
+        if source.kind == .transfer {
+            let validIDs = Set(availableOwners.map(\.id))
+            transferFrom = source.paidBy.flatMap { validIDs.contains($0) ? $0 : nil }
+            transferTo = source.ownerIDs.first.flatMap { validIDs.contains($0) ? $0 : nil }
+            seedDefaultTransferParties()
+            return
+        }
+
+        merchant = source.merchant
         if source.kind == .expense {
             category = source.category
+            // Carry over the payer if it's still a valid member; else default.
+            let validIDs = Set(availableOwners.map(\.id))
+            paidBy = source.paidBy.flatMap { validIDs.contains($0) ? $0 : nil }
+                ?? appState.currentPersonID
         }
         self.source = source.source
-        date = .now
-
-        // Amount: convert stored USD cents into the user's current display
-        // currency so the field reads in the same units the rest of the
-        // sheet uses.
-        let currency = appState.currency
-        let rate = appState.rate(for: currency)
-        let display = Money.toDisplayAmount(cents: source.amount,
-                                            in: currency,
-                                            rate: rate)
-        let formatted = String(
-            format: "%.\(currency.fractionDigits)f",
-            NSDecimalNumber(decimal: display).doubleValue
-        )
-        amountText = formatted
-        originalAmountText = ""
 
         // Owners: intersect with whatever's valid for the current scope
         // so a removed member or local user doesn't pollute the
@@ -593,13 +738,28 @@ struct AddTransactionSheet: View {
 
     // MARK: - Direction toggle
 
+    private static func kindLabel(_ k: TransactionKind) -> LocalizedStringKey {
+        switch k {
+        case .expense:  return "Expense"
+        case .income:   return "Income"
+        case .transfer: return "Transfer"
+        }
+    }
+
+    /// Segments offered. Editing a transfer stays a transfer (and vice versa) —
+    /// the two row shapes aren't interchangeable. Add/settle-up offer all three.
+    private var directionOptions: [TransactionKind] {
+        guard let tx = editing else { return TransactionKind.allCases }
+        return tx.kind == .transfer ? [.transfer] : [.expense, .income]
+    }
+
     private var directionToggle: some View {
         HStack(spacing: 4) {
-            ForEach(TransactionKind.allCases, id: \.self) { k in
+            ForEach(directionOptions, id: \.self) { k in
                 Button {
                     kind = k
                 } label: {
-                    Text(k == .income ? "Income" : "Expense")
+                    Text(Self.kindLabel(k))
                         .font(.lato(size: 14, weight: .semibold))
                         .tracking(-0.1)
                         .foregroundStyle(kind == k ? AppTheme.text : AppTheme.text.opacity(0.58))
@@ -691,6 +851,95 @@ struct AddTransactionSheet: View {
         } else {
             selectedOwners.insert(id)
         }
+    }
+
+    /// "Paid by" member picker for expenses (shown only when >1 member). The
+    /// member who fronted the expense; defaults to the current person.
+    private var paidByRow: some View {
+        HStack(spacing: 12) {
+            Text("Paid by")
+                .font(.lato(size: 15))
+                .foregroundStyle(AppTheme.text.opacity(0.58))
+                .frame(width: 96, alignment: .leading)
+            Spacer()
+            Menu {
+                ForEach(availableOwners) { u in
+                    Button(u.name) { paidBy = u.id }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(memberName(paidBy))
+                        .font(.lato(size: 17, weight: .medium))
+                        .tracking(-0.2)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.lato(size: 11, weight: .semibold))
+                        .foregroundStyle(AppTheme.text.opacity(0.36))
+                }
+                .foregroundStyle(AppTheme.text)
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(minHeight: 52)
+        .accessibilityLabel("Paid by")
+    }
+
+    /// Resolve a member id to its display name (— when nil/unknown).
+    private func memberName(_ id: User.ID?) -> String {
+        guard let id else { return "—" }
+        return appState.user(id).name
+    }
+
+    // MARK: - Transfer section (reimbursement / settle-up)
+
+    /// From → To member pickers for a reimbursement. No category/source/split.
+    private var transferSection: some View {
+        formGroup {
+            transferPartyRow(label: "From", selection: $transferFrom, exclude: transferTo)
+            divider
+            transferPartyRow(label: "To", selection: $transferTo, exclude: transferFrom)
+            divider
+            dateRow
+        }
+    }
+
+    /// One From/To member picker. `exclude` is the other party so the menu
+    /// can't pick the same member on both sides.
+    private func transferPartyRow(label: LocalizedStringKey,
+                                  selection: Binding<User.ID?>,
+                                  exclude: User.ID?) -> some View {
+        HStack(spacing: 12) {
+            Text(label)
+                .font(.lato(size: 15))
+                .foregroundStyle(AppTheme.text.opacity(0.58))
+                .frame(width: 96, alignment: .leading)
+            Spacer()
+            Menu {
+                ForEach(availableOwners) { u in
+                    Button {
+                        selection.wrappedValue = u.id
+                    } label: {
+                        if selection.wrappedValue == u.id {
+                            Label(u.name, systemImage: "checkmark")
+                        } else {
+                            Text(u.name)
+                        }
+                    }
+                    .disabled(u.id == exclude)
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(memberName(selection.wrappedValue))
+                        .font(.lato(size: 17, weight: .medium))
+                        .tracking(-0.2)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.lato(size: 11, weight: .semibold))
+                        .foregroundStyle(AppTheme.text.opacity(0.36))
+                }
+                .foregroundStyle(AppTheme.text)
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(minHeight: 52)
     }
 
     private var categoryRow: some View {

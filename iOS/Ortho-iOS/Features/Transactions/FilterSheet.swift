@@ -98,7 +98,7 @@ struct FilterSheet: View {
     private var kindSection: some View {
         section("Type") {
             segmented(
-                options: [(.all, "All"), (.expense, "Expenses"), (.income, "Income")],
+                options: [(.all, "All"), (.expense, "Expenses"), (.income, "Income"), (.transfer, "Transfers")],
                 selection: criteria.kind
             ) { criteria.kind = $0 }
         }
