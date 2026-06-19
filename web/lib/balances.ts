@@ -37,14 +37,3 @@ export function balanceBetween(
   }
   return net
 }
-
-/** Per-other-member net balance for `viewer` (positive ⇒ they owe the viewer). */
-export function balancesForViewer(
-  viewer: string,
-  memberIds: string[],
-  transactions: Transaction[]
-): Array<{ personId: string; net: number }> {
-  return memberIds
-    .filter((id) => id !== viewer)
-    .map((personId) => ({ personId, net: balanceBetween(viewer, personId, transactions) }))
-}

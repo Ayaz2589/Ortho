@@ -45,7 +45,7 @@ export function TransactionDetailModal({
       <Modal
         open={open && !editing}
         onClose={onClose}
-        title={isIncome ? 'Income' : 'Expense'}
+        title={tx.kind === 'transfer' ? 'Reimbursement' : isIncome ? 'Income' : 'Expense'}
         left={
           <button type="button" onClick={onClose} className="text-accent">
             Done

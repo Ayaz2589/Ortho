@@ -52,6 +52,10 @@ export function MonthSummaryCard({
   let rightCaption: string
   if (isThisMonth) {
     rightCaption = `Day ${dayOfMonth} of ${daysInMonth}`
+  } else if (isSpecificMonth) {
+    // The header already names the selected month; a date-range caption here would
+    // format the UTC month bounds in local time and can drift a day near edges.
+    rightCaption = ''
   } else {
     const endDate = new Date(interval.end.getTime() - 1)
     rightCaption = `${shortDate(interval.start, locale)} – ${shortDate(endDate, locale)}`

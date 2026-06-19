@@ -93,7 +93,8 @@ export function HousingSnapshotCard() {
               <span
                 className="text-[13px] font-normal tabular-nums"
                 style={{
-                  color: netRentalIncome >= 0 ? 'var(--positive)' : 'var(--destructive)',
+                  // Loss/cost is never red (constitution); incoming stays sage-positive.
+                  color: netRentalIncome >= 0 ? 'var(--positive)' : 'var(--text)',
                 }}
               >
                 {signed(netRentalIncome, formatMoney)}

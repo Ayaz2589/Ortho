@@ -81,7 +81,7 @@ export function NetBalanceCard({ property }: { property: Property }) {
         <HousingLabel>Net balance</HousingLabel>
         <span
           className="text-[28px] font-light tracking-[-0.4px] tabular-nums"
-          style={{ color: net >= 0 ? 'var(--positive)' : 'var(--destructive)' }}
+          style={{ color: net >= 0 ? 'var(--positive)' : 'var(--text)' }}
         >
           {signed}
         </span>

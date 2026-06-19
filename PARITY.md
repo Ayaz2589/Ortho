@@ -14,9 +14,13 @@ test suites assert. The **CLI** writes to the same tables and reuses the shared 
 functions where it can, but it is **not** part of the golden-vector harness and has a few intentional and
 a few unintended divergences (below).
 
-> Last audited: **2026-06-18** (post feature `012-household-reimbursement`). Method: 10-capability
-> tri-surface audit, every divergence adversarially re-verified against the code. Apps: web **593** tests
-> green, iOS **21** green. Legend: ✅ in parity · ⚠️ partial / known gap · ⛔️ diverges · — not applicable.
+> Last audited: **2026-06-19** (full web+iOS app review). Method: 10-capability tri-surface audit plus
+> a 6-dimension deep review of each app (dead code, refactors, correctness, per-surface behavior,
+> constitution consistency), every finding adversarially re-verified. Apps: web **593** tests green,
+> iOS **21** green. Web pass applied: constitution *loss-is-never-red* fixes (housing negative net
+> rental / net balance, app-shell error panel), transfer-detail mislabel, dead-code/dependency removal.
+> The matching iOS-side color fixes + cross-surface items (see Known divergences) are tracked for the
+> iOS pass. Legend: ✅ in parity · ⚠️ partial / known gap · ⛔️ diverges · — not applicable.
 
 ## Parity matrix
 

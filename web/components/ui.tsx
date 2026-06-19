@@ -2,7 +2,6 @@
 
 import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { paletteFor } from '@/lib/categories'
 import type { User } from '@/lib/types'
@@ -187,7 +186,7 @@ export function Modal({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden="true" />
       <div className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-bg sm:rounded-3xl">
         <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
           <div className="min-w-[60px] text-left text-[15px] text-accent">
@@ -278,14 +277,6 @@ export function PageHeader({
       </div>
       {right ? <div className="flex items-center gap-2 pt-2">{right}</div> : null}
     </div>
-  )
-}
-
-export function CloseButton({ onClick }: { onClick: () => void }) {
-  return (
-    <IconButton onClick={onClick} ariaLabel="Close">
-      <X size={18} />
-    </IconButton>
   )
 }
 

@@ -1,4 +1,3 @@
-export type Role = 'owner' | 'member'
 /** `transfer` = a member-to-member reimbursement (settle-up); never spend or income. */
 export type TransactionKind = 'expense' | 'income' | 'transfer'
 export type PropertyKind = 'primary_home' | 'multifamily' | 'rental'
@@ -29,13 +28,6 @@ export interface Household {
   id: string
   owner_id: string
   name: string
-  created_at: string
-}
-
-export interface HouseholdMember {
-  household_id: string
-  user_id: string
-  role: Role
   created_at: string
 }
 
@@ -85,8 +77,6 @@ export interface Transaction {
   /** Per-owner amount in cents; the values sum to `amount_cents`. */
   shares: Record<string, number>
 }
-
-export type Platform = 'web' | 'ios'
 
 /** One owner's cents share of a transaction (Supabase `transaction_shares`). */
 export interface TransactionShare {
@@ -163,8 +153,3 @@ export interface Insight {
   magnitude_cents: number
 }
 
-export interface PlatformLock {
-  user_id: string
-  platform: 'web' | 'ios'
-  locked_at: string
-}
