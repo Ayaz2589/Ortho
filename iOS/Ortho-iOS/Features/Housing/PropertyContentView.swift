@@ -53,31 +53,55 @@ struct PropertyContentView: View {
         VStack(alignment: .leading, spacing: 16) {
             switch property.kind {
             case .primaryHome:
-                MortgageMonthlyPaymentCard(mortgage: property.mortgage!)
-                MortgageDetailsCard(mortgage: property.mortgage!)
-                EquityProgressCard(mortgage: property.mortgage!)
-                AmortizationCard(mortgage: property.mortgage!)
+                if let mortgage = property.mortgage {
+                    MortgageMonthlyPaymentCard(mortgage: mortgage)
+                    MortgageDetailsCard(mortgage: mortgage)
+                    EquityProgressCard(mortgage: mortgage)
+                    AmortizationCard(mortgage: mortgage)
+                } else {
+                    incompletePlaceholder
+                }
 
             case .multifamily:
-                MortgageMonthlyPaymentCard(mortgage: property.mortgage!)
-                MortgageDetailsCard(mortgage: property.mortgage!)
-                MultifamilyUnitsCard(property: property)
-                MultifamilyNetBalanceCard(property: property)
-                EquityProgressCard(mortgage: property.mortgage!)
-                AmortizationCard(mortgage: property.mortgage!)
+                if let mortgage = property.mortgage {
+                    MortgageMonthlyPaymentCard(mortgage: mortgage)
+                    MortgageDetailsCard(mortgage: mortgage)
+                    MultifamilyUnitsCard(property: property)
+                    MultifamilyNetBalanceCard(property: property)
+                    EquityProgressCard(mortgage: mortgage)
+                    AmortizationCard(mortgage: mortgage)
+                } else {
+                    incompletePlaceholder
+                }
 
             case .rental:
-                RentalMonthlyRentCard(lease: property.lease!)
-                if property.lease?.isRenewalSoon() == true {
-                    LeaseRenewalBanner(lease: property.lease!)
+                if let lease = property.lease {
+                    RentalMonthlyRentCard(lease: lease)
+                    if lease.isRenewalSoon() {
+                        LeaseRenewalBanner(lease: lease)
+                    }
+                    LeaseInfoCard(lease: lease)
+                    RentalPaymentsCard(propertyID: property.id,
+                                       onAddPayment: { showingAddPayment = true })
+                } else {
+                    incompletePlaceholder
                 }
-                LeaseInfoCard(lease: property.lease!)
-                RentalPaymentsCard(propertyID: property.id,
-                                   onAddPayment: { showingAddPayment = true })
             }
 
             deleteButton
         }
+    }
+
+    /// Neutral fallback when a server property is missing its mortgage/lease
+    /// sub-row. Avoids crashing the Housing tab on partially-synced data.
+    private var incompletePlaceholder: some View {
+        Text("Incomplete property — tap Edit to finish setup.")
+            .font(.lato(size: 15))
+            .foregroundStyle(AppTheme.text2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
+            .background(AppTheme.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private var deleteButton: some View {

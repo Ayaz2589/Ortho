@@ -12,10 +12,10 @@ describe('formatMoney', () => {
       // cents, leadingPlus, expected
       [1234, false, '$12.34'],
       [0, false, '$0.00'],
-      [-1234, false, '-$12.34'],
+      [-1234, false, '−$12.34'],
       [1234, true, '+$12.34'], // leadingPlus adds '+' for positive
       [0, true, '$0.00'], // zero is not positive -> no '+'
-      [-1234, true, '-$12.34'], // negative always uses '-', never '+'
+      [-1234, true, '−$12.34'], // negative always uses '−', never '+'
     ])('formats %i cents (leadingPlus=%s) as %s', (cents, leadingPlus, expected) => {
       expect(formatMoney(cents, 'usd', 1, leadingPlus)).toBe(expected)
     })
@@ -30,7 +30,7 @@ describe('formatMoney', () => {
       expect(formatMoney(1000, 'eur')).toBe('€10.00')
     })
     it('formats negative with leading minus', () => {
-      expect(formatMoney(-1000, 'eur')).toBe('-€10.00')
+      expect(formatMoney(-1000, 'eur')).toBe('−€10.00')
     })
     it('adds leading plus only when requested and positive', () => {
       expect(formatMoney(1000, 'eur', 1, true)).toBe('+€10.00')
@@ -46,7 +46,7 @@ describe('formatMoney', () => {
       expect(formatMoney(0, 'jpy')).toBe('¥0')
     })
     it('formats negative without decimals', () => {
-      expect(formatMoney(-1234, 'jpy')).toBe('-¥12')
+      expect(formatMoney(-1234, 'jpy')).toBe('−¥12')
     })
     it('adds leading plus for positive', () => {
       expect(formatMoney(1234, 'jpy', 1, true)).toBe('+¥12')

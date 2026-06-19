@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Dashboard widget — one row per category with a budget set, showing
 /// month-to-date spend vs the monthly limit. Bar color goes sage →
-/// accent → destructive as spending approaches and exceeds the limit.
+/// accent (sand) as spending approaches and exceeds the limit — never red.
 ///
 /// Hides itself entirely when no budgets are set (matches the empty-card
 /// behavior of `InsightsCardStack`). Reads `AppState.budgets` directly so
@@ -109,10 +109,10 @@ struct BudgetProgressCard: View {
         }
     }
 
-    /// Sage when comfortably under, accent in the warning band, destructive
-    /// when at or over the limit.
+    /// Sage when comfortably under, accent (sand) in the warning band and when
+    /// at or over the limit — over-budget is conveyed by the filled bar + the
+    /// spent/limit figure, never by red (constitution I/IV).
     private func barColor(for fraction: Double) -> Color {
-        if fraction >= 1.0 { return AppTheme.destructive }
         if fraction >= 0.85 { return AppTheme.accent }
         return AppTheme.positive
     }

@@ -20,6 +20,7 @@ function mockApp(transactions: Transaction[]) {
       { id: 'p2', name: 'Tasnuva' },
     ],
     transactions,
+    resolveUser: (id: string) => ({ name: id === 'p1' ? 'Ayaz' : id === 'p2' ? 'Tasnuva' : id }),
     formatMoney: (c: number) => `$${(c / 100).toFixed(2)}`,
   }
 }

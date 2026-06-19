@@ -64,7 +64,8 @@ export function formatMoney(
     maximumFractionDigits: config.fractionDigits,
   }).format(Math.abs(amount))
 
-  const sign = amount < 0 ? '-' : leadingPlus && amount > 0 ? '+' : ''
+  // Unicode minus (U+2212) for shown negatives, per the constitution's money rules.
+  const sign = amount < 0 ? '−' : leadingPlus && amount > 0 ? '+' : ''
   return `${sign}${formatted}`
 }
 

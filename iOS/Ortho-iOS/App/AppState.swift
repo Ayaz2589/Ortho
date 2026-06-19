@@ -339,7 +339,7 @@ final class AppState {
         transactions[idx] = tx
         Task {
             do {
-                try await transactionsAPI.update(tx)
+                try await transactionsAPI.update(tx, previous: previous)
             } catch {
                 await MainActor.run {
                     if let i = transactions.firstIndex(where: { $0.id == tx.id }) {
@@ -428,14 +428,32 @@ final class AppState {
         return balanceBetween(viewer: me, other: other, transactions: transactions)
     }
 
-    /// Per-other-member net balance for the current person, over active members
-    /// only. Positive ⇒ they owe you. Drives the balance line + Settle-up in
-    /// the transactions section.
+    /// Per-other-member net balance for the current person. Positive ⇒ they owe
+    /// you. Drives the balance line + Settle-up in the transactions section.
+    ///
+    /// Iterates over EVERY distinct counterparty that actually appears in
+    /// transactions — not just `activePeople` — so a removed member you still
+    /// owe (or who still owes you) stays visible and settleable. Names resolve
+    /// via `user(_:)`, which looks up removed people too. Only non-zero balances
+    /// are returned. (Web applies the identical fix to BalanceSummary.)
     var memberBalances: [(person: User, net: Int64)] {
         guard let me = currentPersonID else { return [] }
-        return activePeople
-            .filter { $0.id != me }
-            .map { (person: $0.asUser, net: balanceBetween(viewer: me, other: $0.id, transactions: transactions)) }
+
+        // Collect counterparties from payers, owners, and transfer recipients.
+        var counterpartyIDs: Set<Person.ID> = []
+        for tx in transactions {
+            if let payer = tx.paidBy { counterpartyIDs.insert(payer) }
+            counterpartyIDs.formUnion(tx.ownerIDs)
+        }
+        counterpartyIDs.remove(me)
+
+        return counterpartyIDs
+            .map { id -> (person: User, net: Int64) in
+                (person: user(id),
+                 net: balanceBetween(viewer: me, other: id, transactions: transactions))
+            }
+            .filter { $0.net != 0 }
+            .sorted { $0.person.name < $1.person.name }
     }
 
     /// Sum (USD cents) of this user's share of all expense transactions whose
@@ -449,9 +467,13 @@ final class AppState {
     ) -> Int64 {
         let interval = calendar.dateInterval(of: .month, for: referenceDate)
         return transactions.reduce(Int64(0)) { acc, tx in
+            // Half-open [start, end) to match web + monthBounds (DateInterval's
+            // own `contains` is CLOSED and would double-count a tx landing at
+            // the exact next-month midnight).
+            let inInterval = interval.map { tx.date >= $0.start && tx.date < $0.end } ?? true
             guard tx.kind == .expense,
                   tx.ownerIDs.contains(personID),
-                  interval?.contains(tx.date) ?? true
+                  inInterval
             else { return acc }
             return acc + (tx.effectiveShares[personID] ?? 0)
         }
@@ -482,7 +504,9 @@ final class AppState {
     /// interval. USD cents.
     func incomeTotal(in interval: DateInterval) -> Int64 {
         transactions.reduce(0) { acc, tx in
-            guard tx.kind == .income, interval.contains(tx.date) else { return acc }
+            guard tx.kind == .income,
+                  tx.date >= interval.start, tx.date < interval.end
+            else { return acc }
             return acc + tx.amount
         }
     }
@@ -491,7 +515,9 @@ final class AppState {
     /// interval. USD cents.
     func expenseTotal(in interval: DateInterval) -> Int64 {
         transactions.reduce(0) { acc, tx in
-            guard tx.kind == .expense, interval.contains(tx.date) else { return acc }
+            guard tx.kind == .expense,
+                  tx.date >= interval.start, tx.date < interval.end
+            else { return acc }
             return acc + tx.amount
         }
     }
@@ -501,7 +527,7 @@ final class AppState {
         transactions.reduce(Int64(0)) { acc, tx in
             guard tx.kind == .expense,
                   tx.ownerIDs.contains(personID),
-                  interval.contains(tx.date)
+                  tx.date >= interval.start, tx.date < interval.end
             else { return acc }
             return acc + (tx.effectiveShares[personID] ?? 0)
         }
@@ -538,7 +564,7 @@ final class AppState {
         transactions.reduce(0) { acc, tx in
             guard tx.kind == .expense,
                   tx.category == category,
-                  interval.contains(tx.date)
+                  tx.date >= interval.start, tx.date < interval.end
             else { return acc }
             return acc + tx.amount
         }
@@ -552,7 +578,7 @@ final class AppState {
         transactions
             .filter { $0.kind == .expense
                       && $0.category == category
-                      && interval.contains($0.date) }
+                      && $0.date >= interval.start && $0.date < interval.end }
             .sorted { $0.date > $1.date }
     }
 
@@ -566,7 +592,7 @@ final class AppState {
         transactions
             .filter { $0.kind == .expense
                       && $0.ownerIDs.contains(personID)
-                      && interval.contains($0.date) }
+                      && $0.date >= interval.start && $0.date < interval.end }
             .map { tx in (transaction: tx, shareCents: tx.effectiveShares[personID] ?? 0) }
             .sorted { $0.transaction.date > $1.transaction.date }
     }
@@ -579,7 +605,7 @@ final class AppState {
     {
         var totals: [TransactionCategory: Int64] = [:]
         for tx in transactions where tx.kind == .expense {
-            guard interval.contains(tx.date) else { continue }
+            guard tx.date >= interval.start, tx.date < interval.end else { continue }
             totals[tx.category, default: 0] += tx.amount
         }
         return totals
@@ -597,7 +623,7 @@ final class AppState {
     {
         var totals: [String: (cents: Int64, count: Int)] = [:]
         for tx in transactions where tx.kind == .expense {
-            guard interval.contains(tx.date) else { continue }
+            guard tx.date >= interval.start, tx.date < interval.end else { continue }
             var entry = totals[tx.merchant] ?? (cents: 0, count: 0)
             entry.cents += tx.amount
             entry.count += 1
@@ -733,43 +759,6 @@ final class AppState {
                 await MainActor.run {
                     if let i = households.firstIndex(where: { $0.id == id }) {
                         households[i].name = previous
-                    }
-                    dataError = error.localizedDescription
-                }
-            }
-        }
-    }
-
-    /// Append a member to the active household. Used by the Add member flow.
-    /// Note: the surface that called this (`HouseholdView` → `AddUserSheet`)
-    /// is disabled until the Invitations flow lands, so this is currently
-    /// unreachable from the UI. Kept for symmetry with the membership model.
-    func addMemberToCurrentHousehold(_ userID: User.ID) {
-        guard let id = currentHouseholdID,
-              let idx = households.firstIndex(where: { $0.id == id })
-        else { return }
-        if !households[idx].memberIDs.contains(userID) {
-            households[idx].memberIDs.append(userID)
-        }
-    }
-
-    /// Remove a member from the active household — optimistic + server sync.
-    /// The `User` record stays in `users` so existing transactions they
-    /// participate in continue to resolve to a real name + palette. Caller
-    /// is responsible for invariants (e.g. don't remove the last member).
-    func removeMemberFromCurrentHousehold(_ userID: User.ID) {
-        guard let id = currentHouseholdID,
-              let idx = households.firstIndex(where: { $0.id == id })
-        else { return }
-        let previousMembers = households[idx].memberIDs
-        households[idx].memberIDs.removeAll { $0 == userID }
-        Task {
-            do {
-                try await householdsAPI.removeMember(userID: userID, from: id)
-            } catch {
-                await MainActor.run {
-                    if let i = households.firstIndex(where: { $0.id == id }) {
-                        households[i].memberIDs = previousMembers
                     }
                     dataError = error.localizedDescription
                 }

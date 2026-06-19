@@ -59,7 +59,10 @@ struct DailySpendTrendCard: View {
                     if let delta = trendDelta {
                         statColumn(label: "vs. prior 30",
                                    value: deltaString(delta),
-                                   tint: delta >= 0 ? AppTheme.destructive : AppTheme.positive)
+                                   // Spending up is not a loss-red event — read
+                                   // it as neutral secondary text; spending down
+                                   // stays sage (constitution I/IV).
+                                   tint: delta >= 0 ? AppTheme.text2 : AppTheme.positive)
                     }
                 }
             }

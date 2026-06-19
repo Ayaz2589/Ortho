@@ -73,7 +73,7 @@ export function DailySpendTrendCard({ now }: { now: Date }) {
               <Readout
                 label="vs. prior 30"
                 value={deltaString(trendDelta)}
-                tint={trendDelta >= 0 ? 'var(--destructive)' : 'var(--positive)'}
+                tint={trendDelta >= 0 ? 'var(--text-2)' : 'var(--positive)'}
               />
             )}
           </div>

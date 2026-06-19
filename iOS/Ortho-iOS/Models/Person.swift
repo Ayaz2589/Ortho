@@ -3,7 +3,7 @@ import Foundation
 /// A name-only member of a household (the account holder or someone you added).
 /// Owners of transactions are People. Added people need no Ortho account, so
 /// `linkedUserID` is nil for them and set to the auth uid for the account holder.
-/// Replaces the previous LocalUser-vs-User split — there is one people list.
+/// There is a single people list — no separate local-vs-account person split.
 struct Person: Identifiable, Hashable, Codable {
     let id: UUID
     var householdID: Household.ID

@@ -44,10 +44,11 @@ struct TransactionsAPI {
     // MARK: - Write
 
     /// Insert a new transaction. For `.shared` scope, materializes one share
-    /// row per owner. The two inserts are sequential; if shares fail after
-    /// the parent succeeded, the row is left without shares (recoverable by
-    /// retrying or by an `update` call). v2 work could wrap this in a
-    /// `create_transaction_with_shares` RPC for atomicity.
+    /// row per owner. The two inserts are sequential; if the shares insert
+    /// fails after the parent succeeded, we delete the just-inserted parent
+    /// before rethrowing so we never leave an orphaned, share-less row (which
+    /// rehydrate would misread as "creator owns the full amount"). v2 work
+    /// could wrap this in a `create_transaction_with_shares` RPC for atomicity.
     func create(_ tx: Transaction) async throws {
         let row = TransactionRecord.from(tx)
         try await client
@@ -57,15 +58,33 @@ struct TransactionsAPI {
 
         let shares = Self.shareRows(for: tx)
         guard !shares.isEmpty else { return }
-        try await client
-            .from("transaction_shares")
-            .insert(shares)
-            .execute()
+        do {
+            try await client
+                .from("transaction_shares")
+                .insert(shares)
+                .execute()
+        } catch {
+            // Roll back the orphaned parent. Best-effort: if the cleanup itself
+            // fails (network), surface the ORIGINAL shares error to the caller.
+            try? await client
+                .from("transactions")
+                .delete()
+                .eq("id", value: tx.id)
+                .execute()
+            throw error
+        }
     }
 
     /// Update an existing transaction. Replaces every share row rather than
     /// computing a diff — simpler, and the share count is always small.
-    func update(_ tx: Transaction) async throws {
+    ///
+    /// The old shares are deleted before the new ones are inserted, so a
+    /// failure on the insert would otherwise leave the row share-less
+    /// (rehydrate then misreads it as "creator owns the full amount"). To
+    /// avoid that, `previous` is the pre-edit snapshot: if the new-shares
+    /// insert throws, we re-insert the PREVIOUS shares so the server returns
+    /// to a consistent state, then rethrow.
+    func update(_ tx: Transaction, previous: Transaction) async throws {
         let row = TransactionRecord.from(tx)
         try await client
             .from("transactions")
@@ -81,10 +100,24 @@ struct TransactionsAPI {
 
         let shares = Self.shareRows(for: tx)
         guard !shares.isEmpty else { return }
-        try await client
-            .from("transaction_shares")
-            .insert(shares)
-            .execute()
+        do {
+            try await client
+                .from("transaction_shares")
+                .insert(shares)
+                .execute()
+        } catch {
+            // The new shares didn't land and the old ones are already gone —
+            // restore the previous shares so the row isn't left share-less.
+            // Best-effort restore; the original error is what the caller sees.
+            let restore = Self.shareRows(for: previous)
+            if !restore.isEmpty {
+                try? await client
+                    .from("transaction_shares")
+                    .insert(restore)
+                    .execute()
+            }
+            throw error
+        }
     }
 
     /// Delete a transaction. The FK from `transaction_shares.transaction_id`

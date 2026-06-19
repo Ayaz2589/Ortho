@@ -72,18 +72,6 @@ struct HouseholdsAPI {
             .execute()
     }
 
-    func removeMember(
-        userID: User.ID,
-        from householdID: Household.ID
-    ) async throws {
-        try await client
-            .from("household_members")
-            .delete()
-            .eq("household_id", value: householdID)
-            .eq("user_id", value: userID)
-            .execute()
-    }
-
     // MARK: - People (household_people)
 
     func fetchPeople(householdID: Household.ID) async throws -> [Person] {

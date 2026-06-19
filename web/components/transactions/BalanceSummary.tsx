@@ -11,14 +11,23 @@ import type { TransferPrefill } from '@/components/web/TxForm'
  * neutral text — never red (Constitution: loss/cost is never red).
  */
 export function BalanceSummary({ onSettle }: { onSettle: (p: TransferPrefill) => void }) {
-  const { currentPersonId, householdMembers, transactions, formatMoney } = useApp()
-  if (!currentPersonId || householdMembers.length < 2) return null
+  const { currentPersonId, transactions, formatMoney, resolveUser } = useApp()
+  if (!currentPersonId) return null
 
-  const rows = householdMembers
-    .filter((m) => m.id !== currentPersonId)
-    .map((m) => ({ id: m.id, name: m.name, net: balanceBetween(currentPersonId, m.id, transactions) }))
+  // Every other person who appears in the ledger — including REMOVED members — so
+  // an outstanding balance with someone who has left is still shown and settle-able.
+  const counterparties = new Set<string>()
+  for (const t of transactions) {
+    if (t.paid_by && t.paid_by !== currentPersonId) counterparties.add(t.paid_by)
+    for (const id of t.owner_ids) if (id !== currentPersonId) counterparties.add(id)
+  }
 
-  if (rows.every((r) => r.net === 0)) return null // all settled → nothing to show
+  const rows = [...counterparties]
+    .map((id) => ({ id, name: resolveUser(id).name, net: balanceBetween(currentPersonId, id, transactions) }))
+    .filter((r) => r.net !== 0)
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  if (rows.length === 0) return null // all settled → nothing to show
 
   return (
     <Card className="mb-4 p-4">

@@ -87,7 +87,8 @@ enum InsightEngine {
         periodKey: String
     ) -> [Insight] {
         var totals: [TransactionCategory: Int64] = [:]
-        for tx in transactions where tx.kind == .expense && month.contains(tx.date) {
+        for tx in transactions
+        where tx.kind == .expense && tx.date >= month.start && tx.date < month.end {
             totals[tx.category, default: 0] += tx.amount
         }
         guard let top = totals.max(by: { $0.value < $1.value }), top.value > 0 else {
@@ -127,8 +128,12 @@ enum InsightEngine {
         var current: [TransactionCategory: Int64] = [:]
         var prior:   [TransactionCategory: Int64] = [:]
         for tx in transactions where tx.kind == .expense {
-            if month.contains(tx.date)      { current[tx.category, default: 0] += tx.amount }
-            if priorMonth.contains(tx.date) { prior[tx.category,   default: 0] += tx.amount }
+            if tx.date >= month.start && tx.date < month.end {
+                current[tx.category, default: 0] += tx.amount
+            }
+            if tx.date >= priorMonth.start && tx.date < priorMonth.end {
+                prior[tx.category, default: 0] += tx.amount
+            }
         }
         var out: [Insight] = []
         for (category, currentTotal) in current {
@@ -183,7 +188,7 @@ enum InsightEngine {
             let spent = transactions.reduce(Int64(0)) { acc, tx in
                 guard tx.kind == .expense,
                       tx.category == budget.category,
-                      month.contains(tx.date)
+                      tx.date >= month.start, tx.date < month.end
                 else { return acc }
                 return acc + tx.amount
             }
@@ -241,10 +246,10 @@ enum InsightEngine {
         periodKey: String
     ) -> [Insight] {
         let income   = transactions.reduce(Int64(0)) { acc, tx in
-            (tx.kind == .income  && month.contains(tx.date)) ? acc + tx.amount : acc
+            (tx.kind == .income  && tx.date >= month.start && tx.date < month.end) ? acc + tx.amount : acc
         }
         let expenses = transactions.reduce(Int64(0)) { acc, tx in
-            (tx.kind == .expense && month.contains(tx.date)) ? acc + tx.amount : acc
+            (tx.kind == .expense && tx.date >= month.start && tx.date < month.end) ? acc + tx.amount : acc
         }
         let net = income - expenses
         guard income > 0 || expenses > 0 else { return [] }
@@ -364,7 +369,8 @@ enum InsightEngine {
         }
 
         var bestOutlier: (tx: Transaction, multiple: Double)? = nil
-        for tx in transactions where tx.kind == .expense && month.contains(tx.date) {
+        for tx in transactions
+        where tx.kind == .expense && tx.date >= month.start && tx.date < month.end {
             guard let median = medians[tx.category], median > 0 else { continue }
             let multiple = Double(tx.amount) / Double(median)
             guard multiple >= 2.0 else { continue }
@@ -458,7 +464,7 @@ enum InsightEngine {
               mortgage.monthlyPaymentCents > 0
         else { return [] }
         let monthlyIncome = transactions.reduce(Int64(0)) { acc, tx in
-            (tx.kind == .income && month.contains(tx.date)) ? acc + tx.amount : acc
+            (tx.kind == .income && tx.date >= month.start && tx.date < month.end) ? acc + tx.amount : acc
         }
         guard monthlyIncome > 0 else { return [] }
         let ratio = Double(mortgage.monthlyPaymentCents) / Double(monthlyIncome)

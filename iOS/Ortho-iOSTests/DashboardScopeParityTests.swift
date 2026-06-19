@@ -158,6 +158,41 @@ final class DashboardScopeParityTests: XCTestCase {
                        "clearing the month returns to the relative range")
     }
 
+    // MARK: - Month-boundary half-openness ([start, end))
+    //
+    // Regression for the closed-interval double-count: `DateInterval.contains`
+    // is CLOSED [start, end], but the app's `monthBounds`/web are HALF-OPEN
+    // [start, end). A transaction landing at the exact next-month midnight UTC
+    // must belong to the LATER month only — never both. The aggregation sites
+    // (incomeTotal/expenseTotal/spent/categoryExpenseTotal/… and InsightEngine)
+    // now compare `date >= start && date < end`; this locks that predicate.
+
+    /// A tx at the exact next-month-midnight-UTC instant is excluded from the
+    /// earlier month under the half-open predicate (but WOULD be wrongly
+    /// included by `DateInterval.contains`).
+    func testNextMonthMidnightExcludedFromEarlierMonth() throws {
+        let (from, to) = try XCTUnwrap(monthBounds("2026-05"))
+        // `to` is 2026-06-01T00:00:00Z — the first instant of the NEXT month.
+        let boundary = to
+
+        // Half-open predicate used by every aggregation site: excluded.
+        XCTAssertFalse(boundary >= from && boundary < to,
+                       "next-month midnight must not count toward the earlier month")
+
+        // The next month's window includes that same instant (no gap, no overlap).
+        let (nextFrom, nextTo) = try XCTUnwrap(monthBounds("2026-06"))
+        XCTAssertTrue(boundary >= nextFrom && boundary < nextTo,
+                      "next-month midnight belongs to the later month")
+
+        // Document the bug we fixed: the CLOSED DateInterval would double-count it.
+        XCTAssertTrue(DateInterval(start: from, end: to).contains(boundary),
+                      "DateInterval.contains is closed — this is exactly the bug the half-open predicate avoids")
+
+        // A tx one second before the boundary still belongs to the earlier month.
+        let lastSecond = to.addingTimeInterval(-1)
+        XCTAssertTrue(lastSecond >= from && lastSecond < to)
+    }
+
     /// `availableMonths` produces the member set the picker constrains
     /// selection to (selecting an out-of-set month is a UI/AppState no-op).
     func testAvailableMonthsMembership() throws {

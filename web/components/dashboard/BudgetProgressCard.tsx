@@ -5,9 +5,9 @@ import { Card, SectionLabel } from '@/components/ui'
 import { categoryMeta } from '@/lib/categories'
 import type { Interval } from './range'
 
-/** Sage under, accent in the warning band, destructive at/over limit. */
+/** Sage under; sand --accent near/over limit. Loss/cost is never red — the full
+ *  bar position conveys "over limit", not color. */
 function barColor(fraction: number): string {
-  if (fraction >= 1) return 'var(--destructive)'
   if (fraction >= 0.85) return 'var(--accent)'
   return 'var(--positive)'
 }

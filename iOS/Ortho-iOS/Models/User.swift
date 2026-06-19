@@ -6,7 +6,7 @@ import Foundation
 ///
 /// `User.id` equals the Supabase `auth.uid()` — a real Ortho user is one
 /// row in `public.users` keyed by their auth UUID (see Identity decision in
-/// `Tasks.md`). Local device-only people use `LocalUser` instead.
+/// `Tasks.md`).
 struct User: Identifiable, Hashable, Codable {
     let id: UUID
     var name: String

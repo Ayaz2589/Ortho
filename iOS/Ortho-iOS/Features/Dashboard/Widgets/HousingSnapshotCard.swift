@@ -92,7 +92,9 @@ struct HousingSnapshotCard: View {
                     Text(signed(netCents))
                         .font(.lato(size: 13, weight: .semibold))
                         .monospacedDigit()
-                        .foregroundStyle(netCents >= 0 ? AppTheme.positive : AppTheme.destructive)
+                        // Loss is never red (constitution I/IV) — incoming money
+                        // stays sage, a negative net reads as neutral text.
+                        .foregroundStyle(netCents >= 0 ? AppTheme.positive : AppTheme.text)
                 }
                 .padding(.top, 2)
             }

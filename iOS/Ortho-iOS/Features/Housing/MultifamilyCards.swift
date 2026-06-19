@@ -100,7 +100,9 @@ struct MultifamilyNetBalanceCard: View {
                     .font(.lato(size: 28, weight: .bold))
                     .tracking(-0.4)
                     .monospacedDigit()
-                    .foregroundStyle(netCents >= 0 ? AppTheme.positive : AppTheme.destructive)
+                    // Loss is never red (constitution I/IV) — positive cashflow
+                    // is sage, a subsidized (negative) balance is neutral text.
+                    .foregroundStyle(netCents >= 0 ? AppTheme.positive : AppTheme.text)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 Spacer()
