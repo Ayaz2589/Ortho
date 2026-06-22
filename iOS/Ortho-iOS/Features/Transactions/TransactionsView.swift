@@ -404,6 +404,9 @@ struct TransactionsView: View {
                     .font(.lato(size: 15, weight: .semibold))
                     .foregroundStyle(AppTheme.accent)
             }
+            // ≥44pt touch target around the 36pt visual circle.
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(searchActive ? "Close search" : "Search transactions")
@@ -465,7 +468,9 @@ struct TransactionsView: View {
                         .offset(x: 4, y: -3)
                 }
             }
-            .frame(width: 36, height: 36)
+            // ≥44pt touch target around the 36pt visual circle.
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(activeFilterCount_ > 0 ? "Filters, \(activeFilterCount_) active" : "Filters")

@@ -214,6 +214,9 @@ struct RentalPaymentsCard: View {
                 Image(systemName: "minus.circle.fill")
                     .font(.lato(size: 18))
                     .foregroundStyle(AppTheme.destructive)
+                    // ≥44pt touch target around the 18pt glyph.
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Delete payment")

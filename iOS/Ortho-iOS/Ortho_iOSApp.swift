@@ -43,9 +43,19 @@ struct Ortho_iOSApp: App {
         WindowGroup {
             Group {
                 switch appState.authPhase {
-                case .launching: LaunchView()
-                case .signedIn:  RootTabView()
-                case .signedOut: SignInView()
+                case .launching:
+                    LaunchView()
+                case .signedIn:
+                    if appState.bootstrapDidFail {
+                        // Bootstrap left us signed-in with no usable household —
+                        // offer an explicit, non-alarmist Retry instead of an
+                        // empty, half-broken tab shell.
+                        BootstrapRecoveryView()
+                    } else {
+                        RootTabView()
+                    }
+                case .signedOut:
+                    SignInView()
                 }
             }
             .environment(appState)

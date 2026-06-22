@@ -7,6 +7,11 @@ import SwiftUI
 /// Implemented with `TimelineView(.animation)` + `Canvas` so the per-frame
 /// math runs once and renders all rings in a single GPU-friendly pass.
 struct AmbientRippleBackground: View {
+    /// Respect the system "Reduce Motion" setting (Constitution V): when on,
+    /// we render a single static frame of rings instead of the per-frame
+    /// `TimelineView(.animation)` loop, so there's no continuous motion.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     /// Where ripples emanate from, as a fraction of the view's size.
     var origin: UnitPoint = UnitPoint(x: 0.5, y: 0.4)
     /// Absolute point-space nudge applied on top of `origin`. Useful when
@@ -30,40 +35,58 @@ struct AmbientRippleBackground: View {
     private let lineWidth: CGFloat = 1.25
 
     var body: some View {
-        TimelineView(.animation) { context in
-            Canvas { canvas, size in
-                let elapsed = context.date.timeIntervalSinceReferenceDate
-                let center = CGPoint(
-                    x: size.width * origin.x + originOffset.width,
-                    y: size.height * origin.y + originOffset.height
-                )
-                let maxRadius = hypot(
-                    max(center.x, size.width - center.x),
-                    max(center.y, size.height - center.y)
-                )
-
-                for i in 0..<count {
-                    let phaseOffset = Double(i) / Double(count)
-                    let phase = ((elapsed / period) + phaseOffset)
-                        .truncatingRemainder(dividingBy: 1.0)
-                    let radius = maxRadius * phase
-                    let opacity = peakOpacity * (1.0 - phase)
-                    let rect = CGRect(
-                        x: center.x - radius,
-                        y: center.y - radius,
-                        width: radius * 2,
-                        height: radius * 2
-                    )
-                    canvas.stroke(
-                        Path(ellipseIn: rect),
-                        with: .color(rippleColor.opacity(opacity)),
-                        lineWidth: lineWidth
-                    )
+        Group {
+            if reduceMotion {
+                // Static single frame — no animation loop. The decorative
+                // rings are still present (calm, no motion).
+                Canvas { canvas, size in
+                    drawRings(in: &canvas, size: size, elapsed: 0)
+                }
+            } else {
+                TimelineView(.animation) { context in
+                    Canvas { canvas, size in
+                        drawRings(in: &canvas, size: size,
+                                  elapsed: context.date.timeIntervalSinceReferenceDate)
+                    }
                 }
             }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+
+    /// Render the concentric rings for a given `elapsed` time. Pulled out so
+    /// the animated and reduce-motion (static) paths share identical drawing.
+    private func drawRings(in canvas: inout GraphicsContext,
+                           size: CGSize,
+                           elapsed: TimeInterval) {
+        let center = CGPoint(
+            x: size.width * origin.x + originOffset.width,
+            y: size.height * origin.y + originOffset.height
+        )
+        let maxRadius = hypot(
+            max(center.x, size.width - center.x),
+            max(center.y, size.height - center.y)
+        )
+
+        for i in 0..<count {
+            let phaseOffset = Double(i) / Double(count)
+            let phase = ((elapsed / period) + phaseOffset)
+                .truncatingRemainder(dividingBy: 1.0)
+            let radius = maxRadius * phase
+            let opacity = peakOpacity * (1.0 - phase)
+            let rect = CGRect(
+                x: center.x - radius,
+                y: center.y - radius,
+                width: radius * 2,
+                height: radius * 2
+            )
+            canvas.stroke(
+                Path(ellipseIn: rect),
+                with: .color(rippleColor.opacity(opacity)),
+                lineWidth: lineWidth
+            )
+        }
     }
 }
 

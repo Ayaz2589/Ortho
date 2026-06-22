@@ -47,6 +47,12 @@ final class AppState {
     /// Stays `false` for incremental syncs after the first bootstrap.
     var isLoadingInitialData: Bool = false
 
+    /// True when `bootstrapUserSession` failed and left us signed-in with no
+    /// usable household (empty data, nil `currentHouseholdID`). Drives the
+    /// "Couldn't finish setup — Retry" state; cleared on a successful retry.
+    /// Add-card / Add-property are disabled while a household isn't resolved.
+    var bootstrapDidFail: Bool = false
+
     /// Email of the currently-signed-in user, or `nil` when signed out.
     /// Surfaced as a String here so view code doesn't have to import `Auth`
     /// to read it (Swift 6 member-import-visibility — the `User.email`
@@ -1147,6 +1153,7 @@ final class AppState {
 
         await MainActor.run {
             isLoadingInitialData = true
+            bootstrapDidFail = false
         }
 
         do {
@@ -1191,10 +1198,20 @@ final class AppState {
             await MainActor.run {
                 dataError = "Bootstrap failed: \(error.localizedDescription)"
                 isLoadingInitialData = false
-                // Allow a retry on the next auth event (e.g. relaunch).
+                // Surface the in-app "Couldn't finish setup — Retry" state and
+                // allow a retry on the next auth event (e.g. relaunch).
+                bootstrapDidFail = true
                 bootstrappedAuthID = nil
             }
         }
+    }
+
+    /// Re-run the bootstrap after a failure. Driven by the "Retry" button in
+    /// the bootstrap-recovery state. No-op if there's no signed-in session.
+    func retryBootstrap() async {
+        guard let session else { return }
+        bootstrappedAuthID = nil
+        await bootstrapUserSession(authID: session.user.id, email: session.user.email)
     }
 
     /// One-shot fetch from floatrates.com + decode + cache. On failure, sets

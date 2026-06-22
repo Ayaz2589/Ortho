@@ -57,7 +57,11 @@ struct SettingsView: View {
                             }
                             RowSeparator(density: .comfortable)
                         }
+                        // Disabled until a real household is resolved — adding a
+                        // card without one silently no-ops server-side.
                         AddCardRowView { showingAddCard = true }
+                            .disabled(appState.currentHouseholdID == nil)
+                            .opacity(appState.currentHouseholdID == nil ? 0.4 : 1)
                     }
                     .background(AppTheme.surface)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))

@@ -105,6 +105,9 @@ struct AddPropertySheet: View {
 
     private var canSubmit: Bool {
         guard !address.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
+        // A new property needs a resolved household — without one the insert
+        // would FK-fail. Edits keep their original household, so they're fine.
+        if editing == nil, appState.currentHouseholdID == nil { return false }
         switch kind {
         case .primaryHome, .multifamily:
             return parsedDecimal(purchasePriceText) ?? 0 > 0
@@ -512,9 +515,9 @@ struct AddPropertySheet: View {
         }
 
         // Edits preserve the original property's household; new properties
-        // attach to the active one. Falls back to the seeded home household
-        // for preview/empty-state safety — the active household should be
-        // set whenever this sheet is reachable.
+        // attach to the active one. `canSubmit` already blocks the create path
+        // when no household is resolved, so the final fallback is unreachable
+        // in practice — kept only as a last-resort for preview safety.
         let householdID = editing?.householdID
             ?? appState.currentHouseholdID
             ?? Household.homeSample.id

@@ -99,6 +99,9 @@ struct HouseholdView: View {
                             .font(.lato(size: 16, weight: .semibold))
                             .foregroundStyle(AppTheme.accent)
                     }
+                    // ≥44pt touch target around the 36pt visual circle.
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Back")

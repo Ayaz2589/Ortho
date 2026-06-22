@@ -30,6 +30,9 @@ struct CardRowView: View {
                 Image(systemName: "minus.circle.fill")
                     .font(.lato(size: 20, weight: .regular))
                     .foregroundStyle(AppTheme.destructive)
+                    // ≥44pt touch target around the 20pt glyph.
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Delete \(card.name)")

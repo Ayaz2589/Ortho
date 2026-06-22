@@ -121,13 +121,18 @@ struct HousingView: View {
             } label: {
                 ZStack {
                     Circle().fill(AppTheme.text.opacity(0.05))
-                        .frame(width: 36, height: 36)
+                        .frame(width: 44, height: 44)
                     Image(systemName: "plus")
                         .font(.lato(size: 16, weight: .semibold))
                         .foregroundStyle(AppTheme.accent)
                 }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            // Disabled until a real household is resolved — a new property
+            // would otherwise FK-fail against a sample household UUID.
+            .disabled(appState.currentHouseholdID == nil)
+            .opacity(appState.currentHouseholdID == nil ? 0.4 : 1)
             .accessibilityLabel("Add property")
         }
     }
@@ -182,11 +187,14 @@ struct HousingView: View {
                     .foregroundStyle(AppTheme.accent)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
+                    .frame(minHeight: 44)
                     .background(
                         Capsule().fill(AppTheme.text.opacity(0.05))
                     )
             }
             .buttonStyle(.plain)
+            .disabled(appState.currentHouseholdID == nil)
+            .opacity(appState.currentHouseholdID == nil ? 0.4 : 1)
             .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)

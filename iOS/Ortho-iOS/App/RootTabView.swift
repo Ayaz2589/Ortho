@@ -97,6 +97,27 @@ struct RootTabView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
+        @Bindable var appState = appState
+        return content
+            // Global presenter for data-layer failures. `dataError` is set by
+            // ~26 catch blocks across AppState (optimistic-write rollbacks,
+            // sync failures); before this it was written but never read by any
+            // view. Dismissing clears it back to nil. Calm copy, no red panel.
+            .alert(
+                "Something didn't save",
+                isPresented: Binding(
+                    get: { appState.dataError != nil },
+                    set: { if !$0 { appState.dataError = nil } }
+                ),
+                presenting: appState.dataError
+            ) { _ in
+                Button("OK", role: .cancel) { appState.dataError = nil }
+            } message: { message in
+                Text(message)
+            }
+    }
+
+    private var content: some View {
         // Use an explicit VStack to place the demo banner above the tab
         // body. Tried `.safeAreaInset(.top)` here originally, but the
         // child tabs (Housing / Settings) each have their own
