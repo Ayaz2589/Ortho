@@ -220,11 +220,12 @@ function MortgageColumns({ property }: { property: Property }) {
 }
 
 export function HousingDesktop() {
-  const { properties } = useApp()
+  const { properties, deleteProperty } = useApp()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [creatingKind, setCreatingKind] = useState<PropertyKind | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const selected =
     (selectedId ? properties.find((p) => p.id === selectedId) : null) ?? properties[0] ?? null
@@ -232,8 +233,18 @@ export function HousingDesktop() {
 
   const actions = (
     <>
-      {selected && <AccentTextButton onClick={() => setEditingId(selected.id)}>Edit</AccentTextButton>}
-      <ChipIconButton label="Add property" onClick={() => setPickerOpen(true)}>
+      {selected && (
+        <button
+          type="button"
+          className="ow-btn"
+          onClick={() => setConfirmingDelete((c) => !c)}
+          style={{ fontSize: 15, fontWeight: 400, letterSpacing: '-0.2px', color: 'var(--destructive)' }}
+        >
+          Delete
+        </button>
+      )}
+      {selected && <AccentTextButton onClick={() => { setConfirmingDelete(false); setEditingId(selected.id) }}>Edit</AccentTextButton>}
+      <ChipIconButton label="Add property" onClick={() => { setConfirmingDelete(false); setPickerOpen(true) }}>
         <PlusGlyph />
       </ChipIconButton>
     </>
@@ -275,6 +286,36 @@ export function HousingDesktop() {
               </button>
             )
           })}
+        </div>
+      )}
+
+      {selected && confirmingDelete && (
+        <div className="ow-card" style={{ padding: 16, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <span style={{ fontSize: 14, color: 'var(--text-2)', textAlign: 'center' }}>
+            Delete {selected.nickname ?? selected.address}? Mortgage, lease, and payment history will be removed.
+          </span>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+            <button
+              type="button"
+              className="ow-btn"
+              onClick={() => setConfirmingDelete(false)}
+              style={{ padding: '8px 22px', borderRadius: 999, background: 'var(--chip-bg)', fontSize: 14, color: 'var(--text-2)' }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="ow-btn"
+              onClick={() => {
+                deleteProperty(selected.id)
+                setConfirmingDelete(false)
+                setSelectedId(null)
+              }}
+              style={{ padding: '8px 22px', borderRadius: 999, background: 'var(--destructive)', color: 'white', fontSize: 14 }}
+            >
+              Delete
+            </button>
+          </div>
         </div>
       )}
 
