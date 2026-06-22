@@ -14,13 +14,15 @@ test suites assert. The **CLI** writes to the same tables and reuses the shared 
 functions where it can, but it is **not** part of the golden-vector harness and has a few intentional and
 a few unintended divergences (below).
 
-> Last audited: **2026-06-19** (full web+iOS app review). Method: 10-capability tri-surface audit plus
+> Last audited: **2026-06-22** (full web+iOS app review). Method: 10-capability tri-surface audit plus
 > a 6-dimension deep review of each app (dead code, refactors, correctness, per-surface behavior,
-> constitution consistency), every finding adversarially re-verified. Apps: web **593** tests green,
-> iOS **21** green. Web pass applied: constitution *loss-is-never-red* fixes (housing negative net
-> rental / net balance, app-shell error panel), transfer-detail mislabel, dead-code/dependency removal.
-> The matching iOS-side color fixes + cross-surface items (see Known divergences) are tracked for the
-> iOS pass. Legend: ✅ in parity · ⚠️ partial / known gap · ⛔️ diverges · — not applicable.
+> constitution consistency), every finding adversarially re-verified, and a final cross-surface
+> reconciliation. Apps: web **593** tests green, iOS **22** green; golden vectors unchanged. The iOS
+> cross-surface pass is now COMPLETE: the iOS *loss-is-never-red* color fixes, U+2212 negative-money
+> sign, removed-counterparty balances, half-open `[start, end)` month aggregation, and server-side
+> atomic-write compensation have all landed, so both apps are in lockstep on colors, money sign,
+> balances, the month boundary, and the atomic write. Legend: ✅ in parity · ⚠️ partial / known gap ·
+> ⛔️ diverges · — not applicable.
 
 ## Parity matrix
 
@@ -32,7 +34,7 @@ a few unintended divergences (below).
 | Canonical leftover-cent order | ✅ | ✅ | ✅ | `orderedOwnerIds` (now used by all three) |
 | Transaction + shares data contract | ✅ | ✅ | ✅ | columns mirrored across all three (incl. `paid_by`) |
 | Member reimbursement / settle-up balance | ✅ | ✅ | — | `lib/balances.ts` ↔ `Balances.swift` → `member-balance.json` (+ `paid_by`, `transfer` kind) |
-| Atomic parent+shares write | ✅ (rollback) | ⚠️ | ⚠️ | — (only web compensates) |
+| Atomic parent+shares write | ✅ (rollback) | ✅ (rollback) | ⚠️ | — (both apps compensate; CLI does not) |
 | Category / kind / source taxonomy | ✅ | ✅ | ✅ | Postgres `transaction_category`/`transaction_kind` enums (+ `transfer`) / `lib/types.ts` |
 | Date storage & timezone | ✅ | ✅ | ⚠️ | — (convention, not shared code) |
 | Transaction filtering / listing | ✅ | ✅ | ⚠️ | `lib/transactionFilters.ts` → `transaction-filters.json` |
@@ -79,12 +81,14 @@ neither language can silently drift:
 After `009`, the apps agree on every vectored function (owner ordering, currency rounding, recurring-average
 truncation, mortgage months-elapsed boundary, the outlier insight). Residual, low-severity:
 
-- ⚠️ **Atomic write (HIGH, also affects CLI):** all surfaces write the parent transaction and its shares as
-  two separate, non-transactional calls. **Only web rolls back** the orphaned parent on a shares-write
-  failure (`lib/store.tsx` `addTransaction`/`updateTransaction`). iOS rolls back local state only
-  (`AppState.swift`) and the CLI throws without cleanup (`db/persist.ts`), so on a partial failure both can
-  leave a share-less parent that rehydrates as "creator owns all." *(Web was hardened in 009; iOS/CLI not
-  yet — a server-side `create_transaction_with_shares` RPC would close it for all three.)*
+- ⚠️ **Atomic write (MEDIUM, now CLI-only):** the parent transaction and its shares are still two separate,
+  non-transactional calls, but **both apps now compensate** — web rolls back the orphaned parent / restores
+  the prior shares (`lib/store.tsx` `addTransaction`/`updateTransaction`), and iOS does the equivalent
+  server-side (`Services/TransactionsAPI.swift` `create` deletes the just-inserted parent on a shares-write
+  failure; `update` re-inserts the previous shares). Only the **CLI** (`db/persist.ts`) still throws without
+  cleanup, so only a CLI partial failure can leave a share-less parent that rehydrates as "creator owns
+  all." *(Web hardened in 009, iOS in the 2026-06-22 review pass; a server-side
+  `create_transaction_with_shares` RPC would make it truly atomic for all three.)*
 - low **Insights recurring preview:** the 3-merchant name preview is ordered by amount on iOS but in
   trailing-window order on web, and uses a different transaction's merchant casing. IDs / severities /
   magnitudes (the vectored fields) match; only the body string differs.
@@ -119,8 +123,23 @@ others are real gaps:`
 `computeShares` (`tx.ts`, `engine/toTransaction.ts`), so the leftover cent matches the apps — locked by a
 scrambled-owner case in `web/test/import/toTransaction.test.ts`. The stale "6-digit" OTP copy is corrected
 to "8-digit" across `cli.ts`, `tx.ts`, `db/client.ts`, the import README, and the `make ingest-help` text
-(and the iOS `AppState` doc comment). Still open: the cross-cutting atomic-write gap (iOS/CLI), CLI
-filtering reimplementation, the noon-UTC date convention, and `--admin` RLS bypass.
+(and the iOS `AppState` doc comment). Still open: the atomic-write gap (**CLI only** — both apps now
+compensate, see above), CLI filtering reimplementation, the noon-UTC date convention, and `--admin` RLS
+bypass.
+
+**Full-app review pass (2026-06-22):** a deep, adversarially-verified review of both apps (dead code,
+refactors, correctness, per-surface behavior, constitution consistency) was applied. Cross-surface results
+(reconciled, both sides verified in lockstep): constitution *loss-is-never-red* fixes on both apps (housing
+negative net-rental/net-balance, daily-spend increase, budget over-limit; web app-shell error panel
+de-reddened); negative money now uses the Unicode minus on both; member balances now include **removed**
+counterparties so an outstanding debt with someone who left stays visible/settle-able on both; iOS month
+aggregation moved to half-open `[start, end)` to match web (closed `DateInterval.contains` was
+double-counting the month boundary — locked by a new iOS boundary test); iOS parent+shares writes now
+compensate server-side like web (atomic-write cell ⚠️→✅). iOS-only fixes: a Housing force-unwrap crash on
+partial data, surfacing the previously-silent `dataError` + a bootstrap-recovery screen, ≥44pt touch
+targets + Reduce-Motion gating, and deletion of spec-007 dead models. Web-only: transfer detail mislabel
+("Expense"→"Reimbursement"), desktop delete-property, dead-code/`date-fns` removal. No golden vector
+changed (finance logic untouched).
 
 **Auth model change (2026-06-17, feature 010):** the single-active-platform lock was **removed** — iOS and
 web may be signed in simultaneously (neither signs the other out; `platform_locks` is no longer read or
