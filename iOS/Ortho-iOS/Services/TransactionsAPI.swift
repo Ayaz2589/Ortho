@@ -1,6 +1,40 @@
 import Foundation
 import Supabase
 
+/// A `RawRepresentable & Codable` enum value that TOLERATES raw values the
+/// installed build doesn't recognize — i.e. a server/data shape that is ahead of
+/// this client (a new `kind`/`category` added by a later release).
+///
+/// Why this exists: `fetch()` decodes the entire `[TransactionRecord]` array in
+/// one pass, and a plain strict enum throws on any unknown raw value — so a
+/// SINGLE unrecognized row would make the whole decode throw and empty the
+/// ENTIRE transaction list (the "no transactions, again" bug after the `transfer`
+/// kind/category shipped). With this wrapper an unknown value decodes to
+/// `.unknown(raw)` instead of throwing; `rehydrate` then drops just that one row.
+enum Lenient<T: RawRepresentable & Codable>: Codable where T.RawValue == String {
+    case known(T)
+    case unknown(String)
+
+    /// The decoded enum, or nil when the raw value is one this build doesn't know.
+    var value: T? {
+        if case .known(let v) = self { return v }
+        return nil
+    }
+
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = T(rawValue: raw).map(Lenient.known) ?? .unknown(raw)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        switch self {
+        case .known(let v): try c.encode(v.rawValue)
+        case .unknown(let raw): try c.encode(raw)
+        }
+    }
+}
+
 /// Server-backed CRUD for `Transaction`. Talks to the `transactions` and
 /// `transaction_shares` tables. RLS handles visibility — `fetch()` returns
 /// everything the signed-in user can see (their personal rows + every
@@ -156,12 +190,15 @@ struct TransactionsAPI {
         shares: [TransactionShareRow]
     ) -> [Transaction] {
         let sharesByTx = Dictionary(grouping: shares, by: \.transactionID)
-        return rows.map { row in
+        return rows.compactMap { row -> Transaction? in
+            // A row whose kind/category this build doesn't recognize is skipped —
+            // one unknown row no longer empties the entire list (see `Lenient`).
+            guard let kind = row.kind.value, let category = row.category.value else { return nil }
             let txShares = sharesByTx[row.id] ?? []
             let ownerIDs: Set<Person.ID>
             let shareMap: [Person.ID: Int64]
             if txShares.isEmpty {
-                if row.kind == .transfer {
+                if kind == .transfer {
                     // A transfer with no share rows is a malformed/legacy row.
                     // Keep it owner-less (and balance-inert) rather than minting
                     // a phantom "creator owns the full amount" expense-shaped row.
@@ -178,8 +215,8 @@ struct TransactionsAPI {
             return Transaction(
                 id: row.id,
                 merchant: row.merchant,
-                category: row.category,
-                kind: row.kind,
+                category: category,
+                kind: kind,
                 amount: row.amountCents,
                 ownerIDs: ownerIDs,
                 shares: shareMap,
@@ -202,8 +239,10 @@ private struct TransactionRecord: Codable {
     let id: UUID
     let householdID: UUID?
     let merchant: String
-    let category: TransactionCategory
-    let kind: TransactionKind
+    // Lenient so a row with a kind/category this build doesn't know decodes to
+    // `.unknown` instead of throwing for the whole array (see `Lenient`).
+    let category: Lenient<TransactionCategory>
+    let kind: Lenient<TransactionKind>
     let amountCents: Int64
     let source: String
     let date: Date
@@ -215,8 +254,8 @@ private struct TransactionRecord: Codable {
             id: tx.id,
             householdID: tx.householdID,
             merchant: tx.merchant,
-            category: tx.category,
-            kind: tx.kind,
+            category: .known(tx.category),
+            kind: .known(tx.kind),
             amountCents: tx.amount,
             source: tx.source,
             date: tx.date,

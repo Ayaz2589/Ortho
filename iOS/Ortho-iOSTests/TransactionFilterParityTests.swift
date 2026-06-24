@@ -67,3 +67,33 @@ final class TransactionFilterParityTests: XCTestCase {
         }
     }
 }
+
+// Regression: a single row whose `kind`/`category` the installed build doesn't
+// recognize (a server/data shape ahead of the client) must NOT make the whole
+// transactions decode throw and empty the list. `Lenient` tolerates the unknown
+// value so the row is dropped and every other row survives. (The "no
+// transactions, again" bug after the `transfer` kind/category shipped.)
+final class TransactionDecodeResilienceTests: XCTestCase {
+
+    func testLenientDecodesKnownAndUnknownRawValues() throws {
+        let dec = JSONDecoder()
+        let known = try dec.decode(Lenient<TransactionKind>.self, from: Data("\"expense\"".utf8))
+        XCTAssertEqual(known.value, .expense)
+        let unknown = try dec.decode(Lenient<TransactionKind>.self, from: Data("\"frobnicate\"".utf8))
+        XCTAssertNil(unknown.value, "an unrecognized raw value must decode to .unknown, not throw")
+    }
+
+    func testOneUnknownValueDoesNotFailTheWholeArrayDecode() throws {
+        // The crux of the bug: a strict [enum] decode throws on the bad element and
+        // loses ALL of them. With Lenient the array decodes and good rows survive.
+        let json = Data("[\"expense\",\"frobnicate\",\"income\",\"transfer\"]".utf8)
+        let arr = try JSONDecoder().decode([Lenient<TransactionKind>].self, from: json)
+        XCTAssertEqual(arr.count, 4)
+        XCTAssertEqual(arr.compactMap(\.value), [.expense, .income, .transfer])
+    }
+
+    func testLenientEncodesBackToRawValue() throws {
+        let data = try JSONEncoder().encode(Lenient<TransactionCategory>.known(.transfer))
+        XCTAssertEqual(String(decoding: data, as: UTF8.self), "\"transfer\"")
+    }
+}
