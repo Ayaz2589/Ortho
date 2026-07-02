@@ -31,6 +31,21 @@ struct Ortho_iOSApp: App {
         false
         #endif
     }
+
+    // DEBUG `-uiDemoLanguage <code>` launch argument: force the app language
+    // for the session (accepts AppLanguage raw values plus "zh-Hans"), so CI
+    // can screenshot every localization without touching @AppStorage. Rides
+    // the same environment-locale path as the in-app language picker.
+    private static var uiDemoLanguage: AppLanguage? {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-uiDemoLanguage"), i + 1 < args.count else { return nil }
+        let code = args[i + 1]
+        return AppLanguage(rawValue: code == "zh-Hans" ? "zh" : code)
+        #else
+        return nil
+        #endif
+    }
     @AppStorage("appearance") private var appearanceRaw: String = AppearanceMode.system.rawValue
     @AppStorage("language") private var languageRaw: String = AppLanguage.system.rawValue
 
@@ -43,7 +58,7 @@ struct Ortho_iOSApp: App {
     }
 
     private var language: AppLanguage {
-        AppLanguage(rawValue: languageRaw) ?? .system
+        Self.uiDemoLanguage ?? AppLanguage(rawValue: languageRaw) ?? .system
     }
 
     /// Effective locale = explicit choice if set, otherwise track the OS.

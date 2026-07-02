@@ -103,12 +103,21 @@ jobs:
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl install "$UDID" "$APP"
           mkdir -p screenshots
-          for TAB in dashboard transactions housing settings; do
-            xcrun simctl launch "$UDID" "$BUNDLE_ID" -uiDemo -uiDemoTab "$TAB"
+          # snap <lang> <tab> — 'en' launches without a language override;
+          # other codes ride the DEBUG -uiDemoLanguage argument so every
+          # localization is visually reviewable from the artifact.
+          snap() {
+            local L="$1" TAB="$2"
+            local ARGS=(-uiDemo -uiDemoTab "$TAB")
+            if [ "$L" != "en" ]; then ARGS+=(-uiDemoLanguage "$L"); fi
+            xcrun simctl launch "$UDID" "$BUNDLE_ID" "${ARGS[@]}"
             sleep 5
-            xcrun simctl io "$UDID" screenshot "screenshots/$TAB.png"
+            xcrun simctl io "$UDID" screenshot "screenshots/$L-$TAB.png"
             xcrun simctl terminate "$UDID" "$BUNDLE_ID" || true
-          done
+          }
+          for TAB in dashboard transactions housing settings; do snap en "$TAB"; done
+          for L in bn es ja zh-Hans ko; do snap "$L" dashboard; snap "$L" settings; done
+          for L in bn ja; do snap "$L" transactions; snap "$L" housing; done
           ls -la screenshots/
 
       - name: Upload screenshots

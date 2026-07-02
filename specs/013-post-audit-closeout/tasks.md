@@ -19,9 +19,9 @@ iOS CI push** (Phase 10); the live-DB APPLY is **operator-gated** and runs last.
 
 ## Phase 1: Setup
 
-- [ ] T001 Verify baseline: `cd web && npm install && npx tsc --noEmit && npm test` — expect 619 green; record any environment fixes (Linux ARM rolldown binding per docs/index.md §4.6)
-- [ ] T002 Push branch and open a **draft PR** for `013-post-audit-closeout` (`git push -u origin 013-post-audit-closeout && GH_TOKEN=placeholder gh pr create --draft --title "013: post-audit closeout" --body "..."`) — ios-ci.yml only runs on `pull_request` for non-main branches, so this is what turns CI on for the feature
-- [ ] T003 [P] Install `actionlint` in the sandbox (needed by US7 validation; e.g. `go install` binary release into ~/bin)
+- [X] T001 Verify baseline: `cd web && npm install && npx tsc --noEmit && npm test` — expect 619 green; record any environment fixes (Linux ARM rolldown binding per docs/index.md §4.6)
+- [X] T002 Push branch and open a **draft PR** for `013-post-audit-closeout` (`git push -u origin 013-post-audit-closeout && GH_TOKEN=placeholder gh pr create --draft --title "013: post-audit closeout" --body "..."`) — ios-ci.yml only runs on `pull_request` for non-main branches, so this is what turns CI on for the feature
+- [X] T003 [P] Install `actionlint` in the sandbox (needed by US7 validation; e.g. `go install` binary release into ~/bin)
 
 **Checkpoint**: web suite green locally; draft PR open; CI observed running (or queued) on the PR
 
@@ -32,7 +32,7 @@ iOS CI push** (Phase 10); the live-DB APPLY is **operator-gated** and runs last.
 *No shared blocking infrastructure — the stories are independent by design. Proceed straight to
 stories; note only the cross-story file-contention rule:*
 
-- [ ] T004 Confirm no other checkout/worktree is mid-edit on `iOS/Ortho-iOS/Localizable.xcstrings`, `web/scripts/gen-vectors.ts`, or `shared/test-vectors/` (multiple stories touch them sequentially: US1 → US3 → US4 order within this plan)
+- [X] T004 Confirm no other checkout/worktree is mid-edit on `iOS/Ortho-iOS/Localizable.xcstrings`, `web/scripts/gen-vectors.ts`, or `shared/test-vectors/` (multiple stories touch them sequentially: US1 → US3 → US4 order within this plan)
 
 ---
 
@@ -44,16 +44,16 @@ stories; note only the cross-story file-contention rule:*
 
 ### Tests (write first — MUST fail before implementation)
 
-- [ ] T005 [US1] Write `web/test/i18n/catalog-parity.test.ts` implementing contracts/catalog-parity.md C1–C3: parse `iOS/Ortho-iOS/Localizable.xcstrings` + the five `web/lib/i18n/*.ts` catalogs; assert full non-en coverage (`state === 'translated'`, plural branches included, `shouldTranslate:false` exempt), shared-key identity after `%@`/`%lld`/`%n$@` ↔ `{0}…{n}` normalization, bn values free of Bengali digits (U+09E6–U+09EF) and `AppLanguage.swift` containing `@numbers=latn`. Run: expect **RED** with exactly the 87-missing/6-new inventory (the failure list is the work list)
+- [X] T005 [US1] Write `web/test/i18n/catalog-parity.test.ts` implementing contracts/catalog-parity.md C1–C3: parse `iOS/Ortho-iOS/Localizable.xcstrings` + the five `web/lib/i18n/*.ts` catalogs; assert full non-en coverage (`state === 'translated'`, plural branches included, `shouldTranslate:false` exempt), shared-key identity after `%@`/`%lld`/`%n$@` ↔ `{0}…{n}` normalization, bn values free of Bengali digits (U+09E6–U+09EF) and `AppLanguage.swift` containing `@numbers=latn`. Run: expect **RED** with exactly the 87-missing/6-new inventory (the failure list is the work list)
 
 ### Implementation
 
-- [ ] T006 [US1] Mark pure symbol/numeral keys (`·`, `0`, `0.00`, `1Y`, `3M`, `6M`, `(%lld)`, `/ %@`, empty key, etc. — from T005's failure list) as `"shouldTranslate": false` in `iOS/Ortho-iOS/Localizable.xcstrings`
-- [ ] T007 [US1] Author bn + es translations for every remaining missing key in `iOS/Ortho-iOS/Localizable.xcstrings` — copy web catalog values back for keys present in `web/lib/i18n/bn.ts`/`es.ts` (converting `{n}` to the en key's specifiers); author fresh (iOS terminology-consistent) values for iOS-only keys; resolve the 6 `state:"new"` format keys
-- [ ] T008 [US1] Author ja + ko + zh-Hans translations for every remaining missing key in `iOS/Ortho-iOS/Localizable.xcstrings` (same rules as T007; sequential with T007 — same file)
-- [ ] T009 [US1] Run `npx vitest run test/i18n/catalog-parity.test.ts` → **GREEN**; fix stragglers (plural variations, placeholder mismatches) until clean
-- [ ] T010 [US1] Add DEBUG-only `-uiDemoLanguage <code>` launch argument: read in `iOS/Ortho-iOS/Ortho_iOSApp.swift` (pattern of `-uiDemoTab`, RootTabView.swift:6-18) and override the `@AppStorage("language")`-backed `AppLanguage` for the session (map `bn|es|ja|zh-Hans|ko` → `AppLanguage` cases in `iOS/Ortho-iOS/DesignSystem/AppLanguage.swift`) — compiled out of Release. *(Swift — lands in Phase 10 push)*
-- [ ] T011 [US1] Extend `.github/workflows/ios-ci.yml` screenshot step: keep the 4-tab en pass; add `dashboard`+`settings` in each of bn/es/ja/zh-Hans/ko and all 4 tabs in bn + ja via `-uiDemoLanguage`; name files `<lang>-<tab>.png` *(workflow — lands in Phase 10 push)*
+- [X] T006 [US1] Mark pure symbol/numeral keys (`·`, `0`, `0.00`, `1Y`, `3M`, `6M`, `(%lld)`, `/ %@`, empty key, etc. — from T005's failure list) as `"shouldTranslate": false` in `iOS/Ortho-iOS/Localizable.xcstrings`
+- [X] T007 [US1] Author bn + es translations for every remaining missing key in `iOS/Ortho-iOS/Localizable.xcstrings` — copy web catalog values back for keys present in `web/lib/i18n/bn.ts`/`es.ts` (converting `{n}` to the en key's specifiers); author fresh (iOS terminology-consistent) values for iOS-only keys; resolve the 6 `state:"new"` format keys
+- [X] T008 [US1] Author ja + ko + zh-Hans translations for every remaining missing key in `iOS/Ortho-iOS/Localizable.xcstrings` (same rules as T007; sequential with T007 — same file)
+- [X] T009 [US1] Run `npx vitest run test/i18n/catalog-parity.test.ts` → **GREEN**; fix stragglers (plural variations, placeholder mismatches) until clean
+- [X] T010 [US1] Add DEBUG-only `-uiDemoLanguage <code>` launch argument: read in `iOS/Ortho-iOS/Ortho_iOSApp.swift` (pattern of `-uiDemoTab`, RootTabView.swift:6-18) and override the `@AppStorage("language")`-backed `AppLanguage` for the session (map `bn|es|ja|zh-Hans|ko` → `AppLanguage` cases in `iOS/Ortho-iOS/DesignSystem/AppLanguage.swift`) — compiled out of Release. *(Swift — lands in Phase 10 push)*
+- [X] T011 [US1] Extend `.github/workflows/ios-ci.yml` screenshot step: keep the 4-tab en pass; add `dashboard`+`settings` in each of bn/es/ja/zh-Hans/ko and all 4 tabs in bn + ja via `-uiDemoLanguage`; name files `<lang>-<tab>.png` *(workflow — lands in Phase 10 push)*
 
 **Checkpoint**: catalog-parity suite green on-sandbox; Swift/workflow edits staged for Phase 10
 
