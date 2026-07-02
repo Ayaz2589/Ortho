@@ -377,8 +377,19 @@ final class AppState {
     /// Triggered manually from the Developer affordance in Settings for now;
     /// auto-sync on auth + realtime are later work.
     func loadTransactionsFromServer() async {
+        // created_by (auth UUID) → the creator's linked Person id, so a
+        // share-less legacy/defensive row resolves to the same identity as on
+        // web (web/lib/store.tsx `personForUser`). Auth UUIDs are never
+        // Person ids, so without this mapping such rows count toward nobody
+        // in owner filters / per-person totals / balances on iOS.
+        var linkedPersonByUser: [UUID: Person.ID] = [:]
+        for p in people {
+            if let uid = p.linkedUserID, linkedPersonByUser[uid] == nil {
+                linkedPersonByUser[uid] = p.id
+            }
+        }
         do {
-            let fetched = try await transactionsAPI.fetch()
+            let fetched = try await transactionsAPI.fetch(linkedPersonByUser: linkedPersonByUser)
             await MainActor.run { transactions = fetched }
         } catch {
             await MainActor.run { dataError = error.localizedDescription }
@@ -386,12 +397,15 @@ final class AppState {
     }
 
     /// Pull every server-backed collection (transactions, cards, properties
-    /// + housing sub-tables, rental payments) in parallel and replace the
-    /// in-memory copy. Used by bootstrap + the Developer "Sync all from
-    /// server" affordance.
+    /// + housing sub-tables, rental payments) and replace the in-memory copy.
+    /// Used by bootstrap + the Developer "Sync all from server" affordance.
+    /// People load FIRST (not in the parallel group) because the transactions
+    /// rehydrate maps share-less rows onto the creator's linked Person —
+    /// web achieves the same ordering by building `personForUser` from the
+    /// people rows of one batched load.
     func loadAllFromServer() async {
+        await loadPeopleFromServer()
         await withTaskGroup(of: Void.self) { group in
-            group.addTask { await self.loadPeopleFromServer() }
             group.addTask { await self.loadTransactionsFromServer() }
             group.addTask { await self.loadCardsFromServer() }
             group.addTask { await self.loadPropertiesFromServer() }
@@ -459,7 +473,10 @@ final class AppState {
                  net: balanceBetween(viewer: me, other: id, transactions: transactions))
             }
             .filter { $0.net != 0 }
-            .sorted { $0.person.name < $1.person.name }
+            // Locale-aware collation, matching web's `localeCompare` sort in
+            // BalanceSummary (a plain `<` compares Unicode scalars and orders
+            // accented/localized names differently).
+            .sorted { $0.person.name.localizedStandardCompare($1.person.name) == .orderedAscending }
     }
 
     /// Sum (USD cents) of this user's share of all expense transactions whose
@@ -614,8 +631,15 @@ final class AppState {
             guard tx.date >= interval.start, tx.date < interval.end else { continue }
             totals[tx.category, default: 0] += tx.amount
         }
+        // Secondary key: category id ascending. Dictionary iteration order is
+        // randomized per process, so without a deterministic tie-break,
+        // equal-cents categories could shuffle between launches (and against
+        // web) right at the top-5 cutoff.
         return totals
-            .sorted { $0.value > $1.value }
+            .sorted {
+                if $0.value != $1.value { return $0.value > $1.value }
+                return $0.key.rawValue < $1.key.rawValue
+            }
             .prefix(limit)
             .map { (category: $0.key, cents: $0.value) }
     }
@@ -635,8 +659,13 @@ final class AppState {
             entry.count += 1
             totals[tx.merchant] = entry
         }
+        // Secondary key: merchant name ascending — deterministic tie order
+        // across launches (Dictionary iteration order is randomized).
         return totals
-            .sorted { $0.value.cents > $1.value.cents }
+            .sorted {
+                if $0.value.cents != $1.value.cents { return $0.value.cents > $1.value.cents }
+                return $0.key < $1.key
+            }
             .prefix(limit)
             .map { (merchant: $0.key, cents: $0.value.cents, count: $0.value.count) }
     }
@@ -653,12 +682,18 @@ final class AppState {
     /// `monthCount - 1` calendar months ago or earlier — i.e. the data
     /// spans the full window. `.thisMonth` is always available.
     var availableRanges: [DashboardRange] {
-        let cal = Calendar.current
         guard let earliest = earliestTransactionDate else {
             return [.thisMonth]
         }
-        let earliestStart = cal.startOfDay(for: earliest)
-        let monthsBack = cal.dateComponents([.month], from: earliestStart, to: .now).month ?? 0
+        // Day-insensitive calendar-month index difference, matching web's
+        // availableRanges (web/components/dashboard/range.ts): earliest May 3,
+        // today Jul 2 → monthsBack = 2 (so "3M" is offered), even though two
+        // full months haven't elapsed yet.
+        let cal = Calendar.current
+        let from = cal.dateComponents([.year, .month], from: earliest)
+        let to = cal.dateComponents([.year, .month], from: Date())
+        let monthsBack = ((to.year ?? 0) - (from.year ?? 0)) * 12
+            + ((to.month ?? 0) - (from.month ?? 0))
         return DashboardRange.allCases.filter { monthsBack >= $0.monthCount - 1 }
     }
 
@@ -1157,10 +1192,14 @@ final class AppState {
         }
 
         do {
-            // 1. Upsert public.users — `transactions.created_by` FK needs this.
+            // 1. Ensure a public.users profile row exists — the
+            // `transactions.created_by` FK needs it. Insert-if-absent only
+            // (`ignoreDuplicates` → ON CONFLICT DO NOTHING): overwriting on
+            // every sign-in made the derived name/created_at flip-flop
+            // between platforms. Web applies the same insert-only rule.
             try await supabase
                 .from("users")
-                .upsert(me, onConflict: "id")
+                .upsert(me, onConflict: "id", ignoreDuplicates: true)
                 .execute()
 
             // 2. Find or create the user's default household via HouseholdsAPI.

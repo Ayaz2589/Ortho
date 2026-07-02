@@ -112,7 +112,10 @@ struct AddTransactionSheet: View {
             // USD-formatted value when the user is on a different currency.
             _amountText = State(initialValue: "")
             _merchant = State(initialValue: tx.merchant)
-            _category = State(initialValue: tx.category == .income ? .groceries : tx.category)
+            // .income is locked to the income kind and .transfer is not a
+            // spend category (web's SPEND_CATEGORIES excludes both) — an
+            // expense form never carries either.
+            _category = State(initialValue: (tx.category == .income || tx.category == .transfer) ? .groceries : tx.category)
             _selectedOwners = State(initialValue: tx.ownerIDs)
             _source = State(initialValue: tx.source)
             // Copy mode uses today; edit mode keeps the original date.
@@ -521,11 +524,29 @@ struct AddTransactionSheet: View {
         .padding(.bottom, 8)
     }
 
+    /// Noon UTC of the picked LOCAL calendar day — the cross-surface storage
+    /// convention (spec 004; web is adopting the same). The picker binds a
+    /// wall-clock `Date`, so saving it verbatim lands evening entries on the
+    /// NEXT UTC day; noon UTC renders as the same calendar day in every
+    /// timezone, for storage and grouping alike.
+    private static func noonUTC(ofLocalDay date: Date) -> Date {
+        var comps = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        comps.hour = 12
+        comps.minute = 0
+        comps.second = 0
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        return utc.date(from: comps) ?? date
+    }
+
     /// Build a Transaction from the current form state, hand it to the
     /// parent, and either dismiss or reset for another entry. Returns
     /// nothing — both paths run side effects.
     private func submit(keepOpen: Bool) {
         guard let parsed = parsedAmount else { return }
+        // Normalize the picked day once for both the transfer and the
+        // expense/income paths (create and edit alike).
+        let txDate = Self.noonUTC(ofLocalDay: date)
         let cents: Int64
         if let editing, amountText == originalAmountText {
             // User didn't touch the amount field — preserve the stored cents
@@ -553,7 +574,7 @@ struct AddTransactionSheet: View {
                 ownerIDs: [to],
                 shares: [to: cents],
                 source: "",
-                date: date,
+                date: txDate,
                 householdID: appState.currentHouseholdID,
                 createdBy: editing?.createdBy ?? appState.currentUserID,
                 paidBy: from
@@ -592,7 +613,7 @@ struct AddTransactionSheet: View {
             ownerIDs: selectedOwners,
             shares: shares,
             source: source,
-            date: date,
+            date: txDate,
             householdID: appState.currentHouseholdID,
             createdBy: editing?.createdBy ?? appState.currentUserID,
             paidBy: resolvedPaidBy
@@ -647,7 +668,10 @@ struct AddTransactionSheet: View {
 
         merchant = source.merchant
         if source.kind == .expense {
-            category = source.category
+            // Same sanitizing as edit-mode init: neither .income nor .transfer
+            // is a valid expense category.
+            category = (source.category == .income || source.category == .transfer)
+                ? .groceries : source.category
             // Carry over the payer if it's still a valid member; else default.
             let validIDs = Set(availableOwners.map(\.id))
             paidBy = source.paidBy.flatMap { validIDs.contains($0) ? $0 : nil }
@@ -950,7 +974,10 @@ struct AddTransactionSheet: View {
                 .frame(width: 96, alignment: .leading)
             Spacer()
             Menu {
-                ForEach(TransactionCategory.allCases.filter { $0 != .income }, id: \.self) { c in
+                // Spend categories only — .income is locked to the income kind
+                // and .transfer (Reimbursement) is a row shape, not a spend
+                // category. Mirrors web's SPEND_CATEGORIES (web/lib/categories.ts).
+                ForEach(TransactionCategory.allCases.filter { $0 != .income && $0 != .transfer }, id: \.self) { c in
                     Button(c.displayName.string) { category = c }
                 }
             } label: {

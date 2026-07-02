@@ -80,7 +80,10 @@ struct FilterSheet: View {
     private var categorySection: some View {
         section("Category") {
             FlowLayout(spacing: 8) {
-                ForEach(TransactionCategory.allCases) { c in
+                // No .transfer chip: transfer rows are isolated via the
+                // Type = Transfers segment below, matching web's
+                // ALL_CATEGORIES (spend categories + income, no transfer).
+                ForEach(TransactionCategory.allCases.filter { $0 != .transfer }) { c in
                     FilterChip(selected: criteria.categories.contains(c)) {
                         toggle(&criteria.categories, c)
                     } label: {

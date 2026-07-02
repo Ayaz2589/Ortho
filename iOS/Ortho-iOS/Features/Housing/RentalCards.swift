@@ -139,6 +139,11 @@ struct RentalPaymentsCard: View {
 
     @Environment(AppState.self) private var appState
 
+    /// Payment awaiting delete confirmation — set by the row's minus button,
+    /// committed (or cleared) by the alert below. Deletes were previously
+    /// immediate; web has always confirmed first.
+    @State private var pendingDelete: RentalPayment?
+
     private var payments: [RentalPayment] {
         appState.payments(for: propertyID)
     }
@@ -185,6 +190,20 @@ struct RentalPaymentsCard: View {
         }
         .background(AppTheme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .alert("Delete this payment?", isPresented: Binding(
+            get: { pendingDelete != nil },
+            set: { if !$0 { pendingDelete = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { pendingDelete = nil }
+            Button("Delete", role: .destructive) {
+                if let payment = pendingDelete {
+                    appState.deleteRentalPayment(payment)
+                }
+                pendingDelete = nil
+            }
+        } message: {
+            Text("This can't be undone.")
+        }
     }
 
     private func paymentRow(_ payment: RentalPayment) -> some View {
@@ -209,7 +228,7 @@ struct RentalPaymentsCard: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Button {
-                appState.deleteRentalPayment(payment)
+                pendingDelete = payment
             } label: {
                 Image(systemName: "minus.circle.fill")
                     .font(.lato(size: 18))

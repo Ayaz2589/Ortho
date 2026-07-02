@@ -13,6 +13,10 @@ struct MonthSummaryCard: View {
     /// month selected) — drives the "Day X of Y" caption + progress bar, which
     /// are anchored to *now* and meaningless for a selected past month.
     let isLiveMonth: Bool
+    /// True when the dashboard is showing a SELECTED specific month (the
+    /// MonthPicker override), as opposed to a relative range. Suppresses the
+    /// right caption entirely, matching web.
+    let isSpecificMonth: Bool
     @Environment(AppState.self) private var appState
 
     private var income: Int64 { appState.incomeTotal(in: interval) }
@@ -91,7 +95,10 @@ struct MonthSummaryCard: View {
     }
 
     /// Right side of the header. For the live current month shows "Day X of Y";
-    /// otherwise the date range as "Mar 1 – May 31".
+    /// for a relative multi-month range, the date range as "Mar 1 – May 31".
+    /// For a SELECTED specific month it's deliberately empty (matching web):
+    /// the header already names the month, and formatting the UTC month
+    /// bounds in local time can drift a day near the edges.
     private var rightCaption: String {
         if isLiveMonth {
             let cal = Calendar.current
@@ -99,6 +106,7 @@ struct MonthSummaryCard: View {
             let range = cal.range(of: .day, in: .month, for: .now)?.count ?? 30
             return Localizer.tr("Day \(day) of \(range)")
         }
+        if isSpecificMonth { return "" }
         let f = DateFormatter.localized(pattern: "MMM d", locale: Localizer.currentLocale)
         let endDate = Calendar.current.date(byAdding: .day, value: -1, to: interval.end) ?? interval.end
         return "\(f.string(from: interval.start)) – \(f.string(from: endDate))"

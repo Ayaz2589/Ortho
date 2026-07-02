@@ -58,7 +58,12 @@ struct TransactionsAPI {
     /// All transactions visible to the current user. RLS enforces visibility
     /// — no explicit filter here. Ordered by date desc to match the activity
     /// list's natural read order.
-    func fetch() async throws -> [Transaction] {
+    ///
+    /// `linkedPersonByUser` maps an auth user id (`created_by`) to that
+    /// user's linked household Person id. It's only consulted for the rare
+    /// share-less row fallback so both surfaces attribute such rows to the
+    /// same identity (mirrors web's `personForUser`).
+    func fetch(linkedPersonByUser: [UUID: Person.ID] = [:]) async throws -> [Transaction] {
         let rows: [TransactionRecord] = try await client
             .from("transactions")
             .select()
@@ -72,7 +77,7 @@ struct TransactionsAPI {
             .execute()
             .value
 
-        return Self.rehydrate(rows: rows, shares: shares)
+        return Self.rehydrate(rows: rows, shares: shares, linkedPersonByUser: linkedPersonByUser)
     }
 
     // MARK: - Write
@@ -187,7 +192,8 @@ struct TransactionsAPI {
     /// creator-owned expense for a transfer.
     private static func rehydrate(
         rows: [TransactionRecord],
-        shares: [TransactionShareRow]
+        shares: [TransactionShareRow],
+        linkedPersonByUser: [UUID: Person.ID] = [:]
     ) -> [Transaction] {
         let sharesByTx = Dictionary(grouping: shares, by: \.transactionID)
         return rows.compactMap { row -> Transaction? in
@@ -205,8 +211,14 @@ struct TransactionsAPI {
                     ownerIDs = []
                     shareMap = [:]
                 } else {
-                    ownerIDs = [row.createdBy]
-                    shareMap = [row.createdBy: row.amountCents]
+                    // Attribute the row to the creator's linked Person id when
+                    // one exists (matching web's `personForUser` fallback) so
+                    // it counts in owner filters and per-person totals; the
+                    // raw auth UUID is a last resort that at least keeps the
+                    // name rendering via AppState's `users` fallback.
+                    let owner = linkedPersonByUser[row.createdBy] ?? row.createdBy
+                    ownerIDs = [owner]
+                    shareMap = [owner: row.amountCents]
                 }
             } else {
                 ownerIDs = Set(txShares.map(\.personID))

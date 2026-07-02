@@ -13,6 +13,7 @@ struct EditBudgetSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var amountText: String = ""
+    @State private var showingRemoveConfirm = false
     @FocusState private var amountFocused: Bool
 
     init(category: TransactionCategory, onDone: @escaping () -> Void) {
@@ -24,12 +25,16 @@ struct EditBudgetSheet: View {
     /// AppState every render so the sheet picks up the latest server state.
     private var existingBudget: Budget? { appState.budget(for: category) }
 
+    /// Non-negative limit parsed from the field; nil when empty, unparsable,
+    /// or negative. Web's BudgetDrawer applies the same `parsed >= 0` rule —
+    /// a negative monthly limit can never be saved.
     private var parsedAmount: Decimal? {
         let trimmed = amountText
             .replacingOccurrences(of: ",", with: "")
             .trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return nil }
-        return Decimal(string: trimmed)
+        guard !trimmed.isEmpty,
+              let d = Decimal(string: trimmed), d >= 0 else { return nil }
+        return d
     }
 
     private var canSave: Bool { parsedAmount != nil }
@@ -51,11 +56,9 @@ struct EditBudgetSheet: View {
                         .padding(.horizontal, 24)
                         .padding(.bottom, 24)
 
-                    if let existing = existingBudget {
+                    if existingBudget != nil {
                         Button(role: .destructive) {
-                            appState.deleteBudget(existing)
-                            onDone()
-                            dismiss()
+                            showingRemoveConfirm = true
                         } label: {
                             HStack {
                                 Image(systemName: "minus.circle.fill")
@@ -88,6 +91,20 @@ struct EditBudgetSheet: View {
                                                rate: appState.rate(for: appState.currency))
             }
             amountFocused = true
+        }
+        // Confirm before removing — mirrors web's two-step confirm in
+        // BudgetDrawer and the app-wide "confirm destructive deletes" rule.
+        .alert("Remove this budget?", isPresented: $showingRemoveConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Remove", role: .destructive) {
+                if let existing = existingBudget {
+                    appState.deleteBudget(existing)
+                }
+                onDone()
+                dismiss()
+            }
+        } message: {
+            Text("Spending in this category will no longer be tracked against a limit.")
         }
     }
 

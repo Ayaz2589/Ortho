@@ -51,7 +51,8 @@ struct DashboardView: View {
                 }
                 MonthSummaryCard(title: scopedTitle,
                                  interval: activeInterval,
-                                 isLiveMonth: isLiveMonth)
+                                 isLiveMonth: isLiveMonth,
+                                 isSpecificMonth: appState.dashboardSelectedMonth != nil)
                 // Insights sit just below the month summary so the user
                 // first sees the headline number ("+$X this month"), then
                 // the prescriptive cards (over-budget, savings rate, top

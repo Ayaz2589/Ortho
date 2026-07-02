@@ -67,11 +67,20 @@ enum SupabaseCoding {
 /// `"yyyy-MM-dd"` strings on the wire — converting to `Date` at the DTO
 /// boundary keeps the rest of the codebase using `Date` end-to-end.
 enum SupabaseDateFormatters {
+    /// Deliberately anchored to the CURRENT (local) timezone: a Postgres
+    /// `date` column is a calendar day, not an instant. Parsing and
+    /// formatting in the local timezone treats it as the user's local day on
+    /// both read and write — matching web (`dateToISO` in
+    /// web/components/inputs.tsx, `parseLocalDate` in
+    /// web/lib/finance/mortgage.ts) and fixing the west-of-UTC one-day shift
+    /// on closing/lease/rental dates. The locale must stay `en_US_POSIX` so
+    /// the wire format is always plain `yyyy-MM-dd` regardless of the in-app
+    /// language.
     static let dateOnly: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
         f.calendar = Calendar(identifier: .iso8601)
-        f.timeZone = TimeZone(identifier: "UTC")
+        f.timeZone = .current
         f.locale = Locale(identifier: "en_US_POSIX")
         return f
     }()

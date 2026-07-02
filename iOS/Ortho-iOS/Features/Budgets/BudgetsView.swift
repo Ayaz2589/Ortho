@@ -1,9 +1,9 @@
 import SwiftUI
 
 /// Standalone budgets-management screen. Pushed from `SettingsView` via
-/// `NavigationLink`. Lists every `TransactionCategory` (except `.income`)
-/// with its current monthly limit, or "Not set" if none exists. Tapping a
-/// row opens `EditBudgetSheet` for set / edit / delete.
+/// `NavigationLink`. Lists every spend category (no `.income`, no
+/// `.transfer`) with its current monthly limit, or "Not set" if none
+/// exists. Tapping a row opens `EditBudgetSheet` for set / edit / delete.
 struct BudgetsView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
@@ -12,8 +12,12 @@ struct BudgetsView: View {
     @State private var editingCategory: TransactionCategory?
 
     /// Every spend category, in a stable order matching the picker / icons.
+    /// `.income` and `.transfer` (Reimbursement) are excluded — neither is a
+    /// budgetable spend category. Mirrors web's SPEND_CATEGORIES
+    /// (web/lib/categories.ts) and spec 012 FR-006 (a reimbursement never
+    /// counts toward any budget).
     private var spendCategories: [TransactionCategory] {
-        TransactionCategory.allCases.filter { $0 != .income }
+        TransactionCategory.allCases.filter { $0 != .income && $0 != .transfer }
     }
 
     var body: some View {

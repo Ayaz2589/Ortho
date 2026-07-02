@@ -1,6 +1,8 @@
 import SwiftUI
 
-/// Day-grouped transactions list — the Transactions tab. Built on a native
+/// Month-then-day-grouped transactions list — the Transactions tab. Day
+/// groups nest inside collapsible month sections (header: month name, count,
+/// expense total), mirroring web. Built on a native
 /// SwiftUI `List` so vertical scroll and `.swipeActions` are arbitrated by
 /// UIKit. The custom `ScrollView + LazyVStack + SwipeActionRow` stack this
 /// replaced suffered a recurring bug where a `DragGesture` attached inside
@@ -26,6 +28,16 @@ struct TransactionsView: View {
     /// transactions list more vertical real estate. Closing also clears
     /// the active query so the user returns to the full list.
     @State private var searchActive: Bool = false
+    /// Transaction awaiting delete confirmation — set by the swipe action,
+    /// committed (or cleared) by the alert. The swipe delete used to fire
+    /// immediately; it now confirms like the detail sheet (and web) so a
+    /// stray full swipe can't irreversibly delete a record.
+    @State private var pendingDelete: Transaction?
+    /// Expanded month sections, mirroring web's `openMonths`: `nil` means the
+    /// default state (only the current — or most recent — month open); a
+    /// non-nil set is the user's explicit choice. Any active filter forces
+    /// every month open so matches aren't hidden inside a collapsed month.
+    @State private var openMonths: Set<Date>? = nil
 
     /// Drives the AddTransactionSheet via a single `.sheet(item:)` modifier.
     /// `.fresh` opens a blank form (the "+" button in the title); `.copying`
@@ -52,6 +64,56 @@ struct TransactionsView: View {
             let hits = filterTransactions(g.items, criteria, ctx)
             return hits.isEmpty ? nil : TransactionGroup(day: g.day, items: hits)
         }
+    }
+
+    // MARK: - Month grouping (mirrors web's groupDaysByMonth, web/lib/format.ts)
+
+    /// One month bucket of day groups (local calendar month), newest first.
+    /// Day groups keep their existing order inside the month.
+    private struct MonthGroup: Identifiable {
+        /// Local start-of-month for this bucket — the stable section key.
+        let month: Date
+        let days: [TransactionGroup]
+        var id: Date { month }
+        var transactionCount: Int { days.reduce(0) { $0 + $1.items.count } }
+        /// Sum of expense rows only (income/transfers excluded), matching
+        /// web's `expenseTotal` on the month header.
+        var expenseTotalCents: Int64 { days.reduce(0) { $0 + $1.outgoingTotal } }
+    }
+
+    /// The filtered day groups bucketed into local calendar months.
+    private var monthGroups: [MonthGroup] {
+        let cal = Calendar.current
+        var buckets: [Date: [TransactionGroup]] = [:]
+        for g in filteredGroups {
+            let key = cal.date(from: cal.dateComponents([.year, .month], from: g.day)) ?? g.day
+            buckets[key, default: []].append(g)
+        }
+        return buckets.keys.sorted(by: >).map { MonthGroup(month: $0, days: buckets[$0] ?? []) }
+    }
+
+    /// The month open by default: the current month when it has data,
+    /// otherwise the most recent month with data. Matches web.
+    private var defaultOpenMonth: Date? {
+        let cal = Calendar.current
+        let months = monthGroups.map(\.month)
+        if let current = cal.date(from: cal.dateComponents([.year, .month], from: Date())),
+           months.contains(current) {
+            return current
+        }
+        return months.first
+    }
+
+    private func isMonthOpen(_ key: Date) -> Bool {
+        if activeFilterCount_ > 0 { return true }
+        if let openMonths { return openMonths.contains(key) }
+        return key == defaultOpenMonth
+    }
+
+    private func toggleMonth(_ key: Date) {
+        var next: Set<Date> = openMonths ?? (defaultOpenMonth.map { Set([$0]) } ?? Set())
+        if next.contains(key) { next.remove(key) } else { next.insert(key) }
+        openMonths = next
     }
 
     /// Household + owner-name context for search-by-owner and scope.
@@ -156,6 +218,24 @@ struct TransactionsView: View {
             .presentationDetents([.large])
             .presentationBackground(AppTheme.bg)
         }
+        // Single commit point for the swipe-delete action. Copy matches the
+        // detail sheet's confirm exactly.
+        .alert("Delete this transaction?", isPresented: Binding(
+            get: { pendingDelete != nil },
+            set: { if !$0 { pendingDelete = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { pendingDelete = nil }
+            Button("Delete", role: .destructive) {
+                if let tx = pendingDelete {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        appState.deleteTransaction(tx)
+                    }
+                }
+                pendingDelete = nil
+            }
+        } message: {
+            Text("This can't be undone.")
+        }
     }
 
     // MARK: - Member balance line + Settle up
@@ -238,11 +318,24 @@ struct TransactionsView: View {
 
     private var populatedList: some View {
         List {
-            ForEach(filteredGroups) { group in
+            ForEach(monthGroups) { month in
+                let open = isMonthOpen(month.month)
+                // The month header is a plain (non-pinning) row in its own
+                // section; only the nested day headers stick, as before.
                 Section {
-                    rows(in: group)
-                } header: {
-                    DayHeader(group: group)
+                    monthHeader(for: month, open: open)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 10, leading: 20, bottom: 0, trailing: 20))
+                        .listRowSeparator(.hidden)
+                }
+                if open {
+                    ForEach(month.days) { group in
+                        Section {
+                            rows(in: group)
+                        } header: {
+                            DayHeader(group: group)
+                        }
+                    }
                 }
             }
         }
@@ -252,6 +345,54 @@ struct TransactionsView: View {
         .listSectionSpacing(8)
         .contentMargins(.bottom, 60, for: .scrollContent)
         .environment(\.defaultMinListRowHeight, 0)
+    }
+
+    /// Collapsible month header — chevron + "JULY 2026 (N)" + the month's
+    /// expense total. Mirrors web's month header row (transactions page);
+    /// styling follows `DayHeader` (uppercase label, muted caption figures).
+    private func monthHeader(for month: MonthGroup, open: Bool) -> some View {
+        Button {
+            withAnimation(.easeOut(duration: 0.18)) {
+                toggleMonth(month.month)
+            }
+        } label: {
+            HStack(alignment: .firstTextBaseline) {
+                HStack(spacing: 6) {
+                    Image(systemName: "chevron.down")
+                        .font(.lato(size: 11, weight: .semibold))
+                        .foregroundStyle(AppTheme.text3)
+                        .rotationEffect(.degrees(open ? 0 : -90))
+                    Text(monthLabel(month.month).uppercased())
+                        .font(.lato(size: 13, weight: .semibold))
+                        .kerning(0.6)
+                        .foregroundStyle(AppTheme.text2)
+                    Text("(\(month.transactionCount))")
+                        .font(.lato(size: 12))
+                        .monospacedDigit()
+                        .foregroundStyle(AppTheme.text3)
+                }
+                Spacer()
+                Text(appState.formatMoney(month.expenseTotalCents))
+                    .font(.lato(size: 12))
+                    .monospacedDigit()
+                    .foregroundStyle(AppTheme.text3)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(monthLabel(month.month)), \(month.transactionCount) transactions")
+        .accessibilityValue(open ? Text("Expanded") : Text("Collapsed"))
+        .accessibilityHint("Double tap to \(open ? "collapse" : "expand")")
+    }
+
+    /// "July 2026" — full month name + year, in the in-app locale.
+    private func monthLabel(_ month: Date) -> String {
+        DateFormatter.localized(pattern: "LLLL yyyy", locale: Localizer.currentLocale)
+            .string(from: month)
     }
 
     @ViewBuilder
@@ -277,10 +418,11 @@ struct TransactionsView: View {
             .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
             .listRowSeparator(.hidden)
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                // Confirm before committing — a full swipe (or tap) only
+                // stages the delete; the alert below is the single commit
+                // point, matching the detail sheet and web.
                 Button(role: .destructive) {
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        appState.deleteTransaction(tx)
-                    }
+                    pendingDelete = tx
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }

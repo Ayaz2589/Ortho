@@ -92,7 +92,9 @@ struct OrthoTabBar: View {
 /// App shell. Owns tab selection; swaps body between Dashboard, Transactions,
 /// and Settings. Reserves room for the bar via `safeAreaInset(.bottom)`.
 struct RootTabView: View {
-    @State private var selection: OrthoTab = .transactions
+    /// Dashboard is the landing tab after sign-in and on every cold launch,
+    /// matching web (sign-in and `/` both route to /dashboard).
+    @State private var selection: OrthoTab = .dashboard
     @State private var tabBarHidden: Bool = false
     @Environment(AppState.self) private var appState
 
