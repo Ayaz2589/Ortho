@@ -81,8 +81,36 @@ jobs:
             -scheme Ortho-iOS \
             -destination "id=${{ steps.sim.outputs.udid }}" \
             -clonedSourcePackagesDirPath spm-packages \
+            -derivedDataPath DerivedData \
             -resultBundlePath TestResults.xcresult \
             2>&1 | "${FILTER[@]}"
+
+      # Visual evidence: boot the app in the simulator in DEBUG -uiDemo mode
+      # (sample data, no auth/server) and screenshot each tab. The build is
+      # incremental on top of the test step's DerivedData.
+      - name: Capture sample-state screenshots
+        run: |
+          UDID="${{ steps.sim.outputs.udid }}"
+          APP=$(find DerivedData/Build/Products -type d -name 'Ortho-iOS.app' | head -1)
+          echo "App bundle: $APP"
+          BUNDLE_ID=$(defaults read "$PWD/$APP/Info" CFBundleIdentifier)
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" "$APP"
+          mkdir -p screenshots
+          for TAB in dashboard transactions housing settings; do
+            xcrun simctl launch "$UDID" "$BUNDLE_ID" -uiDemo -uiDemoTab "$TAB"
+            sleep 5
+            xcrun simctl io "$UDID" screenshot "screenshots/$TAB.png"
+            xcrun simctl terminate "$UDID" "$BUNDLE_ID" || true
+          done
+          ls -la screenshots/
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-screenshots
+          path: screenshots/
+          if-no-files-found: error
 
       - name: Upload result bundle
         if: failure()

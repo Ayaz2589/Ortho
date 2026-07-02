@@ -94,7 +94,18 @@ struct OrthoTabBar: View {
 struct RootTabView: View {
     /// Dashboard is the landing tab after sign-in and on every cold launch,
     /// matching web (sign-in and `/` both route to /dashboard).
-    @State private var selection: OrthoTab = .dashboard
+    @State private var selection: OrthoTab = {
+        // DEBUG `-uiDemoTab <tab>`: choose the initial tab from the launch
+        // arguments — lets CI screenshot each destination without UI tests.
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "-uiDemoTab"), i + 1 < args.count,
+           let tab = OrthoTab(rawValue: args[i + 1]) {
+            return tab
+        }
+        #endif
+        return .dashboard
+    }()
     @State private var tabBarHidden: Bool = false
     @Environment(AppState.self) private var appState
 

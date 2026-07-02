@@ -12,10 +12,25 @@ struct Ortho_iOSApp: App {
     // Start empty — the app holds no seeded/sample data. Every domain
     // collection is populated only from Supabase once the user signs in
     // (see `bootstrapUserSession` / `loadAllFromServer`).
-    @State private var appState = AppState(
-        users: [], transactions: [], cards: [],
-        households: [], properties: [], rentalPayments: [], budgets: []
-    )
+    //
+    // DEBUG `-uiDemo` launch argument: boot straight into the tab shell on
+    // the sample-seeded AppState, skipping auth and all server traffic.
+    // Exists for CI simulator screenshots (see .github/workflows/ios-ci.yml)
+    // and quick local UI review; compiled out of release builds.
+    @State private var appState: AppState = Self.isUIDemo
+        ? AppState()
+        : AppState(
+            users: [], transactions: [], cards: [],
+            households: [], properties: [], rentalPayments: [], budgets: []
+        )
+
+    private static var isUIDemo: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-uiDemo")
+        #else
+        false
+        #endif
+    }
     @AppStorage("appearance") private var appearanceRaw: String = AppearanceMode.system.rawValue
     @AppStorage("language") private var languageRaw: String = AppLanguage.system.rawValue
 
@@ -42,6 +57,9 @@ struct Ortho_iOSApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
+                if Self.isUIDemo {
+                    RootTabView()
+                } else {
                 switch appState.authPhase {
                 case .launching:
                     LaunchView()
@@ -57,6 +75,7 @@ struct Ortho_iOSApp: App {
                 case .signedOut:
                     SignInView()
                 }
+                }
             }
             .environment(appState)
             .environment(\.locale, effectiveLocale)
@@ -64,6 +83,9 @@ struct Ortho_iOSApp: App {
             .task {
                 // First emission carries the SDK's restored session (or
                 // nil), so this doubles as launch-time session restore.
+                // Skipped in UI-demo mode — the sample state must not be
+                // replaced by a real (empty) session.
+                if Self.isUIDemo { return }
                 await appState.observeAuthChanges()
             }
             .task(id: languageRaw) {
