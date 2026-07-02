@@ -137,14 +137,14 @@ stories; note only the cross-story file-contention rule:*
 
 ### Tests (write first)
 
-- [ ] T034 [US6] Extend `web/test/i18n/catalog-parity.test.ts` with contract C4: every literal `t('…')` call-site key in `web/` resolves in all five catalogs; `— web-only keys —` marker present; iOS-seeded block ⊆ xcstrings keys. Run → fix any RED by adding missing catalog entries (each is a real English-fallback bug)
-- [ ] T035 [US6] Add jsdom no-fallback render tests (new `web/test/i18n/render-locale.test.tsx`): render Dashboard + Settings + TxForm under Español and 日本語 via the store's language state; assert no known-English UI literals appear → RED where strings were missed
+- [X] T034 [US6] Extend `web/test/i18n/catalog-parity.test.ts` with contract C4: every literal `t('…')` call-site key in `web/` resolves in all five catalogs; `— web-only keys —` marker present; iOS-seeded block ⊆ xcstrings keys. Run → fix any RED by adding missing catalog entries (each is a real English-fallback bug)
+- [X] T035 [US6] Add jsdom no-fallback render tests (new `web/test/i18n/render-locale.test.tsx`): render Dashboard + Settings + TxForm under Español and 日本語 via the store's language state; assert no known-English UI literals appear → RED where strings were missed
 
 ### Implementation
 
-- [ ] T036 [P] [US6] Terminology review — bn + es: audit the web-only block of `web/lib/i18n/bn.ts` and `es.ts` against the iOS-seeded block's product vocabulary (household, split, settle up, budget, housing terms); fix divergent values
-- [ ] T037 [P] [US6] Terminology review — ja + ko + zh: same for `web/lib/i18n/ja.ts`, `ko.ts`, `zh.ts`
-- [ ] T038 [US6] Re-run i18n suites (`npx vitest run test/i18n/`) and T005's shared-key identity check (terminology fixes must not break identity for shared keys) → GREEN
+- [X] T036 [P] [US6] Terminology review — bn + es: audit the web-only block of `web/lib/i18n/bn.ts` and `es.ts` against the iOS-seeded block's product vocabulary (household, split, settle up, budget, housing terms); fix divergent values
+- [X] T037 [P] [US6] Terminology review — ja + ko + zh: same for `web/lib/i18n/ja.ts`, `ko.ts`, `zh.ts`
+- [X] T038 [US6] Re-run i18n suites (`npx vitest run test/i18n/`) and T005's shared-key identity check (terminology fixes must not break identity for shared keys) → GREEN
 - [ ] T039 [US6] **[OPERATOR-ASSISTED]** Visual overflow pass: `npm run dev`; user walks Español + 日本語 across the four destinations + add/edit at compact and desktop widths (quickstart.md US6); fix reported overflows/missed strings in catalogs; re-run suites
 
 **Checkpoint**: i18n suites green; visual pass done or explicitly awaiting operator

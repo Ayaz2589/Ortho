@@ -266,6 +266,8 @@ const catalog: Record<string, string> = {
   "You're {0} over this month: {1} out vs {2} in.": "이번 달 {0} 초과: 지출 {1}, 수입 {2}.",
   "You're {0} over your {1} limit with {2} days left.": "{0}일 남았는데, {1} 한도를 {2} 초과했습니다.",
   // — web-only keys (translated 2026-07-02) —
+  "{0} → {1}.": "{0} → {1}.",
+  "“{0}”": "“{0}”",
   "{0} amount": "{0} 금액",
   "{0} days left": "{0}일 남음",
   "{0} members": "구성원 {0}명",
@@ -279,7 +281,7 @@ const catalog: Record<string, string> = {
   "1 member": "구성원 1명",
   "1 property": "부동산 1개",
   "1 unit": "유닛 1개",
-  "1 visit": "1회 방문",
+  "1 visit": "방문 1회",
   "1Y": "1년",
   "3M": "3개월",
   "6M": "6개월",
