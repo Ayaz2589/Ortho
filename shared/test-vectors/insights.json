@@ -62,19 +62,22 @@
         "id": "cashflow-deficit-2026-06",
         "severity": "critical",
         "category": null,
-        "magnitude_cents": 30000
+        "magnitude_cents": 30000,
+        "preview_merchants": []
       },
       {
         "id": "budget-over-dining-2026-06",
         "severity": "critical",
         "category": "dining",
-        "magnitude_cents": 10000
+        "magnitude_cents": 10000,
+        "preview_merchants": []
       },
       {
         "id": "top-category-dining-2026-06",
         "severity": "info",
         "category": "dining",
-        "magnitude_cents": 40000
+        "magnitude_cents": 40000,
+        "preview_merchants": []
       }
     ]
   },
@@ -120,13 +123,15 @@
         "id": "top-category-groceries-2026-06",
         "severity": "info",
         "category": "groceries",
-        "magnitude_cents": 40000
+        "magnitude_cents": 40000,
+        "preview_merchants": []
       },
       {
         "id": "cashflow-savings-2026-06",
         "severity": "positive",
         "category": null,
-        "magnitude_cents": 60000
+        "magnitude_cents": 60000,
+        "preview_merchants": []
       }
     ]
   },
@@ -193,31 +198,36 @@
         "id": "budget-near-dining-2026-06",
         "severity": "warning",
         "category": "dining",
-        "magnitude_cents": 27000
+        "magnitude_cents": 27000,
+        "preview_merchants": []
       },
       {
         "id": "mom-dining-2026-06",
         "severity": "warning",
         "category": "dining",
-        "magnitude_cents": 17000
+        "magnitude_cents": 17000,
+        "preview_merchants": []
       },
       {
         "id": "trend30-2026-06",
         "severity": "warning",
         "category": null,
-        "magnitude_cents": 17000
+        "magnitude_cents": 17000,
+        "preview_merchants": []
       },
       {
         "id": "top-category-dining-2026-06",
         "severity": "info",
         "category": "dining",
-        "magnitude_cents": 27000
+        "magnitude_cents": 27000,
+        "preview_merchants": []
       },
       {
         "id": "cashflow-savings-2026-06",
         "severity": "positive",
         "category": null,
-        "magnitude_cents": 73000
+        "magnitude_cents": 73000,
+        "preview_merchants": []
       }
     ]
   },
@@ -287,25 +297,29 @@
         "id": "mortgage-ratio-2026-06",
         "severity": "warning",
         "category": null,
-        "magnitude_cents": 179865
+        "magnitude_cents": 179865,
+        "preview_merchants": []
       },
       {
         "id": "top-category-dining-2026-06",
         "severity": "info",
         "category": "dining",
-        "magnitude_cents": 10000
+        "magnitude_cents": 10000,
+        "preview_merchants": []
       },
       {
         "id": "cashflow-savings-2026-06",
         "severity": "positive",
         "category": null,
-        "magnitude_cents": 490000
+        "magnitude_cents": 490000,
+        "preview_merchants": []
       },
       {
         "id": "budget-under-dining-2026-06",
         "severity": "positive",
         "category": "dining",
-        "magnitude_cents": 20000
+        "magnitude_cents": 20000,
+        "preview_merchants": []
       }
     ]
   },
@@ -393,31 +407,38 @@
         "id": "cashflow-deficit-2026-06",
         "severity": "critical",
         "category": null,
-        "magnitude_cents": 21500
+        "magnitude_cents": 21500,
+        "preview_merchants": []
       },
       {
         "id": "mom-entertainment-2026-06",
         "severity": "warning",
         "category": "entertainment",
-        "magnitude_cents": 10000
+        "magnitude_cents": 10000,
+        "preview_merchants": []
       },
       {
         "id": "trend30-2026-06",
         "severity": "warning",
         "category": null,
-        "magnitude_cents": 10000
+        "magnitude_cents": 10000,
+        "preview_merchants": []
       },
       {
         "id": "top-category-entertainment-2026-06",
         "severity": "info",
         "category": "entertainment",
-        "magnitude_cents": 20000
+        "magnitude_cents": 20000,
+        "preview_merchants": []
       },
       {
         "id": "recurring-2026-06",
         "severity": "info",
         "category": null,
-        "magnitude_cents": 1500
+        "magnitude_cents": 1500,
+        "preview_merchants": [
+          "Netflix"
+        ]
       }
     ]
   },
@@ -534,19 +555,22 @@
         "id": "top-category-dining-2026-06",
         "severity": "info",
         "category": "dining",
-        "magnitude_cents": 3000
+        "magnitude_cents": 3000,
+        "preview_merchants": []
       },
       {
         "id": "outlier-a1a2a3a4-0000-4000-8000-000000000001",
         "severity": "info",
         "category": "dining",
-        "magnitude_cents": 3000
+        "magnitude_cents": 3000,
+        "preview_merchants": []
       },
       {
         "id": "cashflow-savings-2026-06",
         "severity": "positive",
         "category": null,
-        "magnitude_cents": 597000
+        "magnitude_cents": 597000,
+        "preview_merchants": []
       }
     ]
   },
@@ -620,19 +644,264 @@
         "id": "top-category-subs-2026-06",
         "severity": "info",
         "category": "subs",
-        "magnitude_cents": 1001
+        "magnitude_cents": 1001,
+        "preview_merchants": []
       },
       {
         "id": "recurring-2026-06",
         "severity": "info",
         "category": null,
-        "magnitude_cents": 1000
+        "magnitude_cents": 1000,
+        "preview_merchants": [
+          "Streamly"
+        ]
       },
       {
         "id": "cashflow-savings-2026-06",
         "severity": "positive",
         "category": null,
-        "magnitude_cents": 498999
+        "magnitude_cents": 498999,
+        "preview_merchants": []
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "recurring preview ordering (amount desc, name tie-break)",
+      "referenceDate": "2026-06-15",
+      "transactions": [
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 500,
+          "date": "2026-04-05",
+          "merchant": "Thrifty"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 500,
+          "date": "2026-05-05",
+          "merchant": "Thrifty"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 500,
+          "date": "2026-06-05",
+          "merchant": "Thrifty"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 1500,
+          "date": "2026-04-06",
+          "merchant": "bZeta"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 1500,
+          "date": "2026-05-06",
+          "merchant": "bZeta"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 1500,
+          "date": "2026-06-06",
+          "merchant": "bZeta"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 1500,
+          "date": "2026-04-07",
+          "merchant": "Alpha"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 1500,
+          "date": "2026-05-07",
+          "merchant": "Alpha"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 1500,
+          "date": "2026-06-07",
+          "merchant": "Alpha"
+        }
+      ],
+      "budgets": [],
+      "properties": []
+    },
+    "expected": [
+      {
+        "id": "cashflow-deficit-2026-06",
+        "severity": "critical",
+        "category": null,
+        "magnitude_cents": 3500,
+        "preview_merchants": []
+      },
+      {
+        "id": "top-category-subs-2026-06",
+        "severity": "info",
+        "category": "subs",
+        "magnitude_cents": 3500,
+        "preview_merchants": []
+      },
+      {
+        "id": "recurring-2026-06",
+        "severity": "info",
+        "category": null,
+        "magnitude_cents": 3500,
+        "preview_merchants": [
+          "Alpha",
+          "bZeta",
+          "Thrifty"
+        ]
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "recurring preview casing (most recent transaction wins)",
+      "referenceDate": "2026-06-15",
+      "transactions": [
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 1200,
+          "date": "2026-04-05",
+          "merchant": "streamly"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 1200,
+          "date": "2026-05-05",
+          "merchant": "Streamly"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "subs",
+          "amount_cents": 1200,
+          "date": "2026-06-05",
+          "merchant": "STREAMLY"
+        }
+      ],
+      "budgets": [],
+      "properties": []
+    },
+    "expected": [
+      {
+        "id": "cashflow-deficit-2026-06",
+        "severity": "critical",
+        "category": null,
+        "magnitude_cents": 1200,
+        "preview_merchants": []
+      },
+      {
+        "id": "top-category-subs-2026-06",
+        "severity": "info",
+        "category": "subs",
+        "magnitude_cents": 1200,
+        "preview_merchants": []
+      },
+      {
+        "id": "recurring-2026-06",
+        "severity": "info",
+        "category": null,
+        "magnitude_cents": 1200,
+        "preview_merchants": [
+          "STREAMLY"
+        ]
       }
     ]
   },

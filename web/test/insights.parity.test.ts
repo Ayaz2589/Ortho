@@ -27,6 +27,7 @@ describe('insight engine parity vs golden vectors', () => {
         severity: i.severity,
         category: i.category,
         magnitude_cents: i.magnitude_cents,
+        preview_merchants: i.preview_merchants ?? [],
       }))
       expect(got).toEqual(expected)
     })

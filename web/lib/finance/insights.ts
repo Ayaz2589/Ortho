@@ -56,7 +56,11 @@ export function generateInsights(
   properties: Property[],
   now: Date = new Date(),
   limit: number = 6,
-  tr: InsightTranslate = identityTr
+  tr: InsightTranslate = identityTr,
+  // Display locale for the outlier date (iOS renders it via
+  // Localizer.currentLocale). The default keeps the golden vectors and any
+  // store-less caller on canonical en-US.
+  locale: string = 'en-US'
 ): Insight[] {
   const out: Insight[] = []
   const [mStart, mEnd] = monthInterval(now)
@@ -223,8 +227,21 @@ export function generateInsights(
     }
     if (gaps === 0 || monthlyHits / gaps < 0.8) continue
     // Truncate toward zero to match iOS `Int64` integer division (InsightEngine.swift).
-    recurring.push({ merchant: group[0].merchant, avg: Math.trunc(sumCents(group) / group.length) })
+    // Display casing comes from the merchant's MOST RECENT transaction (iOS-canonical).
+    recurring.push({
+      merchant: sorted[sorted.length - 1].merchant,
+      avg: Math.trunc(sumCents(group) / group.length),
+    })
   }
+  // iOS-canonical preview order: highest monthly burn first; amount ties break
+  // by case-insensitive name using plain code-unit comparison (NOT localeCompare
+  // — the vectors need one deterministic order in every runtime and language).
+  recurring.sort((a, b) => {
+    if (b.avg !== a.avg) return b.avg - a.avg
+    const an = a.merchant.toLowerCase()
+    const bn = b.merchant.toLowerCase()
+    return an < bn ? -1 : an > bn ? 1 : 0
+  })
   if (recurring.length > 0) {
     const burn = recurring.reduce((s, r) => s + r.avg, 0)
     const names = recurring.map((r) => r.merchant)
@@ -238,6 +255,7 @@ export function generateInsights(
       icon: 'subs',
       category: null,
       magnitude_cents: burn,
+      preview_merchants: names.slice(0, 3),
     })
   }
 
@@ -264,7 +282,7 @@ export function generateInsights(
   }
   if (outlier) {
     const { tx, multiple } = outlier
-    const when = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(
+    const when = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(
       new Date(tx.date)
     )
     out.push({

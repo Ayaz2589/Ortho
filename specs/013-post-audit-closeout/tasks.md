@@ -67,16 +67,16 @@ stories; note only the cross-story file-contention rule:*
 
 ### Tests (write first)
 
-- [ ] T012 [P] [US3] Add failing unit tests to `web/test/insights.test.ts` (or a new `web/test/insights-preview.test.ts`): recurring preview ordered by monthly amount desc; amount-tie broken by case-insensitive merchant asc; casing from the merchant's most recent transaction; `+ N more` beyond 3. Run → **RED** (web is Map-order + oldest casing today, insights.ts:209-231)
-- [ ] T013 [P] [US3] Add failing unit test for outlier date locale: `generateInsights` with `locale: 'es-ES'` renders the outlier date with Spanish month token, `'en-US'` keeps current rendering. Run → **RED** (en-US hardcoded at insights.ts:267-269)
+- [X] T012 [P] [US3] Add failing unit tests to `web/test/insights.test.ts` (or a new `web/test/insights-preview.test.ts`): recurring preview ordered by monthly amount desc; amount-tie broken by case-insensitive merchant asc; casing from the merchant's most recent transaction; `+ N more` beyond 3. Run → **RED** (web is Map-order + oldest casing today, insights.ts:209-231)
+- [X] T013 [P] [US3] Add failing unit test for outlier date locale: `generateInsights` with `locale: 'es-ES'` renders the outlier date with Spanish month token, `'en-US'` keeps current rendering. Run → **RED** (en-US hardcoded at insights.ts:267-269)
 
 ### Implementation
 
-- [ ] T014 [US3] Fix `web/lib/finance/insights.ts` recurring section (lines ~209-231): sort detected merchants by monthly amount desc with case-insensitive name asc tie-break; take casing from most recent transaction → T012 **GREEN**
-- [ ] T015 [US3] Thread `locale: string` through `generateInsights` into the outlier `Intl.DateTimeFormat` (replace the `'en-US'` literal); update the store/InsightsCardStack call path to pass the app locale (`web/lib/store.tsx`, source `localeForLanguage`); tests/generator pass `'en-US'` explicitly → T013 **GREEN**
-- [ ] T016 [US3] Extend `web/scripts/gen-vectors.ts` (insights `expected` map, lines ~220-225) with `preview_merchants` and add scenario cases: amount tie with distinct casings + a merchant whose casing changed across txs; run `npm run gen:vectors`; **review `git diff shared/test-vectors/insights.json`: existing id/severity/category/magnitude_cents entries must be byte-identical** (FR-008) — investigate before proceeding if not
-- [ ] T017 [US3] Extend `web/test/insights.parity.test.ts` to assert `preview_merchants` per vector case → GREEN on web
-- [ ] T018 [US3] Mirror on iOS: add the case-insensitive tie-break to `detected.sort` in `iOS/Ortho-iOS/Services/InsightEngine.swift:323`; extend `iOS/Ortho-iOSTests/InsightParityTests.swift` decode struct + assertions with `preview_merchants` *(Swift — lands in Phase 10 push)*
+- [X] T014 [US3] Fix `web/lib/finance/insights.ts` recurring section (lines ~209-231): sort detected merchants by monthly amount desc with case-insensitive name asc tie-break; take casing from most recent transaction → T012 **GREEN**
+- [X] T015 [US3] Thread `locale: string` through `generateInsights` into the outlier `Intl.DateTimeFormat` (replace the `'en-US'` literal); update the store/InsightsCardStack call path to pass the app locale (`web/lib/store.tsx`, source `localeForLanguage`); tests/generator pass `'en-US'` explicitly → T013 **GREEN**
+- [X] T016 [US3] Extend `web/scripts/gen-vectors.ts` (insights `expected` map, lines ~220-225) with `preview_merchants` and add scenario cases: amount tie with distinct casings + a merchant whose casing changed across txs; run `npm run gen:vectors`; **review `git diff shared/test-vectors/insights.json`: existing id/severity/category/magnitude_cents entries must be byte-identical** (FR-008) — investigate before proceeding if not
+- [X] T017 [US3] Extend `web/test/insights.parity.test.ts` to assert `preview_merchants` per vector case → GREEN on web
+- [X] T018 [US3] Mirror on iOS: add the case-insensitive tie-break to `detected.sort` in `iOS/Ortho-iOS/Services/InsightEngine.swift:323`; extend `iOS/Ortho-iOSTests/InsightParityTests.swift` decode struct + assertions with `preview_merchants` *(Swift — lands in Phase 10 push)*
 
 **Checkpoint**: web suites green; insights.json regenerated with reviewed diff; Swift edits staged
 

@@ -539,3 +539,95 @@ describe('generateInsights — sorting & limit', () => {
     expect(generateInsights([], [], [], REF)).toEqual([])
   })
 })
+
+// --- spec 013 US3: recurring preview is iOS-canonical (amount desc, name
+// tie-break, newest casing) and the outlier date follows the app locale. ---
+
+describe('generateInsights — Rule 5: recurring preview ordering (013/US3)', () => {
+  // Three ~monthly hits inside the trailing-6-month window of REF (Jun 12 2026).
+  const monthly = (merchant: string, cents: number, casings?: [string, string, string]) =>
+    ['2026-03-05', '2026-04-04', '2026-05-05'].map((d, i) =>
+      tx({
+        merchant: casings ? casings[i] : merchant,
+        category: 'subs',
+        amount_cents: cents,
+        date: `${d}T12:00:00.000Z`,
+      })
+    )
+
+  const previewOf = (ins: Insight[]): string => {
+    const rec = byId(ins, `recurring-${M}`)
+    expect(rec).toBeTruthy()
+    // body = "Detected N recurring charges: <preview>."  (or "… <preview> + K more.")
+    return rec!.body.split(': ')[1]
+  }
+
+  it('orders the 3-merchant preview by monthly amount, highest first', () => {
+    // Insertion order (Map order) is Cheap first — amount order must win.
+    const ins = generateInsights(
+      [...monthly('Cheap', 500), ...monthly('Pricey', 5000), ...monthly('Middle', 2000)],
+      [],
+      [],
+      REF
+    )
+    expect(previewOf(ins)).toBe('Pricey, Middle, Cheap.')
+  })
+
+  it('breaks amount ties by case-insensitive merchant name', () => {
+    const ins = generateInsights(
+      [...monthly('netflix', 1000), ...monthly('Apple', 1000)],
+      [],
+      [],
+      REF
+    )
+    expect(previewOf(ins)).toBe('Apple, netflix.')
+  })
+
+  it("uses the most recent transaction's casing for each merchant", () => {
+    // Same merchant key, casing changed over time — newest ("SPOTIFY") wins.
+    const ins = generateInsights(
+      monthly('spotify', 1200, ['spotify', 'Spotify', 'SPOTIFY']),
+      [],
+      [],
+      REF
+    )
+    expect(previewOf(ins)).toBe('SPOTIFY.')
+  })
+
+  it('keeps "+ N more" after the top 3 by amount', () => {
+    const ins = generateInsights(
+      [
+        ...monthly('Alpha', 400),
+        ...monthly('Bravo', 3000),
+        ...monthly('Delta', 2000),
+        ...monthly('Golf', 1000),
+      ],
+      [],
+      [],
+      REF
+    )
+    expect(previewOf(ins)).toBe('Bravo, Delta, Golf + 1 more.')
+  })
+})
+
+describe('generateInsights — Rule 6: outlier date locale (013/US3)', () => {
+  const baseline = (cents: number): Transaction[] =>
+    ['2026-02-03', '2026-03-03', '2026-04-03', '2026-05-03', '2026-05-20'].map((d) =>
+      tx({ category: 'dining', amount_cents: cents, date: `${d}T12:00:00.000Z` })
+    )
+  const big = () =>
+    tx({ id: 'big-loc', category: 'dining', amount_cents: 8000, date: '2026-06-05T12:00:00.000Z' })
+
+  it('formats the outlier date in the caller-supplied locale', () => {
+    const ins = generateInsights([...baseline(2000), big()], [], [], REF, 6, undefined, 'es-ES')
+    const out = byId(ins, 'outlier-big-loc')
+    expect(out).toBeTruthy()
+    expect(out!.body).toContain('5 jun') // es-ES renders "5 jun", not "Jun 5"
+    expect(out!.body).not.toContain('Jun 5')
+  })
+
+  it('defaults to en-US rendering', () => {
+    const ins = generateInsights([...baseline(2000), big()], [], [], REF)
+    expect(byId(ins, 'outlier-big-loc')!.body).toContain('Jun 5')
+  })
+})

@@ -151,5 +151,10 @@ export interface Insight {
   icon: string
   category: TransactionCategory | null
   magnitude_cents: number
+  /** Recurring insight only: the 3-merchant preview, amount-desc with
+   *  case-insensitive name tie-break, newest-transaction casing. Vectored
+   *  (spec 013) because ordering/casing are cross-surface logic; the body
+   *  string itself stays per-surface (localized). */
+  preview_merchants?: string[]
 }
 

@@ -36,6 +36,9 @@ final class InsightParityTests: XCTestCase {
         let severity: String
         let category: String?
         let magnitude_cents: Int64
+        // Spec 013: recurring 3-merchant preview (ordering + casing), [] on
+        // every non-recurring insight.
+        let preview_merchants: [String]
     }
 
     /// The harness timezone. The vectors are generated and asserted under
@@ -118,7 +121,8 @@ final class InsightParityTests: XCTestCase {
                 Expected(id: $0.id,
                          severity: severityName($0.severity),
                          category: $0.category?.rawValue,
-                         magnitude_cents: $0.magnitudeCents)
+                         magnitude_cents: $0.magnitudeCents,
+                         preview_merchants: $0.previewMerchants)
             }
 
             XCTAssertEqual(got, v.expected, v.input.name)

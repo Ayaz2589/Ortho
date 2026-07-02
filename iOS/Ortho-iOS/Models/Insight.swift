@@ -20,6 +20,13 @@ struct Insight: Identifiable, Hashable {
     /// Magnitude in USD cents. Drives secondary sort within a severity
     /// tier — bigger dollar-impact insights surface first.
     let magnitudeCents: Int64
+
+    /// Recurring insight only: the 3-merchant preview, ordered by monthly
+    /// amount desc with a case-insensitive name tie-break; casing from each
+    /// merchant's most recent transaction. Golden-vector-locked (spec 013)
+    /// because ordering/casing are cross-surface logic; the body string
+    /// stays per-surface (localized). Empty for every other insight.
+    var previewMerchants: [String] = []
 }
 
 enum InsightSeverity: Int, Hashable, Comparable {

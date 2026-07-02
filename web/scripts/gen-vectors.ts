@@ -207,6 +207,41 @@ const SCENARIOS: InsightScenario[] = [
     properties: [],
   },
   {
+    // Locks the recurring preview ORDER (spec 013): three recurring merchants
+    // whose Map-insertion order (Thrifty first) differs from the canonical
+    // amount-desc order, plus an exact amount tie (bZeta/Alpha, 1500 each)
+    // broken by case-insensitive name — Alpha before bZeta despite casing.
+    name: 'recurring preview ordering (amount desc, name tie-break)',
+    referenceDate: '2026-06-15',
+    transactions: [
+      tx({ kind: 'expense', category: 'subs', amount_cents: 500, date: '2026-04-05', merchant: 'Thrifty' }),
+      tx({ kind: 'expense', category: 'subs', amount_cents: 500, date: '2026-05-05', merchant: 'Thrifty' }),
+      tx({ kind: 'expense', category: 'subs', amount_cents: 500, date: '2026-06-05', merchant: 'Thrifty' }),
+      tx({ kind: 'expense', category: 'subs', amount_cents: 1500, date: '2026-04-06', merchant: 'bZeta' }),
+      tx({ kind: 'expense', category: 'subs', amount_cents: 1500, date: '2026-05-06', merchant: 'bZeta' }),
+      tx({ kind: 'expense', category: 'subs', amount_cents: 1500, date: '2026-06-06', merchant: 'bZeta' }),
+      tx({ kind: 'expense', category: 'subs', amount_cents: 1500, date: '2026-04-07', merchant: 'Alpha' }),
+      tx({ kind: 'expense', category: 'subs', amount_cents: 1500, date: '2026-05-07', merchant: 'Alpha' }),
+      tx({ kind: 'expense', category: 'subs', amount_cents: 1500, date: '2026-06-07', merchant: 'Alpha' }),
+    ],
+    budgets: [],
+    properties: [],
+  },
+  {
+    // Locks the preview CASING source (spec 013): the same merchant key with
+    // casing drift across transactions — the MOST RECENT casing ("STREAMLY")
+    // must win on both surfaces.
+    name: 'recurring preview casing (most recent transaction wins)',
+    referenceDate: '2026-06-15',
+    transactions: [
+      tx({ kind: 'expense', category: 'subs', amount_cents: 1200, date: '2026-04-05', merchant: 'streamly' }),
+      tx({ kind: 'expense', category: 'subs', amount_cents: 1200, date: '2026-05-05', merchant: 'Streamly' }),
+      tx({ kind: 'expense', category: 'subs', amount_cents: 1200, date: '2026-06-05', merchant: 'STREAMLY' }),
+    ],
+    budgets: [],
+    properties: [],
+  },
+  {
     name: 'no qualifying data',
     referenceDate: '2026-06-15',
     transactions: [],
@@ -222,6 +257,10 @@ const insights = SCENARIOS.map((s) => ({
     severity: i.severity,
     category: i.category,
     magnitude_cents: i.magnitude_cents,
+    // Spec 013: recurring preview ordering/casing is cross-surface logic —
+    // always present ([] on non-recurring insights) so both suites assert
+    // one shape.
+    preview_merchants: i.preview_merchants ?? [],
   })),
 }))
 
