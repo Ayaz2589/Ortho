@@ -22,7 +22,7 @@ import { filterTransactions, monthBounds, emptyCriteria, type FilterCriteria, ty
 import { computeShares, validateSplit, seedSplit, orderedOwnerIds, type SplitInput } from '../lib/splits'
 import { toDisplayAmount, toUSDCents } from '../lib/finance/money'
 import { CURRENCIES, FALLBACK_RATE_FROM_USD } from '../lib/finance/currency'
-import { availableMonths, monthReferenceDate, stepMonth } from '../components/dashboard/range'
+import { availableMonths, availableRanges, monthReferenceDate, stepMonth } from '../components/dashboard/range'
 import { balanceBetween } from '../lib/balances'
 import type { Transaction, Budget, Property } from '../lib/types'
 
@@ -453,6 +453,25 @@ const AVAILABLE_MONTHS_CASES: Array<{ name: string; dates: string[] }> = [
   { name: 'year boundary Dec to Jan', dates: ['2025-12-15T12:00:00.000Z', '2026-01-10T12:00:00.000Z'] },
 ]
 
+// availableRanges (spec 013 US4 — the last unvectored month-scope function).
+// Availability = months between the EARLIEST transaction and `now` must reach
+// monthCount(range) - 1; thisMonth is always offered. Cases pin every count
+// boundary, the boundary-miss below it, year-line math, gaps, and future rows.
+const NOON = (d: string) => `${d}T12:00:00.000Z`
+const AVAILABLE_RANGES_CASES: Array<{ name: string; dates: string[]; now: string }> = [
+  { name: 'empty history', dates: [], now: NOON('2026-06-15') },
+  { name: 'single month', dates: [NOON('2026-06-03')], now: NOON('2026-06-15') },
+  { name: 'one month back misses last3Months', dates: [NOON('2026-05-20')], now: NOON('2026-06-15') },
+  { name: 'exactly 3-month boundary', dates: [NOON('2026-04-28')], now: NOON('2026-06-15') },
+  { name: 'five-month span', dates: [NOON('2026-02-10'), NOON('2026-05-01')], now: NOON('2026-06-15') },
+  { name: 'exactly 6-month boundary', dates: [NOON('2026-01-31')], now: NOON('2026-06-15') },
+  { name: 'exactly 12-month boundary', dates: [NOON('2025-07-04')], now: NOON('2026-06-15') },
+  { name: 'thirteen-month span unlocks all', dates: [NOON('2025-06-15')], now: NOON('2026-06-15') },
+  { name: 'gap months (earliest drives, gaps irrelevant)', dates: [NOON('2025-06-15'), NOON('2026-06-01')], now: NOON('2026-06-15') },
+  { name: 'year boundary Nov to Jan', dates: [NOON('2025-11-30')], now: NOON('2026-01-15') },
+  { name: 'future-dated row does not unlock ranges', dates: [NOON('2026-06-01'), NOON('2026-07-20')], now: NOON('2026-06-15') },
+]
+
 const REF_MONTHS = ['2026-06', '2026-01', '2025-12', '2026-02']
 
 const STEP_CASES: Array<{ name: string; months: string[]; current: string; direction: 'prev' | 'next' }> = [
@@ -468,6 +487,12 @@ const dashboardMonthScope = {
     name: c.name,
     dates: c.dates,
     expected: availableMonths(c.dates.map((date) => tx({ date }))),
+  })),
+  availableRanges: AVAILABLE_RANGES_CASES.map((c) => ({
+    name: c.name,
+    dates: c.dates,
+    now: c.now,
+    expected: availableRanges(c.dates.map((date) => tx({ date })), new Date(c.now)),
   })),
   monthReferenceDate: REF_MONTHS.map((m) => ({
     name: m,

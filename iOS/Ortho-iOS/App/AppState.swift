@@ -677,24 +677,11 @@ final class AppState {
         transactions.map(\.date).min()
     }
 
-    /// Which `DashboardRange`s the current dataset can populate. A range
-    /// is "available" when there's at least one transaction from
-    /// `monthCount - 1` calendar months ago or earlier — i.e. the data
-    /// spans the full window. `.thisMonth` is always available.
+    /// Which `DashboardRange`s the current dataset can populate. Delegates
+    /// to the pure, golden-vectored `DashboardRange.available` (spec 013 —
+    /// see Features/Dashboard/DashboardRange.swift).
     var availableRanges: [DashboardRange] {
-        guard let earliest = earliestTransactionDate else {
-            return [.thisMonth]
-        }
-        // Day-insensitive calendar-month index difference, matching web's
-        // availableRanges (web/components/dashboard/range.ts): earliest May 3,
-        // today Jul 2 → monthsBack = 2 (so "3M" is offered), even though two
-        // full months haven't elapsed yet.
-        let cal = Calendar.current
-        let from = cal.dateComponents([.year, .month], from: earliest)
-        let to = cal.dateComponents([.year, .month], from: Date())
-        let monthsBack = ((to.year ?? 0) - (from.year ?? 0)) * 12
-            + ((to.month ?? 0) - (from.month ?? 0))
-        return DashboardRange.allCases.filter { monthsBack >= $0.monthCount - 1 }
+        DashboardRange.available(for: transactions)
     }
 
     // MARK: - Dashboard scope (relative range + transient selected month)

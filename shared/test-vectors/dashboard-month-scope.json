@@ -60,6 +60,133 @@
       ]
     }
   ],
+  "availableRanges": [
+    {
+      "name": "empty history",
+      "dates": [],
+      "now": "2026-06-15T12:00:00.000Z",
+      "expected": [
+        "thisMonth"
+      ]
+    },
+    {
+      "name": "single month",
+      "dates": [
+        "2026-06-03T12:00:00.000Z"
+      ],
+      "now": "2026-06-15T12:00:00.000Z",
+      "expected": [
+        "thisMonth"
+      ]
+    },
+    {
+      "name": "one month back misses last3Months",
+      "dates": [
+        "2026-05-20T12:00:00.000Z"
+      ],
+      "now": "2026-06-15T12:00:00.000Z",
+      "expected": [
+        "thisMonth"
+      ]
+    },
+    {
+      "name": "exactly 3-month boundary",
+      "dates": [
+        "2026-04-28T12:00:00.000Z"
+      ],
+      "now": "2026-06-15T12:00:00.000Z",
+      "expected": [
+        "thisMonth",
+        "last3Months"
+      ]
+    },
+    {
+      "name": "five-month span",
+      "dates": [
+        "2026-02-10T12:00:00.000Z",
+        "2026-05-01T12:00:00.000Z"
+      ],
+      "now": "2026-06-15T12:00:00.000Z",
+      "expected": [
+        "thisMonth",
+        "last3Months"
+      ]
+    },
+    {
+      "name": "exactly 6-month boundary",
+      "dates": [
+        "2026-01-31T12:00:00.000Z"
+      ],
+      "now": "2026-06-15T12:00:00.000Z",
+      "expected": [
+        "thisMonth",
+        "last3Months",
+        "last6Months"
+      ]
+    },
+    {
+      "name": "exactly 12-month boundary",
+      "dates": [
+        "2025-07-04T12:00:00.000Z"
+      ],
+      "now": "2026-06-15T12:00:00.000Z",
+      "expected": [
+        "thisMonth",
+        "last3Months",
+        "last6Months",
+        "last12Months"
+      ]
+    },
+    {
+      "name": "thirteen-month span unlocks all",
+      "dates": [
+        "2025-06-15T12:00:00.000Z"
+      ],
+      "now": "2026-06-15T12:00:00.000Z",
+      "expected": [
+        "thisMonth",
+        "last3Months",
+        "last6Months",
+        "last12Months"
+      ]
+    },
+    {
+      "name": "gap months (earliest drives, gaps irrelevant)",
+      "dates": [
+        "2025-06-15T12:00:00.000Z",
+        "2026-06-01T12:00:00.000Z"
+      ],
+      "now": "2026-06-15T12:00:00.000Z",
+      "expected": [
+        "thisMonth",
+        "last3Months",
+        "last6Months",
+        "last12Months"
+      ]
+    },
+    {
+      "name": "year boundary Nov to Jan",
+      "dates": [
+        "2025-11-30T12:00:00.000Z"
+      ],
+      "now": "2026-01-15T12:00:00.000Z",
+      "expected": [
+        "thisMonth",
+        "last3Months"
+      ]
+    },
+    {
+      "name": "future-dated row does not unlock ranges",
+      "dates": [
+        "2026-06-01T12:00:00.000Z",
+        "2026-07-20T12:00:00.000Z"
+      ],
+      "now": "2026-06-15T12:00:00.000Z",
+      "expected": [
+        "thisMonth"
+      ]
+    }
+  ],
   "monthReferenceDate": [
     {
       "name": "2026-06",

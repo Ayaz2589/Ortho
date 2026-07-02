@@ -90,14 +90,14 @@ stories; note only the cross-story file-contention rule:*
 
 ### Tests (write first)
 
-- [ ] T019 [US4] Add an `availableRanges` describe block to the web dashboard-scope parity test (`web/test/` — the file asserting `dashboard-month-scope.json`) iterating a not-yet-existing `availableRanges` section per contracts/available-ranges-vector.md. Run → **RED** (section absent from vector file)
+- [X] T019 [US4] Add an `availableRanges` describe block to the web dashboard-scope parity test (`web/test/` — the file asserting `dashboard-month-scope.json`) iterating a not-yet-existing `availableRanges` section per contracts/available-ranges-vector.md. Run → **RED** (section absent from vector file)
 
 ### Implementation
 
-- [ ] T020 [US4] Add the `availableRanges` case set to `web/scripts/gen-vectors.ts` (empty · single-month · 2-month boundary-miss · exactly-3/6/12 boundaries · 13-month · gap-months · year-boundary · future-dated; inputs `{dates[], now}`, noon-UTC ISO); `npm run gen:vectors`; review diff (only the new section) → T019 **GREEN**
-- [ ] T021 [US4] Mutation check (SC-004, one-time): flip the `>=` boundary in `web/components/dashboard/range.ts:96` → parity suite **RED** → revert → GREEN; record in the PR description
-- [ ] T022 [US4] Extract pure `func availableRanges(_ transactions: [Transaction], now: Date) -> [DashboardRange]` into `iOS/Ortho-iOS/App/DashboardRange.swift` (logic from `AppState.swift:684-698`, UTC month-index math matching web); make `AppState.availableRanges` delegate to it *(Swift — Phase 10)*
-- [ ] T023 [US4] Extend `iOS/Ortho-iOSTests/DashboardScopeParityTests.swift` with the `availableRanges` section decode + assertions (reuse the UTC ISO formatter, lines 44-49) *(Swift — Phase 10)*
+- [X] T020 [US4] Add the `availableRanges` case set to `web/scripts/gen-vectors.ts` (empty · single-month · 2-month boundary-miss · exactly-3/6/12 boundaries · 13-month · gap-months · year-boundary · future-dated; inputs `{dates[], now}`, noon-UTC ISO); `npm run gen:vectors`; review diff (only the new section) → T019 **GREEN**
+- [X] T021 [US4] Mutation check (SC-004, one-time): flip the `>=` boundary in `web/components/dashboard/range.ts:96` → parity suite **RED** → revert → GREEN; record in the PR description
+- [X] T022 [US4] Extract pure `func availableRanges(_ transactions: [Transaction], now: Date) -> [DashboardRange]` into `iOS/Ortho-iOS/App/DashboardRange.swift` (logic from `AppState.swift:684-698`, UTC month-index math matching web); make `AppState.availableRanges` delegate to it *(Swift — Phase 10)*
+- [X] T023 [US4] Extend `iOS/Ortho-iOSTests/DashboardScopeParityTests.swift` with the `availableRanges` section decode + assertions (reuse the UTC ISO formatter, lines 44-49) *(Swift — Phase 10)*
 
 **Checkpoint**: web parity green incl. mutation check; Swift extraction + tests staged
 
