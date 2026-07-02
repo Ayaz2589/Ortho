@@ -1,0 +1,155 @@
+# iOS deploy — archives Ortho-iOS, signs it, and uploads to TestFlight.
+# Manual-trigger only (workflow_dispatch); owner setup guide: docs/deploy.md.
+# The fast `preflight` job names EVERY missing secret before any macOS minute
+# is spent (spec 013 US7 / SC-007). This repo is public: secrets are never
+# echoed, and the deploy job is gated off fork-originated events.
+name: iOS Deploy (TestFlight)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-deploy
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Check required secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+      DIST_CERT_P12: ${{ secrets.DIST_CERT_P12 }}
+      DIST_CERT_PASSWORD: ${{ secrets.DIST_CERT_PASSWORD }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+    steps:
+      - name: Verify every deploy secret is configured
+        run: |
+          missing=()
+          for name in ASC_ISSUER_ID ASC_KEY_ID ASC_PRIVATE_KEY \
+                      DIST_CERT_P12 DIST_CERT_PASSWORD \
+                      SUPABASE_URL SUPABASE_ANON_KEY; do
+            if [ -z "${!name}" ]; then missing+=("$name"); fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Missing ${#missing[@]} required repo secret(s): ${missing[*]}"
+            echo "Configure them per docs/deploy.md (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+          echo "All deploy secrets present."
+
+  deploy:
+    name: Archive, sign & upload to TestFlight
+    needs: preflight
+    # Fork PRs never reach here (dispatch-only + this gate), so secrets stay safe.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest Xcode
+        run: |
+          XCODE_APP="$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          echo "Selecting $XCODE_APP"
+          sudo xcode-select -s "$XCODE_APP"
+          xcodebuild -version
+
+      # The shipped app talks to the live backend — inject the production
+      # Supabase values (the committed template carries placeholders only).
+      - name: Create SupabaseConfig.swift from template
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          sed -e "s|https://YOUR-PROJECT-REF.supabase.co|$SUPABASE_URL|" \
+              -e "s|sb_publishable_\.\.\.|$SUPABASE_ANON_KEY|" \
+              iOS/Ortho-iOS/App/SupabaseConfig.swift.template \
+              > iOS/Ortho-iOS/App/SupabaseConfig.swift
+
+      - name: Import distribution certificate into a throwaway keychain
+        env:
+          DIST_CERT_P12: ${{ secrets.DIST_CERT_P12 }}
+          DIST_CERT_PASSWORD: ${{ secrets.DIST_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/deploy.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          echo "$DIST_CERT_P12" | base64 --decode > "$RUNNER_TEMP/dist.p12"
+          security import "$RUNNER_TEMP/dist.p12" -k "$KEYCHAIN" \
+            -P "$DIST_CERT_PASSWORD" -A -t cert -f pkcs12
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
+          rm "$RUNNER_TEMP/dist.p12"
+
+      - name: Write App Store Connect API key
+        env:
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/asc"
+          printf '%s' "$ASC_PRIVATE_KEY" > "$RUNNER_TEMP/asc/AuthKey_${ASC_KEY_ID}.p8"
+
+      - name: Archive (Release)
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project iOS/Ortho-iOS.xcodeproj \
+            -scheme Ortho-iOS \
+            -destination "generic/platform=iOS" \
+            -archivePath "$RUNNER_TEMP/Ortho-iOS.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey_${{ secrets.ASC_KEY_ID }}.p8" \
+            -authenticationKeyID "${{ secrets.ASC_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.ASC_ISSUER_ID }}" \
+            CODE_SIGN_STYLE=Automatic \
+            2>&1 | tee "$RUNNER_TEMP/archive.log" | tail -40
+
+      - name: Export .ipa (app-store method)
+        run: |
+          set -o pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>export</string>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Ortho-iOS.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey_${{ secrets.ASC_KEY_ID }}.p8" \
+            -authenticationKeyID "${{ secrets.ASC_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.ASC_ISSUER_ID }}" \
+            2>&1 | tee "$RUNNER_TEMP/export.log" | tail -20
+
+      - name: Upload to TestFlight
+        run: |
+          IPA="$(find "$RUNNER_TEMP/export" -name '*.ipa' | head -1)"
+          echo "Uploading $IPA"
+          xcrun altool --upload-app --type ios --file "$IPA" \
+            --apiKey "${{ secrets.ASC_KEY_ID }}" \
+            --apiIssuer "${{ secrets.ASC_ISSUER_ID }}" \
+            2>&1 | tee "$RUNNER_TEMP/upload.log"
+        env:
+          API_PRIVATE_KEYS_DIR: ${{ runner.temp }}/asc
+
+      - name: Upload build artifacts (ipa + logs)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-output
+          path: |
+            ${{ runner.temp }}/export/*.ipa
+            ${{ runner.temp }}/*.log
+          if-no-files-found: ignore
