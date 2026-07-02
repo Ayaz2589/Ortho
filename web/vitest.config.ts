@@ -1,6 +1,12 @@
 import { defineConfig } from 'vitest/config'
 import { fileURLToPath } from 'node:url'
 
+// The golden vectors are generated under TZ=UTC (see scripts/gen-vectors.ts);
+// assert under the same zone so the suite passes identically on any machine
+// (dev Macs are America/New_York, CI runners are UTC). Set here — workers
+// inherit the main process env before any Date math runs.
+process.env.TZ = 'UTC'
+
 export default defineConfig({
   // Resolve the app's `@/` alias (tsconfig paths) for tests.
   resolve: {

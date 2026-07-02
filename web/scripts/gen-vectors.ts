@@ -26,6 +26,13 @@ import { availableMonths, monthReferenceDate, stepMonth } from '../components/da
 import { balanceBetween } from '../lib/balances'
 import type { Transaction, Budget, Property } from '../lib/types'
 
+// The vectors must be identical no matter where they are generated: pin the
+// process timezone before any Date math runs. Both assertion suites pin the
+// same zone (vitest.config.ts for web, a UTC Calendar in the iOS parity
+// tests), so day-1 date-only strings ("2026-06-01" parses as UTC midnight)
+// bucket into the same month everywhere.
+process.env.TZ = 'UTC'
+
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const OUT = resolve(__dirname, '../../shared/test-vectors')
 

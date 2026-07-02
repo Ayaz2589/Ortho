@@ -122,6 +122,12 @@ After any change to a vectored pure-logic function: regenerate, then run **both*
 
 ## 8. Gotchas
 
+- **The harness is pinned to TZ=UTC** (since 2026-07-02, when the first iOS CI run caught
+  timezone-dependent vectors). `gen-vectors.ts` and `vitest.config.ts` set `process.env.TZ = 'UTC'`,
+  and `InsightParityTests.swift` passes an explicit UTC `Calendar` to the engine. Rationale: JS
+  parses date-only strings (`"2026-06-01"`) as UTC midnight but the engines bucket months in the
+  process timezone, so unpinned vectors encode the generating machine's timezone (day-1 rows fall
+  into the previous month anywhere west of UTC). Keep all three pins in sync.
 - **Never hand-edit the JSONs.** They are generated; hand edits will be silently reverted by the next `npm run gen:vectors`. Fix the TS implementation (or the case list in `gen-vectors.ts`) and regenerate.
 - **Regeneration launders bugs.** Because expected values come from the TS implementation, regenerating after an *unintended* TS behavior change bakes the bug into the vectors — the web suite will pass and only the iOS suite will catch it (on macOS, which a Linux sandbox can't run). Treat vector diffs in review as behavior-change diffs.
 - **iOS tests can't run in this (Linux) sandbox.** A change that regenerates vectors is only *half*-verified here; flag that the iOS XCTest run is pending on macOS.

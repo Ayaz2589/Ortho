@@ -393,7 +393,13 @@
         "id": "cashflow-deficit-2026-06",
         "severity": "critical",
         "category": null,
-        "magnitude_cents": 1500
+        "magnitude_cents": 21500
+      },
+      {
+        "id": "mom-entertainment-2026-06",
+        "severity": "warning",
+        "category": "entertainment",
+        "magnitude_cents": 10000
       },
       {
         "id": "trend30-2026-06",
@@ -402,10 +408,10 @@
         "magnitude_cents": 10000
       },
       {
-        "id": "top-category-subs-2026-06",
+        "id": "top-category-entertainment-2026-06",
         "severity": "info",
-        "category": "subs",
-        "magnitude_cents": 1500
+        "category": "entertainment",
+        "magnitude_cents": 20000
       },
       {
         "id": "recurring-2026-06",

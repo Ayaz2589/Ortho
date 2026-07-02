@@ -38,12 +38,17 @@ final class InsightParityTests: XCTestCase {
         let magnitude_cents: Int64
     }
 
-    private func localDate(_ s: String) -> Date {
-        let p = s.split(separator: "-").compactMap { Int($0) }
-        var c = DateComponents(); c.year = p[0]; c.month = p[1]; c.day = p[2]
-        return Calendar.current.date(from: c)!
-    }
-    /// Mirrors JS `new Date('yyyy-mm-dd')` (UTC midnight) for transaction dates.
+    /// The harness timezone. The vectors are generated and asserted under
+    /// TZ=UTC (gen-vectors.ts / vitest.config.ts pin it on the web side), so
+    /// month bucketing must use UTC here too — otherwise a day-1 transaction
+    /// ("2026-06-01" = UTC midnight) falls into the previous month on any
+    /// machine west of UTC and the suite only passes in some timezones.
+    private let utcCalendar: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }()
+    /// Mirrors JS `new Date('yyyy-mm-dd')` (UTC midnight) for all vector dates.
     private func utcDate(_ s: String) -> Date {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
@@ -107,7 +112,8 @@ final class InsightParityTests: XCTestCase {
                 transactions: transactions,
                 budgets: budgets,
                 properties: properties,
-                referenceDate: localDate(v.input.referenceDate)
+                referenceDate: utcDate(v.input.referenceDate),
+                calendar: utcCalendar
             ).map {
                 Expected(id: $0.id,
                          severity: severityName($0.severity),
