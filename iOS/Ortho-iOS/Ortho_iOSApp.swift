@@ -51,6 +51,16 @@ struct Ortho_iOSApp: App {
 
     init() {
         AppFont.register()
+        // -uiDemoLanguage must reach Localizer BEFORE the first render:
+        // imperative formatters and tr() lookups (insights, date group
+        // headers, "None set") bake their output at first render, and in
+        // demo mode `languageRaw` never changes, so the `.task(id:)` below
+        // would set the locale too late with nothing left to re-render.
+        // Real users are unaffected — their language CHANGES re-fire the
+        // task and @AppStorage invalidates every view.
+        if let demoLocale = Self.uiDemoLanguage?.locale {
+            Localizer.currentLocale = demoLocale
+        }
     }
 
     private var appearance: AppearanceMode {

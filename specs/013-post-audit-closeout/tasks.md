@@ -212,9 +212,9 @@ stories; note only the cross-story file-contention rule:*
 
 ## Phase 12: Polish & Cross-Cutting
 
-- [ ] T053 Reconcile `PARITY.md` fully (FR-020): new audit note for 013; availableRanges row now vectored; insights preview + outlier-date rows resolved; CLI rows resolved per T033; matrix updated
-- [ ] T054 [P] Refresh stale docs: `docs/ios.md` (per-language screenshot matrix, -uiDemoLanguage), `docs/shared.md` (availableRanges + preview_merchants vector sections), `docs/web.md` (i18n suite, insights locale param), `docs/makefile.md` (repair-dates, new tx-list flags), `docs/index.md` (deploy.md link — if not done in T041)
-- [ ] T055 [P] Update `CI-SETUP.local.md` (gitignored): deploy workflow exists, secrets table now normative, correct the "sandbox can't edit pbxproj" note if Phase 10 proved hand-editing viable
+- [X] T053 Reconcile `PARITY.md` fully (FR-020): new audit note for 013; availableRanges row now vectored; insights preview + outlier-date rows resolved; CLI rows resolved per T033; matrix updated
+- [X] T054 [P] Refresh stale docs: `docs/ios.md` (per-language screenshot matrix, -uiDemoLanguage), `docs/shared.md` (availableRanges + preview_merchants vector sections), `docs/web.md` (i18n suite, insights locale param), `docs/makefile.md` (repair-dates, new tx-list flags), `docs/index.md` (deploy.md link — if not done in T041)
+- [X] T055 [P] Update `CI-SETUP.local.md` (gitignored): deploy workflow exists, secrets table now normative, correct the "sandbox can't edit pbxproj" note if Phase 10 proved hand-editing viable
 - [ ] T056 Final gates: `cd web && npx tsc --noEmit && npm test` (all green, incl. every new suite); confirm latest CI run green; run through `quickstart.md` checking every US validation is satisfied or explicitly operator-pending
 - [ ] T057 Mark the draft PR ready for review with a summary of all seven stories, the vector diffs, screenshot evidence links, and the two operator-pending items (visual pass if outstanding; ambiguous rows)
 
