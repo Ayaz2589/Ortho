@@ -78,11 +78,13 @@ shared TS functions but is deliberately **outside** the golden-vector harness.
 4. **Skim `.specify/memory/constitution.md`** — the design/testing constitution every plan gates
    on (tokens-only design, calm-over-dense, loss never red, test-first with golden vectors).
 5. **Know your platform limits**: a Linux sandbox can run everything JS (web dev server, Vitest,
-   vector generation, the Make targets) but **cannot build or test iOS** — that requires
-   macOS/Xcode (`cd iOS && xcodebuild test -scheme Ortho-iOS`).
+   vector generation, the Make targets) but **cannot build or test iOS locally** — that requires
+   macOS/Xcode (`cd iOS && xcodebuild test -scheme Ortho-iOS`). The sandbox feedback loop is CI:
+   `.github/workflows/ios-ci.yml` compiles, runs the parity suites, and uploads simulator
+   screenshots on every push touching `iOS/**` or `shared/test-vectors/**` (see `docs/ios.md` §6).
 6. **Set up web**: `cd web && npm install && npm test` (Node 22 per root `.nvmrc`; on Linux ARM
    you may need `@rolldown/binding-linux-arm64-gnu` since macOS-installed `node_modules` lacks
-   Linux bindings). Expect the full suite green (~593 tests at last audit).
+   Linux bindings). Expect the full suite green (619 tests as of 2026-07-02).
 7. **Check env/credentials**: `web/.env.local` (gitignored) needs `NEXT_PUBLIC_SUPABASE_URL` +
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`; iOS needs the gitignored
    `iOS/Ortho-iOS/App/SupabaseConfig.swift` (create from the committed `.template`). This backend

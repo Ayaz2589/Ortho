@@ -4,7 +4,7 @@
 
 `iOS/` contains **Ortho-iOS**, the canonical SwiftUI client of Ortho — a calm, money-first household budgeting app for two people sharing a household. The iOS app defines the product; the web app (`web/`) is the same product re-expressed for desktop (see `./web.md`). Both clients talk to the **same Supabase backend** (`supabase/`, see `./supabase.md`) and keep their pure finance logic in lockstep via shared golden test vectors in `shared/test-vectors/` (see `./shared.md`).
 
-Four destinations: **Dashboard** (month-scoped widgets + insights + budgets), **Transactions** (day-grouped activity with splits, filters, settle-up), **Housing** (properties: primary home / multifamily / rental with mortgage + lease math), **Settings** (household people, cards, budgets, currency, language, appearance, sign-out).
+Four destinations: **Dashboard** (month-scoped widgets + insights + budgets), **Transactions** (collapsible month sections over day-grouped activity, with splits, filters, settle-up), **Housing** (properties: primary home / multifamily / rental with mortgage + lease math), **Settings** (household people, cards, budgets, currency, language, appearance, sign-out).
 
 > **Warning:** `iOS/ARCHITECTURE.md` is a detailed but **outdated** design doc from the pre-Supabase prototype era (it claims "no persistence, no backend, sample data seeded on launch"). Its rationale sections (design system, tab bar, dual-mode sheets, USD-cents choice) are still accurate; its data-layer and feature-status sections are not. Trust this doc and the source for anything involving Supabase, auth, People, budgets, insights, or the dashboard.
 

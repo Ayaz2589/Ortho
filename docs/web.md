@@ -86,7 +86,7 @@ web/
 ├── scripts/
 │   ├── gen-vectors.ts          # regenerates shared/test-vectors/*.json from the TS engines
 │   └── import/                 # bank-statement import + tx CRUD CLI (engine/, profiles/, db/, cli.ts, tx.ts)
-├── test/                       # 57 Vitest files, 593 tests (unit, jsdom component, *.parity.test.ts,
+├── test/                       # 59 Vitest files, 619 tests (unit, jsdom component, *.parity.test.ts,
 │   │                           #   import/ golden suites + fixtures/, helpers/supabase-mock.ts)
 │   └── setup.ts                # jest-dom matchers + conditional RTL cleanup
 ├── next.config.ts              # images.remotePatterns → brujhxmtzfgowimprueo.supabase.co
@@ -108,7 +108,7 @@ web/
 - **Bootstrap** (once, in the `(app)` layout): `auth.getUser()` → upsert the `users` profile row → find-or-create `households` + `household_members` → ensure the account holder has a `household_people` row (and fold legacy device-only `localUsers` from localStorage) → `loadAll()`.
 - **`loadAll()`** issues 11 parallel Supabase selects: `users`, `household_people`, `transactions`, `transaction_shares`, `cards`, `properties`, `mortgage_info`, `lease_info`, `units`, `rental_payments`, `budgets`; it then stitches properties with their mortgage/lease/units and **rehydrates** each transaction's `owner_ids` + per-person `shares` map from `transaction_shares` rows (a `transfer` with no shares gets `owner_ids: []`, never a synthesized owner).
 - **Mutations are optimistic with rollback**: state updates immediately, the Supabase write runs async, and failure restores the previous state and sets a banner `error`. Transaction writes are **atomic with shares**: if `transaction_shares` fails after the parent insert/update, the parent is deleted/restored so a share-less row never survives (matches iOS's all-or-nothing write; see `writeShares`, `addTransaction`, `updateTransaction`).
-- **FX**: `refreshRates()` fetches `https://www.floatrates.com/daily/usd.json`, caches in localStorage for 24h (`fxRates` / `fxRatesFetchedAt`), and falls back to `FALLBACK_RATE_FROM_USD` (`lib/finance/currency.ts`). `formatMoney` converts USD cents → display currency with the active locale.
+- **FX**: `refreshRates()` fetches `https://www.floatrates.com/daily/usd.json` and caches in localStorage (`fxRates` / `fxRatesFetchedAt`, refreshed after 24h). On fetch failure it KEEPS the last cached live rates at any age (mirrors iOS; since 2026-07-02) and surfaces a freshness caption in Settings; the hardcoded `FALLBACK_RATE_FROM_USD` (`lib/finance/currency.ts`) applies only when no cache has ever existed. `formatMoney` converts USD cents → display currency with the active locale.
 - **Preferences in localStorage**: `currency`, `language`, `appearance`, `dashboardRange` (+ FX cache). All are adopted *after mount* so SSR and first client paint agree — no hydration mismatch.
 - `lib/api/aggregates.ts` wraps the shared Postgres aggregate RPCs (`household_owner_spend` etc., defined in `supabase/migrations/20260611120000_aggregates.sql`). It is **additive and not yet wired** — dashboard widgets still compute locally; the file documents the per-widget cut-over plan.
 
@@ -161,7 +161,7 @@ npm install
 npm run dev              # http://localhost:3000
 npm run build            # next build
 npm start                # next start (after build)
-npm test                 # vitest run — 57 files / 593 tests (verified green)
+npm test                 # vitest run — 59 files / 619 tests (verified green)
 npm run test:coverage    # v8 coverage, thresholds enforced (see vitest.config.ts)
 npm run gen:vectors      # regenerate shared/test-vectors/ from the TS engines
 npx tsc --noEmit         # typecheck
@@ -187,7 +187,7 @@ make tx-list / tx-add / tx-edit / tx-rm     # transaction CRUD; make ingest-help
 
 ## 8. Gotchas
 
-- **Native binaries vs. Linux sandboxes (the big one).** `web/node_modules` is typically installed on macOS-arm64, so Linux-arm64 sandboxes fail with `Cannot find module '@rolldown/binding-linux-arm64-gnu'` (vitest) or missing `lightningcss`/oxide/swc bindings (next build). Fix without touching the lockfile: `npm install @rolldown/binding-linux-arm64-gnu lightningcss-linux-arm64-gnu @tailwindcss/oxide-linux-arm64-gnu @next/swc-linux-arm64-gnu --no-save`. (Verified: after installing the rolldown binding, all 593 tests pass.)
+- **Native binaries vs. Linux sandboxes (the big one).** `web/node_modules` is typically installed on macOS-arm64, so Linux-arm64 sandboxes fail with `Cannot find module '@rolldown/binding-linux-arm64-gnu'` (vitest) or missing `lightningcss`/oxide/swc bindings (next build). Fix without touching the lockfile: `npm install @rolldown/binding-linux-arm64-gnu lightningcss-linux-arm64-gnu @tailwindcss/oxide-linux-arm64-gnu @next/swc-linux-arm64-gnu --no-save`. (Verified: after installing the rolldown binding, the full suite passes.)
 - **This is Next 16** — `proxy.ts` replaces `middleware.ts`; other conventions may differ from memory. Per `web/AGENTS.md`, read `web/node_modules/next/dist/docs/` before writing Next-specific code.
 - **Node >= 20.19 required** (vitest 4 uses `require(ESM)`); `package.json` engines enforce it.
 - **Vitest runs files sequentially** (`fileParallelism: false`) because parallel jsdom worker startup races in sandboxes; don't "optimize" this away.
@@ -195,7 +195,7 @@ make tx-list / tx-add / tx-edit / tx-rm     # transaction CRUD; make ingest-help
 - **`lib/api/aggregates.ts` is not wired** — widgets still aggregate client-side; the RPCs exist in `supabase/migrations/20260611120000_aggregates.sql`.
 - **If you change any parity engine**, regenerate vectors (`npm run gen:vectors`) and expect the iOS suite to need the same change — golden vectors are the contract (see `PARITY.md` at the repo root).
 - **localStorage keys** the app depends on: `currency`, `language`, `appearance`, `dashboardRange`, `fxRates`/`fxRatesFetchedAt`, legacy `localUsers` (folded into `household_people` on first boot, then removed).
-- **FX needs network** (`floatrates.com`); it degrades to `FALLBACK_RATE_FROM_USD` silently.
+- **FX needs network** (`floatrates.com`); offline it reuses the last cached live rates (with a staleness caption in Settings), and only a never-fetched install sees `FALLBACK_RATE_FROM_USD`.
 - **Stale references to a "platform lock"**: the single-active-platform session lock was removed in feature 010; `proxy.ts` documents this. Concurrent iOS + web sessions are expected.
 - **Appearance is applied by an inline boot script** in `app/layout.tsx` that embeds `THEME_VARS` — if you change theme tokens, update `app/globals.css` **and** `components/settings/appearance.ts` (they must mirror each other).
 - The generated `web/coverage/` and `tsconfig.tsbuildinfo` are build artifacts; `web/README.md` is the untouched create-next-app boilerplate (the real docs are the root `README.md`, `PARITY.md`, and `web/scripts/import/README.md`).
