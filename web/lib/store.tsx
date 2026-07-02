@@ -194,6 +194,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('language', next)
   }
 
+  // supabase-js resolves with `{ error }` instead of throwing, so a missed
+  // check reads as success — during bootstrap that turned a transient read
+  // failure into a duplicate household, and during property writes into
+  // silent sub-table data loss. Funnel every result whose failure must not
+  // pass silently through this.
+  const orThrow = <T extends { error: { message: string } | null }>(res: T): T => {
+    if (res.error) throw new Error(res.error.message)
+    return res
+  }
+
   // ---- bootstrap ----
   useEffect(() => {
     if (booted.current) return
@@ -220,18 +230,23 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           color_key: 'sage',
           created_at: new Date().toISOString(),
         }
-        await supabase.from('users').upsert(me, { onConflict: 'id' })
+        orThrow(await supabase.from('users').upsert(me, { onConflict: 'id' }))
 
-        // find or create household
-        const { data: membership } = await supabase
-          .from('household_members')
-          .select('household_id')
-          .eq('user_id', authUser.id)
-          .limit(1)
+        // find or create household. The membership read MUST fail loudly: if
+        // a transient error were treated as "no membership", we would create a
+        // duplicate household and silently detach the user from their data.
+        const { data: membership } = orThrow(
+          await supabase
+            .from('household_members')
+            .select('household_id')
+            .eq('user_id', authUser.id)
+            .limit(1)
+        )
         let householdId: string
         let householdName = 'Home'
         if (membership && membership.length > 0) {
           householdId = membership[0].household_id
+          // Name read is display-only — a failure here must not block boot.
           const { data: h } = await supabase
             .from('households')
             .select('*')
@@ -240,12 +255,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           if (h) householdName = h.name
         } else {
           householdId = uuid()
-          await supabase
-            .from('households')
-            .insert({ id: householdId, owner_id: authUser.id, name: householdName })
-          await supabase
-            .from('household_members')
-            .insert({ household_id: householdId, user_id: authUser.id, role: 'owner' })
+          orThrow(
+            await supabase
+              .from('households')
+              .insert({ id: householdId, owner_id: authUser.id, name: householdName })
+          )
+          orThrow(
+            await supabase
+              .from('household_members')
+              .insert({ household_id: householdId, user_id: authUser.id, role: 'owner' })
+          )
         }
 
         // ensure the account holder has a Person row, then fold any legacy
@@ -264,10 +283,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, [])
 
   async function ensureAccountPersonAndFoldLegacy(householdId: string, me: User) {
-    const { data: existing } = await supabase
-      .from('household_people')
-      .select('id, linked_user_id')
-      .eq('household_id', householdId)
+    // Same fail-loud rule as the membership read: a swallowed error here would
+    // insert a duplicate Person row for the account holder.
+    const { data: existing } = orThrow(
+      await supabase
+        .from('household_people')
+        .select('id, linked_user_id')
+        .eq('household_id', householdId)
+    )
     const rows = (existing ?? []) as { id: string; linked_user_id: string | null }[]
     let order = rows.length
     if (!rows.some((p) => p.linked_user_id === me.id)) {
@@ -327,6 +350,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       supabase.from('rental_payments').select('*').order('date', { ascending: false }),
       supabase.from('budgets').select('*'),
     ])
+
+    // A failed read must surface as an error, not render as a real-looking
+    // empty state (matches iOS, which fails its bootstrap on any load error).
+    for (const res of [usersRes, peopleRes, txRes, sharesRes, cardsRes, propsRes, mortRes, leaseRes, unitsRes, rpRes, budgetsRes]) {
+      orThrow(res)
+    }
 
     setUsers((usersRes.data as User[]) ?? [])
     const peopleRows = (peopleRes.data as Person[]) ?? []
@@ -598,16 +627,23 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     })()
   }
 
+  // Throws on the first failed write so callers can roll back their optimistic
+  // state and surface the error — a swallowed failure after the deletes would
+  // silently destroy the property's mortgage/lease/units server-side while the
+  // UI kept rendering them. (Like iOS, the server write itself is still not
+  // atomic; failing loudly is the shared contract — see PARITY.md.)
   const writePropertySubtables = async (p: Property) => {
-    await supabase.from('mortgage_info').delete().eq('property_id', p.id)
-    await supabase.from('lease_info').delete().eq('property_id', p.id)
-    await supabase.from('units').delete().eq('property_id', p.id)
-    if (p.mortgage) await supabase.from('mortgage_info').insert({ ...p.mortgage, property_id: p.id })
-    if (p.lease) await supabase.from('lease_info').insert({ ...p.lease, property_id: p.id })
+    orThrow(await supabase.from('mortgage_info').delete().eq('property_id', p.id))
+    orThrow(await supabase.from('lease_info').delete().eq('property_id', p.id))
+    orThrow(await supabase.from('units').delete().eq('property_id', p.id))
+    if (p.mortgage) orThrow(await supabase.from('mortgage_info').insert({ ...p.mortgage, property_id: p.id }))
+    if (p.lease) orThrow(await supabase.from('lease_info').insert({ ...p.lease, property_id: p.id }))
     if (p.units && p.units.length) {
-      await supabase
-        .from('units')
-        .insert(p.units.map((u, i) => ({ ...u, property_id: p.id, sort_order: i })))
+      orThrow(
+        await supabase
+          .from('units')
+          .insert(p.units.map((u, i) => ({ ...u, property_id: p.id, sort_order: i })))
+      )
     }
   }
 
@@ -622,13 +658,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const addProperty = (p: Property) => {
     setProperties((prev) => [...prev, p])
     ;(async () => {
-      const { error: e } = await supabase.from('properties').insert(propRecord(p))
-      if (e) {
+      try {
+        orThrow(await supabase.from('properties').insert(propRecord(p)))
+        await writePropertySubtables(p)
+      } catch (e) {
         setProperties((prev) => prev.filter((x) => x.id !== p.id))
-        setError(e.message)
-        return
+        setError((e as Error).message)
       }
-      await writePropertySubtables(p)
     })()
   }
 
@@ -639,27 +675,34 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return list.map((x) => (x.id === p.id ? p : x))
     })
     ;(async () => {
-      const { error: e } = await supabase.from('properties').update(propRecord(p)).eq('id', p.id)
-      if (e) {
+      try {
+        orThrow(await supabase.from('properties').update(propRecord(p)).eq('id', p.id))
+        await writePropertySubtables(p)
+      } catch (e) {
         if (prev) setProperties((list) => list.map((x) => (x.id === p.id ? prev! : x)))
-        setError(e.message)
-        return
+        setError((e as Error).message)
       }
-      await writePropertySubtables(p)
     })()
   }
 
   const deleteProperty = (id: string) => {
     let removed: Property | undefined
+    let removedPayments: RentalPayment[] = []
     setProperties((prev) => {
       removed = prev.find((p) => p.id === id)
       return prev.filter((p) => p.id !== id)
     })
-    setRentalPayments((prev) => prev.filter((rp) => rp.property_id !== id))
+    setRentalPayments((prev) => {
+      removedPayments = prev.filter((rp) => rp.property_id === id)
+      return prev.filter((rp) => rp.property_id !== id)
+    })
     ;(async () => {
       const { error: e } = await supabase.from('properties').delete().eq('id', id)
       if (e && removed) {
         setProperties((prev) => [...prev, removed!])
+        // Restore the locally-cascaded payments too, or a failed delete
+        // leaves the property back but its history gone until reload.
+        setRentalPayments((prev) => [...removedPayments, ...prev])
         setError(e.message)
       }
     })()
@@ -698,9 +741,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }
 
   const addOrUpdateBudget = (b: Budget) => {
+    let prevBudget: Budget | undefined
     setBudgets((prev) => {
-      const exists = prev.some((x) => x.category === b.category && x.household_id === b.household_id)
-      return exists
+      prevBudget = prev.find((x) => x.category === b.category && x.household_id === b.household_id)
+      return prevBudget
         ? prev.map((x) => (x.category === b.category && x.household_id === b.household_id ? b : x))
         : [...prev, b]
     })
@@ -714,7 +758,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         },
         { onConflict: 'household_id,category' }
       )
-      if (e) setError(e.message)
+      if (e) {
+        // Roll back the optimistic value (matches iOS) — keeping it would
+        // show a limit the server never accepted.
+        setBudgets((prev) =>
+          prevBudget
+            ? prev.map((x) => (x.category === b.category && x.household_id === b.household_id ? prevBudget! : x))
+            : prev.filter((x) => !(x.category === b.category && x.household_id === b.household_id))
+        )
+        setError(e.message)
+      }
     })()
   }
 

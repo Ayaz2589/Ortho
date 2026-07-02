@@ -15,6 +15,32 @@ import { SpendByCategoryCard } from '@/components/dashboard/SpendByCategoryCard'
 import { PerOwnerBreakdownCard } from '@/components/dashboard/PerOwnerBreakdownCard'
 import { MonthPicker } from '@/components/dashboard/MonthPicker'
 import { WebPageHeader, Seg, CardLabel } from './kit'
+import type { Property } from '@/lib/types'
+
+/** Housing hero figures. Net rental must not be gated on having a mortgage —
+ *  a paid-off multifamily still earns its unit rents (matches iOS and the
+ *  mobile HousingSnapshotCard). Exported for tests. */
+export function housingSummary(properties: Property[]) {
+  let cost = 0
+  let equity = 0
+  let netRental = 0
+  let multi = false
+  for (const p of properties) {
+    const m = p.mortgage
+    const pay = m ? monthlyPaymentCents(m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years) : 0
+    if (m) {
+      cost += pay
+      equity += currentEquityCents(m.purchase_price_cents, m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date)
+    }
+    if (p.kind === 'multifamily') {
+      multi = true
+      const rent = (p.units ?? []).reduce((s, u) => s + u.monthly_rent_cents, 0)
+      netRental += rent - pay
+    }
+    if (p.lease) cost += p.lease.monthly_rent_cents
+  }
+  return { cost, equity, netRental, multi, count: properties.length }
+}
 
 function Sparkline({ points, height = 64 }: { points: number[]; height?: number }) {
   const max = Math.max(1, ...points)
@@ -101,27 +127,7 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
   }, [transactions, now])
 
   // Housing summary
-  const housing = useMemo(() => {
-    let cost = 0
-    let equity = 0
-    let netRental = 0
-    let multi = false
-    for (const p of properties) {
-      const m = p.mortgage
-      if (m) {
-        const pay = monthlyPaymentCents(m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years)
-        cost += pay
-        equity += currentEquityCents(m.purchase_price_cents, m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date)
-        if (p.kind === 'multifamily') {
-          multi = true
-          const rent = (p.units ?? []).reduce((s, u) => s + u.monthly_rent_cents, 0)
-          netRental += rent - pay
-        }
-      }
-      if (p.lease) cost += p.lease.monthly_rent_cents
-    }
-    return { cost, equity, netRental, multi, count: properties.length }
-  }, [properties])
+  const housing = useMemo(() => housingSummary(properties), [properties])
 
   const insights = useMemo(
     () => generateInsights(transactions, budgets, properties, referenceDate, 2),

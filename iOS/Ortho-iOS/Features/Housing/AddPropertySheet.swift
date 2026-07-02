@@ -33,6 +33,8 @@ struct AddPropertySheet: View {
     // Multifamily
     @State private var units: [Unit]
 
+    @State private var didConvertPrefill = false
+
     private let kind: PropertyKind
 
     init(creating kind: PropertyKind, onSubmit: @escaping (Property) -> Void) {
@@ -205,6 +207,35 @@ struct AddPropertySheet: View {
             .scrollDismissesKeyboard(.interactively)
         }
         .background(AppTheme.bg)
+        .onAppear(perform: convertPrefillToDisplayCurrency)
+    }
+
+    /// The editing init pre-fills money fields as raw USD dollars (it has no
+    /// access to `appState`), but `makeProperty()` parses them back through
+    /// `Money.toUSDCents`, which divides by the FX rate. Under a non-USD
+    /// display currency, saving an untouched edit would divide every stored
+    /// amount by the rate. Convert the pre-fill to the display currency here
+    /// (same pattern as AddRentalPaymentSheet) so the round-trip is symmetric.
+    private func convertPrefillToDisplayCurrency() {
+        guard let property = editing, !didConvertPrefill else { return }
+        didConvertPrefill = true
+        let currency = appState.currency
+        guard currency != .usd else { return }
+        let rate = appState.rate(for: currency)
+        func display(_ cents: Int64) -> String {
+            guard cents > 0 else { return "" }
+            let amount = Money.toDisplayAmount(cents: cents, in: currency, rate: rate)
+            return String(format: "%.\(currency.fractionDigits)f",
+                          NSDecimalNumber(decimal: amount).doubleValue)
+        }
+        if let m = property.mortgage {
+            purchasePriceText = display(m.purchasePrice)
+            originalLoanText = display(m.originalLoan)
+        }
+        if let l = property.lease {
+            monthlyRentText = display(l.monthlyRent)
+            securityDepositText = l.securityDepositCents.map(display) ?? ""
+        }
     }
 
     private var footerCaption: LocalizedStringKey {
@@ -420,7 +451,20 @@ struct AddPropertySheet: View {
                     .font(.lato(size: 15, weight: .medium))
                     .foregroundStyle(AppTheme.text.opacity(0.58))
                 TextField("0", text: Binding(
-                    get: { Self.formatCents(units[index].monthlyRent) },
+                    // Must be the exact inverse of the `set` below (which
+                    // divides by the FX rate): showing raw USD while parsing
+                    // as display currency would shrink the rent on each pass.
+                    get: {
+                        let cents = units[index].monthlyRent
+                        guard cents > 0 else { return "" }
+                        let currency = appState.currency
+                        let amount = Money.toDisplayAmount(
+                            cents: cents, in: currency,
+                            rate: appState.rate(for: currency)
+                        )
+                        return String(format: "%.\(currency.fractionDigits)f",
+                                      NSDecimalNumber(decimal: amount).doubleValue)
+                    },
                     set: { newValue in
                         units[index].monthlyRent = parseToUSDCents(newValue)
                     }

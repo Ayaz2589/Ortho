@@ -21,6 +21,12 @@ export interface SupabaseMockDataset {
   /** Table name -> error message, to make `.insert()` on that table fail
    *  (exercises the atomic transaction+shares write rollback). */
   insertErrors?: Record<string, string>
+  /** Table name -> error message for `.select()` reads (bootstrap fail-loud paths). */
+  selectErrors?: Record<string, string>
+  /** Table name -> error message for `.delete()` / `.update()` / `.upsert()`. */
+  deleteErrors?: Record<string, string>
+  updateErrors?: Record<string, string>
+  upsertErrors?: Record<string, string>
 }
 
 export interface RecordedCall {
@@ -46,7 +52,7 @@ export interface SupabaseClientLike {
 /** Writes may surface an error (used to exercise rollback paths). */
 type MutationResult = { data: null; error: { message: string } | null }
 
-interface QueryBuilder extends PromiseLike<{ data: unknown[]; error: null }> {
+interface QueryBuilder extends PromiseLike<{ data: unknown[] | null; error: { message: string } | null }> {
   select: (cols?: string) => QueryBuilder
   eq: (col: string, val: unknown) => QueryBuilder
   in: (col: string, vals: unknown[]) => QueryBuilder
@@ -66,10 +72,19 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
 
   function builder(table: string): QueryBuilder {
     const rows = (tables[table] ?? []) as unknown[]
-    const resolved = { data: rows, error: null as null }
+    const selectMsg = dataset.selectErrors?.[table]
+    const resolved = selectMsg
+      ? { data: null, error: { message: selectMsg } }
+      : { data: rows, error: null }
+    const writeErrors: Record<RecordedCall['op'], Record<string, string> | undefined> = {
+      insert: dataset.insertErrors,
+      delete: dataset.deleteErrors,
+      update: dataset.updateErrors,
+      upsert: dataset.upsertErrors,
+    }
     const record = (op: RecordedCall['op'], payload?: unknown) => {
       calls.push({ table, op, payload })
-      const msg = op === 'insert' ? dataset.insertErrors?.[table] : undefined
+      const msg = writeErrors[op]?.[table]
       return Promise.resolve(
         msg ? { data: null, error: { message: msg } } : { data: null, error: null as null }
       )
@@ -82,11 +97,19 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
       limit: () => b,
       single: () => Promise.resolve({ data: rows[0] ?? null, error: null }),
       insert: (payload?: unknown) => record('insert', payload),
-      // update()/delete() are chainable (callers do `.update(x).eq(...)`) AND awaitable.
-      update: (payload?: unknown) => Object.assign(builder(table), record('update', payload)) as never,
-      delete: () => Object.assign(builder(table), record('delete')) as never,
+      // update()/delete() are chainable (callers do `.update(x).eq(...)`) AND
+      // awaitable. The await must resolve with the MUTATION result (so injected
+      // update/delete errors surface) — a plain Object.assign would keep the
+      // builder's select-resolving `then`.
+      update: (payload?: unknown) => mutationChain(record('update', payload)),
+      delete: () => mutationChain(record('delete')),
       upsert: (payload?: unknown) => record('upsert', payload),
       then: (onfulfilled, onrejected) => Promise.resolve(resolved).then(onfulfilled, onrejected),
+    }
+    const mutationChain = (p: Promise<MutationResult>) => {
+      const chained = builder(table)
+      chained.then = (onfulfilled, onrejected) => p.then(onfulfilled as never, onrejected) as never
+      return chained as never
     }
     return b
   }
