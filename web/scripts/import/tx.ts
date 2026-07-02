@@ -5,9 +5,10 @@ import * as readline from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
 import { randomUUID } from 'node:crypto'
 import { loadEnv, makeClient, type AuthedClient } from './db/client'
-import { listUsers, resolveHousehold } from './db/lookups'
+import { listUsers, listAllPeople, resolveHousehold } from './db/lookups'
 import { getOne, listTransactions, createOne, updateOne, deleteOne } from './db/transactions'
-import { parseFilters, CATEGORY_LIST } from './engine/filters'
+import { parseListArgs, resolveOwnerIds, type ParsedList } from './engine/filters'
+import { filterTransactions } from '../../lib/transactionFilters'
 import { renderTable, renderDetail } from './engine/render'
 import { validateAmount, validateMerchant, validateCategory, parseDay, todayISO } from './engine/validate'
 import { validateCustomSplit } from './engine/split'
@@ -73,21 +74,53 @@ async function pickOwnersAndSplit(
 
 async function cmdList(flags: Flags, rl: readline.Interface): Promise<void> {
   const admin = flags.admin === true
-  let filter
+  let parsed: ParsedList
   try {
-    filter = parseFilters({
+    parsed = parseListArgs({
       month: str(flags.month),
+      query: str(flags.query),
       category: str(flags.category),
       source: str(flags.source),
       kind: str(flags.kind),
+      owner: str(flags.owner),
       limit: str(flags.limit),
     })
   } catch (e) {
     die(1, e instanceof Error ? e.message : String(e))
   }
   const { supabase, userId } = await authenticate(rl, admin)
-  const rows = await listTransactions(supabase, userId, filter, admin)
-  console.log(renderTable(rows))
+
+  // Scope matches the apps: the whole household (spec 013 US5) — admin mode
+  // (service role, no session user) spans all households.
+  let householdId: string | null = null
+  let people: Person[] = []
+  if (admin) {
+    people = await listAllPeople(supabase)
+  } else {
+    const hh = await resolveHousehold(supabase, userId)
+    if (!hh.household) die(1, 'no household found for this user')
+    householdId = hh.household.id
+    people = hh.people
+  }
+
+  let owners: string[] = []
+  try {
+    owners = resolveOwnerIds(people, parsed.ownerNames)
+  } catch (e) {
+    die(1, e instanceof Error ? e.message : String(e))
+  }
+
+  // Date window in SQL; every other criterion through the apps' shared
+  // filtering brain (same set the apps show — SC-005).
+  const { rows, truncated } = await listTransactions(supabase, householdId, parsed.window, parsed.limit)
+  const ownerNames = Object.fromEntries(people.map((p) => [p.id, p.name]))
+  const visible = filterTransactions(rows, { ...parsed.criteria, owners }, { ownerNames })
+  console.log(renderTable(visible))
+  if (truncated) {
+    console.log(
+      `\nShowing the first ${parsed.limit} rows by date — pass LIMIT=<n> for more (filters applied after the cap).`
+    )
+  }
 }
 
 async function cmdAdd(flags: Flags, rl: readline.Interface): Promise<void> {

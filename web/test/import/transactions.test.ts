@@ -96,28 +96,99 @@ describe('getOne', () => {
   })
 })
 
-describe('listTransactions', () => {
-  it('scopes to created_by and applies filters + order + limit (non-admin)', async () => {
-    const { supabase, calls } = mock({ data: [baseTx], error: null })
-    const rows = await listTransactions(
+// Spec 013 US5/A1: household-wide scope (matching the apps — never
+// created_by), date window only in SQL, batch share rehydration, and an
+// explicit truncation signal (no silent 200-row cap).
+function mockList(byTable: Record<string, { data: unknown; error: unknown }>) {
+  const calls: Call[] = []
+  let current = ''
+  const builder: Record<string, unknown> = {}
+  for (const m of ['select', 'eq', 'in', 'gte', 'lt', 'order', 'limit', 'update', 'delete', 'insert']) {
+    builder[m] = (...args: unknown[]) => {
+      calls.push([m, ...args])
+      return builder
+    }
+  }
+  const result = () => byTable[current] ?? { data: null, error: null }
+  builder.maybeSingle = () => Promise.resolve(result())
+  builder.then = (res: (r: unknown) => unknown, rej?: (e: unknown) => unknown) => Promise.resolve(result()).then(res, rej)
+  const supabase = {
+    from: (t: string) => {
+      current = t
+      calls.push(['from', t])
+      return builder
+    },
+  } as never
+  return { supabase, calls }
+}
+
+describe('listTransactions (013/US5: household scope + rehydration + explicit cap)', () => {
+  const rawRow = { ...baseTx, owner_ids: undefined, shares: undefined }
+
+  it('scopes to the household — never created_by — with window + order + limit', async () => {
+    const { supabase, calls } = mockList({
+      transactions: { data: [rawRow], error: null },
+      transaction_shares: { data: [], error: null },
+    })
+    const res = await listTransactions(
       supabase,
-      'u1',
-      { startISO: '2026-05-01T00:00:00.000Z', endISO: '2026-06-01T00:00:00.000Z', category: 'utilities', limit: 10 },
-      false
+      'h1',
+      { startISO: '2026-05-01T00:00:00.000Z', endISO: '2026-06-01T00:00:00.000Z' },
+      10
     )
-    expect(rows).toEqual([baseTx])
-    expect(calls).toContainEqual(['eq', 'created_by', 'u1'])
-    expect(calls).toContainEqual(['eq', 'category', 'utilities'])
+    expect(res.rows.map((r) => r.id)).toEqual(['t1'])
+    expect(res.truncated).toBe(false)
+    expect(calls).toContainEqual(['eq', 'household_id', 'h1'])
+    expect(calls.find((c) => c[0] === 'eq' && c[1] === 'created_by')).toBeUndefined()
     expect(calls).toContainEqual(['gte', 'date', '2026-05-01T00:00:00.000Z'])
     expect(calls).toContainEqual(['lt', 'date', '2026-06-01T00:00:00.000Z'])
     expect(calls).toContainEqual(['order', 'date', { ascending: false }])
     expect(calls).toContainEqual(['limit', 10])
   })
-  it('admin mode does not scope by created_by and defaults limit to 200', async () => {
-    const { supabase, calls } = mock()
-    await listTransactions(supabase, 'u1', {}, true)
-    expect(calls).not.toContainEqual(['eq', 'created_by', 'u1'])
+
+  it('admin (household null) lists across households', async () => {
+    const { supabase, calls } = mockList({
+      transactions: { data: [], error: null },
+    })
+    await listTransactions(supabase, null, {}, 200)
+    expect(calls.find((c) => c[0] === 'eq' && c[1] === 'household_id')).toBeUndefined()
     expect(calls).toContainEqual(['limit', 200])
+  })
+
+  it('rehydrates owner_ids/shares for the listed rows in one batch', async () => {
+    const { supabase, calls } = mockList({
+      transactions: { data: [rawRow], error: null },
+      transaction_shares: {
+        data: [
+          { transaction_id: 't1', person_id: 'u1', amount_cents: 6000 },
+          { transaction_id: 't1', person_id: 'u2', amount_cents: 2999 },
+        ],
+        error: null,
+      },
+    })
+    const res = await listTransactions(supabase, 'h1', {}, 200)
+    expect(res.rows[0].owner_ids).toEqual(['u1', 'u2'])
+    expect(res.rows[0].shares).toEqual({ u1: 6000, u2: 2999 })
+    expect(calls).toContainEqual(['in', 'transaction_id', ['t1']])
+  })
+
+  it('share-less rows default to creator-owns-all', async () => {
+    const { supabase } = mockList({
+      transactions: { data: [rawRow], error: null },
+      transaction_shares: { data: [], error: null },
+    })
+    const res = await listTransactions(supabase, 'h1', {}, 200)
+    expect(res.rows[0].owner_ids).toEqual(['u1'])
+    expect(res.rows[0].shares).toEqual({ u1: 8999 })
+  })
+
+  it('signals truncation when the fetch fills the limit', async () => {
+    const { supabase } = mockList({
+      transactions: { data: [rawRow, { ...rawRow, id: 't2' }], error: null },
+      transaction_shares: { data: [], error: null },
+    })
+    const res = await listTransactions(supabase, 'h1', {}, 2)
+    expect(res.truncated).toBe(true)
   })
 })
 

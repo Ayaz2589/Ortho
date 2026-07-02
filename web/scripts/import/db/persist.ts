@@ -25,7 +25,10 @@ export function shareRows(tx: Transaction): Array<{ transaction_id: string; pers
   return tx.owner_ids.map((pid) => ({ transaction_id: tx.id, person_id: pid, amount_cents: shares[pid] ?? 0 }))
 }
 
-/** Insert each transaction (+ its shares). Returns the number written. */
+/** Insert each transaction (+ its shares). Returns the number written.
+ *  Compensates like the apps (spec 013 US5/A2): a failed shares insert
+ *  deletes the just-inserted parent before throwing, so a partial failure
+ *  can never leave a share-less row that rehydrates as "creator owns all". */
 export async function persist(supabase: SupabaseClient, txs: Transaction[]): Promise<number> {
   let written = 0
   for (const tx of txs) {
@@ -34,7 +37,18 @@ export async function persist(supabase: SupabaseClient, txs: Transaction[]): Pro
     const rows = shareRows(tx)
     if (rows.length) {
       const { error: se } = await supabase.from('transaction_shares').insert(rows)
-      if (se) throw new Error(`INSERT_SHARES for ${tx.id}: ${se.message}`)
+      if (se) {
+        const { error: de } = await supabase.from('transactions').delete().eq('id', tx.id)
+        if (de) {
+          throw new Error(
+            `INSERT_SHARES for ${tx.id} (${written} written): ${se.message}; ` +
+              `ROLLBACK_FAILED — orphaned parent ${tx.id}: ${de.message}`
+          )
+        }
+        throw new Error(
+          `INSERT_SHARES for ${tx.id} (${written} written): ${se.message} (parent row rolled back)`
+        )
+      }
     }
     written++
   }

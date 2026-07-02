@@ -1,19 +1,25 @@
 /** `transfer` = a member-to-member reimbursement (settle-up); never spend or income. */
 export type TransactionKind = 'expense' | 'income' | 'transfer'
 export type PropertyKind = 'primary_home' | 'multifamily' | 'rental'
-export type TransactionCategory =
-  | 'coffee'
-  | 'groceries'
-  | 'dining'
-  | 'subs'
-  | 'fuel'
-  | 'rent'
-  | 'health'
-  | 'income'
-  | 'transit'
-  | 'utilities'
-  | 'entertainment'
-  | 'transfer'
+/** Every category a user can pick in a form/filter. `transfer` is deliberately
+ *  absent — Reimbursement is never a pickable category/budget/filter (locked
+ *  product decision, 2026-07-02 audit). The union derives from this list so a
+ *  new category can never reach the type without reaching every picker
+ *  (spec 013 US5). */
+export const PICKABLE_CATEGORIES = [
+  'coffee',
+  'groceries',
+  'dining',
+  'subs',
+  'fuel',
+  'rent',
+  'health',
+  'income',
+  'transit',
+  'utilities',
+  'entertainment',
+] as const
+export type TransactionCategory = (typeof PICKABLE_CATEGORIES)[number] | 'transfer'
 export type InsightSeverity = 'critical' | 'warning' | 'info' | 'positive'
 
 export interface User {

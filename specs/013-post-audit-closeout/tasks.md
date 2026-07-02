@@ -111,19 +111,19 @@ stories; note only the cross-story file-contention rule:*
 
 ### Tests (write first — separate files, parallelizable)
 
-- [ ] T024 [P] [US5] Write failing contract test `web/test/import/list-parity.test.ts`: scenario table (free-text query, multi-category, owner filter, kind, month window × a fixture dataset) — CLI listing result ids MUST equal `filterTransactions` output ids; plus household-wide non-admin scoping and explicit-truncation notice cases (mock-builder pattern from `web/test/import/transactions.test.ts`) → **RED**
-- [ ] T025 [P] [US5] Add failing compensation tests to `web/test/import/persist.test.ts`: shares-insert failure ⇒ parent delete issued then throw; delete-also-fails ⇒ combined error naming orphan id → **RED**
-- [ ] T026 [P] [US5] Add failing tolerance tests to `web/test/import/split.test.ts`: 99.8% and 100.4% accepted, 99.4% rejected, owner-coverage/negative checks intact → **RED**
-- [ ] T027 [P] [US5] Write failing derivation test `web/test/import/categories.test.ts`: `engine/filters.ts` CATEGORY_LIST and `cli.ts` CATEGORIES are the same object as the `web/lib/types.ts` export → **RED**
+- [X] T024 [P] [US5] Write failing contract test `web/test/import/list-parity.test.ts`: scenario table (free-text query, multi-category, owner filter, kind, month window × a fixture dataset) — CLI listing result ids MUST equal `filterTransactions` output ids; plus household-wide non-admin scoping and explicit-truncation notice cases (mock-builder pattern from `web/test/import/transactions.test.ts`) → **RED**
+- [X] T025 [P] [US5] Add failing compensation tests to `web/test/import/persist.test.ts`: shares-insert failure ⇒ parent delete issued then throw; delete-also-fails ⇒ combined error naming orphan id → **RED**
+- [X] T026 [P] [US5] Add failing tolerance tests to `web/test/import/split.test.ts`: 99.8% and 100.4% accepted, 99.4% rejected, owner-coverage/negative checks intact → **RED**
+- [X] T027 [P] [US5] Write failing derivation test `web/test/import/categories.test.ts`: `engine/filters.ts` CATEGORY_LIST and `cli.ts` CATEGORIES are the same object as the `web/lib/types.ts` export → **RED**
 
 ### Implementation
 
-- [ ] T028 [US5] `web/lib/types.ts`: export `const CATEGORY_LIST = [...] as const` and derive `type TransactionCategory = (typeof CATEGORY_LIST)[number]`; replace hardcoded copies in `web/scripts/import/engine/filters.ts:5-8` and `web/scripts/import/cli.ts:21-24` with imports → T027 GREEN; `npx tsc --noEmit` clean
-- [ ] T029 [US5] Rework `tx list`: `web/scripts/import/db/transactions.ts` fetches by date window + household scope only (resolve household via `db/lookups.ts resolveHousehold`; drop `created_by` scoping, keep it for `ADMIN=1` attribution paths untouched); `web/scripts/import/engine/filters.ts` maps flags → `FilterCriteria`; `web/scripts/import/tx.ts` applies shared `filterTransactions` in-process, adds `--query`/`--owner`/multi-value `--category`/`--source`, prints `showing first N — pass LIMIT= to raise` on truncation → T024 GREEN
-- [ ] T030 [P] [US5] `web/scripts/import/db/persist.ts`: compensate on shares failure (delete parent by id before throwing; combined error if the delete fails) → T025 GREEN
-- [ ] T031 [P] [US5] `web/scripts/import/engine/split.ts`: `validateCustomSplit` delegates sum check to shared `validateSplit` (`web/lib/splits.ts`), keeping `{ok,error}` shape and non-sum checks → T026 GREEN
-- [ ] T032 [US5] Update root `Makefile` tx-list help text (new QUERY/OWNER/multi-value flags) and `web/scripts/import/` README/help strings; run full `npx vitest run test/import/` → all GREEN
-- [ ] T033 [US5] PARITY.md CLI section: mark filtering/atomic-write/split-tolerance/category rows resolved (reference feature 013); rewrite `--admin` as documented-by-design with constraints (FR-014) — full reconciliation deferred to T053
+- [X] T028 [US5] `web/lib/types.ts`: export `const CATEGORY_LIST = [...] as const` and derive `type TransactionCategory = (typeof CATEGORY_LIST)[number]`; replace hardcoded copies in `web/scripts/import/engine/filters.ts:5-8` and `web/scripts/import/cli.ts:21-24` with imports → T027 GREEN; `npx tsc --noEmit` clean
+- [X] T029 [US5] Rework `tx list`: `web/scripts/import/db/transactions.ts` fetches by date window + household scope only (resolve household via `db/lookups.ts resolveHousehold`; drop `created_by` scoping, keep it for `ADMIN=1` attribution paths untouched); `web/scripts/import/engine/filters.ts` maps flags → `FilterCriteria`; `web/scripts/import/tx.ts` applies shared `filterTransactions` in-process, adds `--query`/`--owner`/multi-value `--category`/`--source`, prints `showing first N — pass LIMIT= to raise` on truncation → T024 GREEN
+- [X] T030 [P] [US5] `web/scripts/import/db/persist.ts`: compensate on shares failure (delete parent by id before throwing; combined error if the delete fails) → T025 GREEN
+- [X] T031 [P] [US5] `web/scripts/import/engine/split.ts`: `validateCustomSplit` delegates sum check to shared `validateSplit` (`web/lib/splits.ts`), keeping `{ok,error}` shape and non-sum checks → T026 GREEN
+- [X] T032 [US5] Update root `Makefile` tx-list help text (new QUERY/OWNER/multi-value flags) and `web/scripts/import/` README/help strings; run full `npx vitest run test/import/` → all GREEN
+- [X] T033 [US5] PARITY.md CLI section: mark filtering/atomic-write/split-tolerance/category rows resolved (reference feature 013); rewrite `--admin` as documented-by-design with constraints (FR-014) — full reconciliation deferred to T053
 
 **Checkpoint**: entire `test/import/` green; CLI behaviorally aligned; zero iOS involvement
 

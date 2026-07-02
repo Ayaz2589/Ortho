@@ -108,14 +108,14 @@ the outlier-insight date string, which the web engine still formats as en-US ins
 After `009`, the apps agree on every vectored function (owner ordering, currency rounding, recurring-average
 truncation, mortgage months-elapsed boundary, the outlier insight). Residual, low-severity:
 
-- ⚠️ **Atomic write (MEDIUM, now CLI-only):** the parent transaction and its shares are still two separate,
-  non-transactional calls, but **both apps now compensate** — web rolls back the orphaned parent / restores
-  the prior shares (`lib/store.tsx` `addTransaction`/`updateTransaction`), and iOS does the equivalent
-  server-side (`Services/TransactionsAPI.swift` `create` deletes the just-inserted parent on a shares-write
-  failure; `update` re-inserts the previous shares). Only the **CLI** (`db/persist.ts`) still throws without
-  cleanup, so only a CLI partial failure can leave a share-less parent that rehydrates as "creator owns
-  all." *(Web hardened in 009, iOS in the 2026-06-22 review pass; a server-side
-  `create_transaction_with_shares` RPC would make it truly atomic for all three.)*
+- ✅ **Atomic write (RESOLVED 2026-07-02, spec 013):** the parent transaction and its shares are still two
+  separate, non-transactional calls, but **all three surfaces now compensate** — web rolls back the orphaned
+  parent / restores the prior shares (`lib/store.tsx` `addTransaction`/`updateTransaction`), iOS does the
+  equivalent server-side (`Services/TransactionsAPI.swift`), and the CLI now mirrors both: `db/persist.ts`
+  and `db/transactions.ts` (`createOne`/`updateOne`) delete the just-inserted parent / restore the previous
+  shares on a shares-write failure, reporting the orphan id if the compensation itself fails. *(A server-side
+  `create_transaction_with_shares` RPC would make it truly atomic for all three — still the right long-term
+  fix, tracked but out of scope.)*
 - low **Insights recurring preview:** the 3-merchant name preview is ordered by amount on iOS but in
   trailing-window order on web, and uses a different transaction's merchant casing. IDs / severities /
   magnitudes (the vectored fields) match; only the body string differs.
@@ -128,31 +128,39 @@ truncation, mortgage months-elapsed boundary, the outlier insight). Residual, lo
 The CLI is a trusted local tool; some differences are by-design (it's USD-only, headless, operator-driven),
 others are real gaps:`
 
-- ⚠️ **Filtering reimplemented (MEDIUM):** `tx list` builds SQL `WHERE` clauses (`db/transactions.ts` +
-  `engine/filters.ts`) rather than the shared `filterTransactions`. Consequences: no free-text query or
-  owner filter; single-value (not multi-select OR) for category/source/kind; a silent **200-row cap**;
-  non-admin scopes to `created_by = you` (the apps scope household-wide). Same criteria can return a
-  different set than the apps.
+- ✅ **Filtering (RESOLVED 2026-07-02, spec 013):** `tx list` now narrows by **date window only** in SQL and
+  runs the apps' shared `filterTransactions` in-process (`engine/filters.ts parseListArgs` →
+  `lib/transactionFilters.ts`), so the same criteria return the same set the apps show: free-text `QUERY`
+  (merchant/source/category/owner name), comma multi-select `CATEGORY`/`SOURCE` (OR), `OWNER` by household
+  person name, `KIND` incl. transfer. Non-admin scope is **household-wide** like the apps; the fetch cap
+  (default 200, `LIMIT=` to raise) is printed when hit — never silent. Locked by
+  `web/test/import/list-parity.test.ts` (CLI ids ≡ shared-filter ids per scenario).
 - **Date storage convention (RESOLVED 2026-07-02):** all three surfaces now write transaction dates as
   noon UTC of the picked local calendar day (`T12:00:00.000Z`, the spec-004 convention) — web's add/edit
   form and iOS's sheet were both normalized to it, so a row entered anywhere renders on the same calendar
   day everywhere.
-- ⚠️ **`--admin` bypasses RLS (MEDIUM, by-design):** admin mode uses the service-role key and attributes
-  `created_by` by name-matching the statement holder rather than an authenticated session — powerful, and
-  outside the household RLS the apps rely on.
-- low **Split validation drift:** `engine/split.ts validateCustomSplit` requires percentages to total
-  *exactly* 100, while the shared `validateSplit` allows a ±0.5 tolerance.
-- low **Type/category duplication:** `engine/filters.ts` hardcodes its own `CATEGORY_LIST` and month-window
-  helper instead of deriving from `lib/types.ts` / `transactionFilters.ts` — they match today but drift if a
-  category is added.
+- 📌 **`--admin` bypasses RLS (BY-DESIGN, documented 2026-07-02 per spec 013 FR-014):** admin mode uses the
+  service-role key (`SUPABASE_SERVICE_ROLE_KEY` in gitignored `web/.env.local` — never in CI or commits) and
+  therefore operates **outside** the household RLS the apps rely on: it can read/write any household's rows,
+  and `tx add` attributes `created_by` by name-matching the statement holder (or the first user) rather than
+  an authenticated session. This is intentional — the CLI is the operator's trusted local maintenance tool —
+  with standing constraints: prefer sign-in mode when it suffices, prefer `DRY_RUN=1` before any admin write,
+  and treat the hosted project as live shared data. Not a parity gap; will not be "fixed".
+- ✅ **Split validation (RESOLVED 2026-07-02, spec 013):** `engine/split.ts validateCustomSplit` now delegates
+  its sum check to the shared `validateSplit`, inheriting the apps' ±0.5 tolerance (owner-coverage and
+  negativity checks unchanged). Locked in `web/test/import/split.test.ts`.
+- ✅ **Type/category duplication (RESOLVED 2026-07-02, spec 013):** categories now have one source of truth —
+  `lib/types.ts` exports `PICKABLE_CATEGORIES` (transfer deliberately unpickable) and derives the
+  `TransactionCategory` union from it; `engine/filters.ts` and `cli.ts` import it, and the CLI month window
+  reuses the shared `monthBounds`. Locked in `web/test/import/categories.test.ts`.
 
 **Resolved (2026-06-17):** the CLI now canonicalizes owner order via `orderedOwnerIds` before
 `computeShares` (`tx.ts`, `engine/toTransaction.ts`), so the leftover cent matches the apps — locked by a
 scrambled-owner case in `web/test/import/toTransaction.test.ts`. The stale "6-digit" OTP copy is corrected
 to "8-digit" across `cli.ts`, `tx.ts`, `db/client.ts`, the import README, and the `make ingest-help` text
-(and the iOS `AppState` doc comment). Still open: the atomic-write gap (**CLI only** — both apps now
-compensate, see above), CLI filtering reimplementation, the noon-UTC date convention, and `--admin` RLS
-bypass.
+(and the iOS `AppState` doc comment). *(2026-07-02, spec 013: every remaining item on this list closed —
+atomic-write compensation now on all three surfaces, CLI filtering shares the apps' brain, the noon-UTC date
+convention landed on all three, and `--admin` is documented by-design above.)*
 
 **Full-app review pass (2026-06-22):** a deep, adversarially-verified review of both apps (dead code,
 refactors, correctness, per-surface behavior, constitution consistency) was applied. Cross-surface results

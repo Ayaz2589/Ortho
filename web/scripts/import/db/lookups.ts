@@ -41,6 +41,17 @@ export async function resolveHousehold(supabase: SupabaseClient, userId: string)
   return { household: (hh?.[0] ?? null) as Household | null, people, defaultPersonId }
 }
 
+/** All active people across households — admin-mode owner-name resolution for
+ *  `tx list` (service role sees every household). */
+export async function listAllPeople(supabase: SupabaseClient): Promise<Person[]> {
+  const { data, error } = await supabase
+    .from('household_people')
+    .select('*')
+    .is('removed_at', null)
+  if (error) throw new Error(`LOOKUP_ALL_PEOPLE: ${error.message}`)
+  return (data ?? []) as Person[]
+}
+
 export async function fetchExistingForDedupe(supabase: SupabaseClient, createdBy: string): Promise<ExistingRow[]> {
   const { data, error } = await supabase
     .from('transactions')

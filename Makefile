@@ -31,10 +31,11 @@ ingest-help:
 	@echo '  SUPABASE_SERVICE_ROLE_KEY (ADMIN=1 only)'
 
 # Transaction CRUD (see specs/005-transaction-crud-cli). Same OTP/ADMIN auth as ingest.
-# List your transactions (read-only):
-#   make tx-list [MONTH=YYYY-MM] [CATEGORY=..] [SOURCE=..] [SCOPE=personal|shared] [KIND=expense|income] [LIMIT=N] [ADMIN=1]
+# List the household's transactions (read-only; filter semantics match the apps —
+# free text, multi-value CATEGORY/SOURCE via commas, owner by name; spec 013):
+#   make tx-list [MONTH=YYYY-MM] [QUERY=text] [CATEGORY=a,b] [SOURCE=a,b] [OWNER=name] [KIND=expense|income|transfer] [LIMIT=N] [ADMIN=1]
 tx-list:
-	cd $(WEB) && npx tsx $(TX) list $(if $(MONTH),--month '$(MONTH)') $(if $(CATEGORY),--category '$(CATEGORY)') $(if $(SOURCE),--source '$(SOURCE)') $(if $(SCOPE),--scope '$(SCOPE)') $(if $(KIND),--kind '$(KIND)') $(if $(LIMIT),--limit '$(LIMIT)') $(if $(filter 1,$(ADMIN)),--admin)
+	cd $(WEB) && npx tsx $(TX) list $(if $(MONTH),--month '$(MONTH)') $(if $(QUERY),--query '$(QUERY)') $(if $(CATEGORY),--category '$(CATEGORY)') $(if $(SOURCE),--source '$(SOURCE)') $(if $(OWNER),--owner '$(OWNER)') $(if $(KIND),--kind '$(KIND)') $(if $(LIMIT),--limit '$(LIMIT)') $(if $(filter 1,$(ADMIN)),--admin)
 
 # Create one transaction:
 #   make tx-add MERCHANT='..' AMOUNT='12.34' [DATE=YYYY-MM-DD] [CATEGORY=..] [KIND=..] [SCOPE=..] [SOURCE='..'] [ADMIN=1]
