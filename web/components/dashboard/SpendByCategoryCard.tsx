@@ -30,7 +30,7 @@ export function SpendByCategoryCard({
   interval: Interval
   label?: string
 }) {
-  const { transactions, formatMoney, ownersDisplay, locale } = useApp()
+  const { transactions, formatMoney, ownersDisplay, locale, t } = useApp()
   const [expanded, setExpanded] = useState<TransactionCategory | null>(null)
 
   const inRange = (date: string) => {
@@ -59,21 +59,21 @@ export function SpendByCategoryCard({
       category,
       cents,
       color: categoryMeta(category).tint,
-      label: categoryMeta(category).label,
+      label: t(categoryMeta(category).label),
     }))
     const otherTotal = rest.reduce((s, e) => s + e.cents, 0)
     if (otherTotal > 0) {
-      out.push({ category: null, cents: otherTotal, color: OTHER_COLOR, label: 'Other' })
+      out.push({ category: null, cents: otherTotal, color: OTHER_COLOR, label: t('Other') })
     }
     return out
-  }, [entries])
+  }, [entries, t])
 
   return (
     <Card className="p-5">
-      <SectionLabel right={label ?? longLabel(range)}>Spend by category</SectionLabel>
+      <SectionLabel right={label ?? t(longLabel(range))}>{t('Spend by category')}</SectionLabel>
 
       {entries.length === 0 ? (
-        <p className="py-5 text-[13px] text-text-3">No expenses in this period yet.</p>
+        <p className="py-5 text-[13px] text-text-3">{t('No expenses in this period yet.')}</p>
       ) : (
         <>
           <div className="mt-3 h-40 w-full">
@@ -134,6 +134,7 @@ export function SpendByCategoryCard({
                       formatMoney={formatMoney}
                       ownersDisplay={ownersDisplay}
                       locale={locale}
+                      t={t}
                     />
                   )}
                 </div>
@@ -165,6 +166,7 @@ function ExpandedTransactions({
   formatMoney,
   ownersDisplay,
   locale,
+  t,
 }: {
   category: TransactionCategory
   transactions: Transaction[]
@@ -172,6 +174,7 @@ function ExpandedTransactions({
   formatMoney: (cents: number) => string
   ownersDisplay: (tx: Transaction) => { label: string }
   locale: string
+  t: (key: string, ...args: Array<string | number>) => string
 }) {
   // transactions are newest-first from the store.
   const all = transactions.filter(
@@ -182,7 +185,7 @@ function ExpandedTransactions({
 
   if (all.length === 0) {
     return (
-      <p className="py-2 pl-10 text-[13px] text-text-3">No transactions in this period.</p>
+      <p className="py-2 pl-10 text-[13px] text-text-3">{t('No transactions in this period.')}</p>
     )
   }
 
@@ -205,7 +208,7 @@ function ExpandedTransactions({
         </div>
       ))}
       {remaining > 0 && (
-        <p className="pt-2.5 text-center text-xs text-text-3">+{remaining} more</p>
+        <p className="pt-2.5 text-center text-xs text-text-3">{t('+ {0} more', remaining)}</p>
       )}
     </div>
   )

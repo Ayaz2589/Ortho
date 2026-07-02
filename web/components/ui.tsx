@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
+import { useApp } from '@/lib/store'
 import { paletteFor } from '@/lib/categories'
 import type { User } from '@/lib/types'
 
@@ -173,6 +174,7 @@ export function Modal({
   left?: ReactNode
   right?: ReactNode
 }) {
+  const { t } = useApp()
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => {
@@ -196,7 +198,7 @@ export function Modal({
           <div className="min-w-[60px] text-left text-[15px] text-accent">
             {left ?? (
               <button type="button" onClick={onClose} className="text-accent">
-                Cancel
+                {t('Cancel')}
               </button>
             )}
           </div>

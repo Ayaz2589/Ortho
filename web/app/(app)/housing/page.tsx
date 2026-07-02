@@ -15,7 +15,7 @@ import { PropertyCard } from '@/components/housing/PropertyCard'
 import { HousingDesktop } from '@/components/web/HousingDesktop'
 
 export default function HousingPage() {
-  const { properties, currentHousehold } = useApp()
+  const { properties, currentHousehold, t } = useApp()
   const isExpanded = useIsExpanded()
 
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -41,7 +41,7 @@ export default function HousingPage() {
     return (
       <>
         <div className="mb-4 flex items-start gap-3 pt-2">
-          <IconButton onClick={() => setSelectedId(null)} ariaLabel="Back">
+          <IconButton onClick={() => setSelectedId(null)} ariaLabel={t('Back')}>
             <ChevronLeft size={18} />
           </IconButton>
           <div className="min-w-0 flex-1">
@@ -51,10 +51,10 @@ export default function HousingPage() {
             {/* Kind-based subtitle, matching iOS PropertyDetailView. */}
             <p className="text-[13px] text-text-2">
               {selected.kind === 'primary_home'
-                ? 'Mortgage · Primary home'
+                ? t('Mortgage · Primary home')
                 : selected.kind === 'multifamily'
-                  ? 'Mortgage · Multifamily'
-                  : 'Rental'}
+                  ? t('Mortgage · Multifamily')
+                  : t('Rental')}
             </p>
           </div>
           <button
@@ -62,7 +62,7 @@ export default function HousingPage() {
             onClick={() => setEditingId(selected.id)}
             className="pt-2 text-[15px] font-normal text-accent"
           >
-            Edit
+            {t('Edit')}
           </button>
         </div>
         <PropertyContent property={selected} />
@@ -81,11 +81,11 @@ export default function HousingPage() {
           onClick={() => setEditingId(lonely.id)}
           className="text-[15px] font-normal text-accent"
         >
-          Edit
+          {t('Edit')}
         </button>
       )}
       {/* Disabled until a real household is resolved (mirrors iOS). */}
-      <IconButton onClick={openPicker} ariaLabel="Add property" disabled={!currentHousehold}>
+      <IconButton onClick={openPicker} ariaLabel={t('Add property')} disabled={!currentHousehold}>
         <Plus size={18} />
       </IconButton>
     </>
@@ -95,11 +95,11 @@ export default function HousingPage() {
     <div className="mx-auto w-full max-w-[640px]">
       {properties.length === 0 && (
         <>
-          <PageHeader title="Housing" right={headerRight} />
+          <PageHeader title={t('Housing')} right={headerRight} />
           <EmptyState
             icon={<House size={40} strokeWidth={1.5} />}
-            title="No properties yet"
-            body="Add a primary home, a rental, or a multifamily property to track payments, balances, and lease info."
+            title={t('No properties yet')}
+            body={t('Add a primary home, a rental, or a multifamily property to track payments, balances, and lease info.')}
             action={
               <button
                 type="button"
@@ -108,7 +108,7 @@ export default function HousingPage() {
                 className="mt-1 rounded-full px-5 py-2.5 text-[15px] font-normal text-accent disabled:opacity-40"
                 style={{ background: 'rgba(0,0,0,0.05)' }}
               >
-                Add property
+                {t('Add property')}
               </button>
             }
           />
@@ -118,9 +118,9 @@ export default function HousingPage() {
       {lonely && (
         <ReadingColumn>
           <PageHeader
-            title="Housing"
+            title={t('Housing')}
             right={headerRight}
-            subtitle={`${lonely.address} · ${kindMeta(lonely.kind).shortLabel}`}
+            subtitle={`${lonely.address} · ${t(kindMeta(lonely.kind).shortLabel)}`}
           />
           <PropertyContent property={lonely} />
         </ReadingColumn>
@@ -128,7 +128,7 @@ export default function HousingPage() {
 
       {properties.length >= 2 && (
         <>
-          <PageHeader title="Housing" right={headerRight} />
+          <PageHeader title={t('Housing')} right={headerRight} />
           <div className="flex flex-col gap-3">
             {properties.map((p) => (
               <PropertyCard key={p.id} property={p} onClick={() => setSelectedId(p.id)} />

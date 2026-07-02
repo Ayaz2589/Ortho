@@ -14,19 +14,19 @@ function occupiedMonthlyRentCents(units: Unit[]): number {
 }
 
 export function UnitsCard({ property }: { property: Property }) {
-  const { formatMoney } = useApp()
+  const { formatMoney, t } = useApp()
   const units = property.units ?? []
   return (
     <HousingSection>
       <div className="flex items-center justify-between px-4 pb-2.5 pt-4">
-        <HousingLabel>Units &amp; tenants</HousingLabel>
+        <HousingLabel>{t('Units & tenants')}</HousingLabel>
         <span className="text-[12px] text-text-3">
-          {units.length} unit{units.length === 1 ? '' : 's'}
+          {units.length === 1 ? t('1 unit') : t('{0} units', units.length)}
         </span>
       </div>
       {units.length === 0 ? (
         <p className="px-4 pb-4 text-[13px] text-text-3">
-          No units yet — edit this property to add them.
+          {t('No units yet — edit this property to add them.')}
         </p>
       ) : (
         <div className="divide-y divide-hairline pb-1">
@@ -41,7 +41,7 @@ export function UnitsCard({ property }: { property: Property }) {
                       'text-[12px] ' + (vacant ? 'text-destructive' : 'text-text-3')
                     }
                   >
-                    {vacant ? 'Vacant' : unit.tenant_name}
+                    {vacant ? t('Vacant') : unit.tenant_name}
                   </span>
                 </div>
                 <span className="ml-auto text-[17px] font-normal tabular-nums text-text">
@@ -57,7 +57,7 @@ export function UnitsCard({ property }: { property: Property }) {
 }
 
 export function NetBalanceCard({ property }: { property: Property }) {
-  const { formatMoney } = useApp()
+  const { formatMoney, t } = useApp()
   const income = occupiedMonthlyRentCents(property.units ?? [])
   const mortgageCents = property.mortgage
     ? monthlyPaymentCents(
@@ -78,7 +78,7 @@ export function NetBalanceCard({ property }: { property: Property }) {
   return (
     <HousingSection>
       <div className="flex flex-col gap-2.5 p-5">
-        <HousingLabel>Net balance</HousingLabel>
+        <HousingLabel>{t('Net balance')}</HousingLabel>
         <span
           className="text-[28px] font-light tracking-[-0.4px] tabular-nums"
           style={{ color: net >= 0 ? 'var(--positive)' : 'var(--text)' }}
@@ -87,13 +87,13 @@ export function NetBalanceCard({ property }: { property: Property }) {
         </span>
         <div className="mt-1 flex flex-col gap-1">
           <div className="flex items-center justify-between">
-            <span className="text-[13px] text-text-2">Rental income</span>
+            <span className="text-[13px] text-text-2">{t('Rental income')}</span>
             <span className="text-[13px] font-normal tabular-nums text-text">
               {formatMoney(income)}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[13px] text-text-2">Mortgage payment</span>
+            <span className="text-[13px] text-text-2">{t('Mortgage payment')}</span>
             <span className="text-[13px] font-normal tabular-nums text-text">
               −{formatMoney(mortgageCents)}
             </span>

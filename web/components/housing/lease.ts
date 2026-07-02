@@ -43,3 +43,13 @@ export function nextRentCaption(lease: LeaseInfo, asOf: Date = new Date()): stri
   if (days === 1) return 'Due tomorrow'
   return `Due in ${days} days`
 }
+
+/** Localized variant of `nextRentCaption` for callers with a store `t`. */
+export function rentDueCaption(
+  days: number,
+  t: (key: string, ...args: Array<string | number>) => string
+): string {
+  if (days === 0) return t('Due today')
+  if (days === 1) return t('Due tomorrow')
+  return t('Due in {0} days', days)
+}

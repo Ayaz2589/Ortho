@@ -5,28 +5,33 @@ import { KeyRound, CalendarClock, Plus, MinusCircle } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { mediumDate } from '@/lib/format'
 import type { LeaseInfo, Property } from '@/lib/types'
-import { nextRentCaption, daysUntilEnd } from './lease'
+import { daysUntilNextRent, daysUntilEnd } from './lease'
 import { HousingSection, HousingLabel } from './MortgageCards'
 import { AddRentalPaymentModal } from './AddRentalPaymentModal'
 
 export function RentHero({ lease }: { lease: LeaseInfo }) {
-  const { formatMoney } = useApp()
+  const { formatMoney, t } = useApp()
+  // Same branching as lease.ts's nextRentCaption, but through the catalog.
+  const days = daysUntilNextRent(lease)
+  const caption =
+    days === 0 ? t('Due today') : days === 1 ? t('Due tomorrow') : t('Due in {0} days', days)
   return (
     <HousingSection>
       <div className="flex flex-col gap-1.5 p-5">
         <HousingLabel right={<KeyRound size={16} className="text-text-2" />}>
-          Monthly rent
+          {t('Monthly rent')}
         </HousingLabel>
         <div className="text-[36px] font-light tracking-[-0.6px] tabular-nums text-text">
           {formatMoney(lease.monthly_rent_cents)}
         </div>
-        <p className="text-[13px] text-text-2">{nextRentCaption(lease)}</p>
+        <p className="text-[13px] text-text-2">{caption}</p>
       </div>
     </HousingSection>
   )
 }
 
 export function RenewalBanner({ lease }: { lease: LeaseInfo }) {
+  const { t } = useApp()
   return (
     <div
       className="flex items-center gap-3 rounded-2xl p-4"
@@ -35,9 +40,9 @@ export function RenewalBanner({ lease }: { lease: LeaseInfo }) {
       <CalendarClock size={18} className="shrink-0 text-accent" />
       <div className="flex flex-col gap-0.5">
         <span className="text-[15px] font-normal text-text">
-          Lease ends in {daysUntilEnd(lease)} days
+          {t('Lease ends in {0} days', daysUntilEnd(lease))}
         </span>
-        <span className="text-[13px] text-text-2">Time to renew or plan a move.</span>
+        <span className="text-[13px] text-text-2">{t('Time to renew or plan a move.')}</span>
       </div>
     </div>
   )
@@ -53,17 +58,17 @@ function LeaseRow({ label, value }: { label: string; value: string }) {
 }
 
 export function LeaseInfoCard({ lease }: { lease: LeaseInfo }) {
-  const { formatMoney, locale } = useApp()
+  const { formatMoney, locale, t } = useApp()
   return (
     <HousingSection>
       <div className="divide-y divide-hairline">
-        <LeaseRow label="Lease start" value={mediumDate(new Date(lease.lease_start), locale)} />
-        <LeaseRow label="Lease end" value={mediumDate(new Date(lease.lease_end), locale)} />
+        <LeaseRow label={t('Lease start')} value={mediumDate(new Date(lease.lease_start), locale)} />
+        <LeaseRow label={t('Lease end')} value={mediumDate(new Date(lease.lease_end), locale)} />
         {lease.security_deposit_cents != null ? (
-          <LeaseRow label="Security deposit" value={formatMoney(lease.security_deposit_cents)} />
+          <LeaseRow label={t('Security deposit')} value={formatMoney(lease.security_deposit_cents)} />
         ) : null}
         {lease.paid_with_source ? (
-          <LeaseRow label="Paid with" value={lease.paid_with_source} />
+          <LeaseRow label={t('Paid with')} value={lease.paid_with_source} />
         ) : null}
       </div>
     </HousingSection>
@@ -71,7 +76,7 @@ export function LeaseInfoCard({ lease }: { lease: LeaseInfo }) {
 }
 
 export function RentalPaymentsCard({ property }: { property: Property }) {
-  const { rentalPayments, formatMoney, deleteRentalPayment, locale } = useApp()
+  const { rentalPayments, formatMoney, deleteRentalPayment, locale, t } = useApp()
   const [adding, setAdding] = useState(false)
   const [confirmId, setConfirmId] = useState<string | null>(null)
 
@@ -87,19 +92,19 @@ export function RentalPaymentsCard({ property }: { property: Property }) {
     <>
       <HousingSection>
         <div className="flex items-center justify-between px-4 pb-2.5 pt-4">
-          <HousingLabel>Payment history</HousingLabel>
+          <HousingLabel>{t('Payment history')}</HousingLabel>
           <button
             type="button"
             onClick={() => setAdding(true)}
             className="flex items-center gap-1 text-[13px] font-normal text-accent"
           >
             <Plus size={12} strokeWidth={2.5} />
-            Log payment
+            {t('Log payment')}
           </button>
         </div>
         {payments.length === 0 ? (
           <p className="px-4 pb-4 text-[13px] text-text-3">
-            No payments logged yet. Tap Log payment to add one.
+            {t('No payments logged yet. Tap Log payment to add one.')}
           </p>
         ) : (
           <div className="divide-y divide-hairline pb-1">
@@ -123,7 +128,7 @@ export function RentalPaymentsCard({ property }: { property: Property }) {
                       onClick={() => setConfirmId(null)}
                       className="text-[13px] text-text-2"
                     >
-                      Cancel
+                      {t('Cancel')}
                     </button>
                     <button
                       type="button"
@@ -133,13 +138,13 @@ export function RentalPaymentsCard({ property }: { property: Property }) {
                       }}
                       className="text-[13px] text-destructive"
                     >
-                      Delete
+                      {t('Delete')}
                     </button>
                   </span>
                 ) : (
                   <button
                     type="button"
-                    aria-label="Delete payment"
+                    aria-label={t('Delete payment')}
                     onClick={() => setConfirmId(payment.id)}
                     className="text-destructive"
                   >

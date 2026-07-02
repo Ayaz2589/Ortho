@@ -32,7 +32,7 @@ export function AddRentalPaymentModal({
   onClose: () => void
   property: Property
 }) {
-  const { currency, rate, addRentalPayment } = useApp()
+  const { currency, rate, addRentalPayment, t } = useApp()
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(todayISO())
   const [note, setNote] = useState('')
@@ -67,9 +67,9 @@ export function AddRentalPaymentModal({
   }
 
   return (
-    <Drawer open={open} onClose={onClose} label="Log payment">
+    <Drawer open={open} onClose={onClose} label={t('Log payment')}>
       <DrawerHeader
-        title="Log payment"
+        title={t('Log payment')}
         onClose={onClose}
         right={
           <button
@@ -78,29 +78,29 @@ export function AddRentalPaymentModal({
             disabled={!canAdd}
             className="text-[15px] text-accent disabled:opacity-40"
           >
-            Add
+            {t('Add')}
           </button>
         }
       />
       <div className="overflow-auto p-4 pb-6">
       <FormGroup>
-        <FieldRow label="Amount" labelWidth={96}>
+        <FieldRow label={t('Amount')} labelWidth={96}>
           <MoneyInput value={amount} onChange={setAmount} autoFocus />
         </FieldRow>
-        <FieldRow label="Date" labelWidth={96}>
-          <DatePicker value={date} onChange={setDate} ariaLabel="Payment date" />
+        <FieldRow label={t('Date')} labelWidth={96}>
+          <DatePicker value={date} onChange={setDate} ariaLabel={t('Payment date')} />
         </FieldRow>
-        <FieldRow label="Note" labelWidth={96}>
+        <FieldRow label={t('Note')} labelWidth={96}>
           <TextInput
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Optional"
+            placeholder={t('Optional')}
           />
         </FieldRow>
       </FormGroup>
       <div className="mt-5">
         <PrimaryButton onClick={handleAdd} disabled={!canAdd}>
-          Add payment
+          {t('Add payment')}
         </PrimaryButton>
       </div>
       </div>

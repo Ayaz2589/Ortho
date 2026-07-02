@@ -26,7 +26,7 @@ export function TransactionRow({
   onDelete: () => void
   selected?: boolean
 }) {
-  const { formatMoney, resolveUser } = useApp()
+  const { formatMoney, resolveUser, t } = useApp()
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const closeMenu = () => {
@@ -82,7 +82,7 @@ export function TransactionRow({
           <div className="truncate text-[15px] font-normal text-text">{transferTitle ?? tx.merchant}</div>
           <div className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-text-3">
             {isTransfer ? (
-              <span className="truncate">Reimbursement</span>
+              <span className="truncate">{t('Reimbursement')}</span>
             ) : (
               <>
                 <span className="truncate">{ownerLabel}</span>
@@ -108,7 +108,7 @@ export function TransactionRow({
       <div className="relative shrink-0">
         <button
           type="button"
-          aria-label="Transaction actions"
+          aria-label={t('Transaction actions')}
           onClick={() => setMenuOpen((o) => !o)}
           className="flex h-7 w-7 items-center justify-center rounded-full text-text-3 opacity-0 transition-opacity hover:bg-[var(--hairline)] focus:opacity-100 group-hover:opacity-100"
         >
@@ -130,7 +130,7 @@ export function TransactionRow({
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-[14px] text-text hover:bg-[var(--hairline)]"
               >
                 <Copy size={15} />
-                Copy
+                {t('Copy')}
               </button>
               {confirmDelete ? (
                 <div className="flex items-center gap-1 px-2 py-1">
@@ -139,7 +139,7 @@ export function TransactionRow({
                     onClick={() => setConfirmDelete(false)}
                     className="flex-1 rounded-lg px-2 py-1.5 text-[13px] text-text-2 hover:bg-[var(--hairline)]"
                   >
-                    Cancel
+                    {t('Cancel')}
                   </button>
                   <button
                     type="button"
@@ -149,7 +149,7 @@ export function TransactionRow({
                     }}
                     className="flex-1 rounded-lg px-2 py-1.5 text-[13px] text-destructive hover:bg-[var(--hairline)]"
                   >
-                    Delete
+                    {t('Delete')}
                   </button>
                 </div>
               ) : (
@@ -159,7 +159,7 @@ export function TransactionRow({
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-[14px] text-destructive hover:bg-[var(--hairline)]"
                 >
                   <Trash2 size={15} />
-                  Delete
+                  {t('Delete')}
                 </button>
               )}
             </div>

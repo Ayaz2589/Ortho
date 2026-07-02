@@ -1,6 +1,7 @@
 'use client'
 
 import { ChevronRight } from 'lucide-react'
+import { useApp } from '@/lib/store'
 import { Drawer, DrawerHeader } from '@/components/web/Drawer'
 import type { PropertyKind } from '@/lib/types'
 import { PROPERTY_KINDS, kindMeta } from './kinds'
@@ -14,12 +15,13 @@ export function PropertyTypePicker({
   onClose: () => void
   onPick: (kind: PropertyKind) => void
 }) {
+  const { t } = useApp()
   return (
-    <Drawer open={open} onClose={onClose} label="New property">
-      <DrawerHeader title="New property" onClose={onClose} />
+    <Drawer open={open} onClose={onClose} label={t('New property')}>
+      <DrawerHeader title={t('New property')} onClose={onClose} />
       <div className="overflow-auto p-4 pb-6">
       <p className="px-1 pb-4 text-[14px] leading-relaxed text-text-2">
-        What kind of home is this? Choose one — we&apos;ll ask only the questions that fit.
+        {t("What kind of home is this? Choose one — we'll ask only the questions that fit.")}
       </p>
       <div className="flex flex-col gap-3">
         {PROPERTY_KINDS.map((kind) => {
@@ -40,8 +42,8 @@ export function PropertyTypePicker({
                 <Icon size={19} />
               </span>
               <span className="flex flex-col gap-0.5">
-                <span className="text-[17px] font-normal text-text">{meta.displayName}</span>
-                <span className="text-[13px] text-text-2">{meta.subtitle}</span>
+                <span className="text-[17px] font-normal text-text">{t(meta.displayName)}</span>
+                <span className="text-[13px] text-text-2">{t(meta.subtitle)}</span>
               </span>
               <ChevronRight size={16} className="ml-auto shrink-0 text-text-3" />
             </button>
@@ -49,8 +51,7 @@ export function PropertyTypePicker({
         })}
       </div>
       <p className="px-1 pb-2 pt-4 text-[13px] leading-relaxed text-text-3">
-        You can change type later from the property&apos;s settings, but a few fields will reset
-        (e.g. lease dates become closing date).
+        {t("You can change type later from the property's settings, but a few fields will reset (e.g. lease dates become closing date).")}
       </p>
       </div>
     </Drawer>

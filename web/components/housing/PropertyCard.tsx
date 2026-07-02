@@ -16,16 +16,16 @@ export function PropertyCard({
   onClick: () => void
   selected?: boolean
 }) {
-  const { formatMoney } = useApp()
+  const { formatMoney, t } = useApp()
   const meta = kindMeta(property.kind)
   const Icon = meta.icon
 
   const subtitle =
     property.kind === 'primary_home'
-      ? 'Primary home'
+      ? t('Primary home')
       : property.kind === 'multifamily'
-        ? `Multifamily · ${(property.units ?? []).length} units`
-        : 'Rental'
+        ? t('Multifamily · {0} units', (property.units ?? []).length)
+        : t('Rental')
 
   const isMortgaged = property.kind === 'primary_home' || property.kind === 'multifamily'
   const amount = isMortgaged
@@ -37,7 +37,7 @@ export function PropertyCard({
         )
       : 0
     : (property.lease?.monthly_rent_cents ?? 0)
-  const caption = isMortgaged ? 'Monthly payment' : 'Monthly rent'
+  const caption = isMortgaged ? t('Monthly payment') : t('Monthly rent')
 
   return (
     <button

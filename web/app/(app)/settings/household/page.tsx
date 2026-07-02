@@ -16,6 +16,7 @@ export default function HouseholdPage() {
     householdMembers,
     formatMoney,
     monthlySpentBy,
+    t,
   } = useApp()
 
   const [drawer, setDrawer] = useState<HouseholdDrawerMode>(null)
@@ -25,10 +26,10 @@ export default function HouseholdPage() {
       <div className="pt-2">
         <Link href="/settings" className="inline-flex items-center gap-1 text-[15px] text-accent">
           <ChevronLeft size={18} />
-          Settings
+          {t('Settings')}
         </Link>
       </div>
-      <PageHeader title="Household" />
+      <PageHeader title={t('Household')} />
 
       <SectionCard>
         <button
@@ -36,10 +37,10 @@ export default function HouseholdPage() {
           onClick={() => setDrawer({ type: 'rename' })}
           className="flex min-h-[60px] w-full items-center gap-3 px-4 py-3 text-left"
         >
-          <span className="text-[17px] font-normal text-text">Name</span>
+          <span className="text-[17px] font-normal text-text">{t('Name')}</span>
           <span className="ml-auto flex items-center gap-1.5">
             <span className="text-[17px] font-normal text-text-2">
-              {currentHousehold?.name ?? 'Untitled'}
+              {currentHousehold?.name ?? t('Untitled')}
             </span>
             <ChevronRight size={16} className="text-text-3" />
           </span>
@@ -50,17 +51,16 @@ export default function HouseholdPage() {
             key={u.id}
             user={u}
             isCurrentUser={u.id === currentPersonId}
-            detail={`${formatMoney(monthlySpentBy(u.id))} this month`}
+            detail={t('{0} this month', formatMoney(monthlySpentBy(u.id)))}
             onClick={() => setDrawer({ type: 'member', userId: u.id })}
           />
         ))}
 
-        <AddRow label="Add person" onClick={() => setDrawer({ type: 'add' })} />
+        <AddRow label={t('Add person')} onClick={() => setDrawer({ type: 'add' })} />
       </SectionCard>
 
       <p className="px-1 pt-3 text-[13px] leading-relaxed text-text-3">
-        Everyone in your household can be an owner of a transaction. People you add need no Ortho
-        account; you can split any transaction between them.
+        {t('Everyone in your household can be an owner of a transaction. People you add need no Ortho account; you can split any transaction between them.')}
       </p>
 
       <HouseholdDrawer mode={drawer} onClose={() => setDrawer(null)} />

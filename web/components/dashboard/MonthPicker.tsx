@@ -24,7 +24,7 @@ export function MonthPicker({
   onSelectMonth: (m: string) => void
   onClear: () => void
 }) {
-  const { locale } = useApp()
+  const { locale, t } = useApp()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -49,13 +49,13 @@ export function MonthPicker({
 
   const older = selectedMonth ? stepMonth(availableMonths, selectedMonth, 'prev') : null
   const newer = selectedMonth ? stepMonth(availableMonths, selectedMonth, 'next') : null
-  const label = selectedMonth ? monthLabel(selectedMonth, locale) : 'Pick a month'
+  const label = selectedMonth ? monthLabel(selectedMonth, locale) : t('Pick a month')
 
   return (
     <div ref={ref} className="relative flex items-center gap-1">
       <button
         type="button"
-        aria-label="Previous month"
+        aria-label={t('Previous month')}
         disabled={!older}
         onClick={() => older && onSelectMonth(older)}
         className="flex h-10 w-10 items-center justify-center rounded-lg text-text-2 transition-colors hover:bg-[var(--chip-bg)] disabled:pointer-events-none disabled:text-text-3 disabled:opacity-40"
@@ -79,7 +79,7 @@ export function MonthPicker({
 
       <button
         type="button"
-        aria-label="Next month"
+        aria-label={t('Next month')}
         disabled={!newer}
         onClick={() => newer && onSelectMonth(newer)}
         className="flex h-10 w-10 items-center justify-center rounded-lg text-text-2 transition-colors hover:bg-[var(--chip-bg)] disabled:pointer-events-none disabled:text-text-3 disabled:opacity-40"
@@ -93,14 +93,14 @@ export function MonthPicker({
           onClick={onClear}
           className="ml-1 rounded-lg px-2 py-2 text-[13px] font-normal text-text-3 transition-colors hover:text-text"
         >
-          Latest
+          {t('Latest')}
         </button>
       )}
 
       {open && (
         <div
           role="listbox"
-          aria-label="Select a month"
+          aria-label={t('Select a month')}
           className="absolute left-0 top-full z-50 mt-1 max-h-72 w-44 overflow-auto rounded-xl border border-hairline bg-surface py-1"
           style={{ boxShadow: 'var(--shadow-sheet)' }}
         >

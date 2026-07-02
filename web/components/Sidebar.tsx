@@ -20,12 +20,12 @@ const TABS = [
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { currentHousehold, householdMembers, signOut } = useApp()
+  const { currentHousehold, householdMembers, signOut, t } = useApp()
   const [confirmSignOut, setConfirmSignOut] = useState(false)
 
   return (
     <nav
-      aria-label="Primary"
+      aria-label={t('Primary')}
       className="sticky top-0 hidden h-screen shrink-0 flex-col border-r border-hairline bg-bg sm:flex sm:w-[72px] lg:w-[232px]"
       style={{ padding: '20px 12px 16px' }}
     >
@@ -44,19 +44,19 @@ export function Sidebar() {
 
       {/* Destinations */}
       <div className="flex flex-col gap-0.5">
-        {TABS.map((t) => {
-          const active = pathname === t.href || pathname.startsWith(t.href + '/')
-          const Icon = t.icon
+        {TABS.map((tab) => {
+          const active = pathname === tab.href || pathname.startsWith(tab.href + '/')
+          const Icon = tab.icon
           return (
             <Link
-              key={t.href}
-              href={t.href}
-              title={t.label}
+              key={tab.href}
+              href={tab.href}
+              title={t(tab.label)}
               aria-current={active ? 'page' : undefined}
               className={cn('ow-nav-item sm:justify-center lg:justify-start', active && 'is-active')}
             >
               <Icon size={22} strokeWidth={active ? 2.4 : 2} className="shrink-0" />
-              <span className="hidden lg:block">{t.label}</span>
+              <span className="hidden lg:block">{t(tab.label)}</span>
             </Link>
           )
         })}
@@ -74,10 +74,10 @@ export function Sidebar() {
           </div>
           <div className="hidden min-w-0 lg:block">
             <div className="truncate" style={{ fontSize: 13, fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.1px' }}>
-              {currentHousehold?.name ?? 'Household'}
+              {currentHousehold?.name ?? t('Household')}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
-              {householdMembers.length} {householdMembers.length === 1 ? 'member' : 'members'}
+              {householdMembers.length === 1 ? t('1 member') : t('{0} members', householdMembers.length)}
             </div>
           </div>
         </div>
@@ -87,7 +87,7 @@ export function Sidebar() {
           onClick={() => (confirmSignOut ? signOut() : setConfirmSignOut(true))}
           onBlur={() => setConfirmSignOut(false)}
         >
-          {confirmSignOut ? 'Click again to sign out' : 'Sign out'}
+          {confirmSignOut ? t('Click again to sign out') : t('Sign out')}
         </button>
       </div>
     </nav>

@@ -1,6 +1,7 @@
 'use client'
 
 import { type ReactNode } from 'react'
+import { useApp } from '@/lib/store'
 import { categoryMeta } from '@/lib/categories'
 import type { TransactionCategory } from '@/lib/types'
 
@@ -163,12 +164,14 @@ export function CardLabel({
 export function WebSearchInput({
   value,
   onChange,
-  placeholder = 'Search',
+  placeholder,
 }: {
   value: string
   onChange: (v: string) => void
   placeholder?: string
 }) {
+  const { t } = useApp()
+  const ph = placeholder ?? t('Search')
   return (
     <div style={{ position: 'relative' }}>
       <svg width="14" height="14" viewBox="0 0 14 14" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
@@ -180,8 +183,8 @@ export function WebSearchInput({
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        aria-label={placeholder}
+        placeholder={ph}
+        aria-label={ph}
       />
     </div>
   )

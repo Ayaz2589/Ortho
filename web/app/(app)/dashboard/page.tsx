@@ -1,6 +1,7 @@
 'use client'
 
 import { PageHeader } from '@/components/ui'
+import { useApp } from '@/lib/store'
 import { useIsExpanded } from '@/lib/useMediaQuery'
 import { useDashboardScope } from '@/lib/useDashboardRange'
 import { RangePicker } from '@/components/dashboard/RangePicker'
@@ -16,6 +17,7 @@ import { DailySpendTrendCard } from '@/components/dashboard/DailySpendTrendCard'
 import { DashboardDesktop } from '@/components/web/DashboardDesktop'
 
 export default function DashboardPage() {
+  const { t } = useApp()
   const isExpanded = useIsExpanded()
   // One scope source for the whole dashboard — lifted here so the mobile and
   // desktop layouts share the same relative range AND the same (transient)
@@ -29,7 +31,7 @@ export default function DashboardPage() {
   const monthLabel = scope.isSpecificMonth ? scope.periodLabel : undefined
   return (
     <div className="mx-auto w-full max-w-[640px]">
-      <PageHeader title="Dashboard" />
+      <PageHeader title={t('Dashboard')} />
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           {scope.rangeOptions.length > 1 && (

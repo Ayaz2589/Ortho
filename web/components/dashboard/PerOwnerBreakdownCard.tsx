@@ -21,7 +21,7 @@ export function PerOwnerBreakdownCard({
   interval: Interval
   label?: string
 }) {
-  const { householdMembers, spentBy, currentPersonId, transactions, formatMoney, locale } =
+  const { householdMembers, spentBy, currentPersonId, transactions, formatMoney, locale, t } =
     useApp()
   const [expanded, setExpanded] = useState<string | null>(null)
 
@@ -46,10 +46,10 @@ export function PerOwnerBreakdownCard({
 
   return (
     <Card className="p-5">
-      <SectionLabel right={label ?? longLabel(range)}>Per owner</SectionLabel>
+      <SectionLabel right={label ?? t(longLabel(range))}>{t('Per owner')}</SectionLabel>
 
       {entries.length === 0 ? (
-        <p className="py-2 text-[13px] text-text-3">No household members yet.</p>
+        <p className="py-2 text-[13px] text-text-3">{t('No household members yet.')}</p>
       ) : (
         <div className="mt-3 flex flex-col gap-3.5">
           {entries.map((entry) => {
@@ -68,7 +68,7 @@ export function PerOwnerBreakdownCard({
                       {entry.user.name}
                     </span>
                     {entry.user.id === currentPersonId && (
-                      <span className="text-xs text-text-3">(you)</span>
+                      <span className="text-xs text-text-3">{t('(you)')}</span>
                     )}
                     <span className="ml-auto text-[15px] font-normal tabular-nums text-text">
                       {formatMoney(entry.cents)}
@@ -99,6 +99,7 @@ export function PerOwnerBreakdownCard({
                     inRange={inRange}
                     formatMoney={formatMoney}
                     locale={locale}
+                    t={t}
                   />
                 )}
               </div>
@@ -116,12 +117,14 @@ function ExpandedShares({
   inRange,
   formatMoney,
   locale,
+  t,
 }: {
   user: User
   transactions: Transaction[]
   inRange: (date: string) => boolean
   formatMoney: (cents: number) => string
   locale: string
+  t: (key: string, ...args: Array<string | number>) => string
 }) {
   // Participated expenses in range (transactions newest-first from store),
   // with this user's split-weighted share.
@@ -138,7 +141,7 @@ function ExpandedShares({
   const remaining = Math.max(0, shares.length - shown.length)
 
   if (shares.length === 0) {
-    return <p className="py-2 pl-1 text-[13px] text-text-3">No expenses in this period.</p>
+    return <p className="py-2 pl-1 text-[13px] text-text-3">{t('No expenses in this period.')}</p>
   }
 
   const pctLabel = (pct: number) =>
@@ -175,7 +178,7 @@ function ExpandedShares({
         </div>
       ))}
       {remaining > 0 && (
-        <p className="pt-2.5 text-center text-xs text-text-3">+{remaining} more</p>
+        <p className="pt-2.5 text-center text-xs text-text-3">{t('+ {0} more', remaining)}</p>
       )}
     </div>
   )

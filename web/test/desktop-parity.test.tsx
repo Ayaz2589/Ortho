@@ -202,7 +202,8 @@ describe('language → locale in the store (US4 / T027)', () => {
     await renderStore()
     const expected: [Parameters<typeof api.chooseLanguage>[0], string][] = [
       ['English', 'en-US'],
-      ['বাংলা', 'bn-BD'],
+      // -u-nu-latn: Latin digits under বাংলা, matching iOS's deliberate choice.
+      ['বাংলা', 'bn-BD-u-nu-latn'],
       ['Español', 'es-ES'],
       ['日本語', 'ja-JP'],
       ['简体中文', 'zh-Hans'],

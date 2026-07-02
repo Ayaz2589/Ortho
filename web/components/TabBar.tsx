@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { BarChart3, ArrowUpDown, House, Settings } from 'lucide-react'
+import { useApp } from '@/lib/store'
 import { cn } from '@/lib/utils'
 
 const TABS = [
@@ -14,26 +15,27 @@ const TABS = [
 
 export function TabBar() {
   const pathname = usePathname()
+  const { t } = useApp()
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-30 flex justify-center border-t border-hairline backdrop-blur-xl sm:hidden"
       style={{ background: 'color-mix(in srgb, var(--surface) 85%, transparent)' }}
     >
       <div className="flex w-full max-w-lg items-stretch justify-around">
-        {TABS.map((t) => {
-          const active = pathname === t.href || pathname.startsWith(t.href + '/')
-          const Icon = t.icon
+        {TABS.map((tab) => {
+          const active = pathname === tab.href || pathname.startsWith(tab.href + '/')
+          const Icon = tab.icon
           return (
             <Link
-              key={t.href}
-              href={t.href}
+              key={tab.href}
+              href={tab.href}
               className={cn(
                 'flex flex-1 flex-col items-center gap-1 py-2.5 transition-colors',
                 active ? 'text-text' : 'text-text-3'
               )}
             >
               <Icon size={22} strokeWidth={active ? 2.4 : 2} />
-              <span className="text-[10px] font-normal">{t.label}</span>
+              <span className="text-[10px] font-normal">{t(tab.label)}</span>
             </Link>
           )
         })}

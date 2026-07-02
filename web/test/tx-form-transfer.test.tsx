@@ -20,6 +20,7 @@ vi.mock('@/lib/store', () => ({
     addTransaction: h.add,
     updateTransaction: h.update,
     formatMoney: (c: number) => `$${(c / 100).toFixed(2)}`,
+    t: (k: string, ...a: Array<string | number>) => (a.length ? k.replace(/\{(\d+)\}/g, (m, i) => String(a[Number(i)] ?? m)) : k),
   }),
 }))
 

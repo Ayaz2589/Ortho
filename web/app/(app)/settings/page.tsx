@@ -23,6 +23,7 @@ import {
 } from '@/components/settings/appearance'
 import { CURRENCIES, CURRENCY_NAMES, currencyCode } from '@/lib/finance/currency'
 import { LANGUAGES } from '@/lib/language'
+import type { Translate } from '@/lib/i18n'
 
 /** FX freshness caption for the Currency section — mirrors iOS's `ratesCaption`. */
 function ratesCaption({
@@ -31,19 +32,21 @@ function ratesCaption({
   error,
   hasRates,
   locale,
+  t,
 }: {
   isLoading: boolean
   lastFetched: number | null
   error: string | null
   hasRates: boolean
   locale: string
+  t: Translate
 }): string {
-  if (isLoading && !hasRates) return 'Updating rates…'
+  if (isLoading && !hasRates) return t('Updating rates…')
   if (lastFetched != null) {
-    return `Rates updated ${relativeTimeLabel(lastFetched, locale)}`
+    return t('Rates updated {0}', relativeTimeLabel(lastFetched, locale))
   }
-  if (error != null) return 'Rates unavailable; using approximate values.'
-  return 'Loading rates…'
+  if (error != null) return t('Rates unavailable; using approximate values.')
+  return t('Loading rates…')
 }
 
 /** Locale-aware relative time ("5 minutes ago"), like iOS's RelativeDateTimeFormatter. */
@@ -74,6 +77,7 @@ export default function SettingsPage() {
     ratesIsLoading,
     ratesError,
     locale,
+    t,
   } = useApp()
   const [addingCard, setAddingCard] = useState(false)
   const [appearance, setAppearance] = useState<Appearance>('system')
@@ -92,51 +96,50 @@ export default function SettingsPage() {
 
   return (
     <ReadingColumn>
-      <PageHeader title="Settings" />
+      <PageHeader title={t('Settings')} />
 
       <div className="flex flex-col gap-6">
         <section className="flex flex-col gap-2">
-          <SectionLabel>Household</SectionLabel>
+          <SectionLabel>{t('Household')}</SectionLabel>
           <SectionCard>
-            <LinkRow href="/settings/household" label="Household" peek={currentHousehold?.name} />
+            <LinkRow href="/settings/household" label={t('Household')} peek={currentHousehold?.name} />
           </SectionCard>
         </section>
 
         <section className="flex flex-col gap-2">
-          <SectionLabel>Budgets</SectionLabel>
+          <SectionLabel>{t('Budgets')}</SectionLabel>
           <SectionCard>
             <LinkRow
               href="/budgets"
-              label="Budgets"
-              peek={budgets.length ? `${budgets.length} set` : 'None set'}
+              label={t('Budgets')}
+              peek={budgets.length ? t('{0} set', budgets.length) : t('None set')}
             />
           </SectionCard>
         </section>
 
         <section className="flex flex-col gap-2">
-          <SectionLabel>Cards</SectionLabel>
+          <SectionLabel>{t('Cards')}</SectionLabel>
           <SectionCard>
             {cards.map((c) => (
               <CardRow key={c.id} card={c} onDelete={() => deleteCard(c.id)} />
             ))}
             {/* Disabled until a real household is resolved — adding a card
                 without one silently no-ops server-side (mirrors iOS). */}
-            <AddRow label="Add card" onClick={() => setAddingCard(true)} disabled={!currentHousehold} />
+            <AddRow label={t('Add card')} onClick={() => setAddingCard(true)} disabled={!currentHousehold} />
           </SectionCard>
           <p className="px-1 text-[13px] leading-relaxed text-text-3">
-            Cards appear in the Paid with menu when you log a new expense. Existing transactions keep
-            their original card name.
+            {t('Cards appear in the Paid with menu when you log a new expense. Existing transactions keep their original card name.')}
           </p>
         </section>
 
         <section className="flex flex-col gap-2">
-          <SectionLabel>Currency</SectionLabel>
+          <SectionLabel>{t('Currency')}</SectionLabel>
           <SectionCard>
             {CURRENCIES.map((c) => (
               <ChoiceRow
                 key={c}
                 icon={<Globe size={16} />}
-                label={`${CURRENCY_NAMES[c]} (${currencyCode(c)})`}
+                label={`${t(CURRENCY_NAMES[c])} (${currencyCode(c)})`}
                 active={c === currency}
                 onClick={() => setCurrency(c)}
               />
@@ -149,12 +152,13 @@ export default function SettingsPage() {
               error: ratesError,
               hasRates: Object.keys(rates).length > 0,
               locale,
+              t,
             })}
           </p>
         </section>
 
         <section className="flex flex-col gap-2">
-          <SectionLabel>Language</SectionLabel>
+          <SectionLabel>{t('Language')}</SectionLabel>
           <SectionCard>
             {LANGUAGES.map((lang) => (
               <ChoiceRow
@@ -169,23 +173,23 @@ export default function SettingsPage() {
         </section>
 
         <section className="flex flex-col gap-2">
-          <SectionLabel>Appearance</SectionLabel>
+          <SectionLabel>{t('Appearance')}</SectionLabel>
           <SectionCard>
             <ChoiceRow
               icon={<Monitor size={16} />}
-              label="System"
+              label={t('System')}
               active={appearance === 'system'}
               onClick={() => chooseAppearance('system')}
             />
             <ChoiceRow
               icon={<Sun size={16} />}
-              label="Light"
+              label={t('Light')}
               active={appearance === 'light'}
               onClick={() => chooseAppearance('light')}
             />
             <ChoiceRow
               icon={<Moon size={16} />}
-              label="Dark"
+              label={t('Dark')}
               active={appearance === 'dark'}
               onClick={() => chooseAppearance('dark')}
             />
@@ -193,32 +197,32 @@ export default function SettingsPage() {
         </section>
 
         <section className="flex flex-col gap-2">
-          <SectionLabel>Account</SectionLabel>
+          <SectionLabel>{t('Account')}</SectionLabel>
           <SectionCard>
             {signingOut ? (
               <div className="flex min-h-[60px] items-center gap-3 px-4 py-3">
-                <span className="text-[15px] text-text-2">Sign out of Ortho?</span>
+                <span className="text-[15px] text-text-2">{t('Sign out of Ortho?')}</span>
                 <span className="ml-auto flex items-center gap-3">
                   <button
                     type="button"
                     onClick={() => setSigningOut(false)}
                     className="text-[15px] font-normal text-text-2"
                   >
-                    Cancel
+                    {t('Cancel')}
                   </button>
                   <button
                     type="button"
                     onClick={() => void signOut()}
                     className="text-[15px] font-normal text-destructive"
                   >
-                    Sign out
+                    {t('Sign out')}
                   </button>
                 </span>
               </div>
             ) : (
               <ActionRow
                 icon={<LogOut size={16} />}
-                label="Sign out"
+                label={t('Sign out')}
                 sub={currentUserEmail ?? undefined}
                 destructive
                 onClick={() => setSigningOut(true)}

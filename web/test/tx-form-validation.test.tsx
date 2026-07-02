@@ -26,6 +26,7 @@ vi.mock('@/lib/store', () => ({
     householdMembers: [ALICE, BOB],
     addTransaction,
     updateTransaction,
+    t: (k: string, ...a: Array<string | number>) => (a.length ? k.replace(/\{(\d+)\}/g, (m, i) => String(a[Number(i)] ?? m)) : k),
   }),
 }))
 

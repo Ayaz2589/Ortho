@@ -10,7 +10,7 @@ import type { Transaction } from '@/lib/types'
 /** Read-only presentational detail for a transaction. Shared by the mobile
  *  modal and the desktop master–detail pane. */
 export function TransactionDetailBody({ tx }: { tx: Transaction }) {
-  const { formatMoney, resolveUser, locale } = useApp()
+  const { formatMoney, resolveUser, locale, t } = useApp()
   const isIncome = tx.kind === 'income'
   const isTransfer = tx.kind === 'transfer'
 
@@ -25,13 +25,13 @@ export function TransactionDetailBody({ tx }: { tx: Transaction }) {
           <span className="text-[40px] font-light tabular-nums text-text">{formatMoney(tx.amount_cents)}</span>
         </div>
         <FormGroup>
-          <FieldRow label="From">
+          <FieldRow label={t('From')}>
             <span className="flex items-center gap-2 text-[15px] font-normal text-text">
               {fromU && <Avatar user={fromU} size={22} />}
               {fromU?.name ?? '—'}
             </span>
           </FieldRow>
-          <FieldRow label="To">
+          <FieldRow label={t('To')}>
             <span className="flex items-center gap-2 text-[15px] font-normal text-text">
               {toU && <Avatar user={toU} size={22} />}
               {toU?.name ?? '—'}
@@ -39,10 +39,10 @@ export function TransactionDetailBody({ tx }: { tx: Transaction }) {
           </FieldRow>
         </FormGroup>
         <FormGroup>
-          <FieldRow label="Type">
-            <span className="text-[15px] font-normal text-text">Reimbursement</span>
+          <FieldRow label={t('Type')}>
+            <span className="text-[15px] font-normal text-text">{t('Reimbursement')}</span>
           </FieldRow>
-          <FieldRow label="Date">
+          <FieldRow label={t('Date')}>
             <span className="text-[15px] font-normal text-text">{mediumDate(new Date(tx.date), locale)}</span>
           </FieldRow>
         </FormGroup>
@@ -71,14 +71,14 @@ export function TransactionDetailBody({ tx }: { tx: Transaction }) {
 
       {/* Merchant + category */}
       <FormGroup>
-        <FieldRow label={isIncome ? 'Source' : 'Merchant'}>
+        <FieldRow label={isIncome ? t('Source') : t('Merchant')}>
           <span className="text-[15px] font-normal text-text">{tx.merchant}</span>
         </FieldRow>
         {!isIncome && (
-          <FieldRow label="Category">
+          <FieldRow label={t('Category')}>
             <span className="flex items-center gap-1.5 text-[15px] font-normal text-text">
               <CatIcon size={15} />
-              {meta.label}
+              {t(meta.label)}
             </span>
           </FieldRow>
         )}
@@ -108,17 +108,17 @@ export function TransactionDetailBody({ tx }: { tx: Transaction }) {
       {/* Meta */}
       <FormGroup>
         {!isIncome && payer && (
-          <FieldRow label="Paid by">
+          <FieldRow label={t('Paid by')}>
             <span className="flex items-center gap-2 text-[15px] font-normal text-text">
               <Avatar user={payer} size={22} />
               {payer.name}
             </span>
           </FieldRow>
         )}
-        <FieldRow label={isIncome ? 'Deposit to' : 'Paid with'}>
+        <FieldRow label={isIncome ? t('Deposit to') : t('Paid with')}>
           <span className="text-[15px] font-normal text-text">{tx.source}</span>
         </FieldRow>
-        <FieldRow label="Date">
+        <FieldRow label={t('Date')}>
           <span className="text-[15px] font-normal text-text">
             {mediumDate(new Date(tx.date), locale)}
           </span>

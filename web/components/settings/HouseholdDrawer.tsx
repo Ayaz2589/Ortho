@@ -34,6 +34,7 @@ export function HouseholdDrawer({
     renamePerson,
     setPersonColor,
     removePerson,
+    t,
   } = useApp()
 
   // Rename-household state
@@ -78,28 +79,28 @@ export function HouseholdDrawer({
   }
 
   const title =
-    mode?.type === 'rename' ? 'Rename household' : mode?.type === 'add' ? 'Add person' : 'Person'
+    mode?.type === 'rename' ? t('Rename household') : mode?.type === 'add' ? t('Add person') : t('Person')
 
   return (
     <Drawer open={mode !== null} onClose={onClose} label={title}>
       {mode?.type === 'rename' && (
         <>
           <DrawerHeader
-            title="Rename household"
+            title={t('Rename household')}
             onClose={onClose}
             right={
               <button type="button" onClick={saveName} disabled={renameName.trim() === ''} className={accentBtn}>
-                Save
+                {t('Save')}
               </button>
             }
           />
           <div style={{ overflow: 'auto', padding: '20px' }}>
             <FormGroup>
-              <FieldRow label="Name">
+              <FieldRow label={t('Name')}>
                 <TextInput
                   value={renameName}
                   onChange={(e) => setRenameName(e.target.value)}
-                  placeholder="Household name"
+                  placeholder={t('Household name')}
                   autoFocus
                 />
               </FieldRow>
@@ -111,11 +112,11 @@ export function HouseholdDrawer({
       {mode?.type === 'add' && (
         <>
           <DrawerHeader
-            title="Add person"
+            title={t('Add person')}
             onClose={onClose}
             right={
               <button type="button" onClick={handleAdd} disabled={!canAdd} className={accentBtn}>
-                Add
+                {t('Add')}
               </button>
             }
           />
@@ -128,16 +129,16 @@ export function HouseholdDrawer({
                 {addInitial}
               </div>
             </div>
-            <SectionLabel>Name</SectionLabel>
+            <SectionLabel>{t('Name')}</SectionLabel>
             <div className="mt-2">
               <FormGroup>
-                <FieldRow label="Name">
-                  <TextInput value={addName} onChange={(e) => setAddName(e.target.value)} placeholder="e.g. Alex" autoFocus />
+                <FieldRow label={t('Name')}>
+                  <TextInput value={addName} onChange={(e) => setAddName(e.target.value)} placeholder={t('e.g. Alex')} autoFocus />
                 </FieldRow>
               </FormGroup>
             </div>
             <div className="mt-5">
-              <SectionLabel>Color</SectionLabel>
+              <SectionLabel>{t('Color')}</SectionLabel>
             </div>
             <div className="mt-2 grid grid-cols-6 gap-3 rounded-2xl bg-surface p-4" style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
               {PALETTE.map((opt) => {
@@ -157,8 +158,7 @@ export function HouseholdDrawer({
               })}
             </div>
             <p className="px-1 pt-3 text-[13px] leading-relaxed text-text-3">
-              Initial is set automatically from the name. People you add can own and split
-              transactions — no account needed.
+              {t('Initial is set automatically from the name. People you add can own and split transactions — no account needed.')}
             </p>
           </div>
         </>
@@ -170,9 +170,8 @@ export function HouseholdDrawer({
         const isCurrentPerson = user.id === currentPersonId
         // Keep at least one person; the account holder can't be removed.
         const removable = !isCurrentPerson && householdMembers.length > 1
-        const detail = isCurrentPerson
-          ? `(you) · ${formatMoney(monthlySpentBy(user.id))} this month`
-          : `${formatMoney(monthlySpentBy(user.id))} this month`
+        const spent = t('{0} this month', formatMoney(monthlySpentBy(user.id)))
+        const detail = isCurrentPerson ? t('(you) · {0}', spent) : spent
         const saveRename = () => {
           const trimmed = editName.trim()
           if (trimmed !== '' && trimmed !== user.name) renamePerson(user.id, trimmed)
@@ -187,11 +186,11 @@ export function HouseholdDrawer({
         return (
           <>
             <DrawerHeader
-              title="Person"
+              title={t('Person')}
               onClose={onClose}
               right={
                 <button type="button" onClick={saveRename} disabled={editName.trim() === ''} className={accentBtn}>
-                  Save
+                  {t('Save')}
                 </button>
               }
             />
@@ -205,14 +204,14 @@ export function HouseholdDrawer({
                 </div>
               </div>
               <FormGroup>
-                <FieldRow label="Name">
-                  <TextInput value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Name" />
+                <FieldRow label={t('Name')}>
+                  <TextInput value={editName} onChange={(e) => setEditName(e.target.value)} placeholder={t('Name')} />
                 </FieldRow>
               </FormGroup>
               <p className="px-1 pt-2 text-center text-[13px] text-text-2">{detail}</p>
 
               <div className="mt-5">
-                <SectionLabel>Color</SectionLabel>
+                <SectionLabel>{t('Color')}</SectionLabel>
               </div>
               <div className="mt-2 grid grid-cols-6 gap-3 rounded-2xl bg-surface p-4" style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
                 {PALETTE.map((opt) => {
@@ -236,14 +235,14 @@ export function HouseholdDrawer({
                 (confirmRemove ? (
                   <div className="mt-6 flex flex-col gap-2 rounded-2xl bg-surface p-4" style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
                     <p className="text-[14px] text-text-2">
-                      Remove this person? Past transactions keep their name.
+                      {t('Remove this person? Past transactions keep their name.')}
                     </p>
                     <div className="flex gap-2">
                       <button type="button" onClick={() => setConfirmRemove(false)} className="flex-1 rounded-full py-2.5 text-[15px] text-text-2" style={{ background: 'var(--chip-bg)' }}>
-                        Cancel
+                        {t('Cancel')}
                       </button>
                       <button type="button" onClick={doRemove} className="flex-1 rounded-full py-2.5 text-[15px] text-white" style={{ background: 'var(--destructive)' }}>
-                        Remove
+                        {t('Remove')}
                       </button>
                     </div>
                   </div>
@@ -255,7 +254,7 @@ export function HouseholdDrawer({
                     style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
                   >
                     <MinusCircle size={16} />
-                    Remove person
+                    {t('Remove person')}
                   </button>
                 ))}
             </div>

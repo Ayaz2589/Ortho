@@ -1,9 +1,11 @@
 'use client'
 
 import { CATEGORIES } from '@/lib/categories'
+import { useApp } from '@/lib/store'
 import type { TxFilters } from '@/lib/useTransactionFilters'
 
 function RemovableChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  const { t } = useApp()
   return (
     <span
       className="inline-flex items-center gap-1 rounded-full py-1 pl-3 pr-1.5 text-[13px] text-text"
@@ -12,7 +14,7 @@ function RemovableChip({ label, onRemove }: { label: string; onRemove: () => voi
       {label}
       <button
         type="button"
-        aria-label={`Remove ${label} filter`}
+        aria-label={t('Remove {0} filter', label)}
         onClick={onRemove}
         className="flex h-6 w-6 items-center justify-center rounded-full text-text-3 transition-colors hover:text-text"
       >
@@ -28,16 +30,17 @@ const KIND_LABEL: Record<string, string> = { expense: 'Expenses', income: 'Incom
 
 /** A wrapping row of removable chips for every active filter dimension + Clear all. */
 export function ActiveFilterChips({ f }: { f: TxFilters }) {
+  const { t } = useApp()
   if (f.count === 0) return null
   const c = f.criteria
   const monthLabel = f.monthOptions.find((m) => m.value === f.selectedMonth)?.label ?? f.selectedMonth
 
   return (
     <div className="mb-4 flex flex-wrap items-center gap-2">
-      {c.query.trim() !== '' && <RemovableChip label={`“${c.query.trim()}”`} onRemove={() => f.setQuery('')} />}
-      {c.kind !== 'all' && <RemovableChip label={KIND_LABEL[c.kind]} onRemove={() => f.setKind('all')} />}
+      {c.query.trim() !== '' && <RemovableChip label={t('“{0}”', c.query.trim())} onRemove={() => f.setQuery('')} />}
+      {c.kind !== 'all' && <RemovableChip label={t(KIND_LABEL[c.kind])} onRemove={() => f.setKind('all')} />}
       {c.categories.map((cat) => (
-        <RemovableChip key={cat} label={CATEGORIES[cat].label} onRemove={() => f.toggleCategory(cat)} />
+        <RemovableChip key={cat} label={t(CATEGORIES[cat].label)} onRemove={() => f.toggleCategory(cat)} />
       ))}
       {c.sources.map((s) => (
         <RemovableChip key={s} label={s} onRemove={() => f.toggleSource(s)} />
@@ -51,7 +54,7 @@ export function ActiveFilterChips({ f }: { f: TxFilters }) {
         onClick={f.clearAll}
         className="rounded-full px-3 py-1 text-[13px] font-normal text-accent transition-colors hover:underline"
       >
-        Clear all
+        {t('Clear all')}
       </button>
     </div>
   )

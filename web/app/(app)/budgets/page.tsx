@@ -11,7 +11,7 @@ import type { TransactionCategory } from '@/lib/types'
 import { BudgetDrawer } from '@/components/budgets/BudgetDrawer'
 
 export default function BudgetsPage() {
-  const { budgets, formatMoney } = useApp()
+  const { budgets, formatMoney, t } = useApp()
   const [editing, setEditing] = useState<TransactionCategory | null>(null)
 
   return (
@@ -19,10 +19,10 @@ export default function BudgetsPage() {
       <div className="pt-2">
         <Link href="/settings" className="inline-flex items-center gap-1 text-[15px] text-accent">
           <ChevronLeft size={18} />
-          Settings
+          {t('Settings')}
         </Link>
       </div>
-      <PageHeader title="Budgets" />
+      <PageHeader title={t('Budgets')} />
 
       <div
         className="divide-y divide-hairline overflow-hidden rounded-2xl bg-surface"
@@ -45,7 +45,7 @@ export default function BudgetsPage() {
               >
                 <Icon size={14} />
               </span>
-              <span className="text-[17px] font-normal text-text">{meta.label}</span>
+              <span className="text-[17px] font-normal text-text">{t(meta.label)}</span>
               <span className="ml-auto flex items-center gap-1.5">
                 <span
                   className={
@@ -53,7 +53,7 @@ export default function BudgetsPage() {
                     (budget ? 'text-text-2' : 'text-text-3')
                   }
                 >
-                  {budget ? `${formatMoney(budget.monthly_limit_cents)} /mo` : 'Not set'}
+                  {budget ? t('{0} / mo', formatMoney(budget.monthly_limit_cents)) : t('Not set')}
                 </span>
                 <ChevronRight size={16} className="text-text-3" />
               </span>
@@ -63,8 +63,7 @@ export default function BudgetsPage() {
       </div>
 
       <p className="px-1 pt-3 text-[13px] leading-relaxed text-text-3">
-        Budgets drive the spending insights on your dashboard. Set a monthly limit for any category
-        and you&apos;ll see progress and alerts when you&apos;re close to or over the limit.
+        {t("Budgets drive the spending insights on your dashboard. Set a monthly limit for any category and you'll see progress + alerts when you're close to or over the limit.")}
       </p>
 
       <BudgetDrawer category={editing} onClose={() => setEditing(null)} />

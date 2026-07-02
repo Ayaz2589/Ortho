@@ -445,7 +445,7 @@ function MemberSelect({
 /** The shared field stack (amount hero, toggles, rows) used by both the modal and the drawer. */
 export function TxFormFields({ form }: { form: TxFormApi }) {
   const { currency, isIncome, isTransfer } = form
-  const { formatMoney } = useApp()
+  const { formatMoney, t } = useApp()
   // Owner / payer pickers appear whenever the household has more than one person.
   const showOwners = form.members.length > 1
   const multi = form.owners.length >= 2
@@ -475,7 +475,7 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
           onChange={form.setDir}
           options={form.directionOptions.map((k) => ({
             value: k,
-            label: k === 'expense' ? 'Expense' : k === 'income' ? 'Income' : 'Transfer',
+            label: k === 'expense' ? t('Expense') : k === 'income' ? t('Income') : t('Transfer'),
           }))}
         />
       </div>
@@ -484,36 +484,36 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
         /* Reimbursement: From -> To + date. No merchant/category/split/source. */
         <>
           <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-            <Row label="From" first>
-              <MemberSelect value={form.transferFrom} onChange={form.setTransferFrom} members={form.members} ariaLabel="Transfer from" />
+            <Row label={t('From')} first>
+              <MemberSelect value={form.transferFrom} onChange={form.setTransferFrom} members={form.members} ariaLabel={t('Transfer from')} />
             </Row>
-            <Row label="To">
-              <MemberSelect value={form.transferTo} onChange={form.setTransferTo} members={form.members} ariaLabel="Transfer to" />
+            <Row label={t('To')}>
+              <MemberSelect value={form.transferTo} onChange={form.setTransferTo} members={form.members} ariaLabel={t('Transfer to')} />
             </Row>
-            <Row label="Date">
-              <DatePicker value={form.date} onChange={form.setDate} ariaLabel="Transfer date" />
+            <Row label={t('Date')}>
+              <DatePicker value={form.date} onChange={form.setDate} ariaLabel={t('Transfer date')} />
             </Row>
           </div>
           <div style={{ padding: '2px 28px 16px', fontSize: 12.5, lineHeight: 1.45, color: 'var(--text-3)' }}>
             {form.transferFrom === form.transferTo
-              ? 'Pick two different members.'
-              : 'Records a reimbursement between members. It does not count as spending or income.'}
+              ? t('Pick two different members.')
+              : t('Records a reimbursement between members. It does not count as spending or income.')}
           </div>
         </>
       ) : (
         <>
           {/* Merchant + category */}
           <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-            <Row label={isIncome ? 'Source' : 'Merchant'} first>
-              <input className="ow-row-input" value={form.merchant} onChange={(e) => form.setMerchant(e.target.value)} placeholder={isIncome ? 'e.g. Acme payroll' : 'e.g. Whole Foods'} />
+            <Row label={isIncome ? t('Source') : t('Merchant')} first>
+              <input className="ow-row-input" value={form.merchant} onChange={(e) => form.setMerchant(e.target.value)} placeholder={isIncome ? t('e.g. Acme Co. payroll') : t('e.g. Whole Foods')} />
             </Row>
             {!isIncome && (
-              <Row label="Category">
+              <Row label={t('Category')}>
                 <CatTile category={form.category} size={22} />
                 <select value={form.category} onChange={(e) => form.setCategory(e.target.value as TransactionCategory)} style={selectStyle()}>
                   {SPEND_CATEGORIES.map((c) => (
                     <option key={c} value={c}>
-                      {categoryMeta(c).label}
+                      {t(categoryMeta(c).label)}
                     </option>
                   ))}
                 </select>
@@ -524,7 +524,7 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
           {/* Owners + who paid */}
           {showOwners && (
             <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-              <Row label="Owners" first>
+              <Row label={t('Owners')} first>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   {form.members.map((u) => {
                     const on = form.owners.includes(u.id)
@@ -545,8 +545,8 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
                 </div>
               </Row>
               {!isIncome && (
-                <Row label="Paid by">
-                  <MemberSelect value={form.paidBy} onChange={form.setPaidBy} members={form.members} ariaLabel="Paid by" />
+                <Row label={t('Paid by')}>
+                  <MemberSelect value={form.paidBy} onChange={form.setPaidBy} members={form.members} ariaLabel={t('Paid by')} />
                 </Row>
               )}
             </div>
@@ -555,11 +555,11 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
           {/* Split editor (multi-owner only) */}
           {multi && (
             <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-              <Row label="Split" first>
+              <Row label={t('Split')} first>
                 <Seg
                   value={form.splitMethod}
                   onChange={form.setSplitMethod}
-                  options={[{ value: 'even', label: 'Even' }, { value: 'percent', label: '%' }, { value: 'value', label: currencySymbol(currency) }]}
+                  options={[{ value: 'even', label: t('Even') }, { value: 'percent', label: '%' }, { value: 'value', label: currencySymbol(currency) }]}
                 />
               </Row>
               {form.owners.map((id) => {
@@ -574,7 +574,7 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
                           className="ow-row-input"
                           style={{ textAlign: 'right', width: 56 }}
                           inputMode="decimal"
-                          aria-label={`${name} percent`}
+                          aria-label={t('{0} percent', name)}
                           value={form.splitText[id] ?? ''}
                           onChange={(e) => form.setSplitPercent(id, e.target.value.replace(/[^\d.]/g, ''))}
                         />
@@ -590,7 +590,7 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
                           className="ow-row-input"
                           style={{ textAlign: 'right', width: 78 }}
                           inputMode="decimal"
-                          aria-label={`${name} amount`}
+                          aria-label={t('{0} amount', name)}
                           value={form.splitText[id] ?? ''}
                           onChange={(e) => form.setSplit(id, e.target.value.replace(/[^\d.,]/g, ''))}
                         />
@@ -602,8 +602,8 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
               {!form.splitOk && (
                 <div style={{ padding: '6px 20px 12px', fontSize: 12.5, lineHeight: 1.45, color: 'var(--text-2)' }}>
                   {form.splitReason === 'percent_sum'
-                    ? 'Percentages must total 100%.'
-                    : `Amounts must add up to ${formatMoney(form.cents ?? 0)}.`}
+                    ? t('Percentages must total 100%.')
+                    : t('Amounts must add up to {0}.', formatMoney(form.cents ?? 0))}
                 </div>
               )}
             </div>
@@ -611,9 +611,9 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
 
           {/* Source + date */}
           <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-            <Row label={isIncome ? 'Deposit to' : 'Paid with'} first>
+            <Row label={isIncome ? t('Deposit to') : t('Paid with')} first>
               {form.sources.length === 0 ? (
-                <span style={{ color: 'var(--text-3)' }}>No cards yet</span>
+                <span style={{ color: 'var(--text-3)' }}>{t('No cards yet')}</span>
               ) : (
                 <select value={form.source} onChange={(e) => form.setSource(e.target.value)} style={selectStyle()}>
                   {form.sources.map((s) => (
@@ -624,15 +624,15 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
                 </select>
               )}
             </Row>
-            <Row label="Date">
-              <DatePicker value={form.date} onChange={form.setDate} ariaLabel="Transaction date" />
+            <Row label={t('Date')}>
+              <DatePicker value={form.date} onChange={form.setDate} ariaLabel={t('Transaction date')} />
             </Row>
           </div>
 
           <div style={{ padding: '2px 28px 16px', fontSize: 12.5, lineHeight: 1.45, color: 'var(--text-3)' }}>
             {multi
-              ? 'Split this transaction between its owners by even shares, percentage, or amount.'
-              : 'Pick more than one owner to split this transaction.'}
+              ? t('Split this transaction between its owners by even shares, percentage, or amount.')
+              : t('Pick more than one owner to split this transaction.')}
           </div>
         </>
       )}
@@ -644,6 +644,7 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
  *  mode (batch entry). Submits and resets the form for the next entry without
  *  closing the surface — mirrors iOS `saveAndAddAnotherButton`. */
 export function SaveAndAddAnotherButton({ form }: { form: TxFormApi }) {
+  const { t } = useApp()
   return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: '0 20px 24px' }}>
       <button
@@ -668,7 +669,7 @@ export function SaveAndAddAnotherButton({ form }: { form: TxFormApi }) {
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
-        Save and add another
+        {t('Save and add another')}
       </button>
     </div>
   )
@@ -676,6 +677,7 @@ export function SaveAndAddAnotherButton({ form }: { form: TxFormApi }) {
 
 /** "Copy from recent" pill shown at the top of the New form. */
 export function CopyFromRecentButton({ onClick }: { onClick: () => void }) {
+  const { t } = useApp()
   return (
     <div style={{ padding: '0 20px 16px' }}>
       <button
@@ -687,7 +689,7 @@ export function CopyFromRecentButton({ onClick }: { onClick: () => void }) {
           <rect x="5" y="5" width="8.5" height="8.5" rx="2" stroke="currentColor" strokeWidth="1.4" />
           <path d="M3 11V4.5A1.5 1.5 0 014.5 3H11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
-        Copy from recent
+        {t('Copy from recent')}
       </button>
     </div>
   )
@@ -696,7 +698,7 @@ export function CopyFromRecentButton({ onClick }: { onClick: () => void }) {
 /** A recent-transactions list shown as a sub-view of the New form. Picking a row
  *  loads its values into the form (keeping today's date). */
 export function TxCopyList({ onPick, onBack }: { onPick: (tx: Transaction) => void; onBack: () => void }) {
-  const { transactions, formatMoney, ownersDisplay, locale } = useApp()
+  const { transactions, formatMoney, ownersDisplay, locale, t } = useApp()
   const groups = useMemo(
     () =>
       groupByDay(
@@ -707,16 +709,16 @@ export function TxCopyList({ onPick, onBack }: { onPick: (tx: Transaction) => vo
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 20px 14px', borderBottom: '0.5px solid var(--hairline)', flexShrink: 0 }}>
-        <button className="ow-btn ow-chip-btn" aria-label="Back" onClick={onBack} style={{ width: 28, height: 28 }}>
+        <button className="ow-btn ow-chip-btn" aria-label={t('Back')} onClick={onBack} style={{ width: 28, height: 28 }}>
           <svg width="11" height="11" viewBox="0 0 12 12">
             <path d="M7.5 2L3.5 6l4 4" stroke="var(--text-2)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
-        <div style={{ fontSize: 15, fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.3px' }}>Copy from recent</div>
+        <div style={{ fontSize: 15, fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.3px' }}>{t('Copy from recent')}</div>
       </div>
       <div style={{ overflow: 'auto' }}>
         {transactions.length === 0 ? (
-          <p style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>Nothing to copy yet.</p>
+          <p style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>{t('Nothing to copy yet')}</p>
         ) : (
           groups.map((g) => (
             <div key={g.day.getTime()}>
@@ -730,7 +732,7 @@ export function TxCopyList({ onPick, onBack }: { onPick: (tx: Transaction) => vo
                   <button key={tx.id} className="ow-btn ow-row" onClick={() => onPick(tx)} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '10px 20px', textAlign: 'left' }}>
                     <CatTile category={tx.category} size={34} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14.5, fontWeight: 400, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.merchant || (tx.kind === 'transfer' ? 'Transfer' : '')}</div>
+                      <div style={{ fontSize: 14.5, fontWeight: 400, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.merchant || (tx.kind === 'transfer' ? t('Transfer') : '')}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, fontSize: 12.5, color: 'var(--text-3)' }}>
                         <SourceDot size={6} />
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{owners.label}{tx.source ? ` · ${tx.source}` : ''}</span>
@@ -762,7 +764,7 @@ export function TxFormContent({
   initialTransfer,
   onDone,
   onCancel,
-  saveLabel = 'Add',
+  saveLabel,
 }: {
   title: string
   editing?: Transaction | null
@@ -772,6 +774,7 @@ export function TxFormContent({
   onCancel: () => void
   saveLabel?: string
 }) {
+  const { t } = useApp()
   const form = useTxForm({ editing, copying, initialTransfer })
   const [picking, setPicking] = useState(false)
   const allowCopy = !editing && !initialTransfer
@@ -792,7 +795,7 @@ export function TxFormContent({
     <>
       <div style={{ position: 'relative', display: 'flex', alignItems: 'center', padding: '18px 20px 14px', borderBottom: '0.5px solid var(--hairline)', flexShrink: 0 }}>
         <button className="ow-btn" onClick={onCancel} style={{ fontSize: 15, fontWeight: 400, color: 'var(--accent)', letterSpacing: '-0.2px', zIndex: 1 }}>
-          Cancel
+          {t('Cancel')}
         </button>
         <div style={{ position: 'absolute', left: 0, right: 0, textAlign: 'center', fontSize: 15, fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.3px', pointerEvents: 'none' }}>
           {title}
@@ -805,7 +808,7 @@ export function TxFormContent({
           disabled={!form.canSave}
           style={{ marginLeft: 'auto', fontSize: 15, fontWeight: 400, letterSpacing: '-0.2px', zIndex: 1, color: form.canSave ? 'var(--accent)' : 'var(--text-3)', cursor: form.canSave ? 'pointer' : 'default' }}
         >
-          {saveLabel}
+          {saveLabel ?? t('Add')}
         </button>
       </div>
       <div style={{ overflow: 'auto', paddingTop: 16 }}>

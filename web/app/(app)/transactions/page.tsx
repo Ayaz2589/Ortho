@@ -19,7 +19,7 @@ import { ActiveFilterChips } from '@/components/web/ActiveFilterChips'
 
 export default function TransactionsPage() {
   const isExpanded = useIsExpanded()
-  const { transactions, formatMoney, deleteTransaction, locale } = useApp()
+  const { transactions, formatMoney, deleteTransaction, locale, t } = useApp()
   const f = useTransactionFilters()
 
   const [searchActive, setSearchActive] = useState(false)
@@ -78,12 +78,12 @@ export default function TransactionsPage() {
   return (
     <div className="mx-auto w-full max-w-[640px]">
       <PageHeader
-        title="Transactions"
+        title={t('Transactions')}
         right={
           <>
             {hasAny && (
               <IconButton
-                ariaLabel={searchActive ? 'Close search' : 'Search transactions'}
+                ariaLabel={searchActive ? t('Close search') : t('Search transactions')}
                 onClick={() => {
                   if (searchActive) {
                     f.setQuery('')
@@ -98,7 +98,7 @@ export default function TransactionsPage() {
             )}
             {hasAny && (
               <span className="relative">
-                <IconButton ariaLabel={`Filters${f.count > 0 ? ` (${f.count} active)` : ''}`} onClick={() => setFilterOpen(true)}>
+                <IconButton ariaLabel={f.count > 0 ? t('Filters ({0} active)', f.count) : t('Filters')} onClick={() => setFilterOpen(true)}>
                   <SlidersHorizontal size={18} />
                 </IconButton>
                 {f.count > 0 && (
@@ -111,7 +111,7 @@ export default function TransactionsPage() {
                 )}
               </span>
             )}
-            <IconButton ariaLabel="Add transaction" onClick={openAdd}>
+            <IconButton ariaLabel={t('Add transaction')} onClick={openAdd}>
               <Plus size={18} />
             </IconButton>
           </>
@@ -125,7 +125,7 @@ export default function TransactionsPage() {
             autoFocus
             value={f.criteria.query}
             onChange={(e) => f.setQuery(e.target.value)}
-            placeholder="Search transactions"
+            placeholder={t('Search transactions')}
             className="w-full rounded-xl bg-surface px-4 py-2.5 text-[15px] text-text outline-none placeholder:text-text-3"
           />
         </div>
@@ -139,8 +139,8 @@ export default function TransactionsPage() {
       {!hasAny ? (
         <EmptyState
           icon={<ArrowUpDown size={40} />}
-          title="No transactions yet"
-          body="Log an expense or income to see it grouped by day here."
+          title={t('No transactions yet')}
+          body={t('Log an expense or income to see it grouped by day here.')}
           action={
             <button
               type="button"
@@ -148,15 +148,15 @@ export default function TransactionsPage() {
               className="mt-2 rounded-full px-5 py-2.5 text-[15px] font-normal text-accent"
               style={{ background: 'rgba(0,0,0,0.05)' }}
             >
-              Add transaction
+              {t('Add transaction')}
             </button>
           }
         />
       ) : noMatches ? (
         <EmptyState
           icon={<SlidersHorizontal size={40} />}
-          title="No transactions match your filters"
-          body="Try removing a filter or widening your search."
+          title={t('No transactions match your filters')}
+          body={t('Try removing a filter or widening your search.')}
           action={
             <button
               type="button"
@@ -164,7 +164,7 @@ export default function TransactionsPage() {
               className="mt-2 rounded-full px-5 py-2.5 text-[15px] font-normal text-accent"
               style={{ background: 'rgba(0,0,0,0.05)' }}
             >
-              Clear filters
+              {t('Clear filters')}
             </button>
           }
         />
@@ -233,11 +233,11 @@ export default function TransactionsPage() {
       <Modal
         open={filterOpen}
         onClose={() => setFilterOpen(false)}
-        title="Filters"
+        title={t('Filters')}
         right={
           f.count > 0 ? (
             <button type="button" onClick={f.clearAll} className="text-accent">
-              Clear
+              {t('Clear')}
             </button>
           ) : undefined
         }

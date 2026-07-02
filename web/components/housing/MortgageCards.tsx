@@ -40,7 +40,7 @@ function Label({ children, right }: { children: React.ReactNode; right?: React.R
 }
 
 export function MortgagePaymentHero({ mortgage }: { mortgage: MortgageInfo }) {
-  const { formatMoney } = useApp()
+  const { formatMoney, t } = useApp()
   const payment = monthlyPaymentCents(
     mortgage.original_loan_cents,
     mortgage.annual_interest_rate_percent,
@@ -49,13 +49,13 @@ export function MortgagePaymentHero({ mortgage }: { mortgage: MortgageInfo }) {
   return (
     <Section>
       <div className="flex flex-col gap-1.5 p-5">
-        <Label right={<House size={16} className="text-text-2" />}>Monthly payment</Label>
+        <Label right={<House size={16} className="text-text-2" />}>{t('Monthly payment')}</Label>
         <div className="text-[36px] font-light tracking-[-0.6px] tabular-nums text-text">
           {formatMoney(payment)}
         </div>
         {mortgage.auto_pay_source ? (
           <p className="text-[13px] text-text-2">
-            Auto-pays on the 1st · {mortgage.auto_pay_source}
+            {t('Auto-pays on the 1st · {0}', mortgage.auto_pay_source)}
           </p>
         ) : null}
       </div>
@@ -84,7 +84,7 @@ function DetailRow({
 }
 
 export function MortgageDetails({ mortgage }: { mortgage: MortgageInfo }) {
-  const { formatMoney, locale } = useApp()
+  const { formatMoney, locale, t } = useApp()
   const balance = currentPrincipalBalanceCents(
     mortgage.original_loan_cents,
     mortgage.annual_interest_rate_percent,
@@ -97,18 +97,18 @@ export function MortgageDetails({ mortgage }: { mortgage: MortgageInfo }) {
     <Section>
       <div className="divide-y divide-hairline">
         <DetailRow
-          label="Principal balance"
-          sublabel={`Original loan · ${formatMoney(mortgage.original_loan_cents)}`}
+          label={t('Principal balance')}
+          sublabel={t('Original loan · {0}', formatMoney(mortgage.original_loan_cents))}
           value={formatMoney(balance)}
         />
         <DetailRow
-          label="Interest rate"
-          sublabel={`Fixed · ${mortgage.loan_term_years}-year`}
+          label={t('Interest rate')}
+          sublabel={t('Fixed · {0}-year', mortgage.loan_term_years)}
           value={`${mortgage.annual_interest_rate_percent.toFixed(2)}%`}
         />
         <DetailRow
-          label="Maturity"
-          sublabel={`${years} years remaining`}
+          label={t('Maturity')}
+          sublabel={t('{0} years remaining', years)}
           value={mediumDate(maturity, locale)}
         />
       </div>
@@ -117,7 +117,7 @@ export function MortgageDetails({ mortgage }: { mortgage: MortgageInfo }) {
 }
 
 export function EquityProgress({ mortgage }: { mortgage: MortgageInfo }) {
-  const { formatMoney, locale } = useApp()
+  const { formatMoney, locale, t } = useApp()
   const equity = currentEquityCents(
     mortgage.purchase_price_cents,
     mortgage.original_loan_cents,
@@ -135,13 +135,13 @@ export function EquityProgress({ mortgage }: { mortgage: MortgageInfo }) {
   return (
     <Section>
       <div className="flex flex-col gap-2.5 p-5">
-        <Label>Equity</Label>
+        <Label>{t('Equity')}</Label>
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-[28px] font-light tracking-[-0.4px] tabular-nums text-text">
             {formatMoney(equity)}
           </span>
           <span className="shrink-0 text-[12px] text-text-3">
-            of {formatMoney(mortgage.purchase_price_cents)} · {(fraction * 100).toFixed(1)}%
+            {t('of {0} · {1}', formatMoney(mortgage.purchase_price_cents), `${(fraction * 100).toFixed(1)}%`)}
           </span>
         </div>
         <div className="mt-0.5 h-1.5 overflow-hidden rounded-full" style={{ background: 'rgba(0,0,0,0.05)' }}>
@@ -151,7 +151,7 @@ export function EquityProgress({ mortgage }: { mortgage: MortgageInfo }) {
           />
         </div>
         <p className="text-[13px] text-text-2">
-          Built since closing · {monthYear(new Date(mortgage.closing_date), locale)}
+          {t('Built since closing · {0}', monthYear(new Date(mortgage.closing_date), locale))}
         </p>
       </div>
     </Section>
@@ -159,7 +159,7 @@ export function EquityProgress({ mortgage }: { mortgage: MortgageInfo }) {
 }
 
 export function Amortization({ mortgage }: { mortgage: MortgageInfo }) {
-  const { locale } = useApp()
+  const { locale, t } = useApp()
   const schedule = upcomingAmortization(
     12,
     mortgage.original_loan_cents,
@@ -177,7 +177,7 @@ export function Amortization({ mortgage }: { mortgage: MortgageInfo }) {
   return (
     <Section>
       <div className="flex flex-col gap-3 p-5">
-        <Label right="Next 12 months">Amortization</Label>
+        <Label right={t('Next 12 months')}>{t('Amortization')}</Label>
         <div className="h-[140px] w-full">
           <ResponsiveContainer width="100%" height={140} minWidth={0}>
             <BarChart data={data} margin={{ top: 4, right: 0, bottom: 0, left: 0 }} barCategoryGap="20%">
@@ -196,8 +196,8 @@ export function Amortization({ mortgage }: { mortgage: MortgageInfo }) {
           </ResponsiveContainer>
         </div>
         <div className="flex items-center gap-4">
-          <LegendDot color="var(--positive)" label="Principal" />
-          <LegendDot color="rgba(26,24,21,0.18)" label="Interest" />
+          <LegendDot color="var(--positive)" label={t('Principal')} />
+          <LegendDot color="rgba(26,24,21,0.18)" label={t('Interest')} />
         </div>
       </div>
     </Section>

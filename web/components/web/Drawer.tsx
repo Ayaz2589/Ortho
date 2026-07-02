@@ -2,6 +2,7 @@
 
 import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useApp } from '@/lib/store'
 
 /**
  * The shared right-side slide-out panel — the same affordance the Transactions
@@ -64,6 +65,7 @@ export function DrawerHeader({
   onClose: () => void
   right?: ReactNode
 }) {
+  const { t } = useApp()
   return (
     <div
       style={{
@@ -77,7 +79,7 @@ export function DrawerHeader({
     >
       <button
         className="ow-btn ow-chip-btn"
-        aria-label="Close"
+        aria-label={t('Close')}
         onClick={onClose}
         style={{ width: 28, height: 28, zIndex: 1 }}
       >

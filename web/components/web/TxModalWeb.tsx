@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useApp } from '@/lib/store'
 import type { Transaction } from '@/lib/types'
 import { WebModal } from './WebModal'
 import {
@@ -31,17 +32,18 @@ export function TxModalWeb({
   copying?: Transaction | null
   initialTransfer?: TransferPrefill | null
 }) {
+  const { t } = useApp()
   const form = useTxForm({ editing, copying, initialTransfer })
   const [picking, setPicking] = useState(false)
   if (!open) return null
   const allowCopy = !editing && !initialTransfer
   const title = editing
     ? editing.kind === 'transfer'
-      ? 'Edit reimbursement'
-      : 'Edit transaction'
+      ? t('Edit reimbursement')
+      : t('Edit transaction')
     : initialTransfer
-      ? 'Settle up'
-      : 'New transaction'
+      ? t('Settle up')
+      : t('New transaction')
 
   return (
     <WebModal
@@ -51,7 +53,7 @@ export function TxModalWeb({
         if (form.submit()) onClose()
       }}
       canSave={form.canSave}
-      saveLabel={editing ? 'Save' : initialTransfer ? 'Record' : 'Add'}
+      saveLabel={editing ? t('Save') : initialTransfer ? t('Record') : t('Add')}
       hideHeader={picking}
     >
       {picking ? (

@@ -1,6 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
+import { useApp } from '@/lib/store'
 import { shortLabel, type DashboardRange } from './range'
 
 /** Segmented pill matching the iOS Dashboard range picker. */
@@ -13,6 +14,7 @@ export function RangePicker({
   value: DashboardRange
   onChange: (r: DashboardRange) => void
 }) {
+  const { t } = useApp()
   return (
     <div
       className="flex gap-1 rounded-[10px] p-1"
@@ -35,7 +37,7 @@ export function RangePicker({
                 : undefined
             }
           >
-            {shortLabel(o)}
+            {t(shortLabel(o))}
           </button>
         )
       })}

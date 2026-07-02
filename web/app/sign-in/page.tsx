@@ -1,13 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PrimaryButton } from '@/components/ui'
+import { makeT } from '@/lib/i18n'
+import { asLanguage, DEFAULT_LANGUAGE, type Language } from '@/lib/language'
 
 function SignIn() {
   const router = useRouter()
   const supabase = createClient()
+
+  // Not rendered under AppStateProvider, so build `t` locally from the same
+  // persisted language the store uses (read after mount, like the store).
+  const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE)
+  useEffect(() => {
+    setLanguage(asLanguage(localStorage.getItem('language')))
+  }, [])
+  const t = useMemo(() => makeT(language), [language])
 
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
@@ -51,7 +61,7 @@ function SignIn() {
             O
           </div>
           <h1 className="text-2xl font-light tracking-tight text-text">Ortho</h1>
-          <p className="mt-1 text-sm text-text-2">Household finance, in order.</p>
+          <p className="mt-1 text-sm text-text-2">{t('Household finance, in order.')}</p>
         </div>
 
         {!pendingEmail ? (
@@ -62,9 +72,9 @@ function SignIn() {
             }}
             className="flex flex-col gap-4"
           >
-            <h2 className="text-lg font-normal text-text">Sign in</h2>
+            <h2 className="text-lg font-normal text-text">{t('Sign in')}</h2>
             <p className="-mt-2 text-sm text-text-2">
-              We&apos;ll email you an 8-digit code. No password, no fuss.
+              {t("We'll email you an 8-digit code. No password, no fuss.")}
             </p>
             <input
               type="email"
@@ -76,10 +86,11 @@ function SignIn() {
             />
             {error && <p className="text-sm text-destructive">{error}</p>}
             <PrimaryButton type="submit" disabled={!validEmail || loading}>
-              {loading ? 'Sending…' : 'Send code'}
+              {loading ? t('Sending…') : t('Send code')}
             </PrimaryButton>
             <p className="text-center text-xs text-text-3">
-              By continuing you agree to our Terms and Privacy.
+              {/* Seed key carries iOS's **bold** markers; web renders it plain. */}
+              {t('By continuing you agree to our **Terms** and **Privacy**.').replace(/\*\*/g, '')}
             </p>
           </form>
         ) : (
@@ -90,9 +101,19 @@ function SignIn() {
             }}
             className="flex flex-col gap-4"
           >
-            <h2 className="text-lg font-normal text-text">Enter your code</h2>
+            <h2 className="text-lg font-normal text-text">{t('Enter your code')}</h2>
             <p className="-mt-2 text-sm text-text-2">
-              Sent to <span className="font-normal text-text">{pendingEmail}</span>.
+              {/* Seed key marks the email with iOS's **bold** markers; render
+                  the bold segments as styled spans. */}
+              {t('Sent to **{0}**.', pendingEmail).split('**').map((part, i) =>
+                i % 2 === 1 ? (
+                  <span key={i} className="font-normal text-text">
+                    {part}
+                  </span>
+                ) : (
+                  part
+                ),
+              )}
             </p>
             <input
               inputMode="numeric"
@@ -104,7 +125,7 @@ function SignIn() {
             />
             {error && <p className="text-sm text-destructive">{error}</p>}
             <PrimaryButton type="submit" disabled={code.length < 8 || loading}>
-              {loading ? 'Verifying…' : 'Verify'}
+              {loading ? t('Verifying…') : t('Verify')}
             </PrimaryButton>
             <div className="flex items-center justify-between text-xs text-text-2">
               <button
@@ -115,10 +136,10 @@ function SignIn() {
                   setError(null)
                 }}
               >
-                Use a different email
+                {t('Use a different email')}
               </button>
               <button type="button" onClick={() => sendCode(pendingEmail)}>
-                Send again
+                {t('Send again')}
               </button>
             </div>
           </form>

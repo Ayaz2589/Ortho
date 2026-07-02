@@ -14,7 +14,7 @@ export function TopMerchantsCard({
   interval: Interval
   label?: string
 }) {
-  const { transactions, formatMoney } = useApp()
+  const { transactions, formatMoney, t } = useApp()
 
   const entries = useMemo(() => {
     const inRange = (date: string) => {
@@ -34,10 +34,10 @@ export function TopMerchantsCard({
 
   return (
     <Card className="p-5">
-      <SectionLabel right={label ?? longLabel(range)}>Top merchants</SectionLabel>
+      <SectionLabel right={label ?? t(longLabel(range))}>{t('Top merchants')}</SectionLabel>
 
       {entries.length === 0 ? (
-        <p className="py-2 text-[13px] text-text-3">No expenses in this period yet.</p>
+        <p className="py-2 text-[13px] text-text-3">{t('No expenses in this period yet.')}</p>
       ) : (
         <div className="mt-2 flex flex-col">
           {entries.map((entry, idx) => (
@@ -49,7 +49,7 @@ export function TopMerchantsCard({
                     {entry.merchant}
                   </p>
                   <p className="text-xs text-text-3">
-                    {entry.count} {entry.count === 1 ? 'visit' : 'visits'}
+                    {entry.count === 1 ? t('1 visit') : t('{0} visits', entry.count)}
                   </p>
                 </div>
                 <span className="text-[15px] font-normal tabular-nums text-text">

@@ -69,7 +69,7 @@ const inRange = (iso: string, s: Date, e: Date) => {
 }
 
 export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
-  const { transactions, properties, budgets, formatMoney, locale } = useApp()
+  const { transactions, properties, budgets, formatMoney, locale, t } = useApp()
   const {
     now,
     range: activeRange,
@@ -86,7 +86,7 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
 
   const rangeOptions = scope.rangeOptions.map((r) => ({
     value: r,
-    label: r === 'thisMonth' ? 'Month' : r === 'last3Months' ? '3M' : r === 'last6Months' ? '6M' : '1Y',
+    label: r === 'thisMonth' ? t('Month') : r === 'last3Months' ? t('3M') : r === 'last6Months' ? t('6M') : t('1Y'),
   }))
 
   const expenses = useMemo(
@@ -137,8 +137,8 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
   const housing = useMemo(() => housingSummary(properties), [properties])
 
   const insights = useMemo(
-    () => generateInsights(transactions, budgets, properties, referenceDate, 2),
-    [transactions, budgets, properties, referenceDate]
+    () => generateInsights(transactions, budgets, properties, referenceDate, 2, t),
+    [transactions, budgets, properties, referenceDate, t]
   )
 
   const rangeLabel = periodLabel
@@ -152,7 +152,7 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
   const monthProgress = dayOfMonth / daysInMonth
   let heroCaption = ''
   if (isThisMonth) {
-    heroCaption = `Day ${dayOfMonth} of ${daysInMonth}`
+    heroCaption = t('Day {0} of {1}', dayOfMonth, daysInMonth)
   } else if (!isSpecificMonth) {
     const endDate = new Date(interval.end.getTime() - 1)
     heroCaption = `${shortDate(interval.start, locale)} – ${shortDate(endDate, locale)}`
@@ -161,7 +161,7 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
   return (
     <div className="ow-page-inner" style={{ maxWidth: 1080, paddingTop: 0, paddingBottom: 0 }}>
       <WebPageHeader
-        title="Dashboard"
+        title={t('Dashboard')}
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {rangeOptions.length > 1 && (
@@ -186,13 +186,13 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
           </div>
           <div style={{ display: 'flex', gap: 36, marginTop: 18 }}>
             <div>
-              <div className="ow-cap">Income</div>
+              <div className="ow-cap">{t('Income')}</div>
               <div style={{ fontSize: 17, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: 'var(--positive)', letterSpacing: '-0.3px' }}>
                 {formatMoney(income)}
               </div>
             </div>
             <div>
-              <div className="ow-cap">Expenses</div>
+              <div className="ow-cap">{t('Expenses')}</div>
               <div style={{ fontSize: 17, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: 'var(--text)', letterSpacing: '-0.3px' }}>
                 {formatMoney(expenseTotalC)}
               </div>
@@ -214,24 +214,24 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
 
         {/* Housing summary */}
         <div className="ow-card ow-s5" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
-          <CardLabel hint={`${housing.count} ${housing.count === 1 ? 'property' : 'properties'}`}>Housing</CardLabel>
+          <CardLabel hint={housing.count === 1 ? t('1 property') : t('{0} properties', housing.count)}>{t('Housing')}</CardLabel>
           {housing.count === 0 ? (
-            <div style={{ fontSize: 13, color: 'var(--text-2)' }}>No properties yet. Add one from the Housing tab.</div>
+            <div style={{ fontSize: 13, color: 'var(--text-2)' }}>{t('No properties yet. Add one from the Housing tab.')}</div>
           ) : housing.count === 1 ? (
             <>
               <div style={{ display: 'flex', gap: 36 }}>
                 <div>
-                  <div className="ow-cap">Monthly cost</div>
+                  <div className="ow-cap">{t('Monthly cost')}</div>
                   <div style={{ fontSize: 22, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.4px' }}>{formatMoney(housing.cost)}</div>
                 </div>
                 <div>
-                  <div className="ow-cap">Equity built</div>
+                  <div className="ow-cap">{t('Equity built')}</div>
                   <div style={{ fontSize: 22, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.4px' }}>{formatMoney(housing.equity)}</div>
                 </div>
               </div>
               {housing.multi && (
                 <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '0.5px solid var(--hairline)', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{ fontSize: 13, color: 'var(--text-2)' }}>Net rental income</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{t('Net rental income')}</span>
                   <span style={{ fontSize: 15, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: housing.netRental >= 0 ? 'var(--positive)' : 'var(--text)' }}>
                     {formatMoney(housing.netRental, { leadingPlus: housing.netRental > 0 })}
                   </span>
@@ -256,7 +256,7 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
                           {propertyTitle(p)}
                         </div>
                         <div style={{ fontSize: 12, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {propertySubtitle(p, formatMoney)}
+                          {propertySubtitle(p, formatMoney, t)}
                         </div>
                       </div>
                       <span style={{ fontSize: 15, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: 'var(--text)' }}>
@@ -268,15 +268,15 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
               })}
               <div style={{ height: 1, background: 'var(--hairline)', marginTop: 4 }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 10 }}>
-                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>Total</span>
+                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{t('Total')}</span>
                 <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: 'var(--text)' }}>
-                  {formatMoney(housing.cost)} / mo
+                  {t('{0} / mo', formatMoney(housing.cost))}
                 </span>
                 {housing.equity > 0 && (
                   <>
                     <span style={{ fontSize: 13, color: 'var(--text-3)' }}>·</span>
                     <span style={{ fontSize: 13, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: 'var(--positive)' }}>
-                      {formatMoney(housing.equity)} equity
+                      {t('{0} equity', formatMoney(housing.equity))}
                     </span>
                   </>
                 )}
@@ -312,21 +312,21 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
         <div className="ow-s6" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <PerOwnerBreakdownCard range={activeRange} interval={interval} label={isSpecificMonth ? periodLabel : undefined} />
           <Link href="/transactions" className="ow-quiet-link">
-            See all activity →
+            {t('See all activity')} →
           </Link>
         </div>
 
         {/* Top merchants */}
         <div className="ow-card ow-s6" style={{ padding: '12px 0' }}>
-          <CardLabel hint={rangeLabel} style={{ padding: '12px 24px 0', marginBottom: 6 }}>Top merchants</CardLabel>
+          <CardLabel hint={rangeLabel} style={{ padding: '12px 24px 0', marginBottom: 6 }}>{t('Top merchants')}</CardLabel>
           {merchants.length === 0 ? (
-            <div style={{ fontSize: 13, color: 'var(--text-3)', padding: '0 24px 12px' }}>No expenses in this period yet.</div>
+            <div style={{ fontSize: 13, color: 'var(--text-3)', padding: '0 24px 12px' }}>{t('No expenses in this period yet.')}</div>
           ) : (
             merchants.map(([name, info], i) => (
               <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 24px', borderTop: i === 0 ? 'none' : '0.5px solid var(--hairline)' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 400, letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{info.count} {info.count === 1 ? 'visit' : 'visits'}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{info.count === 1 ? t('1 visit') : t('{0} visits', info.count)}</div>
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.2px' }}>{formatMoney(info.cents)}</div>
               </div>
@@ -337,10 +337,10 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
         {/* Daily trend — empty state + sage tint for a spending decrease, matching
             the mobile DailySpendTrendCard / iOS (loss is never red; a drop is sage). */}
         <div className="ow-card ow-s6" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
-          <CardLabel hint="Last 30 days">Daily trend</CardLabel>
+          <CardLabel hint={t('Last 30 days')}>{t('Daily trend')}</CardLabel>
           {trend.recent.every((c) => c === 0) ? (
             <p style={{ padding: '20px 0', fontSize: 13, color: 'var(--text-3)' }}>
-              No expenses in the last 30 days.
+              {t('No expenses in the last 30 days.')}
             </p>
           ) : (
             <>
@@ -351,12 +351,12 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 16 }}>
                 <div>
-                  <div className="ow-cap">Avg / day</div>
+                  <div className="ow-cap">{t('Avg / day')}</div>
                   <div style={{ fontSize: 17, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px' }}>{formatMoney(trend.avg)}</div>
                 </div>
                 {trend.delta !== null && (
                   <div style={{ textAlign: 'right' }}>
-                    <div className="ow-cap">vs. prior 30</div>
+                    <div className="ow-cap">{t('vs. prior 30')}</div>
                     <div
                       style={{
                         fontSize: 17,

@@ -15,7 +15,7 @@ import { isRenewalSoon } from './lease'
 
 /** The kind-specific card stack for one property, plus the Delete button. */
 export function PropertyContent({ property }: { property: Property }) {
-  const { deleteProperty } = useApp()
+  const { deleteProperty, t } = useApp()
   const [confirming, setConfirming] = useState(false)
 
   // A server property missing its kind's sub-row (mortgage/lease) renders a
@@ -31,7 +31,7 @@ export function PropertyContent({ property }: { property: Property }) {
           className="rounded-2xl bg-surface p-5 text-[15px] text-text-2"
           style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
         >
-          Incomplete property — tap Edit to finish setup.
+          {t('Incomplete property — tap Edit to finish setup.')}
         </div>
       )}
 
@@ -70,7 +70,8 @@ export function PropertyContent({ property }: { property: Property }) {
           style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
         >
           <p className="text-center text-[14px] text-text-2">
-            Delete this property? Mortgage, lease, and payment history will be removed.
+            {t('Delete this property?')}{' '}
+            {t('Mortgage info, lease details, and rental payment history for this property will be removed.')}
           </p>
           <div className="flex gap-3">
             <button
@@ -79,7 +80,7 @@ export function PropertyContent({ property }: { property: Property }) {
               className="flex-1 rounded-full py-3 text-[15px] font-normal text-text-2"
               style={{ background: 'rgba(0,0,0,0.05)' }}
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button
               type="button"
@@ -87,7 +88,7 @@ export function PropertyContent({ property }: { property: Property }) {
               className="flex-1 rounded-full py-3 text-[15px] font-normal text-white"
               style={{ background: 'var(--destructive)' }}
             >
-              Delete
+              {t('Delete')}
             </button>
           </div>
         </div>
@@ -98,7 +99,7 @@ export function PropertyContent({ property }: { property: Property }) {
           className="rounded-2xl bg-surface py-3.5 text-center text-[17px] font-normal text-destructive"
           style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
         >
-          Delete property
+          {t('Delete property')}
         </button>
       )}
     </div>

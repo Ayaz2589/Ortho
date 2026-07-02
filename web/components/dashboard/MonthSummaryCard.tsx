@@ -25,7 +25,7 @@ export function MonthSummaryCard({
   /** True when a specific month is selected — suppresses the this-month capsule. */
   isSpecificMonth?: boolean
 }) {
-  const { transactions, formatMoney, locale } = useApp()
+  const { transactions, formatMoney, locale, t } = useApp()
   const isThisMonth = range === 'thisMonth' && !isSpecificMonth
 
   const inRange = (date: string) => {
@@ -51,7 +51,7 @@ export function MonthSummaryCard({
 
   let rightCaption: string
   if (isThisMonth) {
-    rightCaption = `Day ${dayOfMonth} of ${daysInMonth}`
+    rightCaption = t('Day {0} of {1}', dayOfMonth, daysInMonth)
   } else if (isSpecificMonth) {
     // The header already names the selected month; a date-range caption here would
     // format the UTC month bounds in local time and can drift a day near edges.
@@ -66,7 +66,7 @@ export function MonthSummaryCard({
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <span className="text-[13px] font-normal uppercase tracking-[0.6px] text-text-2">
-            {label ?? longLabel(range)}
+            {label ?? t(longLabel(range))}
           </span>
           <span className="text-xs text-text-3 tabular-nums">{rightCaption}</span>
         </div>
@@ -79,8 +79,8 @@ export function MonthSummaryCard({
         </div>
 
         <div className="mt-0.5 flex gap-4">
-          <StatColumn label="Income" amount={formatMoney(income)} tint="var(--positive)" />
-          <StatColumn label="Expenses" amount={formatMoney(expenses)} tint="var(--text)" />
+          <StatColumn label={t('Income')} amount={formatMoney(income)} tint="var(--positive)" />
+          <StatColumn label={t('Expenses')} amount={formatMoney(expenses)} tint="var(--text)" />
         </div>
 
         {isThisMonth && (

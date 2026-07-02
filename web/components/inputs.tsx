@@ -107,13 +107,14 @@ const navBtnStyle = {
 export function DatePicker({
   value,
   onChange,
-  ariaLabel = 'Choose date',
+  ariaLabel,
 }: {
   value: string
   onChange: (iso: string) => void
   ariaLabel?: string
 }) {
-  const { locale } = useApp()
+  const { locale, t } = useApp()
+  const label = ariaLabel ?? t('Choose date')
   const [open, setOpen] = useState(false)
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -208,7 +209,7 @@ export function DatePicker({
       <button
         ref={triggerRef}
         type="button"
-        aria-label={ariaLabel}
+        aria-label={label}
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => (open ? setOpen(false) : openPicker())}
@@ -229,7 +230,7 @@ export function DatePicker({
           padding: 0,
         }}
       >
-        {selected ? mediumDate(selected, locale) : 'Select date'}
+        {selected ? mediumDate(selected, locale) : t('Select date')}
         <ChevronDown size={14} style={{ color: 'var(--text-3)' }} />
       </button>
 
@@ -238,7 +239,7 @@ export function DatePicker({
             <div
               ref={popRef}
               role="dialog"
-              aria-label={ariaLabel}
+              aria-label={label}
               style={{
                 position: 'fixed',
                 top: coords.top,
@@ -255,7 +256,7 @@ export function DatePicker({
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 2px 8px' }}>
                 <button
                   className="ow-btn ow-chip-btn"
-                  aria-label="Previous month"
+                  aria-label={t('Previous month')}
                   onClick={() => setView(new Date(view.getFullYear(), view.getMonth() - 1, 1))}
                   style={navBtnStyle}
                 >
@@ -266,7 +267,7 @@ export function DatePicker({
                 </span>
                 <button
                   className="ow-btn ow-chip-btn"
-                  aria-label="Next month"
+                  aria-label={t('Next month')}
                   onClick={() => setView(new Date(view.getFullYear(), view.getMonth() + 1, 1))}
                   style={navBtnStyle}
                 >
@@ -327,7 +328,7 @@ export function DatePicker({
                   onClick={() => pick(new Date())}
                   style={{ fontSize: 13, fontWeight: 400, color: 'var(--accent)', padding: '2px 8px' }}
                 >
-                  Today
+                  {t('Today')}
                 </button>
               </div>
             </div>,

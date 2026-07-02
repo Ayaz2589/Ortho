@@ -26,7 +26,9 @@ export const DEFAULT_LOCALE = 'en-US'
  *  render time from the browser, so it has no fixed entry here. */
 const LOCALE_BY_LANGUAGE: Record<Exclude<Language, 'System'>, string> = {
   English: 'en-US',
-  বাংলা: 'bn-BD',
+  // Latin digits, matching iOS's deliberate choice (AppLanguage: "bn uses
+  // latn digits") — money and dates keep Western numerals under বাংলা.
+  বাংলা: 'bn-BD-u-nu-latn',
   Español: 'es-ES',
   日本語: 'ja-JP',
   简体中文: 'zh-Hans',

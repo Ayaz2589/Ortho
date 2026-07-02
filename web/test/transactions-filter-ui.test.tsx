@@ -25,6 +25,7 @@ vi.mock('@/lib/store', () => ({
     currentHousehold: HOUSEHOLD,
     resolveUser: (id: string) => ({ id, name: id === 'u1' ? 'Alex' : 'Sam', initial: 'X', color_key: 'sage' }),
     formatMoney: (c: number) => `$${(c / 100).toFixed(2)}`,
+    t: (k: string, ...a: Array<string | number>) => (a.length ? k.replace(/\{(\d+)\}/g, (m, i) => String(a[Number(i)] ?? m)) : k),
     deleteTransaction: vi.fn(),
     locale: 'en-US',
   }),

@@ -40,11 +40,11 @@ function TxDetailContent({
   onEdit: () => void
   onDelete: () => void
 }) {
-  const { currentHousehold } = useApp()
+  const { currentHousehold, t } = useApp()
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   // Kind + household name, like iOS's detail nav title ("Expense · Home").
-  const kindLabel = tx.kind === 'transfer' ? 'Reimbursement' : tx.kind === 'income' ? 'Income' : 'Expense'
+  const kindLabel = tx.kind === 'transfer' ? t('Reimbursement') : tx.kind === 'income' ? t('Income') : t('Expense')
   const title =
     currentHousehold && tx.household_id === currentHousehold.id
       ? `${kindLabel} · ${currentHousehold.name}`
@@ -56,7 +56,7 @@ function TxDetailContent({
         <div style={{ fontSize: 13, fontWeight: 400, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-2)' }}>
           {title}
         </div>
-        <button className="ow-btn ow-chip-btn" aria-label="Close" onClick={onClose} style={{ width: 28, height: 28 }}>
+        <button className="ow-btn ow-chip-btn" aria-label={t('Close')} onClick={onClose} style={{ width: 28, height: 28 }}>
           <svg width="11" height="11" viewBox="0 0 12 12">
             <path d="M2 2l8 8M10 2l-8 8" stroke="var(--text-2)" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
@@ -69,20 +69,20 @@ function TxDetailContent({
 
       <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px 18px', borderTop: '0.5px solid var(--hairline)' }}>
         <button className="ow-btn" onClick={onEdit} style={{ fontSize: 14, fontWeight: 400, color: 'var(--accent)', letterSpacing: '-0.1px', padding: '4px 0' }}>
-          Edit transaction
+          {t('Edit transaction')}
         </button>
         {confirmDelete ? (
           <span style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <button className="ow-btn ow-quiet-link" onClick={() => setConfirmDelete(false)}>
-              Cancel
+              {t('Cancel')}
             </button>
             <button className="ow-btn" onClick={onDelete} style={{ fontSize: 13, fontWeight: 400, color: 'var(--destructive)', letterSpacing: '-0.1px' }}>
-              Delete
+              {t('Delete')}
             </button>
           </span>
         ) : (
           <button className="ow-btn ow-quiet-link" onClick={() => setConfirmDelete(true)}>
-            Delete
+            {t('Delete')}
           </button>
         )}
       </div>
@@ -101,7 +101,7 @@ function TxRow({
   onClick: () => void
   onCopy: () => void
 }) {
-  const { formatMoney, resolveUser } = useApp()
+  const { formatMoney, resolveUser, t } = useApp()
   const isIncome = tx.kind === 'income'
   const isTransfer = tx.kind === 'transfer'
   const ownerUsers = tx.owner_ids.map(resolveUser)
@@ -140,7 +140,7 @@ function TxRow({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           <SourceDot />
           <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {isTransfer ? 'Reimbursement' : tx.source}
+            {isTransfer ? t('Reimbursement') : tx.source}
           </span>
         </div>
         <div style={{ fontSize: 14.5, fontWeight: 400, textAlign: 'right', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px', whiteSpace: 'nowrap', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
@@ -151,8 +151,8 @@ function TxRow({
           (same semantics as mobile web's row-menu Copy / iOS's swipe Copy). */}
       <button
         className="ow-btn ow-chip-btn ow-row-action"
-        aria-label="Copy transaction"
-        title="Copy transaction"
+        aria-label={t('Copy transaction')}
+        title={t('Copy transaction')}
         onClick={onCopy}
         style={{ width: 28, height: 28, background: 'var(--surface)', boxShadow: '0 0 0 0.5px var(--hairline), 0 1px 2px rgba(0,0,0,0.06)' }}
       >
@@ -166,7 +166,7 @@ function TxRow({
 }
 
 export function TransactionsDesktop() {
-  const { transactions, formatMoney, deleteTransaction, locale } = useApp()
+  const { transactions, formatMoney, deleteTransaction, locale, t } = useApp()
   const f = useTransactionFilters()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
@@ -287,14 +287,14 @@ export function TransactionsDesktop() {
       }}
     >
       <WebPageHeader
-        title="Transactions"
+        title={t('Transactions')}
         actions={
           <>
             <div style={{ width: 260 }}>
-              <WebSearchInput value={f.criteria.query} onChange={f.setQuery} placeholder="Search transactions" />
+              <WebSearchInput value={f.criteria.query} onChange={f.setQuery} placeholder={t('Search transactions')} />
             </div>
             <span style={{ position: 'relative', display: 'inline-flex' }}>
-              <ChipIconButton label={f.count > 0 ? `Filters (${f.count} active)` : 'Filters'} onClick={() => setFilterOpen(true)}>
+              <ChipIconButton label={f.count > 0 ? t('Filters ({0} active)', f.count) : t('Filters')} onClick={() => setFilterOpen(true)}>
                 <SlidersHorizontal size={16} />
               </ChipIconButton>
               {f.count > 0 && (
@@ -322,7 +322,7 @@ export function TransactionsDesktop() {
                 </span>
               )}
             </span>
-            <ChipIconButton label="Add transaction" onClick={openNew}>
+            <ChipIconButton label={t('Add transaction')} onClick={openNew}>
               <PlusGlyph />
             </ChipIconButton>
           </>
@@ -340,22 +340,22 @@ export function TransactionsDesktop() {
 
       {transactions.length === 0 ? (
         <p style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-2)', fontSize: 14 }}>
-          No transactions yet. Add your first one.
+          {t('No transactions yet. Add your first one.')}
         </p>
       ) : noMatches ? (
         <div style={{ padding: '56px 0', textAlign: 'center' }}>
           <p style={{ color: 'var(--text-2)', fontSize: 14, marginBottom: 12 }}>
-            No transactions match your filters.
+            {t('No transactions match your filters.')}
           </p>
-          <AccentTextButton onClick={f.clearAll}>Clear filters</AccentTextButton>
+          <AccentTextButton onClick={f.clearAll}>{t('Clear filters')}</AccentTextButton>
         </div>
       ) : (
         <>
           <div className="ow-tab-row ow-tab-head" style={{ gridTemplateColumns: TX_COLS }}>
-            <div>Merchant</div>
-            <div>Owner</div>
-            <div>Source</div>
-            <div style={{ textAlign: 'right' }}>Amount</div>
+            <div>{t('Merchant')}</div>
+            <div>{t('Owner')}</div>
+            <div>{t('Source')}</div>
+            <div style={{ textAlign: 'right' }}>{t('Amount')}</div>
           </div>
 
           {months.map((m) => {
@@ -422,11 +422,11 @@ export function TransactionsDesktop() {
         <div className="ow-drawer-scrim" onClick={closePanel} aria-hidden="true" />
       )}
       {panelOpen && (
-        <aside className="ow-drawer" aria-label="Transaction">
+        <aside className="ow-drawer" aria-label={t('Transaction')}>
           {addOpen ? (
             <TxFormContent
-              title={settlePrefill ? 'Settle up' : 'New transaction'}
-              saveLabel={settlePrefill ? 'Record' : 'Add'}
+              title={settlePrefill ? t('Settle up') : t('New transaction')}
+              saveLabel={settlePrefill ? t('Record') : t('Add')}
               copying={copySource}
               initialTransfer={settlePrefill}
               onDone={() => {
@@ -442,8 +442,8 @@ export function TransactionsDesktop() {
             />
           ) : editing && selected ? (
             <TxFormContent
-              title={selected.kind === 'transfer' ? 'Edit reimbursement' : 'Edit transaction'}
-              saveLabel="Save"
+              title={selected.kind === 'transfer' ? t('Edit reimbursement') : t('Edit transaction')}
+              saveLabel={t('Save')}
               editing={selected}
               onDone={() => setEditing(false)}
               onCancel={() => setEditing(false)}
@@ -463,11 +463,11 @@ export function TransactionsDesktop() {
       )}
 
       {/* Filters live in their own right-side drawer, independent of the detail panel. */}
-      <Drawer open={filterOpen} onClose={() => setFilterOpen(false)} label="Filters">
+      <Drawer open={filterOpen} onClose={() => setFilterOpen(false)} label={t('Filters')}>
         <DrawerHeader
-          title="Filters"
+          title={t('Filters')}
           onClose={() => setFilterOpen(false)}
-          right={f.count > 0 ? <AccentTextButton onClick={f.clearAll}>Clear</AccentTextButton> : undefined}
+          right={f.count > 0 ? <AccentTextButton onClick={f.clearAll}>{t('Clear')}</AccentTextButton> : undefined}
         />
         <div style={{ padding: '18px 20px 28px', overflowY: 'auto' }}>
           <FilterPanel f={f} />

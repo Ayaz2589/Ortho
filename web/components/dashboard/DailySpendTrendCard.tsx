@@ -12,7 +12,7 @@ import { startOfDay } from '@/lib/format'
  * ignores the dashboard range.
  */
 export function DailySpendTrendCard({ now }: { now: Date }) {
-  const { transactions, formatMoney } = useApp()
+  const { transactions, formatMoney, t } = useApp()
 
   // 60 days of daily expense cents, index 0 oldest .. 59 = today.
   const allDays = useMemo(() => {
@@ -44,10 +44,10 @@ export function DailySpendTrendCard({ now }: { now: Date }) {
 
   return (
     <Card className="p-5">
-      <SectionLabel right="Last 30 days">Daily trend</SectionLabel>
+      <SectionLabel right={t('Last 30 days')}>{t('Daily trend')}</SectionLabel>
 
       {allZero ? (
-        <p className="py-5 text-[13px] text-text-3">No expenses in the last 30 days.</p>
+        <p className="py-5 text-[13px] text-text-3">{t('No expenses in the last 30 days.')}</p>
       ) : (
         <>
           <div className="mt-3 h-20 w-full">
@@ -68,10 +68,10 @@ export function DailySpendTrendCard({ now }: { now: Date }) {
           </div>
 
           <div className="mt-3 flex items-baseline justify-between">
-            <Readout label="Avg / day" value={formatMoney(avgPerDay)} />
+            <Readout label={t('Avg / day')} value={formatMoney(avgPerDay)} />
             {trendDelta != null && (
               <Readout
-                label="vs. prior 30"
+                label={t('vs. prior 30')}
                 value={deltaString(trendDelta)}
                 tint={trendDelta >= 0 ? 'var(--text-2)' : 'var(--positive)'}
               />

@@ -21,6 +21,7 @@ import {
   localeForLanguage,
   type Language,
 } from './language'
+import { makeT, type Translate } from './i18n'
 import type {
   User,
   Person,
@@ -78,6 +79,9 @@ interface AppStateValue {
   chooseLanguage: (language: Language) => void
   rate: (c: CurrencyKey) => number
   formatMoney: (cents: number, opts?: { leadingPlus?: boolean }) => string
+  /** Translate a UI string for the selected language (identity in English).
+   *  Positional args fill {0},{1}… placeholders — the iOS %@/%lld mirror. */
+  t: Translate
 
   /** Resolve a person id (a transaction owner) to its display fields. */
   resolveUser: (id: string) => User
@@ -220,6 +224,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setLocale(localeForLanguage(next))
     localStorage.setItem('language', next)
   }
+
+  const t = useMemo(() => makeT(language), [language])
 
   // supabase-js resolves with `{ error }` instead of throwing, so a missed
   // check reads as success — during bootstrap that turned a transient read
@@ -993,6 +999,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     chooseLanguage,
     rate,
     formatMoney,
+    t,
     resolveUser,
     ownersDisplay,
     categoryExpenseTotal,

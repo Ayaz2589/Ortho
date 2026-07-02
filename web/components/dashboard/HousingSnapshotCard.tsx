@@ -5,6 +5,7 @@ import { useApp } from '@/lib/store'
 import { Card, SectionLabel } from '@/components/ui'
 import { monthlyPaymentCents, currentEquityCents } from '@/lib/finance/mortgage'
 import { daysUntilEnd } from '@/components/housing/lease'
+import type { Translate } from '@/lib/i18n'
 import type { Property } from '@/lib/types'
 
 function mortgagePayment(p: Property): number {
@@ -49,7 +50,7 @@ export function propertyTitle(p: Property): string {
 }
 
 export function HousingSnapshotCard() {
-  const { properties, formatMoney } = useApp()
+  const { properties, formatMoney, t } = useApp()
 
   const totalMonthlyCost = properties.reduce((s, p) => s + monthlyCost(p), 0)
   const totalEquity = properties.reduce((s, p) => s + equity(p), 0)
@@ -68,29 +69,29 @@ export function HousingSnapshotCard() {
 
   const count = properties.length
   const countLabel =
-    count === 0 ? '' : `${count} ${count === 1 ? 'property' : 'properties'}`
+    count === 0 ? '' : count === 1 ? t('1 property') : t('{0} properties', count)
 
   return (
     <Card className="p-5">
-      <SectionLabel right={countLabel}>Housing</SectionLabel>
+      <SectionLabel right={countLabel}>{t('Housing')}</SectionLabel>
 
       {count === 0 ? (
         <p className="py-2 text-[13px] text-text-3">
-          No properties yet. Add one from the Housing tab.
+          {t('No properties yet. Add one from the Housing tab.')}
         </p>
       ) : count === 1 ? (
         <div className="mt-3 flex flex-col gap-3">
           <div className="flex gap-6">
-            <StatColumn label="Monthly cost" value={formatMoney(totalMonthlyCost)} />
+            <StatColumn label={t('Monthly cost')} value={formatMoney(totalMonthlyCost)} />
             <StatColumn
-              label="Equity built"
+              label={t('Equity built')}
               value={formatMoney(totalEquity)}
               tint="var(--positive)"
             />
           </div>
           {netRentalIncome != null && (
             <div className="mt-0.5 flex items-center justify-between">
-              <span className="text-[13px] text-text-2">Net rental income</span>
+              <span className="text-[13px] text-text-2">{t('Net rental income')}</span>
               <span
                 className="text-[13px] font-normal tabular-nums"
                 style={{
@@ -121,7 +122,7 @@ export function HousingSnapshotCard() {
                     <p className="truncate text-[15px] font-normal text-text">
                       {propertyTitle(p)}
                     </p>
-                    <p className="truncate text-xs text-text-3">{subtitle(p, formatMoney)}</p>
+                    <p className="truncate text-xs text-text-3">{subtitle(p, formatMoney, t)}</p>
                   </div>
                   <span className="text-[15px] font-normal tabular-nums text-text">
                     {formatMoney(headlineCost(p))}
@@ -132,9 +133,9 @@ export function HousingSnapshotCard() {
           })}
           <div className="mt-1 h-px bg-hairline" />
           <div className="mt-2.5 flex items-center gap-2">
-            <span className="text-[13px] text-text-2">Total</span>
+            <span className="text-[13px] text-text-2">{t('Total')}</span>
             <span className="ml-auto text-[13px] font-normal tabular-nums text-text">
-              {formatMoney(totalMonthlyCost)} / mo
+              {t('{0} / mo', formatMoney(totalMonthlyCost))}
             </span>
             {totalEquity > 0 && (
               <>
@@ -143,7 +144,7 @@ export function HousingSnapshotCard() {
                   className="text-[13px] font-normal tabular-nums"
                   style={{ color: 'var(--positive)' }}
                 >
-                  {formatMoney(totalEquity)} equity
+                  {t('{0} equity', formatMoney(totalEquity))}
                 </span>
               </>
             )}
@@ -160,22 +161,32 @@ export function headlineCost(p: Property): number {
   return 0
 }
 
-export function subtitle(p: Property, formatMoney: (c: number) => string): string {
+/** Interpolating identity fallback so callers without a store `t` still render English. */
+const identityT: Translate = (key, ...args) =>
+  args.length ? key.replace(/\{(\d+)\}/g, (m, i) => String(args[Number(i)] ?? m)) : key
+
+export function subtitle(
+  p: Property,
+  formatMoney: (c: number) => string,
+  t: Translate = identityT
+): string {
   switch (p.kind) {
     case 'primary_home':
-      return `Primary home · ${formatMoney(equity(p))} equity`
+      return `${t('Primary home')} · ${t('{0} equity', formatMoney(equity(p)))}`
     case 'multifamily': {
       const n = (p.units ?? []).length
-      return `Multifamily · ${n} unit${n === 1 ? '' : 's'} · ${formatMoney(equity(p))} equity`
+      const units = n === 1 ? t('1 unit') : t('{0} units', n)
+      return `${t('Multifamily')} · ${units} · ${t('{0} equity', formatMoney(equity(p)))}`
     }
     case 'rental': {
       // Lease days-remaining, like iOS ("Rental · N days left"); plain
       // "Rental" once the lease has ended or when there's no lease.
       if (p.lease) {
         const days = daysUntilEnd(p.lease)
-        if (days >= 0) return `Rental · ${days} ${days === 1 ? 'day' : 'days'} left`
+        if (days >= 0)
+          return `${t('Rental')} · ${days === 1 ? t('1 day left') : t('{0} days left', days)}`
       }
-      return 'Rental'
+      return t('Rental')
     }
   }
 }

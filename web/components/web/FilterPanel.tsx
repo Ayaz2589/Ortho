@@ -1,6 +1,7 @@
 'use client'
 
 import { CATEGORIES, SPEND_CATEGORIES } from '@/lib/categories'
+import { useApp } from '@/lib/store'
 import { CatTile } from '@/components/web/kit'
 import { Segmented, SectionLabel } from '@/components/ui'
 import type { TransactionCategory, TransactionKind } from '@/lib/types'
@@ -40,16 +41,17 @@ function Chip({
 
 /** The filter surface body — shown inside a bottom-sheet (compact) or right Drawer (desktop). */
 export function FilterPanel({ f }: { f: TxFilters }) {
+  const { t } = useApp()
   return (
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-2.5">
-        <SectionLabel>Type</SectionLabel>
+        <SectionLabel>{t('Type')}</SectionLabel>
         <Segmented<'all' | TransactionKind>
           options={[
-            { value: 'all', label: 'All' },
-            { value: 'expense', label: 'Expenses' },
-            { value: 'income', label: 'Income' },
-            { value: 'transfer', label: 'Transfers' },
+            { value: 'all', label: t('All') },
+            { value: 'expense', label: t('Expenses') },
+            { value: 'income', label: t('Income') },
+            { value: 'transfer', label: t('Transfers') },
           ]}
           value={f.criteria.kind}
           onChange={f.setKind}
@@ -57,12 +59,12 @@ export function FilterPanel({ f }: { f: TxFilters }) {
       </section>
 
       <section className="flex flex-col gap-2.5">
-        <SectionLabel>Category</SectionLabel>
+        <SectionLabel>{t('Category')}</SectionLabel>
         <div className="flex flex-wrap gap-2">
           {ALL_CATEGORIES.map((c) => (
-            <Chip key={c} active={f.criteria.categories.includes(c)} onClick={() => f.toggleCategory(c)} label={CATEGORIES[c].label}>
+            <Chip key={c} active={f.criteria.categories.includes(c)} onClick={() => f.toggleCategory(c)} label={t(CATEGORIES[c].label)}>
               <CatTile category={c} size={18} />
-              {CATEGORIES[c].label}
+              {t(CATEGORIES[c].label)}
             </Chip>
           ))}
         </div>
@@ -70,7 +72,7 @@ export function FilterPanel({ f }: { f: TxFilters }) {
 
       {f.sourceOptions.length > 0 && (
         <section className="flex flex-col gap-2.5">
-          <SectionLabel>Source</SectionLabel>
+          <SectionLabel>{t('Source')}</SectionLabel>
           <div className="flex flex-wrap gap-2">
             {f.sourceOptions.map((s) => (
               <Chip key={s} active={f.criteria.sources.includes(s)} onClick={() => f.toggleSource(s)} label={s}>
@@ -83,7 +85,7 @@ export function FilterPanel({ f }: { f: TxFilters }) {
 
       {f.ownerOptions.length > 1 && (
         <section className="flex flex-col gap-2.5">
-          <SectionLabel>Owner</SectionLabel>
+          <SectionLabel>{t('Owner')}</SectionLabel>
           <div className="flex flex-wrap gap-2">
             {f.ownerOptions.map((o) => (
               <Chip key={o.id} active={f.criteria.owners.includes(o.id)} onClick={() => f.toggleOwner(o.id)} label={o.name}>
@@ -96,7 +98,7 @@ export function FilterPanel({ f }: { f: TxFilters }) {
 
       {f.monthOptions.length > 0 && (
         <section className="flex flex-col gap-2.5">
-          <SectionLabel>Month</SectionLabel>
+          <SectionLabel>{t('Month')}</SectionLabel>
           <div className="flex flex-wrap gap-2">
             {f.monthOptions.map((m) => {
               const active = f.selectedMonth === m.value

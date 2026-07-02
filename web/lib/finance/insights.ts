@@ -39,6 +39,13 @@ function catLabel(c: TransactionCategory): string {
   return CATEGORIES[c].label
 }
 
+/** Translation hook, mirroring iOS InsightEngine's `tr`. The default is an
+ *  interpolating identity so the golden-vector generator (and any caller
+ *  without a store) keeps producing the canonical English strings. */
+export type InsightTranslate = (key: string, ...args: Array<string | number>) => string
+const identityTr: InsightTranslate = (key, ...args) =>
+  args.length ? key.replace(/\{(\d+)\}/g, (m, i) => String(args[Number(i)] ?? m)) : key
+
 /**
  * Generate dashboard insights from household data. Returns up to `limit`
  * insights, sorted by severity then magnitude.
@@ -48,7 +55,8 @@ export function generateInsights(
   budgets: Budget[],
   properties: Property[],
   now: Date = new Date(),
-  limit: number = 6
+  limit: number = 6,
+  tr: InsightTranslate = identityTr
 ): Insight[] {
   const out: Insight[] = []
   const [mStart, mEnd] = monthInterval(now)
@@ -84,8 +92,8 @@ export function generateInsights(
     const share = Math.round((topVal / monthTotal) * 100)
     out.push({
       id: `top-category-${topCat}-${monthTag(now)}`,
-      title: `${catLabel(topCat)} is your top category`,
-      body: `${usd(topVal)} this month — ${share}% of total spend.`,
+      title: tr('{0} is your top category', tr(catLabel(topCat))),
+      body: tr('{0} this month — {1}% of total spend.', usd(topVal), share),
       severity: 'info',
       icon: 'top',
       category: topCat,
@@ -104,8 +112,8 @@ export function generateInsights(
     const up = delta > 0
     out.push({
       id: `mom-${c}-${monthTag(now)}`,
-      title: `${catLabel(c)} ${up ? 'up' : 'down'} ${pct}% vs last month`,
-      body: `${usd(prior)} → ${usd(current)}.`,
+      title: up ? tr('{0} up {1}% vs last month', tr(catLabel(c)), pct) : tr('{0} down {1}% vs last month', tr(catLabel(c)), pct),
+      body: tr('{0} → {1}.', usd(prior), usd(current)),
       severity: up ? 'warning' : 'positive',
       icon: up ? 'up' : 'down',
       category: c,
@@ -122,8 +130,8 @@ export function generateInsights(
       const over = spent - b.monthly_limit_cents
       out.push({
         id: `budget-over-${b.category}-${monthTag(now)}`,
-        title: `Over budget on ${catLabel(b.category)}`,
-        body: `You're ${usd(over)} over your ${usd(b.monthly_limit_cents)} limit with ${daysLeft} days left.`,
+        title: tr('Over budget on {0}', tr(catLabel(b.category))),
+        body: tr("You're {0} over your {1} limit with {2} days left.", usd(over), usd(b.monthly_limit_cents), daysLeft),
         severity: 'critical',
         icon: 'alert',
         category: b.category,
@@ -133,8 +141,8 @@ export function generateInsights(
       const remaining = b.monthly_limit_cents - spent
       out.push({
         id: `budget-near-${b.category}-${monthTag(now)}`,
-        title: `Approaching ${catLabel(b.category)} limit`,
-        body: `${usd(remaining)} left of ${usd(b.monthly_limit_cents)} with ${daysLeft} days to go.`,
+        title: tr('Approaching {0} limit', tr(catLabel(b.category))),
+        body: tr('{0} left of {1} with {2} days to go.', usd(remaining), usd(b.monthly_limit_cents), daysLeft),
         severity: 'warning',
         icon: 'gauge',
         category: b.category,
@@ -144,8 +152,8 @@ export function generateInsights(
       const remaining = b.monthly_limit_cents - spent
       out.push({
         id: `budget-under-${b.category}-${monthTag(now)}`,
-        title: `Under budget on ${catLabel(b.category)}`,
-        body: `${usd(remaining)} of ${usd(b.monthly_limit_cents)} still available with ${daysLeft} days left.`,
+        title: tr('Under budget on {0}', tr(catLabel(b.category))),
+        body: tr('{0} of {1} still available with {2} days left.', usd(remaining), usd(b.monthly_limit_cents), daysLeft),
         severity: 'positive',
         icon: 'check',
         category: b.category,
@@ -163,8 +171,8 @@ export function generateInsights(
     if (net < 0) {
       out.push({
         id: `cashflow-deficit-${monthTag(now)}`,
-        title: 'Spending exceeds income',
-        body: `You're ${usd(-net)} over this month: ${usd(monthTotal)} out vs ${usd(monthIncome)} in.`,
+        title: tr('Spending exceeds income'),
+        body: tr("You're {0} over this month: {1} out vs {2} in.", usd(-net), usd(monthTotal), usd(monthIncome)),
         severity: 'critical',
         icon: 'minus',
         category: null,
@@ -174,8 +182,8 @@ export function generateInsights(
       const pct = Math.round((net / monthIncome) * 100)
       out.push({
         id: `cashflow-savings-${monthTag(now)}`,
-        title: `Saving ${pct}% of income`,
-        body: `Net ${usd(net)} saved this month — well above the 20% benchmark.`,
+        title: tr('Saving {0}% of income', pct),
+        body: tr('Net {0} saved this month — well above the 20% benchmark.', usd(net)),
         severity: 'positive',
         icon: 'leaf',
         category: null,
@@ -221,11 +229,11 @@ export function generateInsights(
     const burn = recurring.reduce((s, r) => s + r.avg, 0)
     const names = recurring.map((r) => r.merchant)
     const top3 = names.slice(0, 3).join(', ')
-    const extra = names.length > 3 ? ` + ${names.length - 3} more` : ''
+    const extra = names.length > 3 ? ` ${tr('+ {0} more', names.length - 3)}` : ''
     out.push({
       id: `recurring-${monthTag(now)}`,
-      title: `Recurring monthly: ~${usd(burn)}`,
-      body: `Detected ${recurring.length} recurring charges: ${top3}${extra}.`,
+      title: tr('Recurring monthly: ~{0}', usd(burn)),
+      body: `${tr('Detected {0} recurring charges', recurring.length)}: ${top3}${extra}.`,
       severity: 'info',
       icon: 'subs',
       category: null,
@@ -261,8 +269,8 @@ export function generateInsights(
     )
     out.push({
       id: `outlier-${tx.id}`,
-      title: `Unusual ${catLabel(tx.category)} charge`,
-      body: `${usd(tx.amount_cents)} at ${tx.merchant} on ${when} — ${multiple.toFixed(1)}× the typical amount.`,
+      title: tr('Unusual {0} charge', tr(catLabel(tx.category))),
+      body: tr('{0} at {1} on {2} — {3} the typical amount.', usd(tx.amount_cents), tx.merchant, when, `${multiple.toFixed(1)}×`),
       severity: tx.amount_cents >= 50000 ? 'warning' : 'info',
       icon: 'sparkle',
       category: tx.category,
@@ -293,8 +301,8 @@ export function generateInsights(
       const up = delta > 0
       out.push({
         id: `trend30-${monthTag(now)}`,
-        title: `Spending ${up ? 'up' : 'down'} ${pct}% over 30 days`,
-        body: `${usd(recent30)} in the last 30 days vs ${usd(prior30)} the 30 before.`,
+        title: up ? tr('Spending up {0}% over 30 days', pct) : tr('Spending down {0}% over 30 days', pct),
+        body: tr('{0} in the last 30 days vs {1} the 30 before.', usd(recent30), usd(prior30)),
         severity: up ? 'warning' : 'positive',
         icon: up ? 'trend-up' : 'trend-down',
         category: null,
@@ -317,8 +325,8 @@ export function generateInsights(
       const severity = ratio < 0.28 ? 'positive' : ratio <= 0.35 ? 'info' : 'warning'
       out.push({
         id: `mortgage-ratio-${monthTag(now)}`,
-        title: `Mortgage at ${pct}% of income${ratio > 0.35 ? ' — high' : ''}`,
-        body: `${usd(payment)} P&I vs ${usd(monthIncome)} income this month. Lenders typically target below 28%.`,
+        title: ratio > 0.35 ? tr('Mortgage at {0}% of income — high', pct) : tr('Mortgage at {0}% of income', pct),
+        body: tr('{0} P&I vs {1} income this month. Lenders typically target below 28%.', usd(payment), usd(monthIncome)),
         severity,
         icon: 'house',
         category: null,

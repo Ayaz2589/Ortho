@@ -65,7 +65,7 @@ export function AddPropertyModal({
   kind: PropertyKind
   editing?: Property | null
 }) {
-  const { currency, rate, currentHousehold, addProperty, updateProperty } = useApp()
+  const { currency, rate, currentHousehold, addProperty, updateProperty, t } = useApp()
   const meta = kindMeta(kind)
   const isEditing = !!editing
 
@@ -222,16 +222,20 @@ export function AddPropertyModal({
   }
 
   const navTitle = isEditing
-    ? `Edit ${meta.shortLabel.toLowerCase()}`
-    : `New ${kind === 'primary_home' ? 'primary home' : kind === 'multifamily' ? 'multifamily' : 'rental'}`
+    ? t('Edit {0}', t(meta.shortLabel).toLowerCase())
+    : kind === 'primary_home'
+      ? t('New primary home')
+      : kind === 'multifamily'
+        ? t('New multifamily')
+        : t('New rental')
 
   // Per-kind explanatory footer — same meaning as iOS AddPropertySheet.
   const footerCaption =
     kind === 'primary_home'
-      ? "Monthly principal + interest is computed from the loan amount, rate, and term. Taxes and insurance aren't tracked yet."
+      ? t("Monthly principal + interest is computed from the loan amount, rate, and term. Taxes and insurance aren't tracked yet.")
       : kind === 'multifamily'
-        ? "Add each unit's rent and tenant. Net balance is total unit rent minus the mortgage payment."
-        : 'Rent reminders use the day of the month from your lease start date.'
+        ? t("Add each unit's rent and tenant. Net balance is total unit rent minus the mortgage payment.")
+        : t('Rent reminders use the day of the month from your lease start date.')
 
   const addUnit = () =>
     setUnits((prev) => [
@@ -254,40 +258,40 @@ export function AddPropertyModal({
             disabled={!canSubmit}
             className="text-[15px] text-accent disabled:opacity-40"
           >
-            {isEditing ? 'Save' : 'Add'}
+            {isEditing ? t('Save') : t('Add')}
           </button>
         }
       />
       <div className="flex flex-col gap-5 overflow-auto p-4 pb-6">
         <FormGroup>
-          <FieldRow label="Address">
+          <FieldRow label={t('Address')}>
             <TextInput
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="e.g. 124 Oak Lane"
+              placeholder={t('e.g. 124 Oak Lane')}
               autoFocus
             />
           </FieldRow>
-          <FieldRow label="Nickname">
+          <FieldRow label={t('Nickname')}>
             <TextInput
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              placeholder="Optional"
+              placeholder={t('Optional')}
             />
           </FieldRow>
         </FormGroup>
 
         {meta.hasMortgage && (
           <div className="flex flex-col gap-2">
-            <SectionLabel>Mortgage</SectionLabel>
+            <SectionLabel>{t('Mortgage')}</SectionLabel>
             <FormGroup>
-              <FieldRow label="Purchase price">
+              <FieldRow label={t('Purchase price')}>
                 <MoneyInput value={purchase} onChange={setPurchase} placeholder="0" />
               </FieldRow>
-              <FieldRow label="Original loan">
+              <FieldRow label={t('Original loan')}>
                 <MoneyInput value={loan} onChange={setLoan} placeholder="0" />
               </FieldRow>
-              <FieldRow label="Interest rate">
+              <FieldRow label={t('Interest rate')}>
                 <div className="flex items-center gap-1">
                   <input
                     inputMode="decimal"
@@ -299,30 +303,30 @@ export function AddPropertyModal({
                   <span className="text-[15px] text-text-2">%</span>
                 </div>
               </FieldRow>
-              <FieldRow label="Term">
+              <FieldRow label={t('Term')}>
                 <div className="relative flex items-center gap-1">
                   <select
                     value={term}
                     onChange={(e) => setTerm(Number(e.target.value))}
                     className="appearance-none bg-transparent pr-5 text-right text-[15px] font-normal text-text outline-none"
                   >
-                    {TERMS.map((t) => (
-                      <option key={t} value={t}>
-                        {t}-year
+                    {TERMS.map((yr) => (
+                      <option key={yr} value={yr}>
+                        {t('{0}-year', yr)}
                       </option>
                     ))}
                   </select>
                   <ChevronDown size={14} className="pointer-events-none absolute right-0 text-text-3" />
                 </div>
               </FieldRow>
-              <FieldRow label="Closing date">
-                <DatePicker value={closing} onChange={setClosing} ariaLabel="Closing date" />
+              <FieldRow label={t('Closing date')}>
+                <DatePicker value={closing} onChange={setClosing} ariaLabel={t('Closing date')} />
               </FieldRow>
-              <FieldRow label="Auto-pay">
+              <FieldRow label={t('Auto-pay')}>
                 <TextInput
                   value={autoPay}
                   onChange={(e) => setAutoPay(e.target.value)}
-                  placeholder="Optional"
+                  placeholder={t('Optional')}
                 />
               </FieldRow>
             </FormGroup>
@@ -331,20 +335,20 @@ export function AddPropertyModal({
 
         {kind === 'multifamily' && (
           <div className="flex flex-col gap-2">
-            <SectionLabel>Units &amp; tenants</SectionLabel>
+            <SectionLabel>{t('Units & tenants')}</SectionLabel>
             <FormGroup>
               {units.map((u) => (
                 <div key={u.id} className="divide-y divide-hairline">
-                  <FieldRow label="Unit name">
+                  <FieldRow label={t('Unit name')}>
                     <div className="flex w-full items-center justify-end gap-2">
                       <TextInput
                         value={u.name}
                         onChange={(e) => patchUnit(u.id, { name: e.target.value })}
-                        placeholder="e.g. 1A"
+                        placeholder={t('e.g. 1A')}
                       />
                       <button
                         type="button"
-                        aria-label="Remove unit"
+                        aria-label={t('Remove unit')}
                         onClick={() => removeUnit(u.id)}
                         className="shrink-0 text-destructive"
                       >
@@ -352,18 +356,18 @@ export function AddPropertyModal({
                       </button>
                     </div>
                   </FieldRow>
-                  <FieldRow label="Rent">
+                  <FieldRow label={t('Rent')}>
                     <MoneyInput
                       value={u.rent}
                       onChange={(v) => patchUnit(u.id, { rent: v })}
                       placeholder="0"
                     />
                   </FieldRow>
-                  <FieldRow label="Tenant">
+                  <FieldRow label={t('Tenant')}>
                     <TextInput
                       value={u.tenant}
                       onChange={(e) => patchUnit(u.id, { tenant: e.target.value })}
-                      placeholder="Optional"
+                      placeholder={t('Optional')}
                     />
                   </FieldRow>
                 </div>
@@ -379,7 +383,7 @@ export function AddPropertyModal({
                 >
                   <Plus size={14} strokeWidth={2.5} />
                 </span>
-                <span className="text-[15px] font-normal">Add unit</span>
+                <span className="text-[15px] font-normal">{t('Add unit')}</span>
               </button>
             </FormGroup>
           </div>
@@ -387,25 +391,25 @@ export function AddPropertyModal({
 
         {kind === 'rental' && (
           <div className="flex flex-col gap-2">
-            <SectionLabel>Lease</SectionLabel>
+            <SectionLabel>{t('Lease')}</SectionLabel>
             <FormGroup>
-              <FieldRow label="Monthly rent">
+              <FieldRow label={t('Monthly rent')}>
                 <MoneyInput value={rent} onChange={setRent} placeholder="0" />
               </FieldRow>
-              <FieldRow label="Lease start">
-                <DatePicker value={leaseStart} onChange={setLeaseStart} ariaLabel="Lease start" />
+              <FieldRow label={t('Lease start')}>
+                <DatePicker value={leaseStart} onChange={setLeaseStart} ariaLabel={t('Lease start')} />
               </FieldRow>
-              <FieldRow label="Lease end">
-                <DatePicker value={leaseEnd} onChange={setLeaseEnd} ariaLabel="Lease end" />
+              <FieldRow label={t('Lease end')}>
+                <DatePicker value={leaseEnd} onChange={setLeaseEnd} ariaLabel={t('Lease end')} />
               </FieldRow>
-              <FieldRow label="Security deposit">
-                <MoneyInput value={deposit} onChange={setDeposit} placeholder="Optional" />
+              <FieldRow label={t('Security deposit')}>
+                <MoneyInput value={deposit} onChange={setDeposit} placeholder={t('Optional')} />
               </FieldRow>
-              <FieldRow label="Paid with">
+              <FieldRow label={t('Paid with')}>
                 <TextInput
                   value={paidWith}
                   onChange={(e) => setPaidWith(e.target.value)}
-                  placeholder="Optional"
+                  placeholder={t('Optional')}
                 />
               </FieldRow>
             </FormGroup>
@@ -415,7 +419,7 @@ export function AddPropertyModal({
         <p className="px-1 text-[13px] leading-relaxed text-text-3">{footerCaption}</p>
 
         <PrimaryButton onClick={handleSubmit} disabled={!canSubmit}>
-          {isEditing ? 'Save property' : 'Add property'}
+          {isEditing ? t('Save property') : t('Add property')}
         </PrimaryButton>
       </div>
     </Drawer>

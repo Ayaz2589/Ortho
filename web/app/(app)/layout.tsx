@@ -6,7 +6,7 @@ import { TabBar } from '@/components/TabBar'
 import { Sidebar } from '@/components/Sidebar'
 
 function Shell({ children }: { children: ReactNode }) {
-  const { loading, error, bootstrapFailed, dismissError, retryBootstrap } = useApp()
+  const { loading, error, bootstrapFailed, dismissError, retryBootstrap, t } = useApp()
   return (
     <div className="sm:flex sm:h-screen sm:overflow-hidden">
       <Sidebar />
@@ -20,12 +20,12 @@ function Shell({ children }: { children: ReactNode }) {
                 onClick={retryBootstrap}
                 className="shrink-0 font-normal text-accent"
               >
-                Retry
+                {t('Retry')}
               </button>
             )}
             <button
               type="button"
-              aria-label="Dismiss error"
+              aria-label={t('Dismiss error')}
               onClick={dismissError}
               className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-text-3 transition-colors hover:text-text"
             >
@@ -38,7 +38,7 @@ function Shell({ children }: { children: ReactNode }) {
         <div className="px-4 pb-24 pt-2 sm:px-8 sm:pb-12 sm:pt-4 lg:px-10">
           {loading ? (
             <div className="flex flex-1 items-center justify-center py-32 text-sm text-text-3">
-              Loading…
+              {t('Loading…')}
             </div>
           ) : (
             children

@@ -9,12 +9,13 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }))
 
-// Sidebar reads currentHousehold / householdMembers / signOut from the store.
+// Sidebar reads currentHousehold / householdMembers / signOut / t from the store.
 vi.mock('@/lib/store', () => ({
   useApp: () => ({
     currentHousehold: { id: 'h1', name: 'Test Household' },
     householdMembers: [],
     signOut: vi.fn(),
+    t: (key: string) => key,
   }),
 }))
 

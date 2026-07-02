@@ -54,9 +54,9 @@ function iconFor(key: string): LucideIcon {
 }
 
 export function InsightsCardStack({ now }: { now?: Date } = {}) {
-  const { transactions, budgets, properties } = useApp()
+  const { transactions, budgets, properties, t } = useApp()
   // `now` is the scoped reference date (mid selected month, else undefined → today).
-  const insights = generateInsights(transactions, budgets, properties, now)
+  const insights = generateInsights(transactions, budgets, properties, now, 6, t)
 
   if (insights.length === 0) return null
 

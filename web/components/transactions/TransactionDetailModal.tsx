@@ -20,7 +20,7 @@ export function TransactionDetailModal({
   open: boolean
   onClose: () => void
 }) {
-  const { transactions, deleteTransaction, currentHousehold } = useApp()
+  const { transactions, deleteTransaction, currentHousehold, t } = useApp()
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -41,7 +41,7 @@ export function TransactionDetailModal({
   const isIncome = tx.kind === 'income'
   // Kind + household name, like iOS ("Expense · Home"); kind alone when the
   // household can't be resolved.
-  const kindLabel = tx.kind === 'transfer' ? 'Reimbursement' : isIncome ? 'Income' : 'Expense'
+  const kindLabel = tx.kind === 'transfer' ? t('Reimbursement') : isIncome ? t('Income') : t('Expense')
   const title =
     currentHousehold && tx.household_id === currentHousehold.id
       ? `${kindLabel} · ${currentHousehold.name}`
@@ -55,7 +55,7 @@ export function TransactionDetailModal({
         title={title}
         left={
           <button type="button" onClick={onClose} className="text-accent">
-            Done
+            {t('Done')}
           </button>
         }
         right={
@@ -64,7 +64,7 @@ export function TransactionDetailModal({
             onClick={() => setEditing(true)}
             className="font-normal text-accent"
           >
-            Edit
+            {t('Edit')}
           </button>
         }
       >
@@ -74,7 +74,7 @@ export function TransactionDetailModal({
           {confirmDelete ? (
             <div className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
               <p className="text-center text-[14px] text-text-2">
-                Delete this transaction? This can&apos;t be undone.
+                {t('Delete this transaction?')} {t("This can't be undone.")}
               </p>
               <div className="flex gap-2">
                 <button
@@ -83,7 +83,7 @@ export function TransactionDetailModal({
                   className="flex-1 rounded-full py-2.5 text-[15px] font-normal text-text"
                   style={{ background: 'rgba(0,0,0,0.05)' }}
                 >
-                  Cancel
+                  {t('Cancel')}
                 </button>
                 <button
                   type="button"
@@ -93,7 +93,7 @@ export function TransactionDetailModal({
                   }}
                   className="flex-1 rounded-full bg-destructive py-2.5 text-[15px] font-normal text-white"
                 >
-                  Delete
+                  {t('Delete')}
                 </button>
               </div>
             </div>
@@ -103,7 +103,7 @@ export function TransactionDetailModal({
               onClick={() => setConfirmDelete(true)}
               className="rounded-2xl bg-surface py-3.5 text-center text-[15px] font-normal text-destructive"
             >
-              Delete transaction
+              {t('Delete transaction')}
             </button>
           )}
         </div>

@@ -27,7 +27,7 @@ export function BudgetDrawer({
   category: TransactionCategory | null
   onClose: () => void
 }) {
-  const { currency, rate, currentHousehold, budgets, addOrUpdateBudget, deleteBudget } = useApp()
+  const { currency, rate, currentHousehold, budgets, addOrUpdateBudget, deleteBudget, t } = useApp()
   const existing = category ? budgets.find((b) => b.category === category) ?? null : null
   const [amount, setAmount] = useState('')
   const [confirmRemove, setConfirmRemove] = useState(false)
@@ -63,9 +63,9 @@ export function BudgetDrawer({
   const Icon = meta?.icon
 
   return (
-    <Drawer open={category !== null} onClose={onClose} label={meta ? `${meta.label} budget` : 'Budget'}>
+    <Drawer open={category !== null} onClose={onClose} label={meta ? t('{0} budget', t(meta.label)) : t('Budget')}>
       <DrawerHeader
-        title={meta ? `${meta.label} budget` : 'Budget'}
+        title={meta ? t('{0} budget', t(meta.label)) : t('Budget')}
         onClose={onClose}
         right={
           <button
@@ -74,7 +74,7 @@ export function BudgetDrawer({
             disabled={!canSave}
             className="text-[15px] text-accent disabled:opacity-40"
           >
-            Save
+            {t('Save')}
           </button>
         }
       />
@@ -88,25 +88,27 @@ export function BudgetDrawer({
             >
               <Icon size={24} />
             </span>
-            <div className="text-[17px] text-text">{meta.label}</div>
+            <div className="text-[17px] text-text">{t(meta.label)}</div>
           </div>
         )}
 
         <FormGroup>
-          <FieldRow label="Monthly limit">
+          <FieldRow label={t('Monthly limit')}>
             <MoneyInput value={amount} onChange={setAmount} placeholder="0.00" autoFocus />
           </FieldRow>
         </FormGroup>
 
         <p className="px-1 pt-3 text-[13px] leading-relaxed text-text-3">
-          Spending in {meta?.label} is tracked from the 1st of each calendar month. Insights compare
-          actual spend against this limit.
+          {t(
+            'Spending in {0} is tracked from the 1st of each calendar month. Insights compare actual spend against this limit.',
+            meta ? t(meta.label) : ''
+          )}
         </p>
 
         {existing &&
           (confirmRemove ? (
             <div className="mt-4 flex flex-col gap-2 rounded-2xl bg-surface p-4" style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
-              <p className="text-[14px] text-text-2">Remove this budget? Insights for this category will stop.</p>
+              <p className="text-[14px] text-text-2">{t('Remove this budget? Insights for this category will stop.')}</p>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -114,7 +116,7 @@ export function BudgetDrawer({
                   className="flex-1 rounded-full py-2.5 text-[15px] text-text-2"
                   style={{ background: 'var(--chip-bg)' }}
                 >
-                  Cancel
+                  {t('Cancel')}
                 </button>
                 <button
                   type="button"
@@ -122,7 +124,7 @@ export function BudgetDrawer({
                   className="flex-1 rounded-full py-2.5 text-[15px] text-white"
                   style={{ background: 'var(--destructive)' }}
                 >
-                  Remove
+                  {t('Remove')}
                 </button>
               </div>
             </div>
@@ -134,7 +136,7 @@ export function BudgetDrawer({
               style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
             >
               <MinusCircle size={16} />
-              Remove budget
+              {t('Remove budget')}
             </button>
           ))}
       </div>

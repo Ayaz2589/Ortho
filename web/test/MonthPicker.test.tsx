@@ -7,7 +7,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-vi.mock('@/lib/store', () => ({ useApp: () => ({ locale: 'en-US' }) }))
+// `t` mirrors the store's English identity behavior (key in, key out).
+vi.mock('@/lib/store', () => ({ useApp: () => ({ locale: 'en-US', t: (key: string) => key }) }))
 
 import { MonthPicker } from '@/components/dashboard/MonthPicker'
 

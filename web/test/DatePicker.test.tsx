@@ -3,9 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-// DatePicker reads only `locale` from the app store.
+// DatePicker reads only `locale` and `t` from the app store (English identity).
 vi.mock('@/lib/store', () => ({
-  useApp: () => ({ locale: 'en-US' }),
+  useApp: () => ({ locale: 'en-US', t: (key: string) => key }),
 }))
 
 import { DatePicker } from '@/components/inputs'

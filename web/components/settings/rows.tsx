@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { ChevronRight, CreditCard, MinusCircle, Plus } from 'lucide-react'
+import { useApp } from '@/lib/store'
 import { Avatar } from '@/components/ui'
 import type { Card, User } from '@/lib/types'
 
@@ -42,6 +43,7 @@ export function LinkRow({
 }
 
 export function CardRow({ card, onDelete }: { card: Card; onDelete: () => void }) {
+  const { t } = useApp()
   const [confirming, setConfirming] = useState(false)
   return (
     <div className="flex min-h-[60px] items-center gap-3.5 px-4 py-3">
@@ -59,20 +61,20 @@ export function CardRow({ card, onDelete }: { card: Card; onDelete: () => void }
             onClick={() => setConfirming(false)}
             className="text-[13px] font-normal text-text-2"
           >
-            Cancel
+            {t('Cancel')}
           </button>
           <button
             type="button"
             onClick={onDelete}
             className="text-[13px] font-normal text-destructive"
           >
-            Delete
+            {t('Delete')}
           </button>
         </span>
       ) : (
         <button
           type="button"
-          aria-label={`Delete ${card.name}`}
+          aria-label={t('Delete {0}', card.name)}
           onClick={() => setConfirming(true)}
           className="ml-auto text-destructive"
         >
@@ -162,11 +164,12 @@ export function UserRow({
   onRemove?: () => void
   onClick?: () => void
 }) {
+  const { t } = useApp()
   const [confirming, setConfirming] = useState(false)
 
   const composedDetail = (() => {
-    if (isCurrentUser && detail) return `(you) · ${detail}`
-    if (isCurrentUser) return '(you)'
+    if (isCurrentUser && detail) return t('(you) · {0}', detail)
+    if (isCurrentUser) return t('(you)')
     return detail
   })()
 
@@ -208,20 +211,20 @@ export function UserRow({
               onClick={() => setConfirming(false)}
               className="text-[13px] font-normal text-text-2"
             >
-              Cancel
+              {t('Cancel')}
             </button>
             <button
               type="button"
               onClick={onRemove}
               className="text-[13px] font-normal text-destructive"
             >
-              Remove
+              {t('Remove')}
             </button>
           </span>
         ) : (
           <button
             type="button"
-            aria-label={`Remove ${user.name}`}
+            aria-label={t('Remove {0}', user.name)}
             onClick={() => setConfirming(true)}
             className="ml-auto shrink-0 text-destructive"
           >
