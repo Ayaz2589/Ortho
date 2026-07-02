@@ -23,6 +23,12 @@ test suites assert. The **CLI** writes to the same tables and reuses the shared 
 functions where it can, but it is **not** part of the golden-vector harness and has a few intentional and
 a few unintended divergences (below).
 
+> Last reconciled: **2026-07-02, spec 013 (post-audit closeout)** — every residual gap from the same-day
+> 65-divergence audit was closed or reclassified: `availableRanges` vectored, recurring-preview
+> ordering/casing unified + vectored (`preview_merchants`), web outlier date localized, CLI filtering /
+> atomic write / split tolerance / category duplication resolved, `--admin` documented by-design, iOS
+> catalog fully translated in all six languages with a cross-catalog Vitest lock
+> (`web/test/i18n/catalog-parity.test.ts`). Apps: web **705** tests green.
 > Last audited: **2026-07-02** (65-divergence functional audit + same-day remediation — see Known
 > divergences). Previous audit **2026-06-22** (full web+iOS app review). Method: 10-capability tri-surface audit plus
 > a 6-dimension deep review of each app (dead code, refactors, correctness, per-surface behavior,
@@ -44,13 +50,13 @@ a few unintended divergences (below).
 | Canonical leftover-cent order | ✅ | ✅ | ✅ | `orderedOwnerIds` (now used by all three) |
 | Transaction + shares data contract | ✅ | ✅ | ✅ | columns mirrored across all three (incl. `paid_by`) |
 | Member reimbursement / settle-up balance | ✅ | ✅ | — | `lib/balances.ts` ↔ `Balances.swift` → `member-balance.json` (+ `paid_by`, `transfer` kind) |
-| Atomic parent+shares write | ✅ (rollback) | ✅ (rollback) | ⚠️ | — (both apps compensate; CLI does not) |
+| Atomic parent+shares write | ✅ (rollback) | ✅ (rollback) | ✅ (rollback) | — (all three compensate, spec 013; an RPC would make it truly atomic) |
 | Category / kind / source taxonomy | ✅ | ✅ | ✅ | Postgres `transaction_category`/`transaction_kind` enums (+ `transfer`) / `lib/types.ts` |
 | Date storage & timezone | ✅ | ✅ | ✅ | noon-UTC transaction timestamps (spec 004; apps adopted 2026-07-02); date-only columns = local calendar day |
 | Full-UI localization (6 languages) | ✅ | ✅ | — (English) | `web/lib/i18n/*` seeded from iOS `Localizable.xcstrings` |
-| Transaction filtering / listing | ✅ | ✅ | ⚠️ | `lib/transactionFilters.ts` → `transaction-filters.json` |
-| Dashboard month selection | ✅ | ✅ | — | `components/dashboard/range.ts` ↔ `DashboardRange.swift` (+ `monthBounds` → `dashboard-month-scope.json` / `transaction-filters.json`) |
-| Insights engine | ✅ | ✅ | — | `insights.json` (8/8 rules) |
+| Transaction filtering / listing | ✅ | ✅ | ✅ | `lib/transactionFilters.ts` → `transaction-filters.json` (CLI runs the same function in-process, spec 013) |
+| Dashboard month selection | ✅ | ✅ | — | `components/dashboard/range.ts` ↔ `DashboardRange.swift` (+ `monthBounds` → `dashboard-month-scope.json` / `transaction-filters.json`; `availableRanges` vectored in spec 013) |
+| Insights engine | ✅ | ✅ | — | `insights.json` (8/8 rules + `preview_merchants` ordering/casing, spec 013) |
 | Mortgage / housing math | ✅ | ✅ | — | `lib/finance/mortgage.ts` → `mortgage.json` |
 | Auth (email-OTP, 8-digit) | ✅ | ✅ | ⚠️ | — (each calls Supabase SDK) |
 | Concurrent iOS + web sessions | ✅ | ✅ | — | single-active-platform lock **removed** (feature 010) |
@@ -100,8 +106,23 @@ day** on both apps), **feature builds** (iOS collapsible month grouping; web des
 "Save and add another"), and **full web UI translation** into the six iOS languages (catalogs seeded from
 `Localizable.xcstrings`; বাংলা pinned to Latin digits on both). The golden-vector harness itself was pinned
 to TZ=UTC the same day after the first iOS CI run (`.github/workflows/ios-ci.yml`, new) caught
-timezone-dependent vectors. Residual gaps: the recurring-preview ordering below, the CLI section below, and
-the outlier-insight date string, which the web engine still formats as en-US inside `lib/finance/insights.ts`.
+timezone-dependent vectors.
+
+**Post-audit closeout (2026-07-02, spec 013 — `specs/013-post-audit-closeout/`):** every residual left by
+the audit was closed the same week: (1) the iOS string catalog's 87 unlocalized keys translated in all five
+non-English languages, with symbols/DEBUG-only strings marked `shouldTranslate:false` and a new
+cross-catalog Vitest lock (`web/test/i18n/catalog-parity.test.ts`) enforcing coverage, shared-key identity
+(placeholder-normalized, `%%` aware), bn Latin digits, and no-English-fallback for every `t()`/`tr()`
+call-site key; (2) recurring-preview ordering/casing unified (amount desc, case-insensitive name tie-break,
+newest-transaction casing — new `preview_merchants` vector field asserted by both suites); (3) the web
+outlier-insight date now renders in the app locale (`generateInsights` locale parameter — the vectors pass
+`en-US` explicitly); (4) `availableRanges` vectored (11 cases in `dashboard-month-scope.json`; iOS logic
+extracted pure as `DashboardRange.available`); (5) the CLI section below fully resolved; (6) a dry-run-first
+maintenance script repairs legacy 00:00–04:00Z timestamps (`make repair-dates`, spec 013 US2); (7) a
+TestFlight deploy workflow with a fail-fast secret preflight (`.github/workflows/ios-deploy.yml`,
+`docs/deploy.md`). Remaining known items: the `From`/`To` catalog keys serve both date-range and
+person contexts with one value per language (es/ja fit only one context — needs per-context keys on both
+surfaces, low severity); `monthsElapsed`/`yearsRemaining` stay independent reimplementations (below).
 
 ### Apps (web ↔ iOS) — tightly in parity
 
@@ -116,9 +137,10 @@ truncation, mortgage months-elapsed boundary, the outlier insight). Residual, lo
   shares on a shares-write failure, reporting the orphan id if the compensation itself fails. *(A server-side
   `create_transaction_with_shares` RPC would make it truly atomic for all three — still the right long-term
   fix, tracked but out of scope.)*
-- low **Insights recurring preview:** the 3-merchant name preview is ordered by amount on iOS but in
-  trailing-window order on web, and uses a different transaction's merchant casing. IDs / severities /
-  magnitudes (the vectored fields) match; only the body string differs.
+- ✅ **Insights recurring preview (RESOLVED 2026-07-02, spec 013):** both surfaces now order the 3-merchant
+  preview by monthly amount desc with a case-insensitive-name tie-break and take each merchant's casing from
+  its most recent transaction — locked by the new `preview_merchants` field in `insights.json` (asserted by
+  both parity suites); the web outlier-insight date also localizes via the app locale now.
 - low **`monthsElapsed` / `yearsRemaining`** are independent reimplementations (iOS `Calendar` vs hand-rolled
   TS); they agree on all 8 mortgage vectors (incl. the day-29–31 boundary) but are only as safe as the
   vector coverage.
