@@ -4,8 +4,9 @@
 WEB := web
 CLI := scripts/import/cli.ts
 TX := scripts/import/tx.ts
+REPAIR := scripts/maintenance/repair-legacy-dates.ts
 
-.PHONY: ingest ingest-help tx-list tx-add tx-edit tx-rm
+.PHONY: ingest ingest-help tx-list tx-add tx-edit tx-rm repair-dates
 
 # Import a bank-statement PDF into the database.
 #   make ingest FILE=<path.pdf> [BANK=td] [DRY_RUN=1] [YES=1] [ADMIN=1]
@@ -47,6 +48,13 @@ tx-add:
 tx-edit:
 	@test -n "$(ID)" || { echo 'Usage: make tx-edit ID=<uuid> [ADMIN=1]'; exit 1; }
 	cd $(WEB) && npx tsx $(TX) edit --id '$(ID)' $(if $(filter 1,$(ADMIN)),--admin)
+
+# One-time audit/repair of legacy 00:00–04:00Z transaction timestamps (spec 013).
+# DRY RUN by default (report only, zero writes); APPLY=1 additionally requires
+# typing "repair" at the prompt. Same OTP/ADMIN auth as the tx-* targets.
+#   make repair-dates [APPLY=1] [ADMIN=1]
+repair-dates:
+	cd $(WEB) && npx tsx $(REPAIR) $(if $(filter 1,$(APPLY)),--apply) $(if $(filter 1,$(ADMIN)),--admin)
 
 # Delete one transaction (DRY_RUN previews):
 #   make tx-rm ID=<uuid> [DRY_RUN=1] [ADMIN=1]

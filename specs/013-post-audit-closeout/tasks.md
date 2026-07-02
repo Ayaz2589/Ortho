@@ -175,13 +175,13 @@ stories; note only the cross-story file-contention rule:*
 
 ### Tests (write first)
 
-- [ ] T043 [P] [US2] Write failing unit tests `web/test/maintenance/repair-legacy-dates.test.ts` for pure `isLegacy(dateISO)` / `proposeRepair(dateISO)` per contracts/repair-legacy-dates.md: window boundaries (23:59:59Z out, 00:00:00Z in, 03:59:59Z in, 04:00:00Z out), noon-UTC excluded, EST vs EDT instants, DST-transition days, ambiguity band `[00:00,01:00)` NY, idempotence (proposals never re-match) → **RED**
-- [ ] T044 [US2] Add failing IO tests (same file, mock-builder pattern): dry run issues zero `update`s; APPLY updates only non-ambiguous reported ids with `.eq('date', original)` guard; per-row failure reported without halting; non-zero exit on any failure → **RED**
+- [X] T043 [P] [US2] Write failing unit tests `web/test/maintenance/repair-legacy-dates.test.ts` for pure `isLegacy(dateISO)` / `proposeRepair(dateISO)` per contracts/repair-legacy-dates.md: window boundaries (23:59:59Z out, 00:00:00Z in, 03:59:59Z in, 04:00:00Z out), noon-UTC excluded, EST vs EDT instants, DST-transition days, ambiguity band `[00:00,01:00)` NY, idempotence (proposals never re-match) → **RED**
+- [X] T044 [US2] Add failing IO tests (same file, mock-builder pattern): dry run issues zero `update`s; APPLY updates only non-ambiguous reported ids with `.eq('date', original)` guard; per-row failure reported without halting; non-zero exit on any failure → **RED**
 
 ### Implementation
 
-- [ ] T045 [US2] Implement `web/scripts/maintenance/repair-legacy-dates.ts`: pure functions + report format + `makeClient` reuse (`scripts/import/db/client.ts`) + APPLY confirmation prompt (`type "repair"`, structurally unskippable) → T043/T044 **GREEN**
-- [ ] T046 [US2] Add `repair-dates` target to root `Makefile` (`DRY_RUN` default, `APPLY=1`, `ADMIN=1` pass-through; help text) and a one-line mention in `docs/makefile.md`
+- [X] T045 [US2] Implement `web/scripts/maintenance/repair-legacy-dates.ts`: pure functions + report format + `makeClient` reuse (`scripts/import/db/client.ts`) + APPLY confirmation prompt (`type "repair"`, structurally unskippable) → T043/T044 **GREEN**
+- [X] T046 [US2] Add `repair-dates` target to root `Makefile` (`DRY_RUN` default, `APPLY=1`, `ADMIN=1` pass-through; help text) and a one-line mention in `docs/makefile.md`
 - [ ] T047 [US2] **[OPERATOR-ASSISTED]** Run the live dry run: `make repair-dates` (OTP sign-in needs the operator's emailed code, or ADMIN=1 if they provide the service-role key in `web/.env.local`); deliver the full report (repairable + ambiguous rows) to the user — **do not proceed to APPLY**
 
 **Checkpoint**: suites green; dry-run report in the operator's hands

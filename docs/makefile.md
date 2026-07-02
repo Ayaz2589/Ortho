@@ -72,8 +72,8 @@ Pipeline (per `web/scripts/import/README.md`): `extract → detect bank → pars
 ### `make ingest-help`
 Prints the usage/env cheat-sheet for `ingest` (no side effects). Use it to recall the flag/env contract without opening the README.
 
-### `make tx-list [MONTH=YYYY-MM] [CATEGORY=..] [SOURCE=..] [SCOPE=personal|shared] [KIND=expense|income] [LIMIT=N] [ADMIN=1]`
-Read-only listing of your transactions via `web/scripts/import/tx.ts list` (design: `specs/005-transaction-crud-cli/`). Every filter is optional; same OTP/ADMIN auth as `ingest`.
+### `make tx-list [MONTH=YYYY-MM] [QUERY=text] [CATEGORY=a,b] [SOURCE=a,b] [OWNER=name] [KIND=expense|income|transfer] [LIMIT=N] [ADMIN=1]`
+Read-only, **household-wide** listing via `web/scripts/import/tx.ts list` (design: `specs/005-transaction-crud-cli/`, semantics aligned with the apps in `specs/013-post-audit-closeout/`). Only the MONTH window narrows in SQL; everything else runs through the apps' shared `filterTransactions` — free-text `QUERY`, comma multi-select `CATEGORY`/`SOURCE`, `OWNER` by household-person name. Hitting `LIMIT` (default 200) prints an explicit truncation notice. Same OTP/ADMIN auth as `ingest`.
 
 ### `make tx-add MERCHANT='..' AMOUNT='12.34' [DATE=YYYY-MM-DD] [CATEGORY=..] [KIND=..] [SCOPE=..] [SOURCE='..'] [ADMIN=1]`
 Creates one transaction (`tx.ts add`). The Makefile passes only the variables you set; the CLI prompts/validates the rest.
@@ -83,6 +83,16 @@ Interactively edits one transaction (`tx.ts edit`). `ID` is **required** (usage 
 
 ### `make tx-rm ID=<uuid> [DRY_RUN=1] [ADMIN=1]`
 Deletes one transaction (`tx.ts rm`). `ID` is **required**; `DRY_RUN=1` previews without deleting.
+
+### `make repair-dates [APPLY=1] [ADMIN=1]`
+One-time audit/repair of legacy transaction timestamps carrying the pre-2026-07-02 evening
+wall-clock signature (00:00–04:00Z) via `web/scripts/maintenance/repair-legacy-dates.ts`
+(design: `specs/013-post-audit-closeout/contracts/repair-legacy-dates.md`). **Dry run by
+default** — reports each affected row's inferred America/New_York day and proposed
+noon-UTC value, writes nothing. `APPLY=1` prints the same report, then requires typing
+`repair` at a prompt; each write is guarded by the row's original date (race-safe,
+idempotent — a re-run reports 0 repairable). Ambiguous rows are always excluded and
+listed for the operator.
 
 ### Environment required by all targets (in `web/.env.local`)
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — always required.
