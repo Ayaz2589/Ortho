@@ -192,9 +192,9 @@ stories; note only the cross-story file-contention rule:*
 
 **Purpose**: One push carrying ALL Swift/xcstrings/vector/workflow changes staged by T006-T011, T016-T018, T020-T023; then the CI loop.
 
-- [ ] T048 Pre-push review: `git status`/`git diff` over `iOS/**`, `shared/test-vectors/**`, `.github/workflows/ios-ci.yml` — confirm exactly the staged work (catalog, -uiDemoLanguage, InsightEngine tie-break, DashboardRange extraction, both parity-test extensions, screenshot matrix, both regenerated vectors); commit (logical commits per story are fine — one *push*) and push to the draft PR
-- [ ] T049 Watch CI: `GH_TOKEN=placeholder gh run watch --exit-status`; on failure read `gh run view --log-failed`, fix, re-push (fix-up pushes only); repeat until **GREEN** (build + all XCTest parity suites incl. new preview_merchants + availableRanges assertions)
-- [ ] T050 Download and inspect the `simulator-screenshots` artifact (`gh api repos/Ayaz2589/Ortho/actions/runs/<run>/artifacts` → `.../artifacts/<id>/zip`): verify per-language shots — translated UI, no tofu/overflow, Latin digits under বাংলা (SC-001 visual half, US1 acceptance #4); fix + re-push if not
+- [X] T048 Pre-push review: `git status`/`git diff` over `iOS/**`, `shared/test-vectors/**`, `.github/workflows/ios-ci.yml` — confirm exactly the staged work (catalog, -uiDemoLanguage, InsightEngine tie-break, DashboardRange extraction, both parity-test extensions, screenshot matrix, both regenerated vectors); commit (logical commits per story are fine — one *push*) and push to the draft PR
+- [X] T049 Watch CI: `GH_TOKEN=placeholder gh run watch --exit-status`; on failure read `gh run view --log-failed`, fix, re-push (fix-up pushes only); repeat until **GREEN** (build + all XCTest parity suites incl. new preview_merchants + availableRanges assertions)
+- [X] T050 Download and inspect the `simulator-screenshots` artifact (`gh api repos/Ayaz2589/Ortho/actions/runs/<run>/artifacts` → `.../artifacts/<id>/zip`): verify per-language shots — translated UI, no tofu/overflow, Latin digits under বাংলা (SC-001 visual half, US1 acceptance #4); fix + re-push if not
 
 **Checkpoint**: iOS CI green with per-language visual evidence — US1/US3/US4 fully verified
 
@@ -215,8 +215,8 @@ stories; note only the cross-story file-contention rule:*
 - [X] T053 Reconcile `PARITY.md` fully (FR-020): new audit note for 013; availableRanges row now vectored; insights preview + outlier-date rows resolved; CLI rows resolved per T033; matrix updated
 - [X] T054 [P] Refresh stale docs: `docs/ios.md` (per-language screenshot matrix, -uiDemoLanguage), `docs/shared.md` (availableRanges + preview_merchants vector sections), `docs/web.md` (i18n suite, insights locale param), `docs/makefile.md` (repair-dates, new tx-list flags), `docs/index.md` (deploy.md link — if not done in T041)
 - [X] T055 [P] Update `CI-SETUP.local.md` (gitignored): deploy workflow exists, secrets table now normative, correct the "sandbox can't edit pbxproj" note if Phase 10 proved hand-editing viable
-- [ ] T056 Final gates: `cd web && npx tsc --noEmit && npm test` (all green, incl. every new suite); confirm latest CI run green; run through `quickstart.md` checking every US validation is satisfied or explicitly operator-pending
-- [ ] T057 Mark the draft PR ready for review with a summary of all seven stories, the vector diffs, screenshot evidence links, and the two operator-pending items (visual pass if outstanding; ambiguous rows)
+- [X] T056 Final gates: `cd web && npx tsc --noEmit && npm test` (all green, incl. every new suite); confirm latest CI run green; run through `quickstart.md` checking every US validation is satisfied or explicitly operator-pending
+- [X] T057 Mark the draft PR ready for review with a summary of all seven stories, the vector diffs, screenshot evidence links, and the two operator-pending items (visual pass if outstanding; ambiguous rows)
 
 ---
 
