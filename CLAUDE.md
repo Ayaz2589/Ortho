@@ -21,7 +21,10 @@ iOS compile/test feedback comes from GitHub Actions:
 suites on a macOS runner for pushes/PRs touching `iOS/**` or
 `shared/test-vectors/**`. After pushing iOS changes, watch the run with
 `GH_TOKEN=placeholder gh run watch --exit-status` (the placeholder is required
-for `gh` in sandboxes; the proxy injects the real token). If the gitignored
+for `gh` in sandboxes; the proxy injects the real token). Every run also
+uploads a `simulator-screenshots` artifact — the app booted in `-uiDemo`
+(sample-data) mode on all four tabs — so you can visually inspect UI changes
+from here; download the artifact zip via `gh api .../artifacts/<id>/zip`. If the gitignored
 `CI-SETUP.local.md` exists at the repo root, read it — it has the full CI usage
 guide plus local credentials for bootstrapping a fresh sandbox.
 

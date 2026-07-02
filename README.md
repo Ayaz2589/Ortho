@@ -72,8 +72,9 @@ npx tsc --noEmit   # typecheck
 Open the project in Xcode and run the `Ortho-iOS` scheme (SwiftUI, uses the Supabase
 Swift client; preferences persist in `UserDefaults`).
 
-**CI:** [`.github/workflows/ios-ci.yml`](.github/workflows/ios-ci.yml) builds the app and
-runs the XCTest parity suites on a macOS runner for any push/PR touching `iOS/` or
+**CI:** [`.github/workflows/ios-ci.yml`](.github/workflows/ios-ci.yml) builds the app,
+runs the XCTest parity suites, and captures simulator screenshots of all four tabs
+(sample-data `-uiDemo` mode) on a macOS runner for any push/PR touching `iOS/` or
 `shared/test-vectors/` — the iOS feedback loop for environments without Xcode (Linux dev
 sandboxes included). Setup notes and sandbox usage live in the gitignored
 `CI-SETUP.local.md` at the repo root.

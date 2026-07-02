@@ -172,6 +172,19 @@ The split math deliberately uses `Double` (IEEE-754, identical to TS `number`) s
 
 **Everything here is macOS-only (requires Xcode + an iOS Simulator). A Linux dev sandbox cannot build, run, or test this target** — you can still read/edit Swift sources and reason about parity via `shared/test-vectors/`, but verification must happen on a Mac.
 
+**From a Linux sandbox, the feedback loop is CI** (`.github/workflows/ios-ci.yml`): every push
+touching `iOS/**` or `shared/test-vectors/**` compiles the app, runs the XCTest parity suites,
+and uploads a `simulator-screenshots` artifact — the app booted in the simulator on each of the
+four tabs. Watch with `GH_TOKEN=placeholder gh run watch --exit-status`; download artifacts via
+`gh api repos/<owner>/<repo>/actions/artifacts/<id>/zip` (`gh run download` can refuse with a
+path-traversal error).
+
+**UI-demo mode (DEBUG only):** launch argument `-uiDemo` boots straight into the tab shell on the
+built-in sample data — no auth, no server traffic; `-uiDemoTab <dashboard|transactions|housing|settings>`
+picks the starting tab. This is what CI screenshots; locally, add the arguments under
+Product → Scheme → Edit Scheme → Run → Arguments. Compiled out of release builds
+(`Ortho_iOSApp.isUIDemo`, `RootTabView.selection`).
+
 Prerequisite: create the gitignored config once:
 
 ```sh
