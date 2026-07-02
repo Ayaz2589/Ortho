@@ -23,7 +23,8 @@ test suites assert. The **CLI** writes to the same tables and reuses the shared 
 functions where it can, but it is **not** part of the golden-vector harness and has a few intentional and
 a few unintended divergences (below).
 
-> Last audited: **2026-06-22** (full web+iOS app review). Method: 10-capability tri-surface audit plus
+> Last audited: **2026-07-02** (65-divergence functional audit + same-day remediation — see Known
+> divergences). Previous audit **2026-06-22** (full web+iOS app review). Method: 10-capability tri-surface audit plus
 > a 6-dimension deep review of each app (dead code, refactors, correctness, per-surface behavior,
 > constitution consistency), every finding adversarially re-verified, and a final cross-surface
 > reconciliation. Apps: web **593** tests green, iOS **22** green; golden vectors unchanged. The iOS
@@ -45,7 +46,8 @@ a few unintended divergences (below).
 | Member reimbursement / settle-up balance | ✅ | ✅ | — | `lib/balances.ts` ↔ `Balances.swift` → `member-balance.json` (+ `paid_by`, `transfer` kind) |
 | Atomic parent+shares write | ✅ (rollback) | ✅ (rollback) | ⚠️ | — (both apps compensate; CLI does not) |
 | Category / kind / source taxonomy | ✅ | ✅ | ✅ | Postgres `transaction_category`/`transaction_kind` enums (+ `transfer`) / `lib/types.ts` |
-| Date storage & timezone | ✅ | ✅ | ⚠️ | — (convention, not shared code) |
+| Date storage & timezone | ✅ | ✅ | ✅ | noon-UTC transaction timestamps (spec 004; apps adopted 2026-07-02); date-only columns = local calendar day |
+| Full-UI localization (6 languages) | ✅ | ✅ | — (English) | `web/lib/i18n/*` seeded from iOS `Localizable.xcstrings` |
 | Transaction filtering / listing | ✅ | ✅ | ⚠️ | `lib/transactionFilters.ts` → `transaction-filters.json` |
 | Dashboard month selection | ✅ | ✅ | — | `components/dashboard/range.ts` ↔ `DashboardRange.swift` (+ `monthBounds` → `dashboard-month-scope.json` / `transaction-filters.json`) |
 | Insights engine | ✅ | ✅ | — | `insights.json` (8/8 rules) |
@@ -85,6 +87,22 @@ neither language can silently drift:
 
 ## Known divergences
 
+**Full functional parity audit + remediation (2026-07-02):** a 76-agent audit (7 side-by-side area
+comparisons, every finding adversarially verified) confirmed **65 divergences** beyond the vectored core —
+full report in [`docs/parity-audit-2026-07-02.md`](docs/parity-audit-2026-07-02.md). All 65 were fixed the
+same day in three waves: **data integrity** (web supabase-js error-checking sweep with optimistic
+rollbacks, duplicate-household bootstrap, iOS property-edit FX corruption, desktop net-rental), **behavior
+alignment** (transfer-category leakage out of iOS pickers, delete confirmations on iOS, Dashboard as the
+landing tab on both, FX keep-last-rates fallback + freshness caption on web, unknown-enum row guard on web,
+split seeding/live-rebalance on web, copy preserves custom splits / drops removed members, transaction
+timestamps normalized to **noon UTC** on all three surfaces and date-only columns to the **local calendar
+day** on both apps), **feature builds** (iOS collapsible month grouping; web desktop per-row Copy +
+"Save and add another"), and **full web UI translation** into the six iOS languages (catalogs seeded from
+`Localizable.xcstrings`; বাংলা pinned to Latin digits on both). The golden-vector harness itself was pinned
+to TZ=UTC the same day after the first iOS CI run (`.github/workflows/ios-ci.yml`, new) caught
+timezone-dependent vectors. Residual gaps: the recurring-preview ordering below, the CLI section below, and
+the outlier-insight date string, which the web engine still formats as en-US inside `lib/finance/insights.ts`.
+
 ### Apps (web ↔ iOS) — tightly in parity
 
 After `009`, the apps agree on every vectored function (owner ordering, currency rounding, recurring-average
@@ -115,10 +133,10 @@ others are real gaps:`
   owner filter; single-value (not multi-select OR) for category/source/kind; a silent **200-row cap**;
   non-admin scopes to `created_by = you` (the apps scope household-wide). Same criteria can return a
   different set than the apps.
-- ⚠️ **Date storage convention (MEDIUM):** the CLI writes `T12:00:00.000Z` (noon **UTC**); web's add-form
-  writes noon in the **browser's local** time. Both apps then bucket "Today/Yesterday" by the viewer's local
-  day, so far-from-UTC viewers can see a CLI-imported row land on an adjacent calendar day. The cents/owners
-  are unaffected.
+- **Date storage convention (RESOLVED 2026-07-02):** all three surfaces now write transaction dates as
+  noon UTC of the picked local calendar day (`T12:00:00.000Z`, the spec-004 convention) — web's add/edit
+  form and iOS's sheet were both normalized to it, so a row entered anywhere renders on the same calendar
+  day everywhere.
 - ⚠️ **`--admin` bypasses RLS (MEDIUM, by-design):** admin mode uses the service-role key and attributes
   `created_by` by name-matching the statement holder rather than an authenticated session — powerful, and
   outside the household RLS the apps rely on.

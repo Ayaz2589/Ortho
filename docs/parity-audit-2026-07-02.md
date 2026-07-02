@@ -1,5 +1,12 @@
 # Web ↔ iOS functional parity audit — 2026-07-02
 
+> **STATUS: REMEDIATED (same day).** All 65 confirmed divergences below were fixed on 2026-07-02
+> in three waves — wave 1 data-integrity (highs + web error-checking sweep), waves 2–3 behavior
+> alignment + feature builds (iOS month grouping, desktop Copy, batch entry) + full web UI
+> translation into the six iOS languages. See PARITY.md "Known divergences" for the summary and
+> the residual gaps. This file is kept as the audit record; per-finding details below describe
+> the PRE-fix state.
+
 Method: 7 area-comparison agents read both implementations side by side; every claimed
 divergence was then adversarially verified by an independent agent (76 agents total).
 Form-factor adaptations sanctioned by the constitution were classified out, as were

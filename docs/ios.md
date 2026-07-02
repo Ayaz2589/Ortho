@@ -115,7 +115,7 @@ iOS/
 - **Writes are optimistic with rollback**: every `AppState` mutator (add/update/delete for transactions, cards, properties, rental payments, budgets, people, household rename) mutates the local array first, then syncs in a `Task`; on error it restores the snapshot and sets `dataError` (surfaced by the RootTabView alert).
 - **Transactions are two tables**: `TransactionsAPI` splits a Swift `Transaction` into a `transactions` parent row plus N `transaction_shares` rows (one cents-share per owner), and joins them back in `rehydrate`. Since there's no RPC yet, it does **compensating writes**: `create` deletes the orphaned parent if the shares insert fails; `update` re-inserts the *previous* shares if the new-shares insert fails. Deletes cascade via the FK.
 - **Forward-compatible decoding**: `Lenient<T>` (in `TransactionsAPI.swift`) decodes unknown enum raw values (a future `kind`/`category`) to `.unknown` instead of throwing, and `rehydrate` drops just that row — one unknown row no longer empties the whole list.
-- **Dates**: `SupabaseCoding` handles `timestamptz` (ISO-8601 ± fractional seconds) and `date` (`yyyy-MM-dd`) columns; `SupabaseDateFormatters.dateOnly` is locked to `en_US_POSIX`/UTC and **must never** follow the in-app locale.
+- **Dates**: `SupabaseCoding` handles `timestamptz` (ISO-8601 ± fractional seconds) and `date` (`yyyy-MM-dd`) columns; `SupabaseDateFormatters.dateOnly` is locked to `en_US_POSIX` in the **local** timezone (since 2026-07-02 — date-only columns are calendar days; UTC parsing shifted them a day west of UTC) and must never follow the in-app locale.
 
 ### Domain model highlights
 

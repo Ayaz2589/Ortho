@@ -78,7 +78,8 @@ web/
 │   ├── format.ts               # date grouping, effectiveShares
 │   ├── categories.ts           # category metadata + paletteFor
 │   ├── types.ts                # domain types mirroring the Supabase schema
-│   ├── language.ts             # language → BCP-47 locale
+│   ├── language.ts             # language → BCP-47 locale (bn pinned to Latin digits)
+│   ├── i18n/                   # full-UI translation catalogs (bn/es/ja/zh/ko), seeded from iOS xcstrings; store exposes t()
 │   ├── useMediaQuery.ts        # useIsExpanded() = (min-width: 1024px)
 │   ├── useDashboardRange.ts    # persisted range + transient month scope hook
 │   └── useTransactionFilters.ts
