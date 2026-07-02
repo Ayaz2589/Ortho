@@ -1,0 +1,93 @@
+# iOS CI — builds Ortho-iOS and runs the XCTest parity suites on a macOS runner.
+# Dev sandboxes are Linux and cannot build iOS; this workflow is their feedback loop.
+# Setup/usage notes live in the (gitignored) CI-SETUP.local.md at the repo root.
+name: iOS CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "iOS/**"
+      - "shared/test-vectors/**"
+      - ".github/workflows/ios-ci.yml"
+  pull_request:
+    paths:
+      - "iOS/**"
+      - "shared/test-vectors/**"
+      - ".github/workflows/ios-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ios-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & test (iOS Simulator)
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest Xcode
+        run: |
+          XCODE_APP="$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          echo "Selecting $XCODE_APP"
+          sudo xcode-select -s "$XCODE_APP"
+          xcodebuild -version
+
+      # The parity test suite is pure logic (golden vectors) — it never touches the
+      # network, so dummy Supabase values are enough to compile.
+      - name: Create SupabaseConfig.swift from template
+        run: |
+          sed -e 's|https://YOUR-PROJECT-REF.supabase.co|https://ci-placeholder.supabase.co|' \
+              -e 's|sb_publishable_\.\.\.|sb_publishable_ci_placeholder|' \
+              iOS/Ortho-iOS/App/SupabaseConfig.swift.template \
+              > iOS/Ortho-iOS/App/SupabaseConfig.swift
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: spm-packages
+          key: spm-${{ runner.os }}-${{ hashFiles('iOS/Ortho-iOS.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Pick a simulator
+        id: sim
+        run: |
+          xcrun simctl list devices available
+          UDID="$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          iphones = [d for devs in devices.values() for d in devs
+                     if d.get("isAvailable") and d["name"].startswith("iPhone")]
+          if not iphones:
+              sys.exit("no available iPhone simulator on this runner")
+          print(iphones[-1]["udid"])
+          ')"
+          echo "Using simulator UDID: $UDID"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Build and test
+        run: |
+          set -o pipefail
+          if command -v xcbeautify >/dev/null 2>&1; then
+            FILTER=(xcbeautify --renderer github-actions)
+          else
+            FILTER=(cat)
+          fi
+          xcodebuild test \
+            -project iOS/Ortho-iOS.xcodeproj \
+            -scheme Ortho-iOS \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -clonedSourcePackagesDirPath spm-packages \
+            -resultBundlePath TestResults.xcresult \
+            2>&1 | "${FILTER[@]}"
+
+      - name: Upload result bundle
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestResults.xcresult
+          path: TestResults.xcresult
+          if-no-files-found: ignore

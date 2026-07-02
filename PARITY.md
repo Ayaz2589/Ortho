@@ -1,5 +1,14 @@
 # Ortho cross-surface parity
 
+> Subsystem deep-dives (architecture, key files, commands, gotchas) live in
+> [`docs/`](docs/index.md) — this file is the audited parity *contract* between surfaces.
+>
+> **Enforcement in CI:** the iOS half of the golden-vector lock runs automatically —
+> [`.github/workflows/ios-ci.yml`](.github/workflows/ios-ci.yml) executes the XCTest parity
+> suites on a macOS runner for any push/PR touching `iOS/**` or `shared/test-vectors/**`,
+> so vector drift on the Swift side is caught even from Linux environments that cannot
+> build iOS. The web suites run locally via `npm test`.
+
 Ortho is one product on **three surfaces over one Supabase backend** (all money is USD cents):
 
 | Surface | What it is | Location |

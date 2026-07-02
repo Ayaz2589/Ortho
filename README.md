@@ -12,6 +12,7 @@ across languages by shared golden test vectors.
 
 ```
 Ortho/
+├── docs/         Deep-dive docs per subsystem — start at docs/index.md
 ├── iOS/          SwiftUI app (Swift) — the canonical client
 ├── web/          Next.js 16 (App Router) + React 19 + TypeScript + Tailwind v4
 ├── shared/       Cross-language golden test vectors (finance parity)
@@ -19,6 +20,11 @@ Ortho/
 ├── specs/        Spec-Driven Development artifacts (Spec Kit)
 └── .specify/     Spec Kit config + the project constitution
 ```
+
+**New here (human or agent)?** Read [`docs/index.md`](docs/index.md) first — it maps how the
+pieces fit together, then links to a deep-dive doc for each subsystem
+([iOS](docs/ios.md) · [web](docs/web.md) · [supabase](docs/supabase.md) ·
+[shared](docs/shared.md) · [tooling/Makefile](docs/makefile.md)).
 
 The four destinations on every canvas: **Dashboard**, **Transactions**, **Housing**,
 **Settings** (with Budgets and Insights surfaced within them).
@@ -65,6 +71,12 @@ npx tsc --noEmit   # typecheck
 
 Open the project in Xcode and run the `Ortho-iOS` scheme (SwiftUI, uses the Supabase
 Swift client; preferences persist in `UserDefaults`).
+
+**CI:** [`.github/workflows/ios-ci.yml`](.github/workflows/ios-ci.yml) builds the app and
+runs the XCTest parity suites on a macOS runner for any push/PR touching `iOS/` or
+`shared/test-vectors/` — the iOS feedback loop for environments without Xcode (Linux dev
+sandboxes included). Setup notes and sandbox usage live in the gitignored
+`CI-SETUP.local.md` at the repo root.
 
 ### Backend (`supabase/`)
 

@@ -10,6 +10,9 @@
 # Local scratch / screenshots
 temp/
 
+# Local CI setup & usage guide — holds credential values for sandboxes. NEVER commit.
+/CI-SETUP.local.md
+
 # Pre-monorepo git histories — preserved locally, NOT tracked.
 # Recover with e.g.:  git --git-dir=.history-backup/ortho-web.git log
 .history-backup/
