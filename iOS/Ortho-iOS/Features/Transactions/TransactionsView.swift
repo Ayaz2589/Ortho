@@ -481,6 +481,12 @@ struct TransactionsView: View {
                     .font(.lato(size: 32, weight: .bold))
                     .tracking(-0.6)
                     .foregroundStyle(AppTheme.text)
+                    // On 375pt-wide devices (SE class) the three title-row
+                    // buttons squeeze the title into an ugly two-line wrap
+                    // ("Transaction/s") — scale instead. Caught by the CI
+                    // simulator screenshots.
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 Spacer()
                 if hasAnyTransactions {
                     searchButton

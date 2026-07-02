@@ -63,7 +63,13 @@ jobs:
                      if d.get("isAvailable") and d["name"].startswith("iPhone")]
           if not iphones:
               sys.exit("no available iPhone simulator on this runner")
-          print(iphones[-1]["udid"])
+          # Prefer a mainstream-size device: name sorting made [-1] pick an
+          # SE, whose 375pt width is a layout edge case, not the baseline.
+          import re
+          plain = [d for d in iphones if re.fullmatch(r"iPhone \d+", d["name"])]
+          pro = [d for d in iphones if "Pro" in d["name"] and "Max" not in d["name"]]
+          pick = (plain or pro or iphones)[-1]
+          print(pick["udid"])
           ')"
           echo "Using simulator UDID: $UDID"
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
