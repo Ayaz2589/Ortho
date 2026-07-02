@@ -274,7 +274,7 @@ const catalog: Record<string, string> = {
   "{0} properties": "부동산 {0}개",
   "{0} this month": "이번 달 {0}",
   "{0} units": "유닛 {0}개",
-  "{0} visits": "{0}회 방문",
+  "{0} visits": "방문 {0}회",
   "1 day left": "1일 남음",
   "1 member": "구성원 1명",
   "1 property": "부동산 1개",

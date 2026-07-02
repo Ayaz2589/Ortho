@@ -277,6 +277,8 @@ const catalog: Record<string, string> = {
   "1 unit": "1 unidad",
   "1 visit": "1 visita",
   "1Y": "1A",
+  "3M": "3M",
+  "6M": "6M",
   "Add payment": "Añadir pago",
   "Add person": "Añadir persona",
   "Amounts must add up to {0}.": "Los importes deben sumar {0}.",
