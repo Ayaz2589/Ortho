@@ -24,7 +24,7 @@ function RemovableChip({ label, onRemove }: { label: string; onRemove: () => voi
   )
 }
 
-const KIND_LABEL: Record<string, string> = { expense: 'Expenses', income: 'Income' }
+const KIND_LABEL: Record<string, string> = { expense: 'Expenses', income: 'Income', transfer: 'Transfers' }
 
 /** A wrapping row of removable chips for every active filter dimension + Clear all. */
 export function ActiveFilterChips({ f }: { f: TxFilters }) {

@@ -27,7 +27,7 @@ export interface MonthOption {
 /** Single source of filter state + the filtered/derived data, shared by the
  *  compact page and the desktop view. The pure `filterTransactions` does the work. */
 export function useTransactionFilters() {
-  const { transactions, resolveUser } = useApp()
+  const { transactions, resolveUser, locale } = useApp()
   const [criteria, setCriteria] = useState<FilterCriteria>(emptyCriteria)
 
   const ownerNames = useMemo(() => {
@@ -49,13 +49,14 @@ export function useTransactionFilters() {
   const monthOptions: MonthOption[] = useMemo(() => {
     const set = new Set<string>()
     for (const tx of transactions) set.add(tx.date.slice(0, 7))
+    const fmt = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' })
     return [...set]
       .sort((a, b) => b.localeCompare(a)) // newest first
       .map((value) => {
         const [y, m] = value.split('-').map(Number)
-        return { value, label: new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) }
+        return { value, label: fmt.format(new Date(y, m - 1, 1)) }
       })
-  }, [transactions])
+  }, [transactions, locale])
 
   const filtered = useMemo(() => filterTransactions(transactions, criteria, ctx), [transactions, criteria, ctx])
   const count = activeFilterCount(criteria)

@@ -145,6 +145,9 @@ export function AddPropertyModal({
   }
 
   const canSubmit = (() => {
+    // No resolved household → creating would silently no-op server-side;
+    // block it here like iOS's canSubmit does.
+    if (!currentHousehold) return false
     if (address.trim() === '') return false
     if (meta.hasMortgage) {
       return num(purchase) > 0 && num(loan) > 0 && num(interest) > 0
@@ -166,7 +169,9 @@ export function AddPropertyModal({
         annual_interest_rate_percent: num(interest),
         loan_term_years: term,
         closing_date: closing,
-        auto_pay_source: autoPay.trim() === '' ? null : autoPay.trim(),
+        // Empty → null, otherwise stored exactly as typed (iOS parity: only
+        // an isEmpty check, no trimming).
+        auto_pay_source: autoPay === '' ? null : autoPay,
       }
     }
 
@@ -179,18 +184,20 @@ export function AddPropertyModal({
         lease_start: leaseStart,
         lease_end: leaseEnd,
         security_deposit_cents: depCents,
-        paid_with_source: paidWith.trim() === '' ? null : paidWith.trim(),
+        paid_with_source: paidWith === '' ? null : paidWith,
       }
     }
 
+    // Units store exactly as typed (an emptied name saves empty; tenant is
+    // empty→null, never trimmed) — iOS parity: only address is trimmed.
     let unitObjs: Unit[] | undefined
     if (kind === 'multifamily') {
       unitObjs = units.map((u, i) => ({
         id: u.id,
         property_id: id,
-        name: u.name.trim() === '' ? `Unit ${i + 1}` : u.name.trim(),
+        name: u.name,
         monthly_rent_cents: parseMoney(u.rent, currency, r) ?? 0,
-        tenant_name: u.tenant.trim() === '' ? null : u.tenant.trim(),
+        tenant_name: u.tenant === '' ? null : u.tenant,
         tenant_email: null,
         sort_order: i,
       }))
@@ -201,7 +208,7 @@ export function AddPropertyModal({
       household_id: currentHousehold.id,
       kind,
       address: address.trim(),
-      nickname: nickname.trim() === '' ? null : nickname.trim(),
+      nickname: nickname === '' ? null : nickname,
       created_at: editing?.created_at ?? now,
       updated_at: now,
       mortgage,
@@ -217,6 +224,14 @@ export function AddPropertyModal({
   const navTitle = isEditing
     ? `Edit ${meta.shortLabel.toLowerCase()}`
     : `New ${kind === 'primary_home' ? 'primary home' : kind === 'multifamily' ? 'multifamily' : 'rental'}`
+
+  // Per-kind explanatory footer — same meaning as iOS AddPropertySheet.
+  const footerCaption =
+    kind === 'primary_home'
+      ? "Monthly principal + interest is computed from the loan amount, rate, and term. Taxes and insurance aren't tracked yet."
+      : kind === 'multifamily'
+        ? "Add each unit's rent and tenant. Net balance is total unit rent minus the mortgage payment."
+        : 'Rent reminders use the day of the month from your lease start date.'
 
   const addUnit = () =>
     setUnits((prev) => [
@@ -396,6 +411,8 @@ export function AddPropertyModal({
             </FormGroup>
           </div>
         )}
+
+        <p className="px-1 text-[13px] leading-relaxed text-text-3">{footerCaption}</p>
 
         <PrimaryButton onClick={handleSubmit} disabled={!canSubmit}>
           {isEditing ? 'Save property' : 'Add property'}

@@ -49,7 +49,8 @@ export function PropertyTypePicker({
         })}
       </div>
       <p className="px-1 pb-2 pt-4 text-[13px] leading-relaxed text-text-3">
-        You can change details later from the property&apos;s Edit screen.
+        You can change type later from the property&apos;s settings, but a few fields will reset
+        (e.g. lease dates become closing date).
       </p>
       </div>
     </Drawer>

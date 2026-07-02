@@ -99,14 +99,23 @@ export function PlusGlyph({ size = 15 }: { size?: number }) {
 export function ChipIconButton({
   label,
   onClick,
+  disabled = false,
   children,
 }: {
   label: string
   onClick?: () => void
+  disabled?: boolean
   children: ReactNode
 }) {
   return (
-    <button className="ow-btn ow-chip-btn" aria-label={label} title={label} onClick={onClick}>
+    <button
+      className="ow-btn ow-chip-btn"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      disabled={disabled}
+      style={disabled ? { opacity: 0.4, cursor: 'default' } : undefined}
+    >
       {children}
     </button>
   )

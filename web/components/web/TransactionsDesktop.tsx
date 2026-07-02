@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { useApp } from '@/lib/store'
-import { groupByDay, groupDaysByMonth, dayLabel, monthYearLong, expenseTotal, startOfMonth } from '@/lib/format'
+import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expenseTotal, startOfMonth } from '@/lib/format'
 import type { Transaction } from '@/lib/types'
 import { Avatar, StackedAvatars } from '@/components/ui'
 import { TransactionDetailBody } from '@/components/transactions/TransactionDetailBody'
@@ -40,13 +40,21 @@ function TxDetailContent({
   onEdit: () => void
   onDelete: () => void
 }) {
+  const { currentHousehold } = useApp()
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  // Kind + household name, like iOS's detail nav title ("Expense · Home").
+  const kindLabel = tx.kind === 'transfer' ? 'Reimbursement' : tx.kind === 'income' ? 'Income' : 'Expense'
+  const title =
+    currentHousehold && tx.household_id === currentHousehold.id
+      ? `${kindLabel} · ${currentHousehold.name}`
+      : kindLabel
 
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 0' }}>
         <div style={{ fontSize: 13, fontWeight: 400, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-2)' }}>
-          Transaction
+          {title}
         </div>
         <button className="ow-btn ow-chip-btn" aria-label="Close" onClick={onClose} style={{ width: 28, height: 28 }}>
           <svg width="11" height="11" viewBox="0 0 12 12">
@@ -86,10 +94,12 @@ function TxRow({
   tx,
   selected,
   onClick,
+  onCopy,
 }: {
   tx: Transaction
   selected: boolean
   onClick: () => void
+  onCopy: () => void
 }) {
   const { formatMoney, resolveUser } = useApp()
   const isIncome = tx.kind === 'income'
@@ -100,42 +110,58 @@ function TxRow({
     ? `${tx.paid_by ? resolveUser(tx.paid_by).name : '—'} → ${tx.owner_ids[0] ? resolveUser(tx.owner_ids[0]).name : '—'}`
     : tx.merchant
   return (
-    <button
-      className={'ow-btn ow-tab-row ow-tab-tr cv-row' + (selected ? ' is-selected' : '')}
-      style={{ gridTemplateColumns: TX_COLS }}
-      onClick={onClick}
-      aria-current={selected ? 'true' : undefined}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-        <CatTile category={tx.category} size={30} />
-        <span style={{ fontSize: 14.5, fontWeight: 400, letterSpacing: '-0.15px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {title}
-        </span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-        {single ? (
-          <>
-            <Avatar user={single} size={20} />
-            <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {single.name}
-            </span>
-          </>
-        ) : ownerUsers.length === 0 ? (
-          <span style={{ fontSize: 13, color: 'var(--text-3)' }}>—</span>
-        ) : (
-          <StackedAvatars users={ownerUsers} size={20} />
-        )}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-        <SourceDot />
-        <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {isTransfer ? 'Reimbursement' : tx.source}
-        </span>
-      </div>
-      <div style={{ fontSize: 14.5, fontWeight: 400, textAlign: 'right', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px', whiteSpace: 'nowrap', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
-        {formatMoney(tx.amount_cents, { leadingPlus: isIncome })}
-      </div>
-    </button>
+    <div className="ow-row-wrap cv-row">
+      <button
+        className={'ow-btn ow-tab-row ow-tab-tr' + (selected ? ' is-selected' : '')}
+        style={{ gridTemplateColumns: TX_COLS }}
+        onClick={onClick}
+        aria-current={selected ? 'true' : undefined}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+          <CatTile category={tx.category} size={30} />
+          <span style={{ fontSize: 14.5, fontWeight: 400, letterSpacing: '-0.15px', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {title}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          {single ? (
+            <>
+              <Avatar user={single} size={20} />
+              <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {single.name}
+              </span>
+            </>
+          ) : ownerUsers.length === 0 ? (
+            <span style={{ fontSize: 13, color: 'var(--text-3)' }}>—</span>
+          ) : (
+            <StackedAvatars users={ownerUsers} size={20} />
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <SourceDot />
+          <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {isTransfer ? 'Reimbursement' : tx.source}
+          </span>
+        </div>
+        <div style={{ fontSize: 14.5, fontWeight: 400, textAlign: 'right', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px', whiteSpace: 'nowrap', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
+          {formatMoney(tx.amount_cents, { leadingPlus: isIncome })}
+        </div>
+      </button>
+      {/* Hover/focus row action — opens the form pre-filled from this row
+          (same semantics as mobile web's row-menu Copy / iOS's swipe Copy). */}
+      <button
+        className="ow-btn ow-chip-btn ow-row-action"
+        aria-label="Copy transaction"
+        title="Copy transaction"
+        onClick={onCopy}
+        style={{ width: 28, height: 28, background: 'var(--surface)', boxShadow: '0 0 0 0.5px var(--hairline), 0 1px 2px rgba(0,0,0,0.06)' }}
+      >
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <rect x="5" y="5" width="8.5" height="8.5" rx="2" stroke="var(--text-2)" strokeWidth="1.4" />
+          <path d="M3 11V4.5A1.5 1.5 0 014.5 3H11" stroke="var(--text-2)" strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+      </button>
+    </div>
   )
 }
 
@@ -145,6 +171,7 @@ export function TransactionsDesktop() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+  const [copySource, setCopySource] = useState<Transaction | null>(null)
   const [settlePrefill, setSettlePrefill] = useState<TransferPrefill | null>(null)
   const [filterOpen, setFilterOpen] = useState(false)
 
@@ -164,6 +191,7 @@ export function TransactionsDesktop() {
     setEditing(false)
     setSelectedId(null)
     setSettlePrefill(null)
+    setCopySource(null)
   }
 
   // Lock background scroll while the panel is open. `main` has `scrollbar-gutter:
@@ -185,8 +213,10 @@ export function TransactionsDesktop() {
     if (!panelOpen) return
     const h = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
-      if (addOpen) setAddOpen(false)
-      else if (editing) setEditing(false)
+      if (addOpen) {
+        setAddOpen(false)
+        setCopySource(null)
+      } else if (editing) setEditing(false)
       else setSelectedId(null)
     }
     window.addEventListener('keydown', h)
@@ -197,11 +227,20 @@ export function TransactionsDesktop() {
     setSelectedId(null)
     setEditing(false)
     setSettlePrefill(null)
+    setCopySource(null)
+    setAddOpen(true)
+  }
+  const openCopy = (tx: Transaction) => {
+    setSelectedId(null)
+    setEditing(false)
+    setSettlePrefill(null)
+    setCopySource(tx)
     setAddOpen(true)
   }
   const openSettle = (prefill: TransferPrefill) => {
     setSelectedId(null)
     setEditing(false)
+    setCopySource(null)
     setSettlePrefill(prefill)
     setAddOpen(true)
   }
@@ -296,7 +335,8 @@ export function TransactionsDesktop() {
         </div>
       )}
 
-      <BalanceSummary onSettle={openSettle} />
+      {/* Hidden while a search query is active — matches iOS (`!searchActive`). */}
+      {f.criteria.query.trim() === '' && <BalanceSummary onSettle={openSettle} />}
 
       {transactions.length === 0 ? (
         <p style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-2)', fontSize: 14 }}>
@@ -355,15 +395,18 @@ export function TransactionsDesktop() {
                   m.days.map((g) => (
                     <div key={g.day.getTime()}>
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '22px 16px 8px' }}>
-                        <span style={{ fontSize: 13, fontWeight: 400, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-2)' }}>
-                          {dayLabel(g.day, locale)}
+                        <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                          <span style={{ fontSize: 13, fontWeight: 400, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-2)' }}>
+                            {dayLabel(g.day, locale)}
+                          </span>
+                          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{shortDate(g.day, locale)}</span>
                         </span>
                         <span style={{ fontSize: 12, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums' }}>
                           {formatMoney(expenseTotal(g.items))}
                         </span>
                       </div>
                       {g.items.map((tx) => (
-                        <TxRow key={tx.id} tx={tx} selected={tx.id === selectedId} onClick={() => selectRow(tx.id)} />
+                        <TxRow key={tx.id} tx={tx} selected={tx.id === selectedId} onClick={() => selectRow(tx.id)} onCopy={() => openCopy(tx)} />
                       ))}
                     </div>
                   ))}
@@ -384,19 +427,22 @@ export function TransactionsDesktop() {
             <TxFormContent
               title={settlePrefill ? 'Settle up' : 'New transaction'}
               saveLabel={settlePrefill ? 'Record' : 'Add'}
+              copying={copySource}
               initialTransfer={settlePrefill}
               onDone={() => {
                 setAddOpen(false)
                 setSettlePrefill(null)
+                setCopySource(null)
               }}
               onCancel={() => {
                 setAddOpen(false)
                 setSettlePrefill(null)
+                setCopySource(null)
               }}
             />
           ) : editing && selected ? (
             <TxFormContent
-              title="Edit transaction"
+              title={selected.kind === 'transfer' ? 'Edit reimbursement' : 'Edit transaction'}
               saveLabel="Save"
               editing={selected}
               onDone={() => setEditing(false)}

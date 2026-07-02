@@ -86,19 +86,25 @@ export function CardRow({ card, onDelete }: { card: Card; onDelete: () => void }
 export function ActionRow({
   icon,
   label,
+  sub,
   onClick,
   destructive = false,
+  disabled = false,
 }: {
   icon: ReactNode
   label: string
+  /** Optional secondary line under the label (e.g. the signed-in email). */
+  sub?: string
   onClick: () => void
   destructive?: boolean
+  disabled?: boolean
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-[60px] w-full items-center gap-3.5 px-4 py-3 text-left"
+      disabled={disabled}
+      className="flex min-h-[60px] w-full items-center gap-3.5 px-4 py-3 text-left disabled:opacity-40"
     >
       <span
         className={
@@ -109,19 +115,37 @@ export function ActionRow({
       >
         {icon}
       </span>
-      <span
-        className={
-          'text-[17px] font-normal ' + (destructive ? 'text-destructive' : 'text-accent')
-        }
-      >
-        {label}
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span
+          className={
+            'text-[17px] font-normal ' + (destructive ? 'text-destructive' : 'text-accent')
+          }
+        >
+          {label}
+        </span>
+        {sub && <span className="truncate text-[13px] text-text-2">{sub}</span>}
       </span>
     </button>
   )
 }
 
-export function AddRow({ label, onClick }: { label: string; onClick: () => void }) {
-  return <ActionRow icon={<Plus size={15} strokeWidth={2.5} />} label={label} onClick={onClick} />
+export function AddRow({
+  label,
+  onClick,
+  disabled = false,
+}: {
+  label: string
+  onClick: () => void
+  disabled?: boolean
+}) {
+  return (
+    <ActionRow
+      icon={<Plus size={15} strokeWidth={2.5} />}
+      label={label}
+      onClick={onClick}
+      disabled={disabled}
+    />
+  )
 }
 
 /** User row used in the Household screen. */

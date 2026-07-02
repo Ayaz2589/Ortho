@@ -4,6 +4,7 @@ import { House, Building2, KeyRound, type LucideIcon } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { Card, SectionLabel } from '@/components/ui'
 import { monthlyPaymentCents, currentEquityCents } from '@/lib/finance/mortgage'
+import { daysUntilEnd } from '@/components/housing/lease'
 import type { Property } from '@/lib/types'
 
 function mortgagePayment(p: Property): number {
@@ -32,7 +33,7 @@ function monthlyCost(p: Property): number {
   return mortgagePayment(p) + (p.lease?.monthly_rent_cents ?? 0)
 }
 
-function kindIcon(kind: Property['kind']): LucideIcon {
+export function kindIcon(kind: Property['kind']): LucideIcon {
   switch (kind) {
     case 'primary_home':
       return House
@@ -43,7 +44,7 @@ function kindIcon(kind: Property['kind']): LucideIcon {
   }
 }
 
-function propertyTitle(p: Property): string {
+export function propertyTitle(p: Property): string {
   return p.nickname ?? p.address
 }
 
@@ -153,13 +154,13 @@ export function HousingSnapshotCard() {
   )
 }
 
-function headlineCost(p: Property): number {
+export function headlineCost(p: Property): number {
   if (p.mortgage) return mortgagePayment(p)
   if (p.lease) return p.lease.monthly_rent_cents
   return 0
 }
 
-function subtitle(p: Property, formatMoney: (c: number) => string): string {
+export function subtitle(p: Property, formatMoney: (c: number) => string): string {
   switch (p.kind) {
     case 'primary_home':
       return `Primary home · ${formatMoney(equity(p))} equity`
@@ -167,8 +168,15 @@ function subtitle(p: Property, formatMoney: (c: number) => string): string {
       const n = (p.units ?? []).length
       return `Multifamily · ${n} unit${n === 1 ? '' : 's'} · ${formatMoney(equity(p))} equity`
     }
-    case 'rental':
+    case 'rental': {
+      // Lease days-remaining, like iOS ("Rental · N days left"); plain
+      // "Rental" once the lease has ended or when there's no lease.
+      if (p.lease) {
+        const days = daysUntilEnd(p.lease)
+        if (days >= 0) return `Rental · ${days} ${days === 1 ? 'day' : 'days'} left`
+      }
       return 'Rental'
+    }
   }
 }
 

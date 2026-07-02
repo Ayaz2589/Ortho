@@ -97,19 +97,23 @@ export function IconButton({
   children,
   className,
   ariaLabel,
+  disabled = false,
 }: {
   onClick?: () => void
   children: ReactNode
   className?: string
   ariaLabel?: string
+  disabled?: boolean
 }) {
   return (
     <button
       type="button"
       aria-label={ariaLabel}
       onClick={onClick}
+      disabled={disabled}
       className={cn(
         'flex h-9 w-9 items-center justify-center rounded-full text-accent transition-colors hover:bg-[var(--hairline)]',
+        disabled && 'opacity-40 hover:bg-transparent',
         className
       )}
       style={{ background: 'rgba(0,0,0,0.04)' }}

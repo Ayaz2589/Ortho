@@ -13,7 +13,7 @@ import { createClient } from './supabase/client'
 import { formatMoney as fmtMoney, type CurrencyKey } from './finance/money'
 import { FALLBACK_RATE_FROM_USD } from './finance/currency'
 import { effectiveShares } from './format'
-import { paletteFor } from './categories'
+import { CATEGORIES, paletteFor } from './categories'
 import {
   DEFAULT_LANGUAGE,
   DEFAULT_LOCALE,
@@ -45,7 +45,11 @@ export interface OwnerDisplay {
 interface AppStateValue {
   loading: boolean
   error: string | null
+  /** True when the initial bootstrap itself failed — enables Retry (mirrors iOS BootstrapRecoveryView). */
+  bootstrapFailed: boolean
   currentUserId: string
+  /** Signed-in account email (shown on the Sign out row, mirroring iOS). */
+  currentUserEmail: string | null
   currentUser: User | null
   /** The current account holder's Person (owner default), if resolved. */
   currentPersonId: string
@@ -61,6 +65,10 @@ interface AppStateValue {
   budgets: Budget[]
   currency: CurrencyKey
   rates: Partial<Record<CurrencyKey, number>>
+  /** Epoch ms of the last successful live-rate fetch (or cached fetch), null if never. */
+  ratesLastFetched: number | null
+  ratesIsLoading: boolean
+  ratesError: string | null
   /** Selected language picker option ("System" follows the browser). */
   language: Language
   /** BCP-47 locale derived from `language`, driving all Intl formatters. */
@@ -100,6 +108,10 @@ interface AppStateValue {
   removePerson: (id: string) => void
   refreshRates: () => void
   signOut: () => Promise<void>
+  /** Clear the current error banner. */
+  dismissError: () => void
+  /** Re-run the failed bootstrap (mirrors iOS retryBootstrap). */
+  retryBootstrap: () => void
 }
 
 const Ctx = createContext<AppStateValue | null>(null)
@@ -122,10 +134,20 @@ function personToUser(p: Person): User {
   return { id: p.id, name: p.name, initial: p.initial, color_key: p.color_key, created_at: p.created_at }
 }
 
+const KNOWN_KINDS = new Set(['expense', 'income', 'transfer'])
+
+/** Row-level enum guard, mirroring iOS's `Lenient<T>` + compactMap: a server
+ *  row whose kind or category this build doesn't know is silently dropped —
+ *  one bad row disappears, everything else renders, nothing crashes. */
+function isKnownTransactionRow(r: Transaction): boolean {
+  return KNOWN_KINDS.has(r.kind) && r.category in CATEGORIES
+}
+
 /** Attach owner_ids (person ids) + per-owner cents shares to each transaction
  *  from its `transaction_shares` rows. A row with no shares falls back to its
  *  creator's person at the full amount (defensive — post-migration all rows
- *  carry materialized shares). */
+ *  carry materialized shares). Rows with an unknown kind/category are dropped
+ *  (see `isKnownTransactionRow`). */
 function rehydrateTransactions(
   rows: Transaction[],
   shares: TransactionShare[],
@@ -137,7 +159,7 @@ function rehydrateTransactions(
     arr.push(s)
     byTx.set(s.transaction_id, arr)
   }
-  return rows.map((r) => {
+  return rows.filter(isKnownTransactionRow).map((r) => {
     const sh = byTx.get(r.id) ?? []
     if (sh.length === 0) {
       // A transfer (reimbursement) is directional, not co-owned — never synthesize
@@ -156,7 +178,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => createClient(), [])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [bootstrapFailed, setBootstrapFailed] = useState(false)
   const [currentUserId, setCurrentUserId] = useState('')
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [people, setPeople] = useState<Person[]>([]) // all people, incl. removed
   const [household, setHousehold] = useState<Household | null>(null)
@@ -167,6 +191,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [currency, setCurrencyState] = useState<CurrencyKey>('usd')
   const [rates, setRates] = useState<Partial<Record<CurrencyKey, number>>>({})
+  const [ratesLastFetched, setRatesLastFetched] = useState<number | null>(null)
+  const [ratesIsLoading, setRatesIsLoading] = useState(false)
+  const [ratesError, setRatesError] = useState<string | null>(null)
   // Language drives the locale. Start at the default so SSR and the first client
   // paint agree; the persisted choice is adopted (and "System" resolved against
   // navigator.language) after mount.
@@ -205,82 +232,126 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }
 
   // ---- bootstrap ----
-  useEffect(() => {
-    if (booted.current) return
-    booted.current = true
-    ;(async () => {
-      try {
-        const {
-          data: { user: authUser },
-        } = await supabase.auth.getUser()
-        if (!authUser) {
-          setLoading(false)
-          return
-        }
-        setCurrentUserId(authUser.id)
+  async function runBootstrap() {
+    setLoading(true)
+    setError(null)
+    setBootstrapFailed(false)
+    try {
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser()
+      if (!authUser) {
+        setLoading(false)
+        return
+      }
+      setCurrentUserId(authUser.id)
+      setCurrentUserEmail(authUser.email ?? null)
 
-        // ensure profile row
+      // Ensure a profile row exists — insert only when absent. Upserting a
+      // derived name + fresh created_at on every sign-in flip-flopped the
+      // profile between platforms (see PARITY.md); an existing row is now
+      // left untouched.
+      const { data: existingProfile } = orThrow(
+        await supabase.from('users').select('*').eq('id', authUser.id).limit(1)
+      )
+      let me: User
+      if (existingProfile && existingProfile.length > 0) {
+        me = existingProfile[0] as User
+      } else {
         const email = authUser.email ?? ''
         const local = email.split('@')[0] || 'Me'
         const name = local.charAt(0).toUpperCase() + local.slice(1)
-        const me: User = {
+        me = {
           id: authUser.id,
           name,
           initial: name.charAt(0).toUpperCase() || 'M',
           color_key: 'sage',
           created_at: new Date().toISOString(),
         }
-        orThrow(await supabase.from('users').upsert(me, { onConflict: 'id' }))
+        orThrow(await supabase.from('users').insert(me))
+      }
 
-        // find or create household. The membership read MUST fail loudly: if
-        // a transient error were treated as "no membership", we would create a
-        // duplicate household and silently detach the user from their data.
-        const { data: membership } = orThrow(
+      // find or create household. The membership read MUST fail loudly: if
+      // a transient error were treated as "no membership", we would create a
+      // duplicate household and silently detach the user from their data.
+      const { data: membership } = orThrow(
+        await supabase
+          .from('household_members')
+          .select('household_id')
+          .eq('user_id', authUser.id)
+          .limit(1)
+      )
+      let householdId: string
+      let householdName = 'Home'
+      if (membership && membership.length > 0) {
+        householdId = membership[0].household_id
+        // Name read is display-only — a failure here must not block boot.
+        const { data: h } = await supabase
+          .from('households')
+          .select('*')
+          .eq('id', householdId)
+          .single()
+        if (h) householdName = h.name
+      } else {
+        householdId = uuid()
+        orThrow(
+          await supabase
+            .from('households')
+            .insert({ id: householdId, owner_id: authUser.id, name: householdName })
+        )
+        orThrow(
           await supabase
             .from('household_members')
-            .select('household_id')
-            .eq('user_id', authUser.id)
-            .limit(1)
+            .insert({ household_id: householdId, user_id: authUser.id, role: 'owner' })
         )
-        let householdId: string
-        let householdName = 'Home'
-        if (membership && membership.length > 0) {
-          householdId = membership[0].household_id
-          // Name read is display-only — a failure here must not block boot.
-          const { data: h } = await supabase
-            .from('households')
-            .select('*')
-            .eq('id', householdId)
-            .single()
-          if (h) householdName = h.name
-        } else {
-          householdId = uuid()
-          orThrow(
-            await supabase
-              .from('households')
-              .insert({ id: householdId, owner_id: authUser.id, name: householdName })
-          )
-          orThrow(
-            await supabase
-              .from('household_members')
-              .insert({ household_id: householdId, user_id: authUser.id, role: 'owner' })
-          )
-        }
-
-        // ensure the account holder has a Person row, then fold any legacy
-        // device-only local users into household_people (one-time).
-        await ensureAccountPersonAndFoldLegacy(householdId, me)
-
-        await loadAll(householdId, householdName)
-      } catch (e) {
-        setError(`Failed to load: ${(e as Error).message}`)
-      } finally {
-        setLoading(false)
       }
-    })()
+
+      // ensure the account holder has a Person row, then fold any legacy
+      // device-only local users into household_people (one-time).
+      await ensureAccountPersonAndFoldLegacy(householdId, me)
+
+      await loadAll(householdId, householdName)
+    } catch (e) {
+      setBootstrapFailed(true)
+      setError(`Failed to load: ${(e as Error).message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const retryBootstrap = () => {
+    void runBootstrap()
+  }
+
+  useEffect(() => {
+    if (booted.current) return
+    booted.current = true
+    void runBootstrap()
     refreshRates()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Live auth-state watcher — mirrors iOS's authStateChanges subscription: a
+  // mid-session sign-out/expiry (30-day timebox, failed refresh) clears state
+  // and routes to sign-in immediately, not at the next navigation.
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== 'SIGNED_OUT') return
+      setCurrentUserId('')
+      setCurrentUserEmail(null)
+      setUsers([])
+      setPeople([])
+      setHousehold(null)
+      setTransactions([])
+      setCards([])
+      setProperties([])
+      setRentalPayments([])
+      setBudgets([])
+      window.location.assign('/sign-in')
+    })
+    return () => data.subscription.unsubscribe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase])
 
   async function ensureAccountPersonAndFoldLegacy(householdId: string, me: User) {
     // Same fail-loud rule as the membership read: a swallowed error here would
@@ -393,14 +464,27 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }
 
   // ---- FX ----
+  // Mirrors iOS: the cache is adopted at any age, a failed fetch keeps the
+  // last real (stale) rates and only sets `ratesError`, and the hardcoded
+  // FALLBACK_RATE_FROM_USD is used solely when no cache has EVER existed
+  // (via `rate()`'s `??` fallback on an empty map).
   async function refreshRates() {
+    let hasCache = false
     try {
       const fetchedAt = Number(localStorage.getItem('fxRatesFetchedAt') ?? 0)
       const cached = localStorage.getItem('fxRates')
-      if (cached && Date.now() - fetchedAt < 24 * 60 * 60 * 1000) {
+      if (cached) {
         setRates(JSON.parse(cached))
-        return
+        hasCache = true
+        if (fetchedAt > 0) setRatesLastFetched(fetchedAt)
+        if (Date.now() - fetchedAt < 24 * 60 * 60 * 1000) return
       }
+    } catch {
+      // Unreadable cache — proceed to a live fetch.
+    }
+    setRatesIsLoading(true)
+    setRatesError(null)
+    try {
       const res = await fetch('https://www.floatrates.com/daily/usd.json')
       if (!res.ok) throw new Error('rates')
       const json = await res.json()
@@ -410,11 +494,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         const entry = json[key]
         if (entry && typeof entry.rate === 'number') next[key] = entry.rate
       }
+      const now = Date.now()
       setRates(next)
+      setRatesLastFetched(now)
       localStorage.setItem('fxRates', JSON.stringify(next))
-      localStorage.setItem('fxRatesFetchedAt', String(Date.now()))
-    } catch {
-      setRates(FALLBACK_RATE_FROM_USD)
+      localStorage.setItem('fxRatesFetchedAt', String(now))
+    } catch (e) {
+      // Keep whatever rates we already have (stale cache beats a hardcoded
+      // approximation); surface the failure via the Settings caption.
+      setRatesError((e as Error).message || 'rates unavailable')
+      if (!hasCache) setRatesLastFetched(null)
+    } finally {
+      setRatesIsLoading(false)
     }
   }
 
@@ -429,35 +520,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return { id: PLACEHOLDER_ID, name: 'Removed', initial: '·', color_key: 'sand', created_at: '' }
   }
 
+  // Mirrors iOS AppState.ownersDisplay: every owner name comma-joined with the
+  // first owner's real avatar — never a synthetic "Shared" chip or "A + B".
   const ownersDisplay = (tx: Transaction): OwnerDisplay => {
     const owners = tx.owner_ids
     if (owners.length === 0) {
       return { avatarUser: resolveUser(PLACEHOLDER_ID), label: '—', count: 0 }
     }
-    if (owners.length === 1) {
-      const u = resolveUser(owners[0])
-      return { avatarUser: u, label: u.name, count: 1 }
+    const users = owners.map(resolveUser)
+    return {
+      avatarUser: users[0],
+      label: users.map((u) => u.name).join(', '),
+      count: owners.length,
     }
-    if (owners.length === 2) {
-      const a = resolveUser(owners[0])
-      const b = resolveUser(owners[1])
-      const synthetic: User = {
-        id: 'shared',
-        name: 'Shared',
-        initial: `${a.initial[0] ?? ''}+${b.initial[0] ?? ''}`,
-        color_key: 'sage',
-        created_at: '',
-      }
-      return { avatarUser: synthetic, label: `${a.name} + ${b.name}`, count: 2 }
-    }
-    const synthetic: User = {
-      id: 'shared',
-      name: 'Shared',
-      initial: '··',
-      color_key: 'sage',
-      created_at: '',
-    }
-    return { avatarUser: synthetic, label: 'Shared', count: owners.length }
   }
 
   const activePeople = useMemo(
@@ -893,7 +968,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const value: AppStateValue = {
     loading,
     error,
+    bootstrapFailed,
     currentUserId,
+    currentUserEmail,
     currentUser,
     currentPersonId,
     currentHousehold: household,
@@ -907,6 +984,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     budgets,
     currency,
     rates,
+    ratesLastFetched,
+    ratesIsLoading,
+    ratesError,
     language,
     locale,
     setCurrency,
@@ -937,6 +1017,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     removePerson,
     refreshRates,
     signOut,
+    dismissError: () => setError(null),
+    retryBootstrap,
   }
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

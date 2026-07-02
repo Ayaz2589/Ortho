@@ -58,7 +58,8 @@ export function AddRentalPaymentModal({
       property_id: property.id,
       amount_cents: parsed,
       date,
-      note: note.trim() === '' ? null : note.trim(),
+      // Empty → null, otherwise stored as typed (iOS parity: no trimming).
+      note: note === '' ? null : note,
       created_at: new Date().toISOString(),
     }
     addRentalPayment(payment)

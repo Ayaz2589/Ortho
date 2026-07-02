@@ -103,6 +103,9 @@ describe('store (AppStateProvider)', () => {
     const shared = api.transactions[0]
     const od = api.ownersDisplay(shared)
     expect(od.count).toBe(2)
+    // All owner names listed (comma-joined), like iOS — never a synthetic
+    // "Shared" / "A + B" label.
+    expect(od.label.split(', ').sort()).toEqual(['Jordan', 'Maya'])
 
     const personal = makeTx({ owner_ids: ['u-me'], household_id: 'hh-1' })
     const pod = api.ownersDisplay(personal)

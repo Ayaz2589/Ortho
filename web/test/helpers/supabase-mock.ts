@@ -40,11 +40,18 @@ export interface SupabaseMock {
   calls: RecordedCall[]
   /** Convenience: writes recorded for a given table. */
   callsFor(table: string): RecordedCall[]
+  /** Fire the auth-state listener registered by the store (e.g. 'SIGNED_OUT'). */
+  emitAuthChange(event: string, session?: unknown): void
 }
 
 // A minimal structural type — enough for the store + aggregates to type-check.
 export interface SupabaseClientLike {
-  auth: { getUser: () => Promise<{ data: { user: unknown }; error: null }> }
+  auth: {
+    getUser: () => Promise<{ data: { user: unknown }; error: null }>
+    onAuthStateChange: (cb: (event: string, session: unknown) => void) => {
+      data: { subscription: { unsubscribe: () => void } }
+    }
+  }
   from: (table: string) => QueryBuilder
   rpc: (name: string, params?: unknown) => Promise<{ data: unknown; error: Error | null }>
 }
@@ -114,8 +121,18 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
     return b
   }
 
+  // The store subscribes for live sign-out; tests can fire events via
+  // `emitAuthChange`.
+  const authCallbacks: ((event: string, session: unknown) => void)[] = []
+
   const client: SupabaseClientLike = {
-    auth: { getUser: () => Promise.resolve({ data: { user: authUser }, error: null }) },
+    auth: {
+      getUser: () => Promise.resolve({ data: { user: authUser }, error: null }),
+      onAuthStateChange: (cb) => {
+        authCallbacks.push(cb)
+        return { data: { subscription: { unsubscribe: () => {} } } }
+      },
+    },
     from: (table: string) => builder(table),
     rpc: (name: string) => {
       const err = dataset.rpcErrors?.[name] ?? null
@@ -123,7 +140,14 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
     },
   }
 
-  return { client, calls, callsFor: (t) => calls.filter((c) => c.table === t) }
+  return {
+    client,
+    calls,
+    callsFor: (t) => calls.filter((c) => c.table === t),
+    emitAuthChange: (event, session = null) => {
+      for (const cb of authCallbacks) cb(event, session)
+    },
+  }
 }
 
 /**

@@ -20,7 +20,7 @@ export function TransactionDetailModal({
   open: boolean
   onClose: () => void
 }) {
-  const { transactions, deleteTransaction } = useApp()
+  const { transactions, deleteTransaction, currentHousehold } = useApp()
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -39,13 +39,20 @@ export function TransactionDetailModal({
   if (!tx) return null
 
   const isIncome = tx.kind === 'income'
+  // Kind + household name, like iOS ("Expense · Home"); kind alone when the
+  // household can't be resolved.
+  const kindLabel = tx.kind === 'transfer' ? 'Reimbursement' : isIncome ? 'Income' : 'Expense'
+  const title =
+    currentHousehold && tx.household_id === currentHousehold.id
+      ? `${kindLabel} · ${currentHousehold.name}`
+      : kindLabel
 
   return (
     <>
       <Modal
         open={open && !editing}
         onClose={onClose}
-        title={tx.kind === 'transfer' ? 'Reimbursement' : isIncome ? 'Income' : 'Expense'}
+        title={title}
         left={
           <button type="button" onClick={onClose} className="text-accent">
             Done

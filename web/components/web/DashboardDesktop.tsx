@@ -14,6 +14,13 @@ import { BudgetProgressCard } from '@/components/dashboard/BudgetProgressCard'
 import { SpendByCategoryCard } from '@/components/dashboard/SpendByCategoryCard'
 import { PerOwnerBreakdownCard } from '@/components/dashboard/PerOwnerBreakdownCard'
 import { MonthPicker } from '@/components/dashboard/MonthPicker'
+import {
+  kindIcon,
+  propertyTitle,
+  headlineCost,
+  subtitle as propertySubtitle,
+} from '@/components/dashboard/HousingSnapshotCard'
+import { shortDate } from '@/lib/format'
 import { WebPageHeader, Seg, CardLabel } from './kit'
 import type { Property } from '@/lib/types'
 
@@ -62,7 +69,7 @@ const inRange = (iso: string, s: Date, e: Date) => {
 }
 
 export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
-  const { transactions, properties, budgets, formatMoney } = useApp()
+  const { transactions, properties, budgets, formatMoney, locale } = useApp()
   const {
     now,
     range: activeRange,
@@ -136,6 +143,21 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
 
   const rangeLabel = periodLabel
 
+  // Hero captions — parity with the mobile MonthSummaryCard / iOS: the live
+  // month gets "Day X of Y" + a progress capsule; 3M/6M/1Y get the date range;
+  // a selected specific month shows nothing (the label already names it).
+  const isThisMonth = activeRange === 'thisMonth' && !isSpecificMonth
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const dayOfMonth = now.getDate()
+  const monthProgress = dayOfMonth / daysInMonth
+  let heroCaption = ''
+  if (isThisMonth) {
+    heroCaption = `Day ${dayOfMonth} of ${daysInMonth}`
+  } else if (!isSpecificMonth) {
+    const endDate = new Date(interval.end.getTime() - 1)
+    heroCaption = `${shortDate(interval.start, locale)} – ${shortDate(endDate, locale)}`
+  }
+
   return (
     <div className="ow-page-inner" style={{ maxWidth: 1080, paddingTop: 0, paddingBottom: 0 }}>
       <WebPageHeader
@@ -156,9 +178,9 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
       />
 
       <div className="ow-grid">
-        {/* Net summary */}
+        {/* Net summary — parity with the mobile MonthSummaryCard. */}
         <div className="ow-card ow-s7" style={{ padding: 24 }}>
-          <CardLabel>{rangeLabel}</CardLabel>
+          <CardLabel hint={heroCaption || undefined}>{rangeLabel}</CardLabel>
           <div style={{ fontSize: 36, fontWeight: 300, letterSpacing: '-0.7px', fontVariantNumeric: 'tabular-nums', lineHeight: 1.05, color: net >= 0 ? 'var(--positive)' : 'var(--text)' }}>
             {formatMoney(net, { leadingPlus: net > 0 })}
           </div>
@@ -166,7 +188,7 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
             <div>
               <div className="ow-cap">Income</div>
               <div style={{ fontSize: 17, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: 'var(--positive)', letterSpacing: '-0.3px' }}>
-                {formatMoney(income, { leadingPlus: income > 0 })}
+                {formatMoney(income)}
               </div>
             </div>
             <div>
@@ -176,6 +198,18 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
               </div>
             </div>
           </div>
+          {isThisMonth && (
+            <div style={{ marginTop: 14, height: 4, width: '100%', overflow: 'hidden', borderRadius: 999, background: 'var(--chip-bg)' }}>
+              <div
+                style={{
+                  height: '100%',
+                  borderRadius: 999,
+                  width: `${Math.min(100, monthProgress * 100)}%`,
+                  background: 'color-mix(in srgb, var(--text) 20%, transparent)',
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Housing summary */}
@@ -183,7 +217,7 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
           <CardLabel hint={`${housing.count} ${housing.count === 1 ? 'property' : 'properties'}`}>Housing</CardLabel>
           {housing.count === 0 ? (
             <div style={{ fontSize: 13, color: 'var(--text-2)' }}>No properties yet. Add one from the Housing tab.</div>
-          ) : (
+          ) : housing.count === 1 ? (
             <>
               <div style={{ display: 'flex', gap: 36 }}>
                 <div>
@@ -204,6 +238,50 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
                 </div>
               )}
             </>
+          ) : (
+            /* 2+ properties: per-property breakdown + total footer (matches the
+               mobile HousingSnapshotCard / iOS perPropertyList). */
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {properties.map((p, idx) => {
+                const Icon = kindIcon(p.kind)
+                return (
+                  <div key={p.id}>
+                    {idx > 0 && <div style={{ height: 1, background: 'var(--hairline)' }} />}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 0' }}>
+                      <span style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 9, background: 'var(--chip-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Icon size={16} style={{ color: 'var(--text-2)' }} />
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 400, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {propertyTitle(p)}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {propertySubtitle(p, formatMoney)}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: 15, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: 'var(--text)' }}>
+                        {formatMoney(headlineCost(p))}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+              <div style={{ height: 1, background: 'var(--hairline)', marginTop: 4 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 10 }}>
+                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>Total</span>
+                <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: 'var(--text)' }}>
+                  {formatMoney(housing.cost)} / mo
+                </span>
+                {housing.equity > 0 && (
+                  <>
+                    <span style={{ fontSize: 13, color: 'var(--text-3)' }}>·</span>
+                    <span style={{ fontSize: 13, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: 'var(--positive)' }}>
+                      {formatMoney(housing.equity)} equity
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
           )}
         </div>
 
@@ -256,28 +334,45 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
           )}
         </div>
 
-        {/* Daily trend */}
+        {/* Daily trend — empty state + sage tint for a spending decrease, matching
+            the mobile DailySpendTrendCard / iOS (loss is never red; a drop is sage). */}
         <div className="ow-card ow-s6" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
-          <CardLabel hint="Last 30 days">Daily spend</CardLabel>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end' }}>
-            <div style={{ width: '100%' }}>
-              <Sparkline points={trend.recent.map((c) => c / 100)} height={64} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 16 }}>
-            <div>
-              <div className="ow-cap">Avg / day</div>
-              <div style={{ fontSize: 17, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px' }}>{formatMoney(trend.avg)}</div>
-            </div>
-            {trend.delta !== null && (
-              <div style={{ textAlign: 'right' }}>
-                <div className="ow-cap">vs. prior 30</div>
-                <div style={{ fontSize: 17, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px', color: 'var(--text-2)' }}>
-                  {trend.delta >= 0 ? '+' : '−'}{Math.abs(trend.delta)}%
+          <CardLabel hint="Last 30 days">Daily trend</CardLabel>
+          {trend.recent.every((c) => c === 0) ? (
+            <p style={{ padding: '20px 0', fontSize: 13, color: 'var(--text-3)' }}>
+              No expenses in the last 30 days.
+            </p>
+          ) : (
+            <>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end' }}>
+                <div style={{ width: '100%' }}>
+                  <Sparkline points={trend.recent.map((c) => c / 100)} height={64} />
                 </div>
               </div>
-            )}
-          </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 16 }}>
+                <div>
+                  <div className="ow-cap">Avg / day</div>
+                  <div style={{ fontSize: 17, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px' }}>{formatMoney(trend.avg)}</div>
+                </div>
+                {trend.delta !== null && (
+                  <div style={{ textAlign: 'right' }}>
+                    <div className="ow-cap">vs. prior 30</div>
+                    <div
+                      style={{
+                        fontSize: 17,
+                        fontWeight: 400,
+                        fontVariantNumeric: 'tabular-nums',
+                        letterSpacing: '-0.3px',
+                        color: trend.delta >= 0 ? 'var(--text-2)' : 'var(--positive)',
+                      }}
+                    >
+                      {trend.delta >= 0 ? '+' : '−'}{Math.abs(trend.delta)}%
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

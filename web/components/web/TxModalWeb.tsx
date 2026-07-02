@@ -3,7 +3,14 @@
 import { useState } from 'react'
 import type { Transaction } from '@/lib/types'
 import { WebModal } from './WebModal'
-import { useTxForm, TxFormFields, TxCopyList, CopyFromRecentButton, type TransferPrefill } from './TxForm'
+import {
+  useTxForm,
+  TxFormFields,
+  TxCopyList,
+  CopyFromRecentButton,
+  SaveAndAddAnotherButton,
+  type TransferPrefill,
+} from './TxForm'
 
 /**
  * New / Edit transaction as a centered modal. Used on the mobile/medium
@@ -28,7 +35,13 @@ export function TxModalWeb({
   const [picking, setPicking] = useState(false)
   if (!open) return null
   const allowCopy = !editing && !initialTransfer
-  const title = editing ? 'Edit transaction' : initialTransfer ? 'Settle up' : 'New transaction'
+  const title = editing
+    ? editing.kind === 'transfer'
+      ? 'Edit reimbursement'
+      : 'Edit transaction'
+    : initialTransfer
+      ? 'Settle up'
+      : 'New transaction'
 
   return (
     <WebModal
@@ -53,6 +66,7 @@ export function TxModalWeb({
         <>
           {allowCopy && <CopyFromRecentButton onClick={() => setPicking(true)} />}
           <TxFormFields form={form} />
+          {!editing && <SaveAndAddAnotherButton form={form} />}
         </>
       )}
     </WebModal>

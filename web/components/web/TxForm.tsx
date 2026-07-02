@@ -7,7 +7,7 @@ import { currencySymbol, fractionDigits } from '@/lib/finance/currency'
 import { groupByDay, dayLabel } from '@/lib/format'
 import { parseMoney, DatePicker } from '@/components/inputs'
 import { Avatar } from '@/components/ui'
-import { computeShares, validateSplit, orderedOwnerIds, type SplitInput, type SplitMethod } from '@/lib/splits'
+import { computeShares, validateSplit, orderedOwnerIds, seedSplit, type SplitInput, type SplitMethod } from '@/lib/splits'
 import type { Transaction, TransactionCategory, TransactionKind } from '@/lib/types'
 import { Seg, CatTile, SourceDot } from './kit'
 
@@ -23,6 +23,43 @@ export interface TransferPrefill {
 function centsToDisplay(cents: number, rate: number, fd: number): string {
   if (!cents) return ''
   return ((cents / 100) * rate).toFixed(fd)
+}
+
+/** The LOCAL calendar day of a Date as "YYYY-MM-DD". Extracting the UTC day
+ *  (`iso.slice(0, 10)`) shows/saves the wrong day for legacy iOS-written
+ *  evening timestamps — the form always works in the user's calendar. */
+function localDayString(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
+
+/** Even percentages across owners; the last absorbs the rounding remainder
+ *  (33.33 + 33.33 + 33.34 = 100). Mirrors iOS `seedEvenPercents`. */
+function evenPercentStrings(owners: string[]): Record<string, string> {
+  const n = owners.length
+  if (n === 0) return {}
+  const base = Math.floor((100 / n) * 100) / 100
+  const totals = new Array<number>(n).fill(base)
+  totals[n - 1] += Math.round((100 - base * n) * 100) / 100
+  const out: Record<string, string> = {}
+  owners.forEach((id, i) => (out[id] = totals[i].toFixed(2)))
+  return out
+}
+
+/** Even by-amount fields in display currency (a starting point the user edits).
+ *  Mirrors iOS `seedEvenValues`. */
+function evenValueStrings(owners: string[], amountText: string, fd: number): Record<string, string> {
+  const n = owners.length
+  const total = parseFloat(amountText.replace(/,/g, ''))
+  if (n === 0 || !isFinite(total) || total <= 0) return {}
+  const scale = Math.pow(10, fd)
+  const base = Math.floor((total / n) * scale) / scale
+  const amounts = new Array<number>(n).fill(base)
+  amounts[n - 1] += Math.round((total - base * n) * scale) / scale
+  const out: Record<string, string> = {}
+  owners.forEach((id, i) => (out[id] = amounts[i].toFixed(fd)))
+  return out
 }
 
 function selectStyle(): React.CSSProperties {
@@ -53,13 +90,6 @@ function Row({ label, children, first = false }: { label: string; children: Reac
 }
 
 /** Shared form state + submit for the New/Edit transaction surfaces (modal + drawer). */
-/** Is this transaction's stored split just an even one? (for inferring the editor mode) */
-function isEvenSplit(tx: Transaction): boolean {
-  if (tx.owner_ids.length < 2) return true
-  const even = computeShares(tx.amount_cents, orderedOwnerIds(tx.owner_ids), { method: 'even' })
-  return tx.owner_ids.every((id) => (tx.shares[id] ?? 0) === even[id])
-}
-
 export function useTxForm({
   editing,
   copying,
@@ -87,43 +117,71 @@ export function useTxForm({
   const initialKind: TransactionKind = initialTransfer ? 'transfer' : src?.kind ?? 'expense'
   const defaultOwner = currentPersonId || householdMembers[0]?.id || currentUserId
   const otherMember = (notId: string) => householdMembers.find((m) => m.id !== notId)?.id ?? notId
+  // Copy paths validate the source's people against CURRENT membership so a
+  // removed member never re-appears as an owner/payer (mirrors iOS prefill).
+  // Edit keeps the stored people verbatim.
+  const memberIds = useMemo(() => new Set(householdMembers.map((m) => m.id)), [householdMembers])
+  const isMember = (id: string | null | undefined): id is string => !!id && memberIds.has(id)
+
+  const initialOwners = (() => {
+    if (!src || src.owner_ids.length === 0) return [defaultOwner]
+    if (editing) return src.owner_ids
+    const kept = src.owner_ids.filter((id) => memberIds.has(id))
+    return kept.length ? kept : [defaultOwner]
+  })()
 
   const [direction, setDirection] = useState<TransactionKind>(initialKind)
   const [amount, setAmount] = useState(
     initialTransfer ? centsToDisplay(initialTransfer.amountCents, r, fd) : src ? centsToDisplay(src.amount_cents, r, fd) : ''
   )
+  // Snapshot of the pre-filled amount in edit mode. If the user doesn't touch
+  // the field, Save reuses `editing.amount_cents` verbatim so FX round-trip
+  // rounding never silently shifts the stored cents (mirrors iOS).
+  const [originalAmountText] = useState(editing ? centsToDisplay(editing.amount_cents, r, fd) : '')
   const [merchant, setMerchant] = useState(src?.merchant ?? '')
   const [category, setCategory] = useState<TransactionCategory>(
     src && src.kind === 'expense' ? src.category : 'groceries'
   )
-  const [owners, setOwners] = useState<string[]>(src && src.owner_ids.length ? src.owner_ids : [defaultOwner])
+  const [owners, setOwners] = useState<string[]>(initialOwners)
   // Who paid an expense — defaults to the creator/current person, editable.
   const [paidBy, setPaidBy] = useState<string>(
-    src && src.kind === 'expense' && src.paid_by ? src.paid_by : defaultOwner
+    src && src.kind === 'expense' && src.paid_by && (editing || isMember(src.paid_by))
+      ? src.paid_by
+      : defaultOwner
   )
   // Transfer parties: from = the ower/sender, to = the payer/recipient.
-  const [transferFrom, setTransferFrom] = useState<string>(
-    initialTransfer?.from ?? (src?.kind === 'transfer' && src.paid_by ? src.paid_by : defaultOwner)
-  )
-  const [transferTo, setTransferTo] = useState<string>(
-    initialTransfer?.to ?? (src?.kind === 'transfer' ? src.owner_ids[0] ?? otherMember(defaultOwner) : otherMember(defaultOwner))
-  )
+  const [transferFrom, setTransferFrom] = useState<string>(() => {
+    if (initialTransfer) return initialTransfer.from
+    if (src?.kind === 'transfer' && src.paid_by && (editing || isMember(src.paid_by))) return src.paid_by
+    return defaultOwner
+  })
+  const [transferTo, setTransferTo] = useState<string>(() => {
+    if (initialTransfer) return initialTransfer.to
+    if (src?.kind === 'transfer' && src.owner_ids[0] && (editing || isMember(src.owner_ids[0]))) {
+      return src.owner_ids[0]
+    }
+    return otherMember(defaultOwner)
+  })
   const expenseSources = useMemo(() => cards.map((c) => c.name), [cards])
   const [source, setSource] = useState(
     src?.source ?? (initialKind === 'income' ? INCOME_SOURCES[0] : expenseSources[0] ?? '')
   )
-  const [date, setDate] = useState((editing?.date ?? new Date().toISOString()).slice(0, 10))
+  // Edit keeps the transaction's LOCAL calendar day; add/copy default to today.
+  const [date, setDate] = useState(localDayString(editing ? new Date(editing.date) : new Date()))
 
   // Split editor: method + per-owner text input (percentage or display-currency
-  // amount). Even by default; a custom stored split loads as a value split.
-  const [splitMethod, setSplitMethod] = useState<SplitMethod>(src && !isEvenSplit(src) ? 'value' : 'even')
+  // amount). Even by default; a custom stored split reopens as a by-value split
+  // with the EXACT stored cents so a no-op re-save preserves it (seedSplit).
+  const initialSeed = (() => {
+    if (!src || initialOwners.length < 2) return { method: 'even' as const }
+    return seedSplit(src.amount_cents, orderedOwnerIds(initialOwners), src.shares)
+  })()
+  const [splitMethod, setSplitMethod] = useState<SplitMethod>(initialSeed.method)
   const [splitText, setSplitText] = useState<Record<string, string>>(() => {
-    if (src && src.owner_ids.length >= 2 && !isEvenSplit(src)) {
-      const t: Record<string, string> = {}
-      for (const id of src.owner_ids) t[id] = centsToDisplay(src.shares[id] ?? 0, r, fd)
-      return t
-    }
-    return {}
+    if (initialSeed.method !== 'value') return {}
+    const t: Record<string, string> = {}
+    for (const id of initialOwners) t[id] = centsToDisplay(initialSeed.values[id] ?? 0, r, fd)
+    return t
   })
 
   const isIncome = direction === 'income'
@@ -153,46 +211,132 @@ export function useTxForm({
     ? !!cents && cents > 0 && !!transferFrom && !!transferTo && transferFrom !== transferTo
     : !!cents && cents > 0 && merchant.trim() !== '' && owners.length > 0 && splitOk
 
+  // Editing locks the transfer boundary: a transfer stays a transfer, an
+  // expense/income can't become one — the two row shapes aren't
+  // interchangeable (mirrors iOS `directionOptions`).
+  const directionOptions: TransactionKind[] = editing
+    ? editing.kind === 'transfer'
+      ? ['transfer']
+      : ['expense', 'income']
+    : ['expense', 'income', 'transfer']
+
+  /** Reset to an even split (used on owner/direction changes — mirrors iOS). */
+  function resetSplitsToEven() {
+    setSplitMethod('even')
+    setSplitText({})
+  }
+
   function setDir(d: TransactionKind) {
     setDirection(d)
     if (d === 'income') setSource((s) => (INCOME_SOURCES.includes(s) ? s : INCOME_SOURCES[0]))
     else if (d === 'expense') setSource((s) => (expenseSources.includes(s) ? s : expenseSources[0] ?? ''))
+    // Flipping direction resets the split to even, like iOS `onChange(of: kind)`.
+    resetSplitsToEven()
   }
   function toggleOwner(id: string) {
     setOwners((prev) => (prev.includes(id) ? (prev.length > 1 ? prev.filter((x) => x !== id) : prev) : [...prev, id]))
     // Re-balance to an even default whenever the owner set changes.
-    setSplitMethod('even')
-    setSplitText({})
+    resetSplitsToEven()
   }
+  /** Switch the split method, seeding even values so the editor opens valid
+   *  (mirrors iOS `setSplitMethod` → seedEvenPercents/seedEvenValues). */
+  function chooseSplitMethod(m: SplitMethod) {
+    setSplitMethod(m)
+    if (m === 'percent') setSplitText(evenPercentStrings(owners))
+    else if (m === 'value') setSplitText(evenValueStrings(owners, amount, fd))
+    else setSplitText({})
+  }
+  /** By-amount field write — verbatim, no rebalance (the live validation shows
+   *  whether the amounts sum to the transaction). */
   function setSplit(id: string, v: string) {
     setSplitText((prev) => ({ ...prev, [id]: v }))
   }
+  /** Percent field write — writes verbatim, then rebalances the OTHER owners
+   *  so the total stays 100: proportionally to their existing weights when
+   *  any are non-zero, evenly otherwise. Mirrors iOS `rebalance(after:)`. */
+  function setSplitPercent(id: string, v: string) {
+    setSplitText((prev) => {
+      const next = { ...prev, [id]: v }
+      const others = owners.filter((o) => o !== id)
+      if (others.length === 0) return next
+      const editedParsed = parseFloat(v.trim())
+      const clamped = Math.max(0, Math.min(100, isFinite(editedParsed) ? editedParsed : 0))
+      const remaining = Math.max(0, 100 - clamped)
+      const current = others.map((o) => {
+        const p = parseFloat((next[o] ?? '').trim())
+        return isFinite(p) ? p : 0
+      })
+      const currentSum = current.reduce((s, x) => s + x, 0)
+      const rawNew =
+        currentSum > 0
+          ? current.map((x) => (x / currentSum) * remaining)
+          : others.map(() => remaining / others.length)
+      // Round each to 2dp; the last absorbs the rounding error so the
+      // displayed total is exactly the remaining share.
+      const rounded: number[] = []
+      rawNew.forEach((x, i) => {
+        if (i < rawNew.length - 1) rounded.push(Math.round(x * 100) / 100)
+        else rounded.push(remaining - rounded.reduce((s, y) => s + y, 0))
+      })
+      others.forEach((o, i) => (next[o] = rounded[i].toFixed(2)))
+      return next
+    })
+  }
 
-  // Copy values from an existing transaction into the form (keeps today's date).
+  // Copy values from an existing transaction into the form (keeps today's
+  // date). People are validated against current membership, and a custom
+  // (non-even) split is preserved exactly as a by-value split (mirrors iOS
+  // `prefill(from:)` + `seedSplitFields`).
   function loadFrom(tx: Transaction) {
     setDir(tx.kind)
     setAmount(centsToDisplay(tx.amount_cents, r, fd))
     if (tx.kind === 'transfer') {
-      setTransferFrom(tx.paid_by ?? defaultOwner)
-      setTransferTo(tx.owner_ids[0] ?? otherMember(defaultOwner))
+      setTransferFrom(isMember(tx.paid_by) ? tx.paid_by : defaultOwner)
+      setTransferTo(isMember(tx.owner_ids[0]) ? tx.owner_ids[0] : otherMember(defaultOwner))
       return
     }
     setMerchant(tx.merchant)
     setCategory(tx.kind === 'expense' ? tx.category : 'groceries')
-    setOwners(tx.owner_ids.length ? tx.owner_ids : [defaultOwner])
-    setPaidBy(tx.kind === 'expense' && tx.paid_by ? tx.paid_by : defaultOwner)
+    const validOwners = tx.owner_ids.filter((id) => memberIds.has(id))
+    const nextOwners = validOwners.length ? validOwners : [defaultOwner]
+    setOwners(nextOwners)
+    setPaidBy(tx.kind === 'expense' && isMember(tx.paid_by) ? tx.paid_by : defaultOwner)
     setSource(tx.source)
-    setSplitMethod('even')
-    setSplitText({})
+    if (nextOwners.length >= 2) {
+      const seed = seedSplit(tx.amount_cents, orderedOwnerIds(nextOwners), tx.shares)
+      if (seed.method === 'value') {
+        const t: Record<string, string> = {}
+        for (const id of nextOwners) t[id] = centsToDisplay(seed.values[id] ?? 0, r, fd)
+        setSplitMethod('value')
+        setSplitText(t)
+        return
+      }
+    }
+    resetSplitsToEven()
+  }
+
+  /** After "Save and add another": clear the transaction-specific fields
+   *  (merchant, amount, category, splits) and keep the contextual ones
+   *  (kind, source, date, owners) — mirrors iOS `resetFormForAnotherEntry`. */
+  function resetForAnother() {
+    setMerchant('')
+    setAmount('')
+    if (direction === 'expense') setCategory('groceries')
+    resetSplitsToEven()
   }
 
   function submit(): boolean {
     if (!canSave || !cents) return false
+    // Untouched amount in edit mode → keep the stored cents exactly (no FX
+    // round-trip drift). Mirrors iOS's `originalAmountText` guard.
+    const finalCents = editing && amount === originalAmountText ? editing.amount_cents : cents
     const base = {
       id: editing?.id ?? crypto.randomUUID(),
       household_id: currentHousehold?.id ?? '',
-      amount_cents: cents,
-      date: new Date(date + 'T12:00:00').toISOString(),
+      amount_cents: finalCents,
+      // Noon UTC on the picked calendar day — the shared cross-client date
+      // convention (spec 004; iOS + CLI write the same instant).
+      date: `${date}T12:00:00.000Z`,
       created_by: editing?.created_by ?? currentUserId,
       created_at: editing?.created_at ?? new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -208,7 +352,7 @@ export function useTxForm({
         source: '',
         paid_by: transferFrom,
         owner_ids: [transferTo],
-        shares: { [transferTo]: cents },
+        shares: { [transferTo]: finalCents },
       }
     } else {
       tx = {
@@ -219,7 +363,7 @@ export function useTxForm({
         source,
         paid_by: isIncome ? null : paidBy,
         owner_ids: owners,
-        shares: computeShares(cents, orderedOwnerIds(owners), splitInput),
+        shares: computeShares(finalCents, orderedOwnerIds(owners), splitInput),
       }
     }
     if (editing) updateTransaction(tx)
@@ -230,6 +374,7 @@ export function useTxForm({
   return {
     currency,
     direction,
+    directionOptions,
     setDir,
     amount,
     setAmount,
@@ -258,15 +403,17 @@ export function useTxForm({
     cents,
     // split editor
     splitMethod,
-    setSplitMethod,
+    setSplitMethod: chooseSplitMethod,
     splitText,
     setSplit,
+    setSplitPercent,
     shares,
     splitOk,
     splitReason,
     canSave,
     submit,
     loadFrom,
+    resetForAnother,
   }
 }
 
@@ -321,16 +468,15 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
         />
       </div>
 
-      {/* Direction */}
+      {/* Direction — edit mode locks the transfer boundary (mirrors iOS). */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 10, paddingBottom: 18, flexWrap: 'wrap' }}>
         <Seg
           value={form.direction}
           onChange={form.setDir}
-          options={[
-            { value: 'expense', label: 'Expense' },
-            { value: 'income', label: 'Income' },
-            { value: 'transfer', label: 'Transfer' },
-          ]}
+          options={form.directionOptions.map((k) => ({
+            value: k,
+            label: k === 'expense' ? 'Expense' : k === 'income' ? 'Income' : 'Transfer',
+          }))}
         />
       </div>
 
@@ -430,7 +576,7 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
                           inputMode="decimal"
                           aria-label={`${name} percent`}
                           value={form.splitText[id] ?? ''}
-                          onChange={(e) => form.setSplit(id, e.target.value.replace(/[^\d.]/g, ''))}
+                          onChange={(e) => form.setSplitPercent(id, e.target.value.replace(/[^\d.]/g, ''))}
                         />
                         <span style={{ color: 'var(--text-3)' }}>%</span>
                         <span style={{ color: 'var(--text-3)', minWidth: 70, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
@@ -491,6 +637,40 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
         </>
       )}
     </>
+  )
+}
+
+/** Secondary "Save and add another" capsule rendered below the form in add
+ *  mode (batch entry). Submits and resets the form for the next entry without
+ *  closing the surface — mirrors iOS `saveAndAddAnotherButton`. */
+export function SaveAndAddAnotherButton({ form }: { form: TxFormApi }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', padding: '0 20px 24px' }}>
+      <button
+        className="ow-btn"
+        disabled={!form.canSave}
+        onClick={() => {
+          if (form.submit()) form.resetForAnother()
+        }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '10px 20px',
+          borderRadius: 999,
+          background: 'var(--chip-bg)',
+          color: form.canSave ? 'var(--accent)' : 'var(--text-3)',
+          fontSize: 15,
+          fontWeight: 400,
+          cursor: form.canSave ? 'pointer' : 'default',
+        }}
+      >
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+        Save and add another
+      </button>
+    </div>
   )
 }
 
@@ -631,6 +811,7 @@ export function TxFormContent({
       <div style={{ overflow: 'auto', paddingTop: 16 }}>
         {allowCopy && <CopyFromRecentButton onClick={() => setPicking(true)} />}
         <TxFormFields form={form} />
+        {!editing && <SaveAndAddAnotherButton form={form} />}
       </div>
     </>
   )

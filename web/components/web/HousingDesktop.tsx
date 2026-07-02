@@ -18,7 +18,7 @@ import { PropertyTypePicker } from '@/components/housing/PropertyTypePicker'
 import { AddPropertyModal } from '@/components/housing/AddPropertyModal'
 import { AddRentalPaymentModal } from '@/components/housing/AddRentalPaymentModal'
 import { RenewalBanner } from '@/components/housing/RentalCards'
-import { isRenewalSoon } from '@/components/housing/lease'
+import { isRenewalSoon, nextRentCaption } from '@/components/housing/lease'
 import type { PropertyKind } from '@/lib/types'
 import { WebPageHeader, CardLabel, AccentTextButton, ChipIconButton, PlusGlyph } from './kit'
 
@@ -35,30 +35,27 @@ function HStatRow({ label, value, sub, first = false }: { label: string; value: 
 }
 
 function Amortization({ property }: { property: Property }) {
-  const { formatMoney } = useApp()
+  const { locale } = useApp()
   const m = property.mortgage!
   const schedule = upcomingAmortization(12, m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date)
-  const max = Math.max(1, ...schedule.map((s) => s.principalCents + s.interestCents))
+  // Grouped (side-by-side) principal vs interest bars per month — matches
+  // iOS's `.position(by:)` chart, not a stack.
+  const max = Math.max(1, ...schedule.flatMap((s) => [s.principalCents, s.interestCents]))
   return (
     <div style={{ padding: 24 }}>
       <CardLabel hint="Next 12 months">Amortization</CardLabel>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 72 }}>
-        {schedule.map((s, i) => {
-          const total = s.principalCents + s.interestCents
-          const h = (total / max) * 72
-          const pPct = total > 0 ? (s.principalCents / total) * 100 : 0
-          return (
-            <div key={i} style={{ flex: 1, height: h, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 3 }}>
-              <div style={{ height: `${100 - pPct}%`, background: 'var(--text-3)', opacity: 0.45 }} />
-              <div style={{ height: `${pPct}%`, background: 'var(--positive)' }} />
-            </div>
-          )
-        })}
+        {schedule.map((s, i) => (
+          <div key={i} style={{ flex: 1, height: 72, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 2 }}>
+            <div style={{ flex: 1, height: Math.max(1, (s.principalCents / max) * 72), background: 'var(--positive)', borderRadius: 2 }} />
+            <div style={{ flex: 1, height: Math.max(1, (s.interestCents / max) * 72), background: 'var(--text-3)', opacity: 0.45, borderRadius: 2 }} />
+          </div>
+        ))}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.4px' }}>
         {schedule.map((s, i) => (
           <div key={i} style={{ flex: 1, textAlign: 'center' }}>
-            {new Intl.DateTimeFormat('en-US', { month: 'narrow' }).format(s.month)}
+            {new Intl.DateTimeFormat(locale, { month: 'narrow' }).format(s.month)}
           </div>
         ))}
       </div>
@@ -86,12 +83,27 @@ function MortgageColumns({ property }: { property: Property }) {
   const netBalance = occupiedRent - payment
   const isMulti = property.kind === 'multifamily'
   const isRental = property.kind === 'rental'
+  // A property missing its kind's sub-row (mortgage for homes/multifamily,
+  // lease for rentals) renders only the neutral fallback — mirrors iOS.
+  const incomplete = isRental ? !property.lease : !m
+
+  // Newest-first at read time (mirrors iOS `payments(for:)`) — the store
+  // prepends new payments, so raw order isn't reliable for back-dated ones.
+  const payments = rentalPayments
+    .filter((rp) => rp.property_id === property.id)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
   return (
     <div className="ow-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
       {/* Left column */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {m ? (
+        {incomplete ? (
+          <div className="ow-card" style={{ padding: 20 }}>
+            <span style={{ fontSize: 15, color: 'var(--text-2)' }}>
+              Incomplete property — tap Edit to finish setup.
+            </span>
+          </div>
+        ) : m ? (
           <>
             <div className="ow-card" style={{ padding: 24 }}>
               <CardLabel hint={m.auto_pay_source ? 'Auto-pays on the 1st' : undefined}>Monthly payment</CardLabel>
@@ -112,6 +124,7 @@ function MortgageColumns({ property }: { property: Property }) {
             <div className="ow-card" style={{ padding: 24 }}>
               <CardLabel>Monthly rent</CardLabel>
               <div style={{ fontSize: 34, fontWeight: 300, letterSpacing: '-0.7px', fontVariantNumeric: 'tabular-nums', lineHeight: 1.05 }}>{formatMoney(property.lease.monthly_rent_cents)}</div>
+              <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 8 }}>{nextRentCaption(property.lease)}</div>
             </div>
             {/* Lease-renewal banner — matches the phone view / iOS (shown when the
                 lease ends within 60 days). */}
@@ -143,27 +156,37 @@ function MortgageColumns({ property }: { property: Property }) {
           </div>
         )}
 
-        {isMulti && (
+        {isMulti && !incomplete && (
           <>
+            {/* Units & tenants — iOS content: every unit shows its configured
+                rent (vacant or not); the sublabel is "Vacant" (destructive)
+                or the tenant's name, never invented copy. */}
             <div className="ow-card">
               <div style={{ padding: '16px 20px 4px' }}>
-                <CardLabel hint={`${units.length} ${units.length === 1 ? 'unit' : 'units'}`} style={{ marginBottom: 0 }}>Rental income</CardLabel>
+                <CardLabel hint={`${units.length} ${units.length === 1 ? 'unit' : 'units'}`} style={{ marginBottom: 0 }}>Units &amp; tenants</CardLabel>
               </div>
-              {units.map((u, i) => {
-                const vacant = (u.tenant_name ?? '').trim() === ''
-                return (
-                  <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 20px', minHeight: 60, borderTop: i === 0 ? 'none' : '0.5px solid var(--hairline)' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--chip-bg)', color: 'var(--text-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12.5, fontWeight: 400 }}>{u.name}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14.5, fontWeight: 400, letterSpacing: '-0.15px' }}>{vacant ? 'Vacant' : u.tenant_name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{vacant ? 'No applicants' : 'Tenant'}</div>
+              {units.length === 0 ? (
+                <div style={{ padding: '8px 20px 16px', fontSize: 13, color: 'var(--text-3)' }}>
+                  No units yet — edit this property to add them.
+                </div>
+              ) : (
+                units.map((u, i) => {
+                  const vacant = (u.tenant_name ?? '').trim() === ''
+                  return (
+                    <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 20px', minHeight: 60, borderTop: i === 0 ? 'none' : '0.5px solid var(--hairline)' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14.5, fontWeight: 400, letterSpacing: '-0.15px' }}>{u.name}</div>
+                        <div style={{ fontSize: 12, color: vacant ? 'var(--destructive)' : 'var(--text-3)', marginTop: 2 }}>
+                          {vacant ? 'Vacant' : u.tenant_name}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 400, letterSpacing: '-0.3px', fontVariantNumeric: 'tabular-nums', color: 'var(--text)' }}>
+                        {formatMoney(u.monthly_rent_cents)}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 15, fontWeight: 400, letterSpacing: '-0.3px', fontVariantNumeric: 'tabular-nums', color: vacant ? 'var(--text-3)' : 'var(--text)' }}>
-                      {vacant ? '—' : formatMoney(u.monthly_rent_cents)}
-                    </div>
-                  </div>
-                )
-              })}
+                  )
+                })
+              )}
             </div>
             <div className="ow-card">
               <HStatRow first label="Rental income" value={formatMoney(occupiedRent)} />
@@ -181,17 +204,16 @@ function MortgageColumns({ property }: { property: Property }) {
           </>
         )}
 
-        {isRental && (
+        {isRental && !incomplete && (
           <div className="ow-card">
             <div style={{ padding: '16px 20px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ fontSize: 13, fontWeight: 400, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-2)' }}>Payment history</div>
               <button className="ow-btn" onClick={() => setLogging(true)} style={{ fontSize: 13, fontWeight: 400, color: 'var(--accent)' }}>Log payment</button>
             </div>
-            {rentalPayments.filter((rp) => rp.property_id === property.id).length === 0 ? (
+            {payments.length === 0 ? (
               <div style={{ padding: '8px 20px 16px', fontSize: 13, color: 'var(--text-3)' }}>No payments logged yet.</div>
             ) : (
-              rentalPayments
-                .filter((rp) => rp.property_id === property.id)
+              payments
                 .map((rp, i) => (
                   <div key={rp.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', minHeight: 56, borderTop: i === 0 ? 'none' : '0.5px solid var(--hairline)' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -220,7 +242,7 @@ function MortgageColumns({ property }: { property: Property }) {
 }
 
 export function HousingDesktop() {
-  const { properties, deleteProperty } = useApp()
+  const { properties, deleteProperty, currentHousehold } = useApp()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [creatingKind, setCreatingKind] = useState<PropertyKind | null>(null)
@@ -244,7 +266,13 @@ export function HousingDesktop() {
         </button>
       )}
       {selected && <AccentTextButton onClick={() => { setConfirmingDelete(false); setEditingId(selected.id) }}>Edit</AccentTextButton>}
-      <ChipIconButton label="Add property" onClick={() => { setConfirmingDelete(false); setPickerOpen(true) }}>
+      {/* Disabled until a real household is resolved — a new property would
+          otherwise silently no-op (mirrors iOS's disabled '+'). */}
+      <ChipIconButton
+        label="Add property"
+        disabled={!currentHousehold}
+        onClick={() => { setConfirmingDelete(false); setPickerOpen(true) }}
+      >
         <PlusGlyph />
       </ChipIconButton>
     </>

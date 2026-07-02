@@ -115,6 +115,111 @@ describe('bootstrap fail-loud', () => {
   })
 })
 
+describe('bootstrap profile row', () => {
+  it('leaves an existing users profile row untouched (no upsert, no insert)', async () => {
+    h.mock = makeSupabaseMock(dataset())
+    await renderStore()
+
+    expect(api.error).toBeNull()
+    expect(h.mock.callsFor('users')).toHaveLength(0)
+  })
+
+  it('inserts the profile row only when absent', async () => {
+    const d = dataset()
+    d.tables!.users = []
+    h.mock = makeSupabaseMock(d)
+    await renderStore()
+
+    const writes = h.mock.callsFor('users')
+    expect(writes).toHaveLength(1)
+    expect(writes[0].op).toBe('insert')
+  })
+})
+
+describe('mid-session sign-out', () => {
+  it('clears state immediately on a SIGNED_OUT auth event', async () => {
+    h.mock = makeSupabaseMock(dataset())
+    await renderStore()
+    expect(api.currentUserId).toBe('u-me')
+    expect(api.properties).toHaveLength(1)
+
+    act(() => h.mock!.emitAuthChange('SIGNED_OUT'))
+    expect(api.currentUserId).toBe('')
+    expect(api.properties).toHaveLength(0)
+    expect(api.transactions).toHaveLength(0)
+    expect(api.currentHousehold).toBeNull()
+  })
+})
+
+describe('error banner', () => {
+  it('dismissError clears the banner; a failed bootstrap flags retry', async () => {
+    h.mock = makeSupabaseMock({
+      ...dataset(),
+      selectErrors: { transactions: 'transactions read failed' },
+    })
+    await renderStore()
+
+    expect(api.error).toMatch(/transactions read failed/)
+    expect(api.bootstrapFailed).toBe(true)
+    act(() => api.dismissError())
+    expect(api.error).toBeNull()
+  })
+
+  it('retryBootstrap re-runs the bootstrap and recovers once the failure clears', async () => {
+    const failing: SupabaseMockDataset = {
+      ...dataset(),
+      selectErrors: { transactions: 'transactions read failed' },
+    }
+    h.mock = makeSupabaseMock(failing)
+    await renderStore()
+    expect(api.bootstrapFailed).toBe(true)
+
+    // Heal the transient failure (the mock reads selectErrors per query),
+    // then retry — the store reloads cleanly.
+    delete failing.selectErrors!.transactions
+    act(() => api.retryBootstrap())
+    await waitFor(() => expect(api.loading).toBe(false))
+    expect(api.error).toBeNull()
+    expect(api.bootstrapFailed).toBe(false)
+  })
+})
+
+describe('unknown enum resilience', () => {
+  it('drops a row with an unknown category/kind and keeps the rest (no crash)', async () => {
+    const d = dataset()
+    d.tables!.transactions = [
+      { id: 'tx-ok', household_id: 'hh-1', merchant: 'Grocer', category: 'groceries', kind: 'expense', amount_cents: 1000, source: 'Visa', date: '2026-06-10T12:00:00.000Z', created_by: 'u-me', created_at: '2026-06-10T12:00:00Z', updated_at: '2026-06-10T12:00:00Z', paid_by: 'u-me' },
+      { id: 'tx-bad-cat', household_id: 'hh-1', merchant: 'Mystery', category: 'futurecat', kind: 'expense', amount_cents: 2000, source: 'Visa', date: '2026-06-11T12:00:00.000Z', created_by: 'u-me', created_at: '2026-06-11T12:00:00Z', updated_at: '2026-06-11T12:00:00Z', paid_by: 'u-me' },
+      { id: 'tx-bad-kind', household_id: 'hh-1', merchant: 'Mystery 2', category: 'groceries', kind: 'futurekind', amount_cents: 3000, source: 'Visa', date: '2026-06-12T12:00:00.000Z', created_by: 'u-me', created_at: '2026-06-12T12:00:00Z', updated_at: '2026-06-12T12:00:00Z', paid_by: 'u-me' },
+    ]
+    d.tables!.transaction_shares = [
+      { transaction_id: 'tx-ok', person_id: 'u-me', amount_cents: 1000 },
+      { transaction_id: 'tx-bad-cat', person_id: 'u-me', amount_cents: 2000 },
+    ]
+    h.mock = makeSupabaseMock(d)
+    await renderStore()
+
+    // One bad row disappears; everything else renders; no error is raised.
+    expect(api.error).toBeNull()
+    expect(api.transactions.map((t) => t.id)).toEqual(['tx-ok'])
+  })
+})
+
+describe('FX fallback', () => {
+  it('keeps stale cached rates when the live fetch fails (never reverts to hardcoded)', async () => {
+    // Cache a real-but-stale rate table (25h old), then kill the network.
+    localStorage.setItem('fxRates', JSON.stringify({ usd: 1, gbp: 0.5 }))
+    localStorage.setItem('fxRatesFetchedAt', String(Date.now() - 25 * 60 * 60 * 1000))
+    h.mock = makeSupabaseMock(dataset())
+    await renderStore()
+
+    await waitFor(() => expect(api.ratesError).not.toBeNull())
+    // The stale cached rate wins over the hardcoded approximation (0.78).
+    expect(api.rate('gbp')).toBe(0.5)
+    expect(api.ratesLastFetched).not.toBeNull()
+  })
+})
+
 describe('property write rollback', () => {
   it('rolls back addProperty when a sub-table write fails', async () => {
     h.mock = makeSupabaseMock({ ...dataset(), insertErrors: { units: 'units insert failed' } })

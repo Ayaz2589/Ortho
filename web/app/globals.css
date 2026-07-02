@@ -384,6 +384,25 @@ body {
   contain-intrinsic-size: auto 54px;
 }
 
+/* Hover/focus-revealed per-row action (the ledger Copy button). Sits above the
+   row button (a sibling, not a nested button) and stays keyboard-reachable:
+   focus-within reveals it for tab users. */
+.ow-row-wrap { position: relative; }
+.ow-row-action {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+.ow-row-wrap:hover .ow-row-action,
+.ow-row-wrap:focus-within .ow-row-action {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .ow-drawer {
   position: fixed;
   top: 0;

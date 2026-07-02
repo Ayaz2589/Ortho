@@ -15,7 +15,7 @@ import { PropertyCard } from '@/components/housing/PropertyCard'
 import { HousingDesktop } from '@/components/web/HousingDesktop'
 
 export default function HousingPage() {
-  const { properties } = useApp()
+  const { properties, currentHousehold } = useApp()
   const isExpanded = useIsExpanded()
 
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -48,8 +48,13 @@ export default function HousingPage() {
             <h1 className="truncate text-[28px] font-light tracking-[-0.6px] text-text">
               {propertyTitle(selected)}
             </h1>
+            {/* Kind-based subtitle, matching iOS PropertyDetailView. */}
             <p className="text-[13px] text-text-2">
-              {selected.address} · {kindMeta(selected.kind).shortLabel}
+              {selected.kind === 'primary_home'
+                ? 'Mortgage · Primary home'
+                : selected.kind === 'multifamily'
+                  ? 'Mortgage · Multifamily'
+                  : 'Rental'}
             </p>
           </div>
           <button
@@ -79,7 +84,8 @@ export default function HousingPage() {
           Edit
         </button>
       )}
-      <IconButton onClick={openPicker} ariaLabel="Add property">
+      {/* Disabled until a real household is resolved (mirrors iOS). */}
+      <IconButton onClick={openPicker} ariaLabel="Add property" disabled={!currentHousehold}>
         <Plus size={18} />
       </IconButton>
     </>
@@ -98,7 +104,8 @@ export default function HousingPage() {
               <button
                 type="button"
                 onClick={openPicker}
-                className="mt-1 rounded-full px-5 py-2.5 text-[15px] font-normal text-accent"
+                disabled={!currentHousehold}
+                className="mt-1 rounded-full px-5 py-2.5 text-[15px] font-normal text-accent disabled:opacity-40"
                 style={{ background: 'rgba(0,0,0,0.05)' }}
               >
                 Add property

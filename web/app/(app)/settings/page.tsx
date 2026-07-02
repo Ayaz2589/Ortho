@@ -24,9 +24,57 @@ import {
 import { CURRENCIES, CURRENCY_NAMES, currencyCode } from '@/lib/finance/currency'
 import { LANGUAGES } from '@/lib/language'
 
+/** FX freshness caption for the Currency section — mirrors iOS's `ratesCaption`. */
+function ratesCaption({
+  isLoading,
+  lastFetched,
+  error,
+  hasRates,
+  locale,
+}: {
+  isLoading: boolean
+  lastFetched: number | null
+  error: string | null
+  hasRates: boolean
+  locale: string
+}): string {
+  if (isLoading && !hasRates) return 'Updating rates…'
+  if (lastFetched != null) {
+    return `Rates updated ${relativeTimeLabel(lastFetched, locale)}`
+  }
+  if (error != null) return 'Rates unavailable; using approximate values.'
+  return 'Loading rates…'
+}
+
+/** Locale-aware relative time ("5 minutes ago"), like iOS's RelativeDateTimeFormatter. */
+function relativeTimeLabel(epochMs: number, locale: string): string {
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+  const seconds = Math.round((epochMs - Date.now()) / 1000)
+  const abs = Math.abs(seconds)
+  if (abs < 60) return rtf.format(seconds, 'second')
+  if (abs < 3600) return rtf.format(Math.round(seconds / 60), 'minute')
+  if (abs < 86400) return rtf.format(Math.round(seconds / 3600), 'hour')
+  return rtf.format(Math.round(seconds / 86400), 'day')
+}
+
 export default function SettingsPage() {
-  const { cards, budgets, currentHousehold, currency, setCurrency, language, chooseLanguage, deleteCard, signOut } =
-    useApp()
+  const {
+    cards,
+    budgets,
+    currentHousehold,
+    currentUserEmail,
+    currency,
+    setCurrency,
+    language,
+    chooseLanguage,
+    deleteCard,
+    signOut,
+    rates,
+    ratesLastFetched,
+    ratesIsLoading,
+    ratesError,
+    locale,
+  } = useApp()
   const [addingCard, setAddingCard] = useState(false)
   const [appearance, setAppearance] = useState<Appearance>('system')
   const [signingOut, setSigningOut] = useState(false)
@@ -71,7 +119,9 @@ export default function SettingsPage() {
             {cards.map((c) => (
               <CardRow key={c.id} card={c} onDelete={() => deleteCard(c.id)} />
             ))}
-            <AddRow label="Add card" onClick={() => setAddingCard(true)} />
+            {/* Disabled until a real household is resolved — adding a card
+                without one silently no-ops server-side (mirrors iOS). */}
+            <AddRow label="Add card" onClick={() => setAddingCard(true)} disabled={!currentHousehold} />
           </SectionCard>
           <p className="px-1 text-[13px] leading-relaxed text-text-3">
             Cards appear in the Paid with menu when you log a new expense. Existing transactions keep
@@ -92,6 +142,15 @@ export default function SettingsPage() {
               />
             ))}
           </SectionCard>
+          <p className="px-1 text-[13px] leading-relaxed text-text-3">
+            {ratesCaption({
+              isLoading: ratesIsLoading,
+              lastFetched: ratesLastFetched,
+              error: ratesError,
+              hasRates: Object.keys(rates).length > 0,
+              locale,
+            })}
+          </p>
         </section>
 
         <section className="flex flex-col gap-2">
@@ -160,6 +219,7 @@ export default function SettingsPage() {
               <ActionRow
                 icon={<LogOut size={16} />}
                 label="Sign out"
+                sub={currentUserEmail ?? undefined}
                 destructive
                 onClick={() => setSigningOut(true)}
               />

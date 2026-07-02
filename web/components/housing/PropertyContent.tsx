@@ -18,8 +18,23 @@ export function PropertyContent({ property }: { property: Property }) {
   const { deleteProperty } = useApp()
   const [confirming, setConfirming] = useState(false)
 
+  // A server property missing its kind's sub-row (mortgage/lease) renders a
+  // neutral placeholder instead of nothing — mirrors iOS's
+  // `incompletePlaceholder` in PropertyContentView.
+  const incomplete =
+    property.kind === 'rental' ? !property.lease : !property.mortgage
+
   return (
     <div className="flex flex-col gap-4">
+      {incomplete && (
+        <div
+          className="rounded-2xl bg-surface p-5 text-[15px] text-text-2"
+          style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
+        >
+          Incomplete property — tap Edit to finish setup.
+        </div>
+      )}
+
       {property.kind === 'primary_home' && property.mortgage && (
         <>
           <MortgagePaymentHero mortgage={property.mortgage} />

@@ -6,14 +6,16 @@ import { Modal, FormGroup, FieldRow, PrimaryButton } from '@/components/ui'
 import { TextInput } from '@/components/inputs'
 
 export function AddCardModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { addCard } = useApp()
+  const { addCard, currentHousehold } = useApp()
   const [name, setName] = useState('')
 
   useEffect(() => {
     if (open) setName('')
   }, [open])
 
-  const canAdd = name.trim() !== ''
+  // Adding without a resolved household would silently no-op server-side —
+  // block it here like iOS's AddCardSheet does.
+  const canAdd = name.trim() !== '' && !!currentHousehold
 
   const handleAdd = () => {
     if (!canAdd) return

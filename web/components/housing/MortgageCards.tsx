@@ -188,8 +188,10 @@ export function Amortization({ mortgage }: { mortgage: MortgageInfo }) {
                 tick={{ fontSize: 11, fill: 'var(--text-3)' }}
                 interval={0}
               />
-              <Bar dataKey="principal" stackId="a" fill="var(--positive)" />
-              <Bar dataKey="interest" stackId="a" fill="rgba(26,24,21,0.18)" radius={[3, 3, 0, 0]} />
+              {/* Grouped (side-by-side) bars per month — matches iOS's
+                  `.position(by:)` chart semantics, not a stack. */}
+              <Bar dataKey="principal" fill="var(--positive)" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="interest" fill="rgba(26,24,21,0.18)" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

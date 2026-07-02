@@ -82,33 +82,47 @@ describe('split editor', () => {
     expect(h.getApi().shares).toEqual({ p1: 5000, p2: 5000 })
   })
 
-  it('by-percent entry reconciles and saves; a bad total blocks save', async () => {
+  it('switching to percent seeds even values and editing one field rebalances the other (iOS mirror)', async () => {
     const h = setup()
     await h.user.type(h.amount(), '100')
     await h.user.type(h.merchant(), 'Dinner')
     await h.user.click(screen.getByRole('button', { name: /Bob/ }))
     await h.user.click(screen.getByRole('tab', { name: '%' }))
 
+    // Seeded even — the editor opens valid.
+    expect((screen.getByLabelText('Alice percent') as HTMLInputElement).value).toBe('50.00')
+    expect((screen.getByLabelText('Bob percent') as HTMLInputElement).value).toBe('50.00')
+    expect(h.addBtn()).toBeEnabled()
+
+    // Editing Alice live-rebalances Bob so the total stays 100.
+    await h.user.clear(screen.getByLabelText('Alice percent'))
     await h.user.type(screen.getByLabelText('Alice percent'), '70')
-    await h.user.type(screen.getByLabelText('Bob percent'), '30')
+    expect((screen.getByLabelText('Bob percent') as HTMLInputElement).value).toBe('30.00')
     expect(h.getApi().shares).toEqual({ p1: 7000, p2: 3000 })
     expect(h.addBtn()).toBeEnabled()
 
-    // Break the total → save disabled + reconcile message.
-    await h.user.clear(screen.getByLabelText('Bob percent'))
-    await h.user.type(screen.getByLabelText('Bob percent'), '25')
+    // An over-100 entry leaves nothing for the others → total ≠ 100 → blocked.
+    await h.user.clear(screen.getByLabelText('Alice percent'))
+    await h.user.type(screen.getByLabelText('Alice percent'), '150')
+    expect((screen.getByLabelText('Bob percent') as HTMLInputElement).value).toBe('0.00')
     expect(h.addBtn()).toBeDisabled()
     expect(screen.getByText('Percentages must total 100%.')).toBeInTheDocument()
   })
 
-  it('by-value entry reconciles to the exact amount', async () => {
+  it('by-value entry seeds even and reconciles to the exact amount', async () => {
     const h = setup()
     await h.user.type(h.amount(), '100')
     await h.user.type(h.merchant(), 'Dinner')
     await h.user.click(screen.getByRole('button', { name: /Bob/ }))
     await h.user.click(screen.getByRole('tab', { name: '$' }))
 
+    // Seeded to an even split of the entered amount.
+    expect((screen.getByLabelText('Alice amount') as HTMLInputElement).value).toBe('50.00')
+    expect((screen.getByLabelText('Bob amount') as HTMLInputElement).value).toBe('50.00')
+
+    await h.user.clear(screen.getByLabelText('Alice amount'))
     await h.user.type(screen.getByLabelText('Alice amount'), '60')
+    await h.user.clear(screen.getByLabelText('Bob amount'))
     await h.user.type(screen.getByLabelText('Bob amount'), '40')
     expect(h.addBtn()).toBeEnabled()
     expect(h.getApi().submit()).toBe(true)

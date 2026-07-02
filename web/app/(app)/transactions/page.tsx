@@ -5,7 +5,7 @@ import { Search, Plus, X, ArrowUpDown, ChevronDown, SlidersHorizontal } from 'lu
 import { useApp } from '@/lib/store'
 import { PageHeader, IconButton, Card, EmptyState, Modal } from '@/components/ui'
 import { useIsExpanded } from '@/lib/useMediaQuery'
-import { groupByDay, groupDaysByMonth, dayLabel, monthYearLong, expenseTotal, startOfMonth } from '@/lib/format'
+import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expenseTotal, startOfMonth } from '@/lib/format'
 import type { Transaction } from '@/lib/types'
 import { TransactionRow } from '@/components/transactions/TransactionRow'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
@@ -133,7 +133,8 @@ export default function TransactionsPage() {
 
       {hasAny && <ActiveFilterChips f={f} />}
 
-      <BalanceSummary onSettle={openSettle} />
+      {/* Hidden while search is active — matches iOS (`!searchActive`). */}
+      {!searchActive && <BalanceSummary onSettle={openSettle} />}
 
       {!hasAny ? (
         <EmptyState
@@ -199,9 +200,12 @@ export default function TransactionsPage() {
                 {open &&
                   m.days.map((g) => (
                     <Card key={g.day.getTime()} className="overflow-hidden">
-                      <div className="flex items-center justify-between px-4 pb-1 pt-3">
-                        <span className="text-[13px] font-normal uppercase tracking-[0.6px] text-text-2">
-                          {dayLabel(g.day, locale)}
+                      <div className="flex items-baseline justify-between px-4 pb-1 pt-3">
+                        <span className="flex items-baseline gap-2">
+                          <span className="text-[13px] font-normal uppercase tracking-[0.6px] text-text-2">
+                            {dayLabel(g.day, locale)}
+                          </span>
+                          <span className="text-[12px] text-text-3">{shortDate(g.day, locale)}</span>
                         </span>
                         <span className="text-[13px] font-normal tabular-nums text-text-3">
                           {formatMoney(expenseTotal(g.items))}
