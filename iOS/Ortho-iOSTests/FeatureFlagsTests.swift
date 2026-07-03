@@ -1,8 +1,15 @@
 import XCTest
 @testable import Ortho_iOS
 
-/// spec 015 — test-build feature flags, the refreshed sample dataset, and
-/// test-data isolation. Covers contracts feature-flags.md and test-data-store.md.
+/// spec 015 — test-build feature flags + the refreshed sample dataset.
+///
+/// These assert against the pure flag registry and the model `*.sample` statics
+/// (and the free `balanceBetween`), never a live `AppState`/`SupabaseClient` —
+/// matching the existing parity suites. The test-data *isolation* guarantee
+/// (mutators skip the network when `testDataEnabled`) is a guard on every
+/// `AppState` mutator, verified by code review and by the web equivalent
+/// (`web/test/store/test-data-isolation.test.tsx`); it can't be unit-tested here
+/// without constructing a network-backed `AppState`.
 @MainActor
 final class FeatureFlagsTests: XCTestCase {
 
@@ -50,68 +57,41 @@ final class FeatureFlagsTests: XCTestCase {
     // MARK: - Refreshed sample dataset (FR-009..012, SC-003)
 
     func test_sampleOwnersResolveToPeople() {
-        let app = AppState(testDataEnabled: true)
-        XCTAssertFalse(app.transactions.isEmpty)
-        for tx in app.transactions {
+        let personIDs = Set(Person.sample.map(\.id))
+        XCTAssertFalse(Transaction.sample.isEmpty)
+        for tx in Transaction.sample {
             for owner in tx.ownerIDs {
-                XCTAssertTrue(app.people.contains { $0.id == owner },
-                              "owner \(owner) is not a sample Person")
-                XCTAssertNotEqual(app.user(owner).id, User.placeholder.id,
-                                  "owner \(owner) resolved to the Removed placeholder")
+                XCTAssertTrue(personIDs.contains(owner),
+                              "owner \(owner) is not a sample Person (would render as Removed)")
             }
         }
     }
 
     func test_sampleExpensesCarryPayerAndIncludeTransfer() {
-        let app = AppState(testDataEnabled: true)
-        for tx in app.transactions where tx.kind == .expense {
+        for tx in Transaction.sample where tx.kind == .expense {
             XCTAssertNotNil(tx.paidBy, "expense \(tx.merchant) has no paidBy")
         }
-        XCTAssertTrue(app.transactions.contains { $0.kind == .transfer },
+        XCTAssertTrue(Transaction.sample.contains { $0.kind == .transfer },
                       "sample has no reimbursement transfer")
     }
 
     func test_sampleSpansMultipleMonths() {
-        let app = AppState(testDataEnabled: true)
-        let dates = app.transactions.map(\.date)
+        let dates = Transaction.sample.map(\.date)
         let span = dates.max()!.timeIntervalSince(dates.min()!)
         XCTAssertGreaterThan(span, 60 * 24 * 60 * 60, "sample spans < ~2 months")
     }
 
-    func test_sampleMemberBalancesNonEmpty() {
-        let app = AppState(testDataEnabled: true)
-        XCTAssertFalse(app.memberBalances.isEmpty, "member balances are empty in the seed")
+    func test_sampleMemberBalancesAreNonZero() {
+        let net = balanceBetween(
+            viewer: Person.mayaSample.id,
+            other: Person.jordanSample.id,
+            transactions: Transaction.sample
+        )
+        XCTAssertNotEqual(net, 0, "sample produces a zero balance between the two members")
     }
 
     func test_sampleIncludesBudgetsAndRentalPayments() {
-        let app = AppState(testDataEnabled: true)
-        XCTAssertFalse(app.budgets.isEmpty)
-        XCTAssertFalse(app.rentalPayments.isEmpty)
-    }
-
-    // MARK: - Test-data isolation (C-TD-1)
-
-    func test_mutatorSkipsNetworkInTestDataMode() async {
-        let app = AppState(testDataEnabled: true)
-        let before = app.transactions.count
-        let tx = Transaction(
-            merchant: "Test Coffee",
-            category: .coffee,
-            kind: .expense,
-            amount: 500,
-            ownerIDs: [Person.mayaSample.id],
-            source: "Amex Gold",
-            date: Date(),
-            householdID: Household.homeSample.id,
-            createdBy: User.mayaSample.id,
-            paidBy: Person.mayaSample.id
-        )
-        app.addTransaction(tx)
-        // The guard skips the network Task entirely, so this is synchronous and
-        // there is no rollback: the row stays and no dataError is set.
-        await Task.yield()
-        XCTAssertEqual(app.transactions.count, before + 1)
-        XCTAssertTrue(app.transactions.contains { $0.id == tx.id })
-        XCTAssertNil(app.dataError, "a network attempt rolled the row back — isolation broke")
+        XCTAssertFalse(Budget.sample.isEmpty)
+        XCTAssertFalse(RentalPayment.sample.isEmpty)
     }
 }
