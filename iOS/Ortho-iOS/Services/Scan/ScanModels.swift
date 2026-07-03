@@ -38,11 +38,12 @@ nonisolated struct ScanDocumentText: Equatable {
 
 /// Which prefill fields are inferences (vs direct extraction). Drives the
 /// text3 "Guessed" affordance — cleared per field on first user edit
-/// (FR-016). Only fields some tier actually infers are cases: merchant
-/// (refiner), category/owners (history + rule table), currency (FX
-/// detection). Extracted date/amount are never "guesses".
+/// (FR-016). merchant (refiner/fallback), category/owners (history + rule
+/// table), currency (FX detection). A confidently-extracted date/amount is
+/// never a guess — but the forgiving fallback tier and the on-device rescue
+/// mark ALL their fields, amount and date included.
 nonisolated enum GuessedField: String, Codable, Hashable {
-    case merchant, category, owners, currency
+    case merchant, category, owners, currency, amount, date
 }
 
 /// One potential transaction extracted from a capture.

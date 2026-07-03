@@ -134,6 +134,9 @@ jobs:
             xcrun simctl terminate "$UDID" "$BUNDLE_ID" || true
           }
           for L in en bn es ja zh-Hans ko; do snap_scan "$L" receipt-duplicate "" receipt; done
+          # Forgiving fallback tier (post-T037): unlabeled total prefills
+          # best-effort with Guessed tags on merchant, amount, AND date.
+          snap_scan en receipt-no-total "" fallback
           for L in en bn ja; do
             snap_scan "$L" statement-card ""        interstitial
             snap_scan "$L" statement-card row       row

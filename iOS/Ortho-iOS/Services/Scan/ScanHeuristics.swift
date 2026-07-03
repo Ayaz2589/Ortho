@@ -82,8 +82,24 @@ nonisolated enum ScanHeuristics {
 
     // MARK: - Dates
 
+    /// English month names, as bank UIs and receipts print them ("Jul 1" on
+    /// the Amex web rows that motivated the fallback tier). The first three
+    /// letters are unambiguous, so "Jul", "Jul.", and "July" all resolve.
+    private static let monthNamePattern =
+        "JAN(?:UARY)?|FEB(?:RUARY)?|MAR(?:CH)?|APR(?:IL)?|MAY|JUN(?:E)?|JUL(?:Y)?|AUG(?:UST)?|SEP(?:T(?:EMBER)?)?|OCT(?:OBER)?|NOV(?:EMBER)?|DEC(?:EMBER)?"
+
+    private static let monthNumbers: [String: Int] = [
+        "JAN": 1, "FEB": 2, "MAR": 3, "APR": 4, "MAY": 5, "JUN": 6,
+        "JUL": 7, "AUG": 8, "SEP": 9, "OCT": 10, "NOV": 11, "DEC": 12,
+    ]
+
+    static func monthNumber(_ name: String) -> Int? {
+        monthNumbers[String(name.uppercased().prefix(3))]
+    }
+
     /// First full date (MM/DD/YYYY, DD/MM/YYYY disambiguated by month > 12,
-    /// or YYYY-MM-DD) found scanning lines in order. Receipt path only.
+    /// YYYY-MM-DD, or a month-name form like "Jul 1, 2026") found scanning
+    /// lines in order. Receipt path only.
     static func firstFullDate(in lines: [String]) -> DateComponents? {
         for line in lines {
             if let d = fullDate(in: line) { return d }
@@ -105,6 +121,24 @@ nonisolated enum ScanHeuristics {
             let parts = String(text[range]).split(separator: "-").compactMap { Int($0) }
             guard parts.count == 3, (1...12).contains(parts[1]), (1...31).contains(parts[2]) else { return nil }
             return DateComponents(year: parts[0], month: parts[1], day: parts[2])
+        }
+        // "Jul 1, 2026" / "July 1 2026" — the shape web banking UIs print.
+        if let groups = firstGroups(
+            in: text,
+            pattern: "(?i)\\b(\(monthNamePattern))\\.?\\s+(\\d{1,2})(?:ST|ND|RD|TH)?,?\\s+(\\d{4})\\b"
+        ), let month = monthNumber(groups[0]),
+           let dayValue = Int(groups[1]), (1...31).contains(dayValue),
+           let year = Int(groups[2]) {
+            return DateComponents(year: year, month: month, day: dayValue)
+        }
+        // "1 Jul 2026" (day-first European form).
+        if let groups = firstGroups(
+            in: text,
+            pattern: "(?i)\\b(\\d{1,2})\\s+(\(monthNamePattern))\\.?\\s+(\\d{4})\\b"
+        ), let dayValue = Int(groups[0]), (1...31).contains(dayValue),
+           let month = monthNumber(groups[1]),
+           let year = Int(groups[2]) {
+            return DateComponents(year: year, month: month, day: dayValue)
         }
         return nil
     }
@@ -152,17 +186,33 @@ nonisolated enum ScanHeuristics {
         let amount: AmountToken
     }
 
-    /// One "MM/DD  DESCRIPTION  $AMOUNT" line → a row. The trailing token
-    /// must be a decimal money amount; lines without a leading date (headers,
-    /// balances, period lines) never match. A trailing "CR" is the credit
-    /// notation used instead of a minus sign on Amex/Chase-style statements —
-    /// it flips the sign (FR-011).
+    /// One "MM/DD  DESCRIPTION  $AMOUNT" line → a row — or the month-name
+    /// form web banking UIs print ("Jul 1  UBER TRIP  $24.51", an optional
+    /// year swallowed). The trailing token must be a decimal money amount;
+    /// lines without a leading date (headers, balances, period lines) never
+    /// match. A trailing "CR" is the credit notation used instead of a minus
+    /// sign on Amex/Chase-style statements — it flips the sign (FR-011).
     static func statementRow(from line: String, defaultCurrency: Currency = .usd) -> StatementRow? {
-        guard let match = firstGroups(
+        let amountTail = "(-?[$€£]?\\s?-?[0-9][0-9,]*\\.\\d{2})(\\s*CR)?\\s*$"
+        var month: Int?
+        var day: Int?
+        var match: [String]?
+        if let numeric = firstGroups(
             in: line,
-            pattern: "^\\s*(\\d{1,2})/(\\d{1,2})\\s+(.+?)\\s+(-?[$€£]?\\s?-?[0-9][0-9,]*\\.\\d{2})(\\s*CR)?\\s*$"
-        ) else { return nil }
-        guard let month = Int(match[0]), let day = Int(match[1]),
+            pattern: "^\\s*(\\d{1,2})/(\\d{1,2})\\s+(.+?)\\s+\(amountTail)"
+        ) {
+            month = Int(numeric[0])
+            day = Int(numeric[1])
+            match = numeric
+        } else if let named = firstGroups(
+            in: line,
+            pattern: "(?i)^\\s*(\(monthNamePattern))\\.?\\s+(\\d{1,2})(?:,?\\s+\\d{4})?\\s+(.+?)\\s+\(amountTail)"
+        ) {
+            month = monthNumber(named[0])
+            day = Int(named[1])
+            match = named
+        }
+        guard let month, let day, let match,
               (1...12).contains(month), (1...31).contains(day) else { return nil }
         let description = match[2].trimmingCharacters(in: .whitespaces)
         guard !description.isEmpty,
@@ -242,6 +292,32 @@ nonisolated enum ScanHeuristics {
                 ?? amountOnly.map(\.token).max { $0.minorUnits < $1.minorUnits }
         }
         return found
+    }
+
+    /// Best-effort amount for the forgiving fallback tier: receipts and
+    /// screenshots mark the amount that matters with a currency ("$13.50")
+    /// while item prices are bare, so the largest currency-marked token wins;
+    /// only when nothing is marked does the largest bare money-shaped token
+    /// stand in. Nil when the text has no money shape at all — that, not a
+    /// missing TOTAL label, is what "couldn't read this" means.
+    static func strongestAmount(in lines: [String], defaultCurrency: Currency = .usd) -> AmountToken? {
+        var best: (token: AmountToken, marked: Bool)?
+        for line in lines {
+            guard let token = lastAmount(in: line, defaultCurrency: defaultCurrency) else { continue }
+            let marked = token.currency != nil || matches(line, pattern: "[$€£¥৳]")
+            let better: Bool
+            if let current = best {
+                if marked != current.marked {
+                    better = marked
+                } else {
+                    better = abs(token.minorUnits) > abs(current.token.minorUnits)
+                }
+            } else {
+                better = true
+            }
+            if better { best = (token, marked) }
+        }
+        return best?.token
     }
 
     /// The last money-shaped token in a line (labels sit left, amounts

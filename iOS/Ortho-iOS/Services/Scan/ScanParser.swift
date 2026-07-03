@@ -1,11 +1,17 @@
 // ScanDocumentText → ScanParseResult. Pure and deterministic: same document +
 // same context ⇒ identical result (spec 014, contracts/scan-parser.md).
-// Detection order is research R5 and is binding:
+// Detection order is research R5 (+ the post-T037 forgiving tier) and is
+// binding:
 //   1. ≥3 transaction rows           → statement
 //   2. confident labeled grand total → receipt
 //   3. 1–2 transaction rows          → statement (a one-row wizard is still
 //                                      a correct, reviewable outcome)
-//   4. otherwise                     → .none (calm failure copy)
+//   4. any money-shaped text         → best-effort receipt, every field
+//                                      Guessed (wrong guesses are cheap —
+//                                      review-before-add exists for exactly
+//                                      this; refusing to guess is the worse
+//                                      failure)
+//   5. otherwise                     → .none (calm failure copy)
 
 import Foundation
 
@@ -37,6 +43,9 @@ nonisolated enum ScanParser {
         }
         if !rowCandidates.isEmpty {
             return .statement(rowCandidates)
+        }
+        if let fallback = fallbackCandidate(lineTexts: texts, context: context) {
+            return .receipt(fallback)
         }
         return .none
     }
@@ -108,6 +117,39 @@ nonisolated enum ScanParser {
             direction: total.negative ? .credit : .debit,
             currency: total.currency ?? context.defaultCurrency
         )
+        if candidate.currency != .usd {
+            candidate.originalAmount = decimalAmount(candidate.amountCents, candidate.currency)
+            candidate.guesses.insert(.currency)
+        }
+        return ScanInference.enrich(candidate, context: context, claimed: &claimed)
+    }
+
+    // MARK: - Forgiving fallback (tier 4, post-T037 device feedback)
+
+    /// Real-world captures — web-banking screenshots, crumpled receipts with
+    /// a garbled TOTAL line — often defeat tiers 1–3 while the OCR text is
+    /// perfectly readable. If the text still contains a money-shaped amount,
+    /// prefill best-effort instead of failing: strongest amount, top
+    /// plausible merchant line, any full date — every field marked Guessed
+    /// so the review-before-add affordances carry the risk.
+    private static func fallbackCandidate(lineTexts: [String],
+                                          context: ScanContext) -> ParsedCandidate? {
+        guard let amount = ScanHeuristics.strongestAmount(in: lineTexts,
+                                                          defaultCurrency: context.defaultCurrency)
+        else { return nil }
+        var claimed: Set<Transaction.ID> = []
+        let merchantRaw = ScanHeuristics.cleanMerchant(merchantLine(in: lineTexts) ?? "")
+        var candidate = ParsedCandidate(
+            merchantRaw: merchantRaw,
+            merchant: merchantRaw,
+            date: ScanHeuristics.firstFullDate(in: lineTexts),
+            amountCents: abs(amount.minorUnits),
+            direction: amount.negative ? .credit : .debit,
+            currency: amount.currency ?? context.defaultCurrency
+        )
+        candidate.guesses.insert(.amount)
+        if !merchantRaw.isEmpty { candidate.guesses.insert(.merchant) }
+        if candidate.date != nil { candidate.guesses.insert(.date) }
         if candidate.currency != .usd {
             candidate.originalAmount = decimalAmount(candidate.amountCents, candidate.currency)
             candidate.guesses.insert(.currency)

@@ -41,7 +41,16 @@ final class ScanParserTests: XCTestCase {
         try await assertFixture("receipt-duplicate", ext: "png")
     }
 
-    /// Unparseable capture → .none (FR-017 path).
+    /// No labeled TOTAL anywhere — the forgiving fallback tier prefills
+    /// best-effort (largest currency-marked amount beats the larger bare
+    /// CASH tender, top line is the merchant, first full date), with
+    /// merchant/amount/date all marked Guessed (post-T037 device feedback).
+    func testReceiptNoTotalFallback() async throws {
+        try await assertFixture("receipt-no-total", ext: "png")
+    }
+
+    /// Unparseable capture → .none (FR-017 path). The fallback tier must
+    /// NOT rescue glyph-free noise — that is what the failure copy is for.
     func testUnreadable() async throws {
         try await assertFixture("unreadable", ext: "png")
     }
@@ -68,6 +77,14 @@ final class ScanParserTests: XCTestCase {
     /// Photographed/scanned statement through the OCR table/line path.
     func testStatementScanned() async throws {
         try await assertFixture("statement-scanned", ext: "png")
+    }
+
+    /// Screenshot of a web-banking transaction list: month-name dates
+    /// ("Jul 1"), no MM/DD anywhere — the real-world capture shape that
+    /// motivated the post-T037 fixes. Rows parse, years resolve against the
+    /// reference day, CR credit and payment-row flagging still apply.
+    func testStatementScreenshot() async throws {
+        try await assertFixture("statement-screenshot", ext: "png")
     }
 
     /// The CLI year-inference convention (engine/dates.ts): a December row
@@ -125,6 +142,77 @@ final class ScanParserTests: XCTestCase {
         // And the plain debit row still parses unchanged.
         let debit = ScanHeuristics.statementRow(from: "06/03  STARBUCKS  $6.45")
         XCTAssertEqual(debit?.amount.negative, false)
+    }
+
+    /// Month-name rows ("Jul 1  UBER  $24.51") are statement rows too — the
+    /// shape web banking UIs print. An optional year is swallowed; header
+    /// lines never match.
+    func testMonthNameStatementRows() {
+        let row = ScanHeuristics.statementRow(from: "Jul 1  UBER TRIP HELP.UBER.COM  $24.51")
+        XCTAssertEqual(row?.month, 7)
+        XCTAssertEqual(row?.day, 1)
+        XCTAssertEqual(row?.description, "UBER TRIP HELP.UBER.COM")
+        XCTAssertEqual(row?.amount.minorUnits, 2451)
+
+        let withYear = ScanHeuristics.statementRow(from: "Jun 30, 2026  STARBUCKS  $6.45")
+        XCTAssertEqual(withYear?.month, 6)
+        XCTAssertEqual(withYear?.day, 30)
+        XCTAssertEqual(withYear?.description, "STARBUCKS")
+
+        let credit = ScanHeuristics.statementRow(from: "Jun 25  ONLINE PAYMENT - THANK YOU  $500.00 CR")
+        XCTAssertEqual(credit?.amount.negative, true)
+
+        XCTAssertNil(ScanHeuristics.statementRow(from: "Date   Description   Amount"))
+        XCTAssertNil(ScanHeuristics.statementRow(from: "MAY SPECIAL OFFER DETAILS"))
+    }
+
+    /// Month-name full dates parse in both orders; the existing numeric
+    /// forms keep priority.
+    func testMonthNameFullDate() {
+        XCTAssertEqual(ScanHeuristics.fullDate(in: "Paid on Jul 1, 2026"),
+                       DateComponents(year: 2026, month: 7, day: 1))
+        XCTAssertEqual(ScanHeuristics.fullDate(in: "1 July 2026"),
+                       DateComponents(year: 2026, month: 7, day: 1))
+        XCTAssertEqual(ScanHeuristics.fullDate(in: "DECEMBER 31 2025"),
+                       DateComponents(year: 2025, month: 12, day: 31))
+        XCTAssertNil(ScanHeuristics.fullDate(in: "Jul 1"), "no year — never fabricate one here")
+    }
+
+    // MARK: - Forgiving fallback tier (post-T037 device feedback)
+
+    /// Text with a money-shaped amount but no total label and no rows →
+    /// best-effort receipt, never .none: the largest currency-MARKED amount
+    /// beats a larger bare number, and merchant/amount/date are all Guessed.
+    func testFallbackReceiptWhenNoTotalLabel() {
+        let doc = ScanDocumentText(pages: [.init(lines: [
+            .init(text: "CORNER STORE", frame: .zero),
+            .init(text: "07/01/2026", frame: .zero),
+            .init(text: "SNACK  3.25", frame: .zero),
+            .init(text: "$9.75", frame: .zero),
+            .init(text: "CASH  20.00", frame: .zero),
+        ], tables: [])])
+        let context = ScanContext(referenceDay: DateComponents(year: 2026, month: 7, day: 3))
+        guard case .receipt(let candidate) = ScanParser.parse(doc, context: context) else {
+            return XCTFail("expected fallback receipt")
+        }
+        XCTAssertEqual(candidate.amountCents, 975, "marked $9.75 must beat bare 20.00")
+        XCTAssertEqual(candidate.merchant, "CORNER STORE")
+        XCTAssertEqual(candidate.date, DateComponents(year: 2026, month: 7, day: 1))
+        XCTAssertEqual(candidate.direction, .debit)
+        XCTAssertEqual(candidate.guesses, [.merchant, .amount, .date])
+    }
+
+    /// Readable text without any money shape stays .none — the fallback
+    /// must not invent an amount.
+    func testFallbackNeedsMoneyShapedText() {
+        let doc = ScanDocumentText(pages: [.init(lines: [
+            .init(text: "HELLO WORLD", frame: .zero),
+            .init(text: "JUST SOME WORDS 42", frame: .zero),
+        ], tables: [])])
+        let context = ScanContext(referenceDay: DateComponents(year: 2026, month: 7, day: 3))
+        guard case .none = ScanParser.parse(doc, context: context) else {
+            return XCTFail("expected .none for money-free text")
+        }
     }
 
     /// TOTAL-labeled lines whose trailing number is not money-shaped
