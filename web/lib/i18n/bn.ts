@@ -266,6 +266,8 @@ const catalog: Record<string, string> = {
   "You're {0} over this month: {1} out vs {2} in.": "এই মাসে {0} বেশি: {2} আয়, {1} খরচ।",
   "You're {0} over your {1} limit with {2} days left.": "{2} দিন বাকি — {1} সীমার {0} বেশি।",
   // — web-only keys (translated 2026-07-02) —
+  "{0} → {1}.": "{0} → {1}।",
+  "“{0}”": "“{0}”",
   "{0} amount": "{0}-এর পরিমাণ",
   "{0} days left": "{0} দিন বাকি",
   "{0} members": "{0} জন সদস্য",

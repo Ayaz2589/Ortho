@@ -137,8 +137,8 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
   const housing = useMemo(() => housingSummary(properties), [properties])
 
   const insights = useMemo(
-    () => generateInsights(transactions, budgets, properties, referenceDate, 2, t),
-    [transactions, budgets, properties, referenceDate, t]
+    () => generateInsights(transactions, budgets, properties, referenceDate, 2, t, locale),
+    [transactions, budgets, properties, referenceDate, t, locale]
   )
 
   const rangeLabel = periodLabel

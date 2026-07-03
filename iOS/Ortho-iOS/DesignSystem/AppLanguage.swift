@@ -56,6 +56,9 @@ enum AppLanguage: String, CaseIterable, Identifiable, Hashable {
     /// Korean has morphological plural, so catalog `one`/`other`
     /// variants are identical.
     var locale: Locale? {
+        // NOTE: Localizer.currentBundle maps these locales onto .lproj folders
+        // (script-qualified first, e.g. zh-Hans.lproj, then bare language) —
+        // keep that resolution in sync when adding a language here.
         switch self {
         case .system: nil
         case .en:     Locale(identifier: "en_US")

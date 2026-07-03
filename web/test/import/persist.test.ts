@@ -78,3 +78,50 @@ describe('persist', () => {
     await expect(persist(fake, [single])).rejects.toThrow(/INSERT_TX/)
   })
 })
+
+// --- Spec 013 US5/A2: compensating writes — no share-less parent may persist. ---
+
+type QCall = [string, ...unknown[]]
+/** FIFO mock: each awaited query consumes the next queued result. */
+function mockQueue(results: Array<{ data: unknown; error: unknown }>) {
+  const calls: QCall[] = []
+  let i = 0
+  const builder: Record<string, unknown> = {}
+  for (const m of ['select', 'eq', 'in', 'gte', 'lt', 'order', 'limit', 'update', 'delete', 'insert']) {
+    builder[m] = (...args: unknown[]) => {
+      calls.push([m, ...args])
+      return builder
+    }
+  }
+  builder.then = (res: (r: unknown) => unknown, rej?: (e: unknown) => unknown) =>
+    Promise.resolve(results[i++] ?? { data: null, error: null }).then(res, rej)
+  const supabase = {
+    from: (t: string) => {
+      calls.push(['from', t])
+      return builder
+    },
+  } as never
+  return { supabase, calls }
+}
+
+const ok = { data: null, error: null }
+const boom = { data: null, error: { message: 'boom' } }
+
+describe('persist — compensation on shares failure (013/US5)', () => {
+  it('deletes the just-inserted parent when the shares insert fails, then throws', async () => {
+    // insert tx OK → insert shares FAILS → compensating delete OK
+    const { supabase, calls } = mockQueue([ok, boom, ok])
+    await expect(persist(supabase, [multi])).rejects.toThrow(/INSERT_SHARES.*rolled back/)
+    expect(calls).toContainEqual(['delete'])
+    expect(calls).toContainEqual(['eq', 'id', 't2'])
+  })
+  it('reports BOTH failures (and the orphan id) when the compensating delete also fails', async () => {
+    const { supabase } = mockQueue([ok, boom, boom])
+    await expect(persist(supabase, [multi])).rejects.toThrow(/ROLLBACK_FAILED.*t2/)
+  })
+  it('a clean batch still writes parent + shares with no delete', async () => {
+    const { supabase, calls } = mockQueue([ok, ok])
+    await expect(persist(supabase, [multi])).resolves.toBe(1)
+    expect(calls.find((c) => c[0] === 'delete')).toBeUndefined()
+  })
+})

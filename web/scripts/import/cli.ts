@@ -16,12 +16,10 @@ import { listUsers, resolveHousehold, fetchExistingForDedupe } from './db/lookup
 import { persist } from './db/persist'
 import { formatMoney } from '../../lib/finance/money'
 import type { RunOptions, ParsedTransaction } from './engine/types'
-import type { TransactionCategory, TransactionKind, User } from '../../lib/types'
+import { PICKABLE_CATEGORIES, type TransactionCategory, type TransactionKind, type User } from '../../lib/types'
 
-const CATEGORIES: TransactionCategory[] = [
-  'coffee', 'groceries', 'dining', 'subs', 'fuel', 'rent',
-  'health', 'income', 'transit', 'utilities', 'entertainment',
-]
+// One category source of truth (spec 013 US5): the shared pickable list.
+const CATEGORIES: readonly TransactionCategory[] = PICKABLE_CATEGORIES
 
 function parseArgs(argv: string[]): RunOptions {
   const o: RunOptions = { file: '', bankOverride: null, dryRun: false, assumeYes: false, admin: false }

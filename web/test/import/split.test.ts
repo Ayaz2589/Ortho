@@ -33,3 +33,21 @@ describe('validateCustomSplit', () => {
     expect(validateCustomSplit({ a: 120, b: -20 }, ['a', 'b']).ok).toBe(false)
   })
 })
+
+// --- Spec 013 US5/A3: tolerance identical to the apps' shared validateSplit (±0.5). ---
+describe('validateCustomSplit — shared tolerance (013/US5)', () => {
+  const owners = ['a', 'b']
+  it('accepts sums inside the apps\' ±0.5 tolerance', () => {
+    expect(validateCustomSplit({ a: 49.9, b: 49.9 }, owners).ok).toBe(true) // 99.8
+    expect(validateCustomSplit({ a: 50.2, b: 50.2 }, owners).ok).toBe(true) // 100.4
+  })
+  it('rejects sums outside the tolerance, with the sum in the message', () => {
+    const v = validateCustomSplit({ a: 49.7, b: 49.7 }, owners) // 99.4
+    expect(v.ok).toBe(false)
+    if (!v.ok) expect(v.error).toMatch(/99\.4/)
+  })
+  it('still enforces owner coverage and non-negative percentages', () => {
+    expect(validateCustomSplit({ a: 100 }, owners).ok).toBe(false)
+    expect(validateCustomSplit({ a: 110, b: -10 }, owners).ok).toBe(false)
+  })
+})

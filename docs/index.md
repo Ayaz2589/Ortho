@@ -66,6 +66,7 @@ shared TS functions but is deliberately **outside** the golden-vector harness.
 | [./supabase.md](./supabase.md) | …changing the schema, enums, RLS policies, or RPCs; understanding migrations, `config.toml`, or the local stack. |
 | [./shared.md](./shared.md) | …touching any mirrored finance logic: how golden vectors are generated, asserted on both platforms, and their determinism conventions. |
 | [./makefile.md](./makefile.md) | …importing bank statements or doing terminal transaction CRUD (`make ingest`, `tx-*`), or navigating the spec-kit / `.claude` tooling at the root. |
+| [./deploy.md](./deploy.md) | …shipping the iOS app to TestFlight: the manual-trigger deploy workflow, the Apple/Supabase secrets it preflights, and the owner setup steps. |
 
 ## 4. The golden path (fresh sandbox)
 

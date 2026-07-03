@@ -25,8 +25,9 @@ shared/
     ├── README.md                    # Contract, file-by-file docs, regen + run instructions
     ├── mortgage.json                # (554 ln) MortgageInfo / lib/finance/mortgage.ts: payment, balance,
     │                                #   equity, maturity, years remaining, 12-mo amortization slice
-    ├── insights.json                # (643 ln) InsightEngine / lib/finance/insights.ts: snapshot +
-    │                                #   pinned referenceDate → fired insights (id/severity/category/magnitude_cents)
+    ├── insights.json                # (918 ln) InsightEngine / lib/finance/insights.ts: snapshot +
+    │                                #   pinned referenceDate → fired insights (id/severity/category/
+    │                                #   magnitude_cents/preview_merchants)
     ├── transaction-filters.json     # (1408 ln) filterTransactions / lib/transactionFilters.ts:
     │                                #   query/categories/kind/sources/owners/date-window cases → expectedIds
     ├── transaction-splits.json      # (516 ln) computeShares/validateSplit/seedSplit/orderedOwnerIds
@@ -34,8 +35,8 @@ shared/
     │                                #   save-gate validations, edit-seed round-trips, canonical owner ordering
     ├── currency.json                # (692 ln) toDisplayAmount/toUSDCents (lib/finance/money.ts +
     │                                #   lib/finance/currency.ts) across all 7 currencies at fallback rates
-    ├── dashboard-month-scope.json   # (140 ln) availableMonths/monthReferenceDate/stepMonth
-    │                                #   (components/dashboard/range.ts) — dashboard month picker logic
+    ├── dashboard-month-scope.json   # (267 ln) availableMonths/availableRanges/monthReferenceDate/stepMonth
+    │                                #   (components/dashboard/range.ts) — dashboard range + month picker logic
     └── member-balance.json          # (352 ln) balanceBetween (lib/balances.ts): reimbursement/settle-up
                                      #   net cents between two members, incl. transfer-kind reimbursements
 ```
@@ -63,14 +64,15 @@ shared/test-vectors/*.json   ← committed to git; regenerated only on INTENDED 
 Key properties:
 
 - **The TypeScript implementation generates the expected values** (after being parity-corrected to match iOS semantics — e.g. recurring-average rounding truncates toward zero like Swift `Int64` division, not `Math.round`). The Swift side never generates; it only asserts.
-- **Vectors are wired into the Xcode project by relative path**: `iOS/Ortho-iOS.xcodeproj/project.pbxproj` contains `PBXFileReference` entries with `path = "../shared/test-vectors/<file>.json"` and all seven JSONs are in the test target's Copy Bundle Resources phase. Regenerating a JSON therefore updates the iOS test inputs automatically on the next test build — no copy step. Adding an **eighth** vector file *would* require editing the pbxproj (new file reference + Resources build phase entry).
+- **Vectors are wired into the Xcode project by relative path**: `iOS/Ortho-iOS.xcodeproj/project.pbxproj` contains `PBXFileReference` entries with `path = "../shared/test-vectors/<file>.json"` and all seven JSONs are in the test target's Copy Bundle Resources phase. Regenerating a JSON therefore updates the iOS test inputs automatically on the next test build — no copy step, and **adding cases or sections to an existing file needs no pbxproj change** (feature 013 added `availableRanges` and `preview_merchants` this way). Adding an **eighth** vector file requires pbxproj edits (see §8), but the pbxproj is plain text and hand-editable.
 - **Determinism/portability decisions baked into the vectors** (so TS `number` and Swift `Double`/`Int64` agree bit-for-bit):
   - All money is integer USD cents.
   - Transaction/filter ids are lowercase UUID strings (`00000000-0000-0000-0000-…`) so the iOS `Transaction` decoder (UUID ids) accepts them; web compares strings and is agnostic.
   - Dates are timezone-stable by construction: mortgage dates parse as **local** calendar dates on both sides; insight dates mirror JS `new Date('YYYY-MM-DD')` (UTC midnight) and sit mid-month so timezone can't flip a month bucket; filter windows are **UTC half-open `[from, to)`** via `monthBounds('YYYY-MM')`.
   - Display *strings* for currency are locale-dependent and deliberately **not** vectored — only numeric amounts are.
 - **The insight `id` scheme is part of the contract** (e.g. `top-category-dining-2026-06`, `budget-over-dining-2026-06`, `outlier-<lowercase-uuid>`). Differing ids across suites is a real divergence, not a test bug.
-- **What's covered**: mortgage math (incl. zero-interest and month-end-closing day-boundary cases), all 8 insight rules, transaction filtering (every dimension in isolation, OR-within/AND-across, empty edges, UTC month boundary), split math (leftover-cent placement in canonical owner order, percent/value validation gates, lossless edit-seed round-trips), currency conversion in both directions for 7 currencies, dashboard month-picker derivation/stepping, and member reimbursement balances (expenses with `paid_by` + `transfer`-kind reimbursements netting to signed cents).
+- **What's covered**: mortgage math (incl. zero-interest and month-end-closing day-boundary cases), all 8 insight rules, transaction filtering (every dimension in isolation, OR-within/AND-across, empty edges, UTC month boundary), split math (leftover-cent placement in canonical owner order, percent/value validation gates, lossless edit-seed round-trips), currency conversion in both directions for 7 currencies, dashboard month-picker derivation/stepping plus range availability (`availableRanges`, 11 cases: TS `availableRanges` in `web/components/dashboard/range.ts` ↔ Swift `DashboardRange.available`), and member reimbursement balances (expenses with `paid_by` + `transfer`-kind reimbursements netting to signed cents).
+- **Insight `expected[]` entries carry `preview_merchants: string[]`** (feature 013): the recurring insight's 3-merchant preview, locking both ordering and casing — amount descending, case-insensitive name tie-break, casing taken from the newest transaction; `[]` on non-recurring insights. Two scenarios exist specifically for the ordering tie-break and casing drift. `generateInsights` also gained a trailing `locale` parameter — the generator and both parity suites pass the default `en-US`, keeping the vectors language-neutral.
 - **What's NOT covered**: the CLI (`web/scripts/import/`) asserts against no vector — it reuses `computeShares`/`orderedOwnerIds`/`formatMoney` from `web/lib` directly but its own filtering/parsing can drift (documented in `PARITY.md`).
 
 ## 5. Key files
@@ -113,7 +115,7 @@ After any change to a vectored pure-logic function: regenerate, then run **both*
 
 ## 7. Conventions & patterns
 
-- **File shape**: `mortgage.json` and `insights.json` are top-level arrays of `{ input, expected }`; `transaction-filters.json` is `{ cases: [...] }`; `transaction-splits.json` is `{ cases, validations, seeds, ownerOrdering }`; `currency.json` is `{ toDisplay, toUsdCents }`; `dashboard-month-scope.json` is `{ availableMonths, monthReferenceDate, stepMonth }`; `member-balance.json` is `{ cases }`. Every case has a human-readable `name` used as the test name in both suites.
+- **File shape**: `mortgage.json` and `insights.json` are top-level arrays of `{ input, expected }`; `transaction-filters.json` is `{ cases: [...] }`; `transaction-splits.json` is `{ cases, validations, seeds, ownerOrdering }`; `currency.json` is `{ toDisplay, toUsdCents }`; `dashboard-month-scope.json` is `{ availableMonths, availableRanges, monthReferenceDate, stepMonth }`; `member-balance.json` is `{ cases }`. Every case has a human-readable `name` used as the test name in both suites.
 - **Pretty-printed JSON** (`JSON.stringify(..., null, 2)` + trailing newline) so diffs are reviewable.
 - **Integer cents everywhere**; the only doubles are rates, percents, `equityFraction`, and display amounts — chosen so IEEE-754 arithmetic matches across TS and Swift.
 - **Leftover-cent rule**: remainders go to the earliest owner in *canonical* order (`orderedOwnerIds` — the C1 contract); the `ownerOrdering` cases feed deliberately scrambled owner lists to lock this.
@@ -133,7 +135,7 @@ After any change to a vectored pure-logic function: regenerate, then run **both*
 - **iOS tests can't run in this (Linux) sandbox.** A change that regenerates vectors is only *half*-verified here; flag that the iOS XCTest run is pending on macOS.
 - **The generator asserts nothing** — it just writes whatever the TS functions return. The safety net is running both suites afterward.
 - **`shared/test-vectors/README.md` is stale for the 3 newer files** (currency, dashboard-month-scope, member-balance) and its "Running the suites" section describes the one-time Xcode setup as if pending — the pbxproj already wires all seven files. `gen-vectors.ts` and `PARITY.md` are more current.
-- **Adding a new vector file** requires three touchpoints: a section + `writeFileSync` in `web/scripts/gen-vectors.ts`, a `web/test/<name>.parity.test.ts`, and an `iOS/Ortho-iOSTests/<Name>ParityTests.swift` **plus** pbxproj entries (file reference with `path = "../shared/test-vectors/<file>.json"` and a Resources build-phase entry) — the last part is macOS/Xcode-unfriendly to do by hand but is plain-text editable.
+- **Adding a new vector file** requires three touchpoints: a section + `writeFileSync` in `web/scripts/gen-vectors.ts`, a `web/test/<name>.parity.test.ts`, and an `iOS/Ortho-iOSTests/<Name>ParityTests.swift` **plus** pbxproj entries (a `PBXFileReference` with `path = "../shared/test-vectors/<file>.json"`, a `PBXBuildFile`, a group entry, and a Resources build-phase entry) — the pbxproj is hand-editable text, so this is doable from a Linux sandbox, and CI validates the result. Adding cases to an *existing* file needs none of the pbxproj work.
 - **Node version**: Vitest 4 needs Node ≥ 20.19 / ≥ 22.12 (`require(ESM)`); older Node fails the web suite even though `tsx` itself may run.
 - Vector transaction `date` strings intentionally sit **mid-month at 12:00Z** (except boundary-specific cases) so no local timezone can re-bucket them.
 

@@ -71,7 +71,7 @@ iOS/
 │   │   ├── Insights/                        # InsightCard + InsightsCardStack (renders InsightEngine output)
 │   │   ├── Budgets/                         # BudgetsView + EditBudgetSheet
 │   │   └── Settings/                        # SettingsView, HouseholdView, user/card rows + sheets, appearance/language
-│   ├── Localizable.xcstrings        # string catalog for en/bn/es/ja/zh/ko
+│   ├── Localizable.xcstrings        # string catalog, fully translated for en/bn/es/ja/zh/ko (coverage locked by a web Vitest suite)
 │   ├── Fonts/                       # Lato-Light/Regular/Bold/Black.ttf
 │   └── Resources/legacy-import.json # GITIGNORED personal data for DEBUG LegacyImporter
 ├── Ortho-iOSTests/                  # 7 parity suites asserting shared/test-vectors/*.json
@@ -140,12 +140,14 @@ These files are line-for-line semantic mirrors of `web/lib/*` / `web/components/
 
 The split math deliberately uses `Double` (IEEE-754, identical to TS `number`) so the two implementations cannot diverge; leftover cents land on the same owner via `orderedOwnerIds` (ascending UUID-string sort).
 
+Two additions from spec 013: `DashboardRange.available(for:now:calendar:)` is the pure, vectored mirror of the TS `availableRanges` (`AppState` delegates to it), locked by the `availableRanges` section of `dashboard-month-scope.json`; and `Insight.previewMerchants` plus the InsightEngine's recurring 3-merchant preview tie-break are locked via `preview_merchants` in `insights.json`.
+
 ### Design system
 
 - `AppTheme` (`DesignSystem/AppTheme.swift`): warm, muted light/dark token pairs via a `Color(light:dark:)` UITraitCollection helper. Tokens: `bg`, `surface`, `text`, derived `text2/text3/hairline` (opacity 0.58/0.36/0.07), `accent` (sand/tan), `positive` (sage), `destructive` (muted brick). **Loss/cost is never red** — constitution rule.
 - Typography: `Font.lato(size:weight:)` — the `weight:` is ignored; family is picked by size (**≥ 24pt → Lato-Light**, below → Lato-Regular). Money is the headline; negative money uses **U+2212** (minus sign), not a hyphen.
 - `Palette.swift`: six muted avatar swatches (`peach, slate, sage, terracotta, mauve, sand`) — do not add saturated colors.
-- Localization: string catalog `Localizable.xcstrings` (en/bn/es/ja/zh/ko); `AppLanguage` self-names languages in the picker; Bangla forces Latin digits (`bn_BD@numbers=latn`). `Services/Localizer.swift` bridges the in-app locale to imperative formatters (Money, InsightEngine, TransactionGroup) that SwiftUI's `\.locale` doesn't reach.
+- Localization: string catalog `Localizable.xcstrings` (en/bn/es/ja/zh/ko), **fully translated in all six languages** since spec 013; symbol/numeral keys and DEBUG-only strings carry `shouldTranslate: false`. A web Vitest suite (`web/test/i18n/catalog-parity.test.ts`) locks catalog coverage and shared-key identity against the web catalogs — iOS translators must keep shared keys byte-identical to `web/lib/i18n/*` (placeholder-converted). `AppLanguage` self-names languages in the picker; Bangla forces Latin digits (`bn_BD@numbers=latn`). `Services/Localizer.swift` bridges the in-app locale to imperative formatters (Money, InsightEngine, TransactionGroup) that SwiftUI's `\.locale` doesn't reach.
 - Money renders always use `.lineLimit(1)` + `.minimumScaleFactor` to avoid truncating cents.
 
 ## 5. Key files (read first)
@@ -174,14 +176,19 @@ The split math deliberately uses `Double` (IEEE-754, identical to TS `number`) s
 
 **From a Linux sandbox, the feedback loop is CI** (`.github/workflows/ios-ci.yml`): every push
 touching `iOS/**` or `shared/test-vectors/**` compiles the app, runs the XCTest parity suites,
-and uploads a `simulator-screenshots` artifact — the app booted in the simulator on each of the
-four tabs. Watch with `GH_TOKEN=placeholder gh run watch --exit-status`; download artifacts via
+and uploads a `simulator-screenshots` artifact — a per-language matrix of the app booted in the
+simulator: **en on all four tabs, dashboard + settings in each of bn/es/ja/zh-Hans/ko, and all
+four tabs in bn + ja**, with files named `<lang>-<tab>.png`. Watch with
+`GH_TOKEN=placeholder gh run watch --exit-status`; download artifacts via
 `gh api repos/<owner>/<repo>/actions/artifacts/<id>/zip` (`gh run download` can refuse with a
-path-traversal error).
+path-traversal error). A second workflow, `.github/workflows/ios-deploy.yml`, is the
+**dispatch-only TestFlight deploy** — it never runs automatically; see `./deploy.md`.
 
 **UI-demo mode (DEBUG only):** launch argument `-uiDemo` boots straight into the tab shell on the
 built-in sample data — no auth, no server traffic; `-uiDemoTab <dashboard|transactions|housing|settings>`
-picks the starting tab. This is what CI screenshots; locally, add the arguments under
+picks the starting tab, and `-uiDemoLanguage <code>` forces the app language (accepts `AppLanguage`
+raw values plus `"zh-Hans"`; defined in `Ortho_iOSApp.swift`, riding the same environment-locale
+path as the in-app language picker). This is what CI screenshots; locally, add the arguments under
 Product → Scheme → Edit Scheme → Run → Arguments. Compiled out of release builds
 (`Ortho_iOSApp.isUIDemo`, `RootTabView.selection`).
 

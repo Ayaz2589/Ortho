@@ -77,17 +77,20 @@ web/
 │   ├── transactionFilters.ts   # filter engine + monthBounds
 │   ├── format.ts               # date grouping, effectiveShares
 │   ├── categories.ts           # category metadata + paletteFor
-│   ├── types.ts                # domain types mirroring the Supabase schema
+│   ├── types.ts                # domain types mirroring the Supabase schema; exports PICKABLE_CATEGORIES
 │   ├── language.ts             # language → BCP-47 locale (bn pinned to Latin digits)
 │   ├── i18n/                   # full-UI translation catalogs (bn/es/ja/zh/ko), seeded from iOS xcstrings; store exposes t()
+│   │                           #   layout invariant: iOS-seeded block, `— web-only keys —` marker, web-only block
 │   ├── useMediaQuery.ts        # useIsExpanded() = (min-width: 1024px)
 │   ├── useDashboardRange.ts    # persisted range + transient month scope hook
 │   └── useTransactionFilters.ts
 ├── scripts/
 │   ├── gen-vectors.ts          # regenerates shared/test-vectors/*.json from the TS engines
-│   └── import/                 # bank-statement import + tx CRUD CLI (engine/, profiles/, db/, cli.ts, tx.ts)
-├── test/                       # 59 Vitest files, 619 tests (unit, jsdom component, *.parity.test.ts,
-│   │                           #   import/ golden suites + fixtures/, helpers/supabase-mock.ts)
+│   ├── import/                 # bank-statement import + tx CRUD CLI (engine/, profiles/, db/, cli.ts, tx.ts)
+│   └── maintenance/repair-legacy-dates.ts  # one-shot date repair (make repair-dates, dry-run by default)
+├── test/                       # 63 Vitest files, 705 tests (unit, jsdom component, *.parity.test.ts,
+│   │                           #   i18n/ catalog + render-locale locks, import/ golden suites + fixtures/,
+│   │                           #   helpers/supabase-mock.ts)
 │   └── setup.ts                # jest-dom matchers + conditional RTL cleanup
 ├── next.config.ts              # images.remotePatterns → brujhxmtzfgowimprueo.supabase.co
 ├── tailwind.config.ts          # maps semantic color names → CSS variables
@@ -113,7 +116,7 @@ web/
 - `lib/api/aggregates.ts` wraps the shared Postgres aggregate RPCs (`household_owner_spend` etc., defined in `supabase/migrations/20260611120000_aggregates.sql`). It is **additive and not yet wired** — dashboard widgets still compute locally; the file documents the per-widget cut-over plan.
 
 ### Pure finance core (parity-locked)
-`lib/finance/{money,currency,mortgage,insights}.ts`, `lib/splits.ts`, `lib/balances.ts`, `lib/transactionFilters.ts`, and `components/dashboard/range.ts` are pure TypeScript mirrored by Swift on iOS and pinned by golden vectors. `npm run gen:vectors` (`scripts/gen-vectors.ts`) regenerates `shared/test-vectors/*.json` from these TS implementations; both the web `*.parity.test.ts` suites and the iOS XCTest suite assert against the same files, so neither language can silently drift. Key invariants: integer USD cents everywhere, `orderedOwnerIds` canonicalizes the deterministic leftover cent, half-open `[start, end)` month windows.
+`lib/finance/{money,currency,mortgage,insights}.ts`, `lib/splits.ts`, `lib/balances.ts`, `lib/transactionFilters.ts`, and `components/dashboard/range.ts` are pure TypeScript mirrored by Swift on iOS and pinned by golden vectors. `npm run gen:vectors` (`scripts/gen-vectors.ts`) regenerates `shared/test-vectors/*.json` from these TS implementations; both the web `*.parity.test.ts` suites and the iOS XCTest suite assert against the same files, so neither language can silently drift. Key invariants: integer USD cents everywhere, `orderedOwnerIds` canonicalizes the deterministic leftover cent, half-open `[start, end)` month windows. Since spec 013, `generateInsights` takes a trailing `locale` parameter (threaded from the store's `localeForLanguage` value; vectors stay language-neutral at the default `en-US`), and the recurring insight's 3-merchant preview is vector-locked via `Insight.preview_merchants` — amount descending, case-insensitive name tie-break, casing from the newest transaction. `lib/types.ts` also exports `PICKABLE_CATEGORIES` (transfer is deliberately unpickable) with `TransactionCategory` derived from it.
 
 ### Responsive behavior
 Three tiers, one source of truth (`lib/useMediaQuery.ts`):
@@ -135,7 +138,7 @@ Three tiers, one source of truth (`lib/useMediaQuery.ts`):
 3. `web/app/layout.tsx` — root layout: Lato font, pre-paint appearance boot script.
 4. `web/app/globals.css` — every design token (light/dark) + the `ow-*` desktop chrome.
 5. `web/app/(app)/layout.tsx` — the app shell (provider + Sidebar + TabBar + loading/error states).
-6. `web/lib/types.ts` — domain types (Transaction/Person/Property…) mirroring the Supabase schema; doc-comments explain `paid_by`, `transfer`, `owner_ids`, `shares`.
+6. `web/lib/types.ts` — domain types (Transaction/Person/Property…) mirroring the Supabase schema; doc-comments explain `paid_by`, `transfer`, `owner_ids`, `shares`; `PICKABLE_CATEGORIES` → `TransactionCategory`.
 7. `web/lib/useMediaQuery.ts` — `useIsExpanded()` (≥1024px), the responsive branch point.
 8. `web/app/(app)/dashboard/page.tsx` — the canonical mobile-vs-desktop branching pattern.
 9. `web/components/web/TransactionsDesktop.tsx` — the biggest desktop composition (ledger table + drawer).
@@ -161,7 +164,7 @@ npm install
 npm run dev              # http://localhost:3000
 npm run build            # next build
 npm start                # next start (after build)
-npm test                 # vitest run — 59 files / 619 tests (verified green)
+npm test                 # vitest run — 63 files / 705 tests (verified green, 2026-07-02 / spec 013)
 npm run test:coverage    # v8 coverage, thresholds enforced (see vitest.config.ts)
 npm run gen:vectors      # regenerate shared/test-vectors/ from the TS engines
 npx tsc --noEmit         # typecheck
@@ -173,7 +176,15 @@ npx tsc --noEmit         # typecheck
 ```bash
 make ingest FILE=<statement.pdf|csv> [BANK=td|apple|amex|chase] [DRY_RUN=1] [YES=1] [ADMIN=1]
 make tx-list / tx-add / tx-edit / tx-rm     # transaction CRUD; make ingest-help for flags
+make repair-dates [APPLY=1] [ADMIN=1]       # scripts/maintenance/repair-legacy-dates.ts (dry-run by default)
 ```
+
+Since spec 013 the CLI is parity-aligned with the apps: `tx list` runs the shared
+`filterTransactions` engine in-process (only the date window is pushed into SQL), is
+household-wide in scope, supports `QUERY`/`OWNER` and multi-select flags, and prints an explicit
+truncation notice when results are cut off; transaction writes compensate on failure (parent
+rollback on create, prior-shares restore on update), and `validateCustomSplit` delegates to the
+shared `validateSplit`.
 
 ## 7. Conventions & patterns
 
@@ -184,6 +195,7 @@ make tx-list / tx-add / tx-edit / tx-rm     # transaction CRUD; make ingest-help
 - **Styling**: Tailwind utilities bound to semantic tokens for shared components; handwritten `ow-*` classes (plus some inline `style` for exact handoff metrics) for desktop chrome. Never hardcode colors — always tokens; loss/cost is never red; no bold text.
 - **Naming**: mobile-shared feature components in `components/<feature>/`; desktop-only in `components/web/`; pure logic in `lib/` (hooks prefixed `use*`); parity-vectored logic carries doc-comments naming its Swift mirror and vector file.
 - **Tests**: pure logic in node env; component suites opt into jsdom with a `// @vitest-environment jsdom` first line; parity suites are named `*.parity.test.ts`; Supabase is mocked via `test/helpers/supabase-mock.ts`. New money/date behavior is developed test-first (constitution Principle VI).
+- **i18n locks** (`web/test/i18n/`, spec 013): `catalog-parity.test.ts` enforces catalog coverage, shared-key identity with the iOS string catalog, digit rules, and call-site validity — every literal `t()`/`tr()` key in the codebase must resolve in all five catalogs; `render-locale.test.tsx` renders key screens under jsdom in Español and 日本語 and asserts no English fallback leaks. Keep the catalog layout invariant (iOS-seeded block, `— web-only keys —` marker, web-only block) when adding keys.
 
 ## 8. Gotchas
 

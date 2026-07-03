@@ -320,8 +320,16 @@ enum InsightEngine {
             monthlyBurnCents += avg
         }
         guard !detected.isEmpty else { return [] }
-        detected.sort { $0.monthly > $1.monthly }
-        let preview = detected.prefix(3).map { $0.merchant }.joined(separator: ", ")
+        // Highest monthly burn first; exact-amount ties break by
+        // case-insensitive name (plain code-unit comparison, mirroring web's
+        // deliberate non-locale sort — the vectors need one deterministic
+        // order in every runtime and language). Spec 013.
+        detected.sort {
+            if $0.monthly != $1.monthly { return $0.monthly > $1.monthly }
+            return $0.merchant.lowercased() < $1.merchant.lowercased()
+        }
+        let previewMerchants = Array(detected.prefix(3).map { $0.merchant })
+        let preview = previewMerchants.joined(separator: ", ")
         // "+N more" is locale-sensitive — render it through the catalog.
         let extra: String
         if detected.count > 3 {
@@ -341,7 +349,8 @@ enum InsightEngine {
             severity: .info,
             icon: "arrow.triangle.2.circlepath",
             category: nil,
-            magnitudeCents: monthlyBurnCents
+            magnitudeCents: monthlyBurnCents,
+            previewMerchants: previewMerchants
         )]
     }
 

@@ -266,6 +266,8 @@ const catalog: Record<string, string> = {
   "You're {0} over this month: {1} out vs {2} in.": "本月超支{0}：支出{1}对比收入{2}。",
   "You're {0} over your {1} limit with {2} days left.": "还剩{0}天，您已超出{1}的{2}限额{3}。",
   // — web-only keys (translated 2026-07-02) —
+  "{0} → {1}.": "{0} → {1}。",
+  "“{0}”": "“{0}”",
   "{0} amount": "{0}的金额",
   "{0} days left": "还剩{0}天",
   "{0} members": "{0}位成员",

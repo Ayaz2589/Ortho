@@ -42,13 +42,28 @@ enum Localizer {
     static var currentBundle: Bundle {
         let identifier = currentLocale.identifier
         if let cached = bundleCache[identifier] { return cached }
-        let languageCode = currentLocale.language.languageCode?.identifier ?? "en"
-        guard let path = Bundle.main.path(forResource: languageCode, ofType: "lproj"),
-              let bundle = Bundle(path: path) else {
-            return Bundle.main
+        // Try the script-qualified folder first, then the bare language code.
+        // Xcode names the Simplified Chinese folder `zh-Hans.lproj` (there is
+        // no `zh.lproj`), so a bare-code lookup alone silently fell back to
+        // Bundle.main — every Localizer-routed string (insights, date group
+        // headers, "None set") rendered in the SYSTEM language for 简体中文
+        // users. Caught by the per-language CI screenshots (spec 013).
+        let language = currentLocale.language
+        var candidates: [String] = []
+        if let code = language.languageCode?.identifier {
+            if let script = language.script?.identifier {
+                candidates.append("\(code)-\(script)") // zh-Hans
+            }
+            candidates.append(code) // bn, en, es, ja, ko
         }
-        bundleCache[identifier] = bundle
-        return bundle
+        for candidate in candidates {
+            if let path = Bundle.main.path(forResource: candidate, ofType: "lproj"),
+               let bundle = Bundle(path: path) {
+                bundleCache[identifier] = bundle
+                return bundle
+            }
+        }
+        return Bundle.main
     }
 
     private static var bundleCache: [String: Bundle] = [:]

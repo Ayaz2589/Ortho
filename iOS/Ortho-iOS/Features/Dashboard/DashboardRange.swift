@@ -58,6 +58,29 @@ enum DashboardRange: String, CaseIterable, Hashable, Identifiable, Codable {
     }
 }
 
+extension DashboardRange {
+    /// Which ranges a dataset can populate. A range is "available" when the
+    /// day-insensitive calendar-month index difference between the EARLIEST
+    /// transaction and `now` reaches `monthCount - 1` (earliest May 3, now
+    /// Jul 2 → monthsBack = 2, so "3M" is offered). `.thisMonth` is always
+    /// available. Pure mirror of web `availableRanges`
+    /// (web/components/dashboard/range.ts), golden-vectored in
+    /// `dashboard-month-scope.json` (spec 013) and asserted by
+    /// DashboardScopeParityTests.
+    static func available(for transactions: [Transaction],
+                          now: Date = .now,
+                          calendar: Calendar = .current) -> [DashboardRange] {
+        guard let earliest = transactions.map(\.date).min() else {
+            return [.thisMonth]
+        }
+        let from = calendar.dateComponents([.year, .month], from: earliest)
+        let to = calendar.dateComponents([.year, .month], from: now)
+        let monthsBack = ((to.year ?? 0) - (from.year ?? 0)) * 12
+            + ((to.month ?? 0) - (from.month ?? 0))
+        return DashboardRange.allCases.filter { monthsBack >= $0.monthCount - 1 }
+    }
+}
+
 // MARK: - Specific-month selection (parity-locked)
 //
 // Mirror of the three pure helpers in `web/components/dashboard/range.ts`

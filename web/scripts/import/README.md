@@ -64,19 +64,28 @@ new (duplicate detection).
 Manage transactions directly (spec 005). Same OTP / `ADMIN=1` auth as `ingest`.
 
 ```bash
-make tx-list [MONTH=YYYY-MM] [CATEGORY=…] [SOURCE=…] [SCOPE=personal|shared] [KIND=expense|income] [LIMIT=N]
+make tx-list [MONTH=YYYY-MM] [QUERY=text] [CATEGORY=a,b] [SOURCE=a,b] [OWNER=name] [KIND=expense|income|transfer] [LIMIT=N]
 make tx-add  MERCHANT='Corner Coffee' AMOUNT='4.50' [DATE=YYYY-MM-DD] [CATEGORY=…] [KIND=…] [SCOPE=…] [SOURCE='…']
 make tx-edit ID=<uuid>
 make tx-rm   ID=<uuid> [DRY_RUN=1]
 ```
 
-- **tx-list** — money-aligned table, newest first; filters combine; read-only.
+- **tx-list** — money-aligned table, newest first; read-only. Filter semantics
+  are the apps' (spec 013): only the MONTH window narrows in SQL, everything
+  else runs through the shared `filterTransactions` — free-text QUERY
+  (merchant/source/category/owner name), comma multi-select CATEGORY/SOURCE
+  (OR within a dimension), OWNER by household-person name, KIND incl.
+  transfer. Scope is the whole household, like the apps. If the fetch hits
+  LIMIT (default 200) the truncation is printed — never silent.
 - **tx-add** — validates like the web form (amount > 0, merchant non-empty, valid category); personal by default, `SCOPE=shared` prompts for owners + split; confirm before write.
 - **tx-edit** — shows current values, edits field-by-field (incl. personal↔shared), confirm to save.
 - **tx-rm** — shows the row, `DRY_RUN=1` previews; otherwise `y/N` confirm; shares cascade.
 
-In sign-in mode you only see/edit/delete your own rows (RLS); `ADMIN=1` acts on any.
-Writes mirror the web store exactly, so CLI rows are indistinguishable from app rows.
+Listing is household-wide in sign-in mode (RLS still bounds you to your own
+household); `ADMIN=1` spans all households. Writes mirror the web store exactly
+— including its compensation: a failed shares write rolls back the parent
+(create) or restores the previous shares (edit), so a partial failure never
+leaves a row that rehydrates as "creator owns all" (spec 013).
 See [spec 005](../../../specs/005-transaction-crud-cli/) and its [`contracts/cli.md`](../../../specs/005-transaction-crud-cli/contracts/cli.md).
 
 ## Layout

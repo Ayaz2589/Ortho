@@ -33,8 +33,16 @@ final class DashboardScopeParityTests: XCTestCase {
         let direction: String
         let expected: String?
     }
+    // Spec 013 US4: availableRanges — the last unvectored month-scope function.
+    private struct AvailableRangesCase: Decodable {
+        let name: String
+        let dates: [String]
+        let now: String
+        let expected: [String]
+    }
     private struct Vectors: Decodable {
         let availableMonths: [AvailableMonthsCase]
+        let availableRanges: [AvailableRangesCase]
         let monthReferenceDate: [MonthReferenceDateCase]
         let stepMonth: [StepMonthCase]
     }
@@ -83,6 +91,29 @@ final class DashboardScopeParityTests: XCTestCase {
             }
             let txs = dates.map(tx(at:))
             XCTAssertEqual(availableMonths(txs), c.expected, "case: \(c.name)")
+        }
+    }
+
+    // MARK: - availableRanges (spec 013 US4)
+
+    /// The vectors are generated under TZ=UTC, so month-index math here must
+    /// run on a UTC calendar (the production default is `.current`).
+    private let utcCalendar: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC")!
+        return c
+    }()
+
+    func testAvailableRangesParity() throws {
+        let vectors = try loadVectors()
+        XCTAssertFalse(vectors.availableRanges.isEmpty)
+        for c in vectors.availableRanges {
+            let dates = try c.dates.map { s in
+                try XCTUnwrap(Self.iso.date(from: s), "bad ISO date \(s) in case \(c.name)")
+            }
+            let now = try XCTUnwrap(Self.iso.date(from: c.now), "bad now \(c.now) in case \(c.name)")
+            let got = DashboardRange.available(for: dates.map(tx(at:)), now: now, calendar: utcCalendar)
+            XCTAssertEqual(got.map(\.rawValue), c.expected, "case: \(c.name)")
         }
     }
 

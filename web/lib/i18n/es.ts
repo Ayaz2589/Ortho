@@ -261,6 +261,9 @@ const catalog: Record<string, string> = {
   "You're {0} over this month: {1} out vs {2} in.": "Estás {0} por encima este mes: {1} de salida vs {2} de entrada.",
   "You're {0} over your {1} limit with {2} days left.": "Estás {0} por encima de tu límite de {1} con {2} días restantes.",
   // — web-only keys (translated 2026-07-02) —
+  "{0} → {1}.": "{0} → {1}.",
+  "Color": "Color",
+  "Total": "Total",
   "“{0}”": "«{0}»",
   "{0} amount": "Importe de {0}",
   "{0} days left": "{0} días restantes",
@@ -277,6 +280,8 @@ const catalog: Record<string, string> = {
   "1 unit": "1 unidad",
   "1 visit": "1 visita",
   "1Y": "1A",
+  "3M": "3M",
+  "6M": "6M",
   "Add payment": "Añadir pago",
   "Add person": "Añadir persona",
   "Amounts must add up to {0}.": "Los importes deben sumar {0}.",
@@ -358,7 +363,7 @@ const catalog: Record<string, string> = {
   "Verifying…": "Verificando…",
   "vs. prior 30": "vs 30 anteriores",
   "We'll email you an 8-digit code. No password, no fuss.": "Te enviaremos un código de 8 dígitos por correo. Sin contraseñas, sin complicaciones.",
-  "You owe {0}": "Debes {0}",
+  "You owe {0}": "Le debes a {0}",
   // — plural-variation seeds (other form) —
   "Detected {0} recurring charges": "Detectados {0} cargos recurrentes",
 }

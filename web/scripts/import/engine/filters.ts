@@ -1,67 +1,88 @@
-// List filters for tx-list. Pure: parse + validate flag values into a TxFilter,
-// and translate MONTH into a half-open [start, end) date window.
-import type { TransactionCategory, TransactionKind } from '../../../lib/types'
+// tx-list flag parsing (spec 013 US5): a thin mapping onto the apps' shared
+// FilterCriteria. The CLI narrows by DATE WINDOW ONLY in SQL, then runs the
+// shared `filterTransactions` in-process — one filtering brain, so the same
+// criteria return the same set the apps show (free text, multi-select OR,
+// owner filter). The month window reuses the shared `monthBounds`.
+import { PICKABLE_CATEGORIES, type TransactionCategory } from '../../../lib/types'
+import { emptyCriteria, monthBounds, type FilterCriteria } from '../../../lib/transactionFilters'
 
-export const CATEGORY_LIST: TransactionCategory[] = [
-  'coffee', 'groceries', 'dining', 'subs', 'fuel', 'rent',
-  'health', 'income', 'transit', 'utilities', 'entertainment',
-]
+/** The shared pickable list (transfer stays unpickable — locked product
+ *  decision). Re-exported under the CLI's historical name. */
+export const CATEGORY_LIST: readonly TransactionCategory[] = PICKABLE_CATEGORIES
 
-export interface TxFilter {
-  startISO?: string
-  endISO?: string
-  category?: TransactionCategory
-  source?: string
-  kind?: TransactionKind
-  limit?: number
-}
-
-const pad = (n: number) => String(n).padStart(2, '0')
-
-/** "2026-05" → half-open month window `[2026-05-01, 2026-06-01)` (UTC). */
-export function monthRange(month: string): { startISO: string; endISO: string } {
-  const m = month.match(/^(\d{4})-(\d{2})$/)
-  if (!m) throw new Error(`INVALID_MONTH: ${JSON.stringify(month)} (expected YYYY-MM)`)
-  const year = Number(m[1])
-  const mo = Number(m[2])
-  if (mo < 1 || mo > 12) throw new Error(`INVALID_MONTH: ${month}`)
-  const endYear = mo === 12 ? year + 1 : year
-  const endMo = mo === 12 ? 1 : mo + 1
-  return {
-    startISO: `${year}-${pad(mo)}-01T00:00:00.000Z`,
-    endISO: `${endYear}-${pad(endMo)}-01T00:00:00.000Z`,
-  }
-}
-
-export interface FilterArgs {
+export interface RawListArgs {
   month?: string
+  query?: string
   category?: string
   source?: string
   kind?: string
+  owner?: string
   limit?: string
 }
 
-/** Validate + assemble a TxFilter from raw flag strings. Throws on bad values. */
-export function parseFilters(args: FilterArgs): TxFilter {
-  const f: TxFilter = {}
+export interface ParsedList {
+  /** SQL fetch bound (broadest criterion only — everything else is in-process). */
+  window: { startISO?: string; endISO?: string }
+  /** Apps' criteria, owners left empty until names resolve against the household. */
+  criteria: FilterCriteria
+  /** Raw --owner names; resolve with `resolveOwnerIds` once people are known. */
+  ownerNames: string[]
+  /** Fetch cap. Truncation must be reported to the operator, never silent. */
+  limit: number
+}
+
+const splitMulti = (s: string): string[] =>
+  s.split(',').map((x) => x.trim()).filter(Boolean)
+
+/** Validate + assemble the list request from raw flag strings. Throws on bad values. */
+export function parseListArgs(args: RawListArgs): ParsedList {
+  const criteria = emptyCriteria()
+  const window: ParsedList['window'] = {}
   if (args.month) {
-    const r = monthRange(args.month)
-    f.startISO = r.startISO
-    f.endISO = r.endISO
+    const b = monthBounds(args.month) // throws INVALID_MONTH
+    window.startISO = b.dateFrom
+    window.endISO = b.dateTo
+    criteria.dateFrom = b.dateFrom
+    criteria.dateTo = b.dateTo
   }
+  if (args.query) criteria.query = args.query
   if (args.category) {
-    if (!CATEGORY_LIST.includes(args.category as TransactionCategory)) throw new Error(`INVALID_CATEGORY: ${args.category}`)
-    f.category = args.category as TransactionCategory
+    for (const c of splitMulti(args.category)) {
+      if (!CATEGORY_LIST.includes(c as TransactionCategory)) {
+        throw new Error(`INVALID_CATEGORY: ${c} (one of: ${CATEGORY_LIST.join(', ')})`)
+      }
+      criteria.categories.push(c as TransactionCategory)
+    }
   }
-  if (args.source) f.source = args.source
+  if (args.source) criteria.sources.push(...splitMulti(args.source))
   if (args.kind) {
-    if (args.kind !== 'expense' && args.kind !== 'income') throw new Error(`INVALID_KIND: ${args.kind}`)
-    f.kind = args.kind
+    if (args.kind !== 'expense' && args.kind !== 'income' && args.kind !== 'transfer') {
+      throw new Error(`INVALID_KIND: ${args.kind} (expense|income|transfer)`)
+    }
+    criteria.kind = args.kind
   }
+  let limit = 200
   if (args.limit) {
     const n = Number(args.limit)
     if (!Number.isInteger(n) || n <= 0) throw new Error(`INVALID_LIMIT: ${args.limit}`)
-    f.limit = n
+    limit = n
   }
-  return f
+  return { window, criteria, ownerNames: args.owner ? splitMulti(args.owner) : [], limit }
+}
+
+/** `--owner` names → household person ids, case-insensitively. Throws with the
+ *  available names so the operator can self-correct. */
+export function resolveOwnerIds(
+  people: ReadonlyArray<{ id: string; name: string }>,
+  names: string[]
+): string[] {
+  return names.map((name) => {
+    const p = people.find((x) => x.name.toLowerCase() === name.toLowerCase())
+    if (!p) {
+      throw new Error(
+        `UNKNOWN_OWNER: ${name} (household people: ${people.map((x) => x.name).join(', ')})`
+      )
+    }
+    return p.id
+  })
 }
