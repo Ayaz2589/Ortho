@@ -97,6 +97,15 @@ final class ScanParserTests: XCTestCase {
         try await assertFixture("statement-app-list", ext: "png")
     }
 
+    /// The Amex-app shape that failed the T044 device pass (IMG_0829,
+    /// rebuilt synthetically): dark mode, dates as GROUP HEADERS covering
+    /// several cells, "Pending" under each amount, an owner-name subtitle,
+    /// status-bar junk on top. Grouped date resolution must yield all 7
+    /// rows — never a $176.14 receipt with merchant "5G".
+    func testStatementAppGrouped() async throws {
+        try await assertFixture("statement-app-grouped", ext: "png")
+    }
+
     /// The CLI year-inference convention (engine/dates.ts): a December row
     /// in a Dec→Jan statement period resolves to the PERIOD's earlier year.
     func testYearInferenceAcrossBoundary() {
@@ -231,6 +240,64 @@ final class ScanParserTests: XCTestCase {
         XCTAssertEqual(rowsAbove[0].month, 7)
         XCTAssertEqual(rowsAbove[2].description, "H MART")
         XCTAssertEqual(rowsAbove[2].amount.minorUnits, 6320)
+    }
+
+    /// GROUPED headers (the Amex-app shape from the T044 device pass):
+    /// "Jul 3" covers every cell until "Jul 2"; "Pending" status words are
+    /// stripped; the owner-name subtitle must lose to the merchant; the
+    /// status bar and page title are unreachable across the header bound.
+    func testStackedRowsGroupedHeaders() {
+        let lines = [
+            "10:24  5G  87",
+            "ORTHO BANK GOLD CARD",
+            "Jul 3",
+            "ALPACADB  $99.00",
+            "Pending",
+            "UBER EATS  $25.14",
+            "Pending",
+            "AMAZON MARKETPLACE NA PA",
+            "SAM PARKER",
+            "$176.14",
+            "Jul 2",
+            "UBER EATS  $32.37",
+            "Pending",
+            "NYCT PAYGO  $3.00",
+            "NYCT PAYGO  $3.00",
+        ]
+        let rows = ScanHeuristics.stackedRows(in: lines)
+        XCTAssertEqual(rows.count, 6, "\(rows)")
+        XCTAssertEqual(rows[0].description, "ALPACADB")
+        XCTAssertEqual(rows[0].month, 7)
+        XCTAssertEqual(rows[0].day, 3)
+        XCTAssertEqual(rows[0].amount.minorUnits, 9900)
+        XCTAssertEqual(rows[2].description, "AMAZON MARKETPLACE NA PA",
+                       "the owner-name subtitle must never become the merchant")
+        XCTAssertEqual(rows[2].amount.minorUnits, 17614)
+        XCTAssertEqual(rows[3].day, 2, "cells after the second header take its date")
+        XCTAssertEqual(rows[5].description, "NYCT PAYGO")
+        XCTAssertFalse(rows.contains { $0.description.contains("5G") || $0.description.contains("CARD") },
+                       "status bar / page title must be unreachable")
+    }
+
+    /// "$99.00  Pending" style lines: the status word is stripped so the
+    /// amount still anchors a row.
+    func testStackedRowsStripStatusWords() {
+        let lines = [
+            "Jul 3",
+            "COFFEE SHOP",
+            "$4.50  Pending",
+            "Jul 2",
+            "BAGEL PLACE",
+            "$3.25  Posted",
+            "TACO TRUCK",
+            "$12.00  Pending",
+        ]
+        let rows = ScanHeuristics.stackedRows(in: lines)
+        XCTAssertEqual(rows.count, 3, "\(rows)")
+        XCTAssertEqual(rows[0].description, "COFFEE SHOP")
+        XCTAssertEqual(rows[0].amount.minorUnits, 450)
+        XCTAssertEqual(rows[2].description, "TACO TRUCK")
+        XCTAssertEqual(rows[2].day, 2)
     }
 
     /// A receipt's price column can never become stacked rows: item lines

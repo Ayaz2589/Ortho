@@ -102,6 +102,7 @@ refiner), and asserts the candidate list field-by-field. Minimum fixture set:
 | `statement-scanned.png` | image statement through the OCR table path |
 | `statement-screenshot.png` | web-banking screenshot: month-name dates, CR credit, payment row (post-T037) |
 | `statement-app-list.png` | photographed app list: stacked cells + "Total balance" trap → 4 rows, never a receipt (post-T041) |
+| `statement-app-grouped.png` | Amex-app shape: dark mode, date GROUP headers, "Pending" statuses, owner subtitle, status bar → 7 rows (post-T044) |
 | `receipt-no-total.png` | unlabeled total → forgiving fallback tier, merchant/amount/date Guessed (post-T037) |
 | `unreadable.png` | `.none` → failure copy path (FR-017) |
 

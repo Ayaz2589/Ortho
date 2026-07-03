@@ -339,6 +339,25 @@ camera auto-snapped before the shot was lined up. Two more fixes:
       confirm the camera waits for a lined-up shot with the capture button
       enabling only when text is readable
 
+T044's first screenshot test (operator, Amex APP screenshot IMG_0829) still
+failed — $176.14 receipt with merchant "5G" (the status bar!). The app uses
+dates as GROUP HEADERS ("Jul 3" covering several cells), so per-row date
+claiming matched only 2 of 7 amounts and the tier never fired; "Pending"
+rides under every amount; an owner-name subtitle sits under some merchants.
+
+- [X] T045 Grouped-header mode in `stackedRows`: when per-row matching
+      explains <3 rows but ≥2 bare-date headers exist, every anchor takes the
+      nearest header above it. Status words ("Pending"/"Posted"/...) stripped
+      before classification; descriptions resolve within the anchor's own
+      cell (bounded by the previous anchor/header — page titles unreachable,
+      owner subtitles lose to the first line); fallback merchant now needs
+      ≥3 letters (no more "5G"). Locked by `statement-app-grouped.png`
+      (synthetic rebuild of the failing capture) + unit tests
+- [ ] T046 **[OPERATOR-PENDING]** Re-test with the same Amex app screenshot —
+      expect the interstitial with 7 rows across Jul 3/Jul 2, correct
+      merchants/categories (UBER EATS → dining, EXXONMOBIL → fuel,
+      NYCT PAYGO → transit), then the camera checks from T044
+
 ---
 
 ## Authoring notes (implementation)

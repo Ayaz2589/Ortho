@@ -1,0 +1,108 @@
+{
+  "kind": "statement",
+  "context": {
+    "referenceDate": "2026-07-03",
+    "existing": [],
+    "history": []
+  },
+  "candidates": [
+    {
+      "merchantRaw": "ALPACADB",
+      "merchant": "ALPACADB",
+      "date": "2026-07-03",
+      "amountCents": 9900,
+      "direction": "debit",
+      "currency": "usd",
+      "originalAmount": null,
+      "isPaymentRow": false,
+      "categoryGuess": null,
+      "ownersGuess": null,
+      "duplicateOf": null,
+      "guesses": []
+    },
+    {
+      "merchantRaw": "UBER EATS",
+      "merchant": "UBER EATS",
+      "date": "2026-07-03",
+      "amountCents": 2514,
+      "direction": "debit",
+      "currency": "usd",
+      "originalAmount": null,
+      "isPaymentRow": false,
+      "categoryGuess": "dining",
+      "ownersGuess": null,
+      "duplicateOf": null,
+      "guesses": ["category"]
+    },
+    {
+      "merchantRaw": "AMAZON MARKETPLACE NA PA",
+      "merchant": "AMAZON MARKETPLACE NA PA",
+      "date": "2026-07-03",
+      "amountCents": 17614,
+      "direction": "debit",
+      "currency": "usd",
+      "originalAmount": null,
+      "isPaymentRow": false,
+      "categoryGuess": null,
+      "ownersGuess": null,
+      "duplicateOf": null,
+      "guesses": []
+    },
+    {
+      "merchantRaw": "UBER EATS",
+      "merchant": "UBER EATS",
+      "date": "2026-07-02",
+      "amountCents": 3237,
+      "direction": "debit",
+      "currency": "usd",
+      "originalAmount": null,
+      "isPaymentRow": false,
+      "categoryGuess": "dining",
+      "ownersGuess": null,
+      "duplicateOf": null,
+      "guesses": ["category"]
+    },
+    {
+      "merchantRaw": "EXXONMOBIL CAT OUTSIDE",
+      "merchant": "EXXONMOBIL CAT OUTSIDE",
+      "date": "2026-07-02",
+      "amountCents": 2323,
+      "direction": "debit",
+      "currency": "usd",
+      "originalAmount": null,
+      "isPaymentRow": false,
+      "categoryGuess": "fuel",
+      "ownersGuess": null,
+      "duplicateOf": null,
+      "guesses": ["category"]
+    },
+    {
+      "merchantRaw": "NYCT PAYGO",
+      "merchant": "NYCT PAYGO",
+      "date": "2026-07-02",
+      "amountCents": 300,
+      "direction": "debit",
+      "currency": "usd",
+      "originalAmount": null,
+      "isPaymentRow": false,
+      "categoryGuess": "transit",
+      "ownersGuess": null,
+      "duplicateOf": null,
+      "guesses": ["category"]
+    },
+    {
+      "merchantRaw": "NYCT PAYGO",
+      "merchant": "NYCT PAYGO",
+      "date": "2026-07-02",
+      "amountCents": 300,
+      "direction": "debit",
+      "currency": "usd",
+      "originalAmount": null,
+      "isPaymentRow": false,
+      "categoryGuess": "transit",
+      "ownersGuess": null,
+      "duplicateOf": null,
+      "guesses": ["category"]
+    }
+  ]
+}

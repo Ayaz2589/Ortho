@@ -176,13 +176,16 @@ nonisolated enum ScanParser {
         return ScanInference.enrich(candidate, context: context, claimed: &claimed)
     }
 
-    /// The merchant is the top-most line that reads like a name: has letters,
-    /// isn't a date line, isn't just an amount.
+    /// The merchant is the top-most line that reads like a name: at least
+    /// three letters (a status bar's "5G" or "87" never qualifies —
+    /// post-T044 device feedback), isn't a date line, isn't just an amount.
     private static func merchantLine(in lineTexts: [String]) -> String? {
         for text in lineTexts {
             let trimmed = text.trimmingCharacters(in: .whitespaces)
-            guard trimmed.rangeOfCharacter(from: .letters) != nil else { continue }
-            guard ScanHeuristics.fullDate(in: trimmed) == nil else { continue }
+            let letters = trimmed.unicodeScalars.count(where: { CharacterSet.letters.contains($0) })
+            guard letters >= 3 else { continue }
+            guard ScanHeuristics.fullDate(in: trimmed) == nil,
+                  ScanHeuristics.bareDate(trimmed) == nil else { continue }
             guard !ScanHeuristics.matches(trimmed, pattern: "^[-$€£¥0-9.,\\s]+$") else { continue }
             return trimmed
         }

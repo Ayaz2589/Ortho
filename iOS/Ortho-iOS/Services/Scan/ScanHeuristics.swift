@@ -265,22 +265,25 @@ nonisolated enum ScanHeuristics {
         return nil
     }
 
-    /// Status words that ride along in app list cells but are never the
-    /// merchant ("Pending", "Posted"...).
-    private static let statusNoisePattern =
-        "(?i)^\\s*(?:PENDING|POSTED|PROCESSING|COMPLETED|DECLINED)\\s*$"
-
     /// Reconstruct statement rows from STACKED app-list cells — the shape a
     /// photo of a banking app/website produces: each transaction spreads
-    /// over 2–3 OCR lines (merchant / bare date / amount in some order), so
-    /// the one-line row regex never fires. Anchor on each amount (an
-    /// amount-only line, or a description line with a trailing amount);
-    /// match anchors to bare-date lines globally by proximity (nearest pair
-    /// first, each line claimable once — so a "Total balance" header can't
-    /// steal the first row's date), then claim the nearest description
-    /// looking back, then forward. Anchors that can't claim their OWN date
-    /// yield nothing — per-row dates are exactly what separates a
-    /// transaction list from a receipt's price column.
+    /// over 2–3 OCR lines (merchant / date / amount / status in some order),
+    /// so the one-line row regex never fires. Anchor on each amount (an
+    /// amount-only line, or a description line with a trailing amount), then
+    /// resolve dates two ways:
+    ///   • PER-ROW (web lists): match anchors to bare-date lines by
+    ///     proximity (≤2 lines, nearest-first, both vertical orders, each
+    ///     date claimable once — a "Total balance" header loses every
+    ///     contest it enters);
+    ///   • GROUPED (Amex-app shape, post-T044): when per-row matching
+    ///     explains <3 rows but there are ≥2 bare-date HEADERS, every
+    ///     anchor takes the nearest header above it.
+    /// Either way an anchor without a date yields nothing, and a receipt's
+    /// single standalone date can never clear the two-header bar — per-row
+    /// or grouped dates are what separate a transaction list from a
+    /// receipt's price column. Descriptions come from the anchor's own cell
+    /// (never across a date header, so a page title can't become the
+    /// merchant), first line wins (owner/status subtitles lose).
     static func stackedRows(in lines: [String], defaultCurrency: Currency = .usd) -> [StatementRow] {
         struct Anchor {
             let index: Int
@@ -289,9 +292,17 @@ nonisolated enum ScanHeuristics {
         }
         var anchors: [Anchor] = []
         var dateIndexes: [Int] = []
-        var descAvailable: Set<Int> = []
+        var descIndexes: Set<Int> = []
+        var cleaned: [String] = []
 
-        for (index, line) in lines.enumerated() {
+        for (index, raw) in lines.enumerated() {
+            // "$99.00  Pending" — status words ride along in app cells;
+            // strip them so the amount classifies as amount-only and a
+            // bare "Pending" line drops out entirely.
+            let line = replace(raw, pattern: "(?i)\\s*\\b(?:PENDING|POSTED|PROCESSING|COMPLETED|DECLINED)\\s*$",
+                               with: "").trimmingCharacters(in: .whitespaces)
+            cleaned.append(line)
+            if line.isEmpty { continue }
             if bareDate(line) != nil {
                 dateIndexes.append(index)
                 continue
@@ -302,25 +313,22 @@ nonisolated enum ScanHeuristics {
                 }
                 continue
             }
-            guard line.rangeOfCharacter(from: .letters) != nil,
-                  !matches(line, pattern: statusNoisePattern) else { continue }
+            guard line.rangeOfCharacter(from: .letters) != nil else { continue }
             if let amount = lastAmount(in: line, defaultCurrency: defaultCurrency) {
                 // "UBER TRIP  $24.51" — merchant and amount share the line.
                 anchors.append(Anchor(index: index, amount: amount, inlineDesc: line))
             } else {
-                descAvailable.insert(index)
+                descIndexes.insert(index)
             }
         }
         guard anchors.count >= 2, dateIndexes.count >= 2 else { return [] }
 
-        // Every cell in one app lays out the same way, so its date is
-        // consistently on ONE side of its amount — but that side varies by
-        // app, and an amount can sit nearer the NEXT cell's date than its
-        // own. Try both directional readings (date after vs before the
-        // amount, ≤2 lines away, nearest-first greedy, each date claimable
-        // once) and keep whichever explains more rows; a "Total balance"
-        // header loses every claim it contests either way.
-        func assign(dateAfterAmount: Bool) -> [Int: Int] {   // anchor array idx → date line idx
+        // PER-ROW: every cell in one app lays out the same way, so its date
+        // is consistently on ONE side of its amount — but that side varies
+        // by app, and an amount can sit nearer the NEXT cell's date than
+        // its own. Try both directional readings and keep whichever
+        // explains more rows.
+        func assignPerRow(dateAfterAmount: Bool) -> [Int: Int] {   // anchor array idx → date line idx
             var pairs: [(distance: Int, anchorIdx: Int, dateIdx: Int)] = []
             for (a, anchor) in anchors.enumerated() {
                 for dateIdx in dateIndexes {
@@ -338,27 +346,46 @@ nonisolated enum ScanHeuristics {
             }
             return dateFor
         }
-        let after = assign(dateAfterAmount: true)
-        let before = assign(dateAfterAmount: false)
-        let dateFor = after.count >= before.count ? after : before
+        let after = assignPerRow(dateAfterAmount: true)
+        let before = assignPerRow(dateAfterAmount: false)
+        var dateFor = after.count >= before.count ? after : before
+
+        // GROUPED: "Jul 3" heads every cell until "Jul 2" (Amex/Apple-Card
+        // app shape) — anchors inherit the nearest header above them.
+        if dateFor.count < 3 {
+            var grouped: [Int: Int] = [:]
+            for (a, anchor) in anchors.enumerated() {
+                if let header = dateIndexes.last(where: { $0 < anchor.index }) {
+                    grouped[a] = header
+                }
+            }
+            if grouped.count > dateFor.count { dateFor = grouped }
+        }
 
         var rows: [StatementRow] = []
+        var previousAnchorIndex = -1
         for (a, anchor) in anchors.enumerated() {
-            guard let dateIdx = dateFor[a], let date = bareDate(lines[dateIdx]) else { continue }
+            defer { previousAnchorIndex = anchor.index }
+            guard let dateIdx = dateFor[a], let date = bareDate(cleaned[dateIdx]) else { continue }
             var description = anchor.inlineDesc.map {
                 // Drop the trailing amount token from the shared line.
                 replace($0, pattern: "\\s*(?:EUR|GBP|JPY|CNY|CAD|BDT)?\\s*[-$€£¥]*\\s?-?[0-9][0-9.,]*(\\s*CR)?\\s*$", with: "")
                     .trimmingCharacters(in: .whitespaces)
             } ?? ""
             if description.isEmpty {
-                // Nearest unclaimed description: back up to 3 lines, else 1 forward.
-                let back = (1...3).lazy.map { anchor.index - $0 }.first {
-                    descAvailable.contains($0)
-                }
-                let candidate = back ?? (descAvailable.contains(anchor.index + 1) ? anchor.index + 1 : nil)
+                // The anchor's own cell: from the last boundary (previous
+                // anchor or the nearest date header, whichever is closer)
+                // up to the anchor — FIRST description line wins, so
+                // owner-name subtitles lose to the merchant and a page
+                // title outside the cell is unreachable. Fallback: the
+                // line right after the anchor (amount-above-merchant cells).
+                let headerBound = dateIndexes.last(where: { $0 < anchor.index }) ?? -1
+                let boundary = max(previousAnchorIndex, headerBound)
+                let inCell = ((boundary + 1)..<anchor.index).first { descIndexes.contains($0) }
+                let candidate = inCell ?? (descIndexes.contains(anchor.index + 1) ? anchor.index + 1 : nil)
                 guard let candidate else { continue }
-                descAvailable.remove(candidate)
-                description = lines[candidate].trimmingCharacters(in: .whitespaces)
+                descIndexes.remove(candidate)
+                description = cleaned[candidate]
             }
             guard !description.isEmpty else { continue }
             rows.append(StatementRow(month: date.month, day: date.day,
