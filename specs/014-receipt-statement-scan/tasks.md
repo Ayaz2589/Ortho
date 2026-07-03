@@ -315,6 +315,30 @@ fixes agreed with the operator ("add all three"):
       fixes in place (the original failing captures should now prefill), then the
       remaining items: permission-denial, airplane mode, SC-003 timing
 
+T041's first device pass: single items prefill correctly, but a PHOTO of a
+banking-app transaction list collapsed into one receipt (a "Total…" label wins
+tier 2, or the fallback picks one amount) — app lists stack each transaction
+over 2–3 OCR lines, so the one-line row regex never fires. And the document
+camera auto-snapped before the shot was lined up. Two more fixes:
+
+- [X] T042 Stacked app-list rows: `ScanHeuristics.bareDate` + `stackedRows`
+      (amount anchors ↔ bare-date lines, direction-aware nearest-first matching,
+      "Total balance" headers lose every claim) as detection tier 2, BEFORE the
+      grand-total tier; plus the description-first one-line variant
+      ("UBER TRIP  Jul 1  $24.51") for structured-table cell joins. Locked by
+      `statement-app-list.png` (with a Total-balance trap) + unit tests
+- [X] T043 Text-gated camera: `ScanCameraView` (custom AVFoundation) replaces
+      the document camera — shutter disabled until live fast-OCR sees readable
+      text in consecutive frames, auto-capture only after ~2.5 s of sustained
+      readability, document deskew retained via segmentation + perspective
+      correction; permission-denied and no-camera states handled in-view
+      (6 new catalog keys ×6 languages). Trade-off: single capture per session
+      (multi-page statements ride the PDF/file source) — research R1 revised
+- [ ] T044 **[OPERATOR-PENDING]** Device pass on the two fixes: photograph a
+      banking-app list (expect the wizard with one row per transaction) and
+      confirm the camera waits for a lined-up shot with the capture button
+      enabling only when text is readable
+
 ---
 
 ## Authoring notes (implementation)

@@ -20,6 +20,15 @@ Info.plist).
 optimized for live viewfinder text/QR capture, not for producing a corrected document
 image, and no PDF story. Custom AVFoundation camera — rejected: pure liability, worse UX.
 
+**REVISED (post-T041 device feedback, 2026-07-03)**: the document camera's auto-shutter
+fires on ANY document-shaped rectangle — on device it snapped before the user lined up
+the capture, and it exposes no shutter control. Replaced by a custom AVFoundation camera
+(`ScanCameraView`): live frames run fast on-device OCR (~3/s) and the shutter enables
+only when readable text is present; auto-capture fires only after the scene stays
+readable ~2.5 s; captured photos keep the document deskew via
+`VNDetectDocumentSegmentationRequest` + `CIPerspectiveCorrection`. Trade-off accepted:
+one capture per camera session (multi-page statements ride the PDF/file source).
+
 ## R2. OCR / document understanding
 
 **Decision**: Vision `RecognizeDocumentsRequest` (iOS 26) as the primary engine — it

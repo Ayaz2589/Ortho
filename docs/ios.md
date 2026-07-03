@@ -265,18 +265,25 @@ There are **no Makefile targets for iOS** — the root `Makefile` only wraps the
 - `iOS/build/`, `iOS/build-device/`, `iOS/temp/`, and `Resources/legacy-import.json` are gitignored local artifacts / personal financial data — never commit or rely on them.
 - FX rates come from floatrates.com with hardcoded fallbacks; rates refresh at most once per launch when the 24h cache is stale (no foreground refresh).
 - `LegacyImporter` / `TDBankMay2026Importer` are DEBUG-only one-shot seeders scheduled for deletion — don't build on them.
-- **Scan (spec 014) is deliberately forgiving on real-world captures** (post-T037 device
-  feedback, 2026-07-03): after the strict tiers (labeled grand total, `MM/DD`/month-name
-  statement rows), any capture whose text still contains a money-shaped amount prefills
-  best-effort — strongest currency-marked amount, top plausible merchant line, any full
-  date — with merchant/amount/date ALL tagged Guessed. Only truly money-free text shows
-  "Couldn't read this", and on capable hardware `ScanRefiner.rescue` first hands the raw
-  OCR text to on-device Foundation Models (never in fixtures or `-uiDemoScan`). In DEBUG
-  builds the failure state grows a "What the scan read" disclosure (plus an os_log line,
-  category `scan`) so a failing photo can be debugged on the device and turned into a
-  fixture. Remember: synthetic fixtures passing in CI ≠ real photos working — lock any
-  new real-world shape with a fixture (`statement-screenshot`, `receipt-no-total` are the
-  post-T037 examples).
+- **Scan (spec 014) is deliberately forgiving on real-world captures** (post-T037/T041
+  device feedback, 2026-07-03): after one-line statement rows (`MM/DD`, month-name, or
+  description-first joins), STACKED app-list rows reconstruct a photographed banking
+  app/website (each transaction spread over 2–3 OCR lines with its own bare-date line;
+  this tier outranks the grand total so a "Total balance" header can't collapse a list
+  into one receipt). Then: labeled grand total → receipt; any money-shaped text →
+  best-effort prefill with merchant/amount/date ALL tagged Guessed. Only truly
+  money-free text shows "Couldn't read this", and on capable hardware
+  `ScanRefiner.rescue` first hands the raw OCR text to on-device Foundation Models
+  (never in fixtures or `-uiDemoScan`). In DEBUG builds the failure state grows a
+  "What the scan read" disclosure (plus an os_log line, category `scan`) so a failing
+  photo can be debugged on the device and turned into a fixture. Remember: synthetic
+  fixtures passing in CI ≠ real photos working — lock any new real-world shape with a
+  fixture (`statement-screenshot`, `receipt-no-total`, `statement-app-list`).
+- **The scan camera is a custom AVFoundation view** (`ScanCameraView`, post-T041 — the
+  VisionKit document camera auto-fired before users lined up the shot): the shutter
+  enables only when live fast-OCR sees readable text, auto-capture needs ~2.5 s of
+  sustained readability, and captures are deskewed via document segmentation. One
+  capture per camera session; multi-page statements go through the PDF/file source.
 
 ## 9. Cross-links
 

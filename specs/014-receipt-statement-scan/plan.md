@@ -23,7 +23,8 @@ CI screenshots in all six languages.
 **Language/Version**: Swift 5 / SwiftUI, `@Observable` (no ViewModels), iOS deployment target 26.2
 
 **Primary Dependencies** (all Apple system frameworks — no new SPM packages):
-- VisionKit `VNDocumentCameraViewController` (capture UI) via `UIViewControllerRepresentable`
+- AVFoundation camera with a text-gated shutter (`ScanCameraView`, research R1 revision —
+  originally VisionKit `VNDocumentCameraViewController`, replaced post-T041)
 - PhotosUI `PhotosPicker` (library source), SwiftUI `.fileImporter` (PDF source)
 - Vision `RecognizeDocumentsRequest` (structured/table OCR, primary) with
   `RecognizeTextRequest` line-clustering fallback

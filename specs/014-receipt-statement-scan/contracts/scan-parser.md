@@ -40,12 +40,16 @@ Capture (image|PDF)
    inference follows the CLI algorithm (`web/scripts/import/engine/dates.ts`): resolve
    MM/DD within the statement period, noon-UTC on save via the form's existing
    convention (FR-019). Unparseable date ⇒ `nil`, never fabricated.
-5. **Detection order** (research R5 + post-T037 forgiving tier): ≥3 rows ⇒ statement;
-   else confident grand total ⇒ receipt; else 1–2 rows ⇒ statement; else any
-   money-shaped amount in the text ⇒ best-effort receipt with merchant/amount/date
-   (and FX currency) all in `guesses`; else `.none`. Statement rows accept both
-   `MM/DD` and English month-name dates ("Jul 1", optional year). "Couldn't read
-   this" is reserved for captures whose text has no money shape at all.
+5. **Detection order** (research R5 + post-T037/T041 forgiving tiers): ≥3 one-line
+   rows ⇒ statement; else ≥3 STACKED app-list rows (each transaction spread over 2–3
+   OCR lines with its own bare-date line; runs before the grand-total tier so a
+   "Total balance" header can't collapse a list into one receipt) ⇒ statement; else
+   confident grand total ⇒ receipt; else 1–2 rows ⇒ statement; else any money-shaped
+   amount in the text ⇒ best-effort receipt with merchant/amount/date (and FX
+   currency) all in `guesses`; else `.none`. Statement rows accept `MM/DD`, English
+   month-name dates ("Jul 1", optional year), and description-first cell joins
+   ("UBER TRIP  Jul 1  $24.51"). "Couldn't read this" is reserved for captures whose
+   text has no money shape at all.
 6. **Payment rows** (FR-012): patterns ported from `engine/exclusions.ts` plus
    `PAYMENT THANK YOU` / `AUTOPAY` variants; matched rows get `isPaymentRow = true`.
 7. **Duplicates** (FR-015): key = (calendar day, amountCents) vs existing transactions
@@ -97,6 +101,7 @@ refiner), and asserts the candidate list field-by-field. Minimum fixture set:
 | `statement-card.pdf` (text layer, multi-page) | table rows, credits/debits, payment row default-skip, duplicate pre-skip counts (SC-002, SC-005) |
 | `statement-scanned.png` | image statement through the OCR table path |
 | `statement-screenshot.png` | web-banking screenshot: month-name dates, CR credit, payment row (post-T037) |
+| `statement-app-list.png` | photographed app list: stacked cells + "Total balance" trap → 4 rows, never a receipt (post-T041) |
 | `receipt-no-total.png` | unlabeled total → forgiving fallback tier, merchant/amount/date Guessed (post-T037) |
 | `unreadable.png` | `.none` → failure copy path (FR-017) |
 
