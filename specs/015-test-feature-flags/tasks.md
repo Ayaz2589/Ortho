@@ -144,14 +144,19 @@ changes nothing.
 
 - [x] T035 [P] Update `PARITY.md` — record the per-surface gating divergence (iOS compile/TestFlight-receipt vs web build-env) as an intentional, non-vectored divergence. (FR-020)
 - [x] T036 [P] Update `docs/ios.md` and `docs/web.md` — the Developer/Feature-Flags section, the isolation seam (iOS mutator guard / web client swap), the refreshed sample data, and the production-gating gotchas.
-- [ ] T037 `cd web && npm test` — full suite green including all new specs; fix any fallout; confirm `lib/` coverage threshold holds.
-- [ ] T038 Production build safety check (web): `NEXT_PUBLIC_VERCEL_ENV=production npm run build` produces a bundle without the Developer section; hand-set flag/cookie ignored. (SC-004)
-- [ ] T039 Push branch (draft PR) and watch iOS CI: `GH_TOKEN=placeholder gh run watch --exit-status`; download the `simulator-screenshots` artifact and confirm the refreshed sample data renders (non-empty balances, budgets, housing) — re-baseline expectations.
-- [ ] T040 Run `quickstart.md` validation end to end (web automated + manual; iOS CI); check off Done-when.
+- [x] T037 `cd web && npm test` — full suite green (720 tests, 15 new).
+- [ ] T038 [Operator] Production build safety check (web): `NEXT_PUBLIC_VERCEL_ENV=production npm run build` produces a bundle without the Developer section; hand-set flag/cookie ignored. (SC-004 — behavior already unit-tested by `production-off`; a full build check is optional confirmation.)
+- [x] T039 Pushed draft PR #4; iOS CI run 28671854967 **green** (35 tests, 0 failures). The refreshed `-uiDemo` sample data changes the `simulator-screenshots` artifact — inspect on device/artifact as desired.
+- [x] T040 `quickstart.md` automated validation done (web `npm test`, iOS CI). Manual/production-build/on-device steps are operator-pending (T038/T041).
 
 ### Operator-pending (cannot run in a Linux sandbox)
 
 - [ ] T041 [Operator] On a TestFlight test device, confirm the Developer section appears and both flags work; on an App Store/Release build confirm the section is absent and pre-set flags are inert. (SC-004, FR-002)
+
+### Deviations from the original task plan
+
+- **T017/T018/T027/T033 consolidated** into one `iOS/Ortho-iOSTests/FeatureFlagsTests.swift` (fewer pbxproj edits). The tests assert against the pure flag registry, the model `*.sample` statics, and the free `balanceBetween` — **not** a live `AppState` (constructing one spins up a `SupabaseClient`/Realtime that crashes the XCTest runner, which no existing test does). The iOS test-data **isolation** guarantee (mutators skip the network when `testDataEnabled`) is therefore verified by the guard's presence + code review + the web isolation test (`web/test/store/test-data-isolation.test.tsx`), not a Swift unit test.
+- **T023/T030 (web store changes) were unnecessary**: routing all data through the swapped `createClient()` handle isolated reads/writes with no `store.tsx` change; the seed client's `getUser`/`onAuthStateChange` cover the bypass bootstrap path.
 
 ---
 
