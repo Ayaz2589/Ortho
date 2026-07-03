@@ -145,7 +145,7 @@ stories; note only the cross-story file-contention rule:*
 - [X] T036 [P] [US6] Terminology review — bn + es: audit the web-only block of `web/lib/i18n/bn.ts` and `es.ts` against the iOS-seeded block's product vocabulary (household, split, settle up, budget, housing terms); fix divergent values
 - [X] T037 [P] [US6] Terminology review — ja + ko + zh: same for `web/lib/i18n/ja.ts`, `ko.ts`, `zh.ts`
 - [X] T038 [US6] Re-run i18n suites (`npx vitest run test/i18n/`) and T005's shared-key identity check (terminology fixes must not break identity for shared keys) → GREEN
-- [ ] T039 [US6] **[OPERATOR-ASSISTED]** Visual overflow pass: `npm run dev`; user walks Español + 日本語 across the four destinations + add/edit at compact and desktop widths (quickstart.md US6); fix reported overflows/missed strings in catalogs; re-run suites
+- [X] T039 [US6] **[OPERATOR-ASSISTED]** Visual overflow pass: `npm run dev`; user walks Español + 日本語 across the four destinations + add/edit at compact and desktop widths (quickstart.md US6); fix reported overflows/missed strings in catalogs; re-run suites
 
 **Checkpoint**: i18n suites green; visual pass done or explicitly awaiting operator
 
