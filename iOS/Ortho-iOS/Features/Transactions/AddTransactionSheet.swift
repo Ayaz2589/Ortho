@@ -705,7 +705,9 @@ struct AddTransactionSheet: View {
               let original = scan.originalAmount else { return nil }
         let amount = String(format: "%.\(scan.currency.fractionDigits)f",
                             NSDecimalNumber(decimal: original).doubleValue)
-        return String(localized: "Converted from \(scan.currency.code) \(amount)")
+        // Localizer.tr, not String(localized:) — the in-app language picker
+        // never changes Locale.current/bundle prefs (see Localizer.swift).
+        return Localizer.tr("Converted from \(scan.currency.code) \(amount)")
     }
 
     /// Tiny text3 "Guessed" tag under a field label (FR-016).
@@ -1148,7 +1150,7 @@ struct AddTransactionSheet: View {
             let name = dup.merchant.isEmpty ? dup.source : dup.merchant
             let day = dup.date.formatted(.dateTime.month(.abbreviated).day()
                 .locale(Localizer.currentLocale))
-            duplicateNote = String(localized: "Looks like a duplicate of \(name), \(day) — add anyway?")
+            duplicateNote = Localizer.tr("Looks like a duplicate of \(name), \(day) — add anyway?")
         }
         scanCaptionVisible = !scanSession.isWizardActive
     }
