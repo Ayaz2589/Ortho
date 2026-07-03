@@ -17,11 +17,12 @@ struct Ortho_iOSApp: App {
     // the sample-seeded AppState, skipping auth and all server traffic.
     // Exists for CI simulator screenshots (see .github/workflows/ios-ci.yml)
     // and quick local UI review; compiled out of release builds.
-    @State private var appState: AppState = Self.isUIDemo
-        ? AppState()
+    @State private var appState: AppState = Self.useSeededData
+        ? AppState(testDataEnabled: true)
         : AppState(
             users: [], transactions: [], cards: [],
-            households: [], properties: [], rentalPayments: [], budgets: []
+            households: [], people: [], properties: [], rentalPayments: [], budgets: [],
+            testDataEnabled: false
         )
 
     private static var isUIDemo: Bool {
@@ -30,6 +31,15 @@ struct Ortho_iOSApp: App {
         #else
         false
         #endif
+    }
+
+    /// Seed + run on the in-memory sample dataset, skipping auth and all server
+    /// traffic. True for the DEBUG `-uiDemo` CI path OR the spec-015 test-build
+    /// feature flags (`FeatureFlags.effectiveUseTestData`, which is forced false
+    /// off a test build). Read once at launch; toggling a flag applies on next
+    /// relaunch (like `-uiDemo`).
+    private static var useSeededData: Bool {
+        isUIDemo || FeatureFlags.effectiveUseTestData()
     }
 
     // DEBUG `-uiDemoLanguage <code>` launch argument: force the app language
@@ -82,7 +92,7 @@ struct Ortho_iOSApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if Self.isUIDemo {
+                if Self.useSeededData {
                     RootTabView()
                 } else {
                 switch appState.authPhase {
@@ -108,9 +118,10 @@ struct Ortho_iOSApp: App {
             .task {
                 // First emission carries the SDK's restored session (or
                 // nil), so this doubles as launch-time session restore.
-                // Skipped in UI-demo mode — the sample state must not be
-                // replaced by a real (empty) session.
-                if Self.isUIDemo { return }
+                // Skipped in seeded (UI-demo / test-data) mode — the sample
+                // state must not be replaced by a real (empty) session, and no
+                // server/auth traffic should occur.
+                if Self.useSeededData { return }
                 await appState.observeAuthChanges()
             }
             .task(id: languageRaw) {

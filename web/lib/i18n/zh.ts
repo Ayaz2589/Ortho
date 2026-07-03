@@ -266,6 +266,10 @@ const catalog: Record<string, string> = {
   "You're {0} over this month: {1} out vs {2} in.": "本月超支{0}：支出{1}对比收入{2}。",
   "You're {0} over your {1} limit with {2} days left.": "还剩{0}天，您已超出{1}的{2}限额{3}。",
   // — web-only keys (translated 2026-07-02) —
+  "Developer": "开发者",
+  "Use test data": "使用测试数据",
+  "Bypass auth": "跳过身份验证",
+  "Only visible on test builds. Test data runs the app on a disposable in-memory dataset — nothing is saved to your real account.": "仅在测试版本中可见。测试数据会在临时的内存数据集上运行应用，不会向你的真实账户保存任何内容。",
   "{0} → {1}.": "{0} → {1}。",
   "“{0}”": "“{0}”",
   "{0} amount": "{0}的金额",
