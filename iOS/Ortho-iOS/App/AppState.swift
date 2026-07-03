@@ -76,6 +76,12 @@ final class AppState {
     /// no on-device persistence. Includes soft-removed people for history.
     var people: [Person] = []
 
+    /// True when the app is running on the isolated in-memory test dataset
+    /// (spec 015). Set at launch from `FeatureFlags.effectiveUseTestData`. While
+    /// true, every optimistic mutator skips its server hop and server reads are
+    /// suppressed, so no test activity ever reaches the live backend.
+    @ObservationIgnored let testDataEnabled: Bool
+
     // MARK: - Identity + active household
 
     /// Which user is "me" on this device. Persisted so the choice survives
@@ -152,9 +158,12 @@ final class AppState {
          transactions: [Transaction] = Transaction.sample,
          cards: [Card] = Card.sample,
          households: [Household] = [.homeSample],
+         people: [Person] = Person.sample,
          properties: [Property] = Property.sample,
-         rentalPayments: [RentalPayment] = [],
-         budgets: [Budget] = []) {
+         rentalPayments: [RentalPayment] = RentalPayment.sample,
+         budgets: [Budget] = Budget.sample,
+         testDataEnabled: Bool = false) {
+        self.testDataEnabled = testDataEnabled
         self.supabase = SupabaseClient(
             supabaseURL: SupabaseConfig.projectURL,
             supabaseKey: SupabaseConfig.publishableKey
@@ -163,20 +172,27 @@ final class AppState {
         self.transactions = transactions
         self.cards = cards
         self.households = households
+        self.people = people
         self.properties = properties
         self.rentalPayments = rentalPayments
         self.budgets = budgets
 
-        // Restore persisted current user; fall back to first user.
+        // Restore persisted current user; fall back to first user. In test-data
+        // mode ignore any persisted (real) uid so the current person resolves to
+        // a sample Person — otherwise a stale real uid leaves balances empty.
         let savedUserID = UserDefaults.standard.string(forKey: Self.currentUserIDKey)
             .flatMap(UUID.init(uuidString:))
-        self.currentUserID = savedUserID ?? users.first?.id ?? User.mayaSample.id
+        self.currentUserID = testDataEnabled
+            ? (users.first?.id ?? User.mayaSample.id)
+            : (savedUserID ?? users.first?.id ?? User.mayaSample.id)
 
-        // Restore persisted active household; fall back to first.
+        // Restore persisted active household; fall back to first. In test-data
+        // mode pin the seeded household, not a persisted (real) one.
         let savedHouseholdID = UserDefaults.standard.string(forKey: Self.currentHouseholdIDKey)
             .flatMap(UUID.init(uuidString:))
-        self.currentHouseholdID = savedHouseholdID
-            ?? households.first?.id
+        self.currentHouseholdID = testDataEnabled
+            ? households.first?.id
+            : (savedHouseholdID ?? households.first?.id)
 
         // Restore persisted currency.
         let saved = UserDefaults.standard.string(forKey: Self.currencyKey)
@@ -244,6 +260,7 @@ final class AppState {
             sortOrder: people.count
         )
         people.append(person)
+        guard !testDataEnabled else { return }
         Task {
             do { try await householdsAPI.createPerson(person) }
             catch { await MainActor.run { people.removeAll { $0.id == person.id }; dataError = error.localizedDescription } }
@@ -257,6 +274,7 @@ final class AppState {
         people[idx].name = trimmed
         people[idx].initial = String(trimmed.prefix(1)).uppercased()
         let updated = people[idx]
+        guard !testDataEnabled else { return }
         Task {
             do { try await householdsAPI.updatePerson(updated) }
             catch { await MainActor.run { if let i = people.firstIndex(where: { $0.id == id }) { people[i] = previous }; dataError = error.localizedDescription } }
@@ -271,6 +289,7 @@ final class AppState {
         let previous = people[idx]
         people[idx].colorKey = colorKey
         let updated = people[idx]
+        guard !testDataEnabled else { return }
         Task {
             do { try await householdsAPI.updatePerson(updated) }
             catch { await MainActor.run { if let i = people.firstIndex(where: { $0.id == id }) { people[i] = previous }; dataError = error.localizedDescription } }
@@ -282,6 +301,7 @@ final class AppState {
         let previous = people[idx]
         people[idx].removedAt = Date()
         let updated = people[idx]
+        guard !testDataEnabled else { return }
         Task {
             do { try await householdsAPI.updatePerson(updated) }
             catch { await MainActor.run { if let i = people.firstIndex(where: { $0.id == id }) { people[i] = previous }; dataError = error.localizedDescription } }
@@ -325,6 +345,8 @@ final class AppState {
             tx.paidBy = currentPersonID
         }
         transactions.append(tx)
+        // Test-data mode is strictly local — never hit the live backend (spec 015).
+        guard !testDataEnabled else { return }
         Task {
             do {
                 try await transactionsAPI.create(tx)
@@ -343,6 +365,7 @@ final class AppState {
         guard let idx = transactions.firstIndex(where: { $0.id == tx.id }) else { return }
         let previous = transactions[idx]
         transactions[idx] = tx
+        guard !testDataEnabled else { return }
         Task {
             do {
                 try await transactionsAPI.update(tx, previous: previous)
@@ -361,6 +384,7 @@ final class AppState {
     /// the row at the end (loses original position — acceptable for v1).
     func deleteTransaction(_ tx: Transaction) {
         transactions.removeAll { $0.id == tx.id }
+        guard !testDataEnabled else { return }
         Task {
             do {
                 try await transactionsAPI.delete(id: tx.id)
@@ -404,6 +428,9 @@ final class AppState {
     /// web achieves the same ordering by building `personForUser` from the
     /// people rows of one batched load.
     func loadAllFromServer() async {
+        // In test-data mode there is no live session; a server read would clobber
+        // the in-memory seed with empty/blocked results (spec 015).
+        guard !testDataEnabled else { return }
         await loadPeopleFromServer()
         await withTaskGroup(of: Void.self) { group in
             group.addTask { await self.loadTransactionsFromServer() }
@@ -729,6 +756,7 @@ final class AppState {
 
     func addCard(_ card: Card) {
         cards.append(card)
+        guard !testDataEnabled else { return }
         Task {
             do {
                 try await cardsAPI.create(card)
@@ -743,6 +771,7 @@ final class AppState {
 
     func deleteCard(_ card: Card) {
         cards.removeAll { $0.id == card.id }
+        guard !testDataEnabled else { return }
         Task {
             do {
                 try await cardsAPI.delete(id: card.id)
@@ -780,6 +809,7 @@ final class AppState {
         else { return }
         let previous = households[idx].name
         households[idx].name = name
+        guard !testDataEnabled else { return }
         Task {
             do {
                 try await householdsAPI.updateName(name, householdID: id)
@@ -810,6 +840,7 @@ final class AppState {
 
     func addProperty(_ p: Property) {
         properties.append(p)
+        guard !testDataEnabled else { return }
         Task {
             do {
                 try await propertiesAPI.create(p)
@@ -826,6 +857,7 @@ final class AppState {
         guard let idx = properties.firstIndex(where: { $0.id == p.id }) else { return }
         let previous = properties[idx]
         properties[idx] = p
+        guard !testDataEnabled else { return }
         Task {
             do {
                 try await propertiesAPI.update(p)
@@ -846,6 +878,7 @@ final class AppState {
         let cascadedPayments = rentalPayments.filter { $0.propertyID == p.id }
         properties.removeAll { $0.id == p.id }
         rentalPayments.removeAll { $0.propertyID == p.id }
+        guard !testDataEnabled else { return }
         Task {
             do {
                 try await propertiesAPI.delete(id: p.id)
@@ -876,6 +909,7 @@ final class AppState {
 
     func addRentalPayment(_ payment: RentalPayment) {
         rentalPayments.append(payment)
+        guard !testDataEnabled else { return }
         Task {
             do {
                 try await rentalPaymentsAPI.create(payment)
@@ -890,6 +924,7 @@ final class AppState {
 
     func deleteRentalPayment(_ payment: RentalPayment) {
         rentalPayments.removeAll { $0.id == payment.id }
+        guard !testDataEnabled else { return }
         Task {
             do {
                 try await rentalPaymentsAPI.delete(id: payment.id)
@@ -929,6 +964,7 @@ final class AppState {
         } else {
             budgets.append(budget)
         }
+        guard !testDataEnabled else { return }
         Task {
             do {
                 try await budgetsAPI.upsert(budget)
@@ -949,6 +985,7 @@ final class AppState {
 
     func deleteBudget(_ budget: Budget) {
         budgets.removeAll { $0.id == budget.id }
+        guard !testDataEnabled else { return }
         Task {
             do {
                 try await budgetsAPI.delete(id: budget.id)

@@ -1,6 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { isTestBuild } from './lib/test-build'
+import { BYPASS_AUTH_COOKIE } from './lib/flags'
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -31,7 +33,14 @@ export async function proxy(request: NextRequest) {
   const isAuthRoute = request.nextUrl.pathname.startsWith('/sign-in')
   const isApiRoute = request.nextUrl.pathname.startsWith('/api')
 
-  if (!user && !isAuthRoute && !isApiRoute) {
+  // Test builds only: the "Bypass auth" flag (spec 015) sets this cookie so a
+  // session-less tester reaches the app instead of being bounced to /sign-in.
+  // In production `isTestBuild()` is a build-time `false`, so the cookie is
+  // ignored and the gate is unchanged (contract C-TD-4/C-FF-4).
+  const bypassAuth =
+    isTestBuild() && request.cookies.get(BYPASS_AUTH_COOKIE)?.value === '1'
+
+  if (!user && !isAuthRoute && !isApiRoute && !bypassAuth) {
     const url = request.nextUrl.clone()
     url.pathname = '/sign-in'
     return NextResponse.redirect(url)
