@@ -319,7 +319,7 @@ struct AddTransactionSheet: View {
         .fullScreenCover(isPresented: $showingDocCamera) {
             DocumentCameraView { images in
                 showingDocCamera = false
-                startParse { await scanSession.process(images: images, context: scanContext()) }
+                startParse { await scanSession.process(images: images, context: scanContext(), rescue: scanRescuer()) }
             } onCancel: {
                 showingDocCamera = false
             }
@@ -332,7 +332,8 @@ struct AddTransactionSheet: View {
             startParse {
                 let image = (try? await item.loadTransferable(type: Data.self)).flatMap(UIImage.init(data:))
                 // No image → empty extraction → .none → the calm failed state.
-                await scanSession.process(images: image.map { [$0] } ?? [], context: scanContext())
+                await scanSession.process(images: image.map { [$0] } ?? [], context: scanContext(),
+                                          rescue: scanRescuer())
             }
         }
         .fileImporter(isPresented: $fileImporterPresented,
@@ -340,12 +341,13 @@ struct AddTransactionSheet: View {
             guard case .success(let url) = result else { return }
             startParse {
                 if url.pathExtension.lowercased() == "pdf" {
-                    await scanSession.process(pdfAt: url, context: scanContext())
+                    await scanSession.process(pdfAt: url, context: scanContext(), rescue: scanRescuer())
                 } else {
                     let scoped = url.startAccessingSecurityScopedResource()
                     let image = (try? Data(contentsOf: url)).flatMap(UIImage.init(data:))
                     if scoped { url.stopAccessingSecurityScopedResource() }
-                    await scanSession.process(images: image.map { [$0] } ?? [], context: scanContext())
+                    await scanSession.process(images: image.map { [$0] } ?? [], context: scanContext(),
+                                              rescue: scanRescuer())
                 }
             }
         }
@@ -550,6 +552,16 @@ struct AddTransactionSheet: View {
         .onChange(of: amountText) { _, newValue in
             if newValue != appliedAmountText {
                 guessedFields.remove(.currency)
+                guessedFields.remove(.amount)
+            }
+        }
+        .onChange(of: date) { _, newValue in
+            guard guessedFields.contains(.date), let applied = appliedScan?.date else { return }
+            let day = Calendar.current.dateComponents([.year, .month, .day], from: newValue)
+            // Field-wise comparison — DateComponents == is stricter than
+            // "same calendar day" (calendar/isLeapMonth defaults differ).
+            if day.year != applied.year || day.month != applied.month || day.day != applied.day {
+                guessedFields.remove(.date)
             }
         }
         .sheet(isPresented: $showingCopyPicker) {
@@ -682,9 +694,44 @@ struct AddTransactionSheet: View {
                     .background(Capsule().fill(AppTheme.text.opacity(0.05)))
             }
             .buttonStyle(.plain)
+            #if DEBUG
+            // Dev-only, deliberately unlocalized (verbatim): shows what OCR
+            // extracted so a failing real-world capture can be debugged on
+            // the device itself and turned into a fixture.
+            if let debugText = scanDebugText {
+                DisclosureGroup {
+                    ScrollView {
+                        Text(verbatim: debugText)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(AppTheme.text.opacity(0.58))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                    }
+                    .frame(maxHeight: 160)
+                } label: {
+                    Text(verbatim: "What the scan read (debug)")
+                        .font(.lato(size: 12))
+                        .foregroundStyle(AppTheme.text.opacity(0.44))
+                }
+                .tint(AppTheme.text.opacity(0.44))
+                .padding(.horizontal, 24)
+            }
+            #endif
         }
         .frame(maxWidth: .infinity)
     }
+
+    #if DEBUG
+    /// The extractor's view of the failed capture — lines, then table rows.
+    private var scanDebugText: String? {
+        guard let document = scanSession.lastDocument, !document.isEmpty else { return nil }
+        let lineTexts = document.pages.flatMap { $0.lines.map(\.text) }
+        let tableTexts = document.pages
+            .flatMap(\.tables)
+            .flatMap { $0.rows.map { $0.joined(separator: " | ") } }
+        return (lineTexts + tableTexts).joined(separator: "\n")
+    }
+    #endif
 
     /// One calm inline line — informational, never blocking (FR-015).
     private func duplicateNoteView(_ note: String) -> some View {
@@ -1181,6 +1228,15 @@ struct AddTransactionSheet: View {
         return ScanRefiner.isAvailable
     }
 
+    /// The on-device extraction rescue for parses the deterministic tiers
+    /// couldn't crack — nil whenever refinement is off, so the session's
+    /// pipeline stays fully deterministic in demo/CI.
+    private func scanRescuer() -> ScanSession.Rescue? {
+        guard scanRefinementEnabled else { return nil }
+        let context = scanContext()
+        return { document in await ScanRefiner.rescue(document, context: context) }
+    }
+
     private func startParse(_ operation: @escaping () async -> Void) {
         Task {
             await operation()
@@ -1287,28 +1343,33 @@ struct AddTransactionSheet: View {
     // MARK: - Amount hero
 
     private var amountHero: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Spacer()
-            Text(Money.symbol(for: appState.currency))
-                .font(.lato(size: 32, weight: .semibold))
-                .foregroundStyle(amountText.isEmpty
-                                 ? AppTheme.text.opacity(0.36)
-                                 : (kind == .income ? AppTheme.positive : AppTheme.text))
-                .tracking(-0.4)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
+        VStack(spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Spacer()
+                Text(Money.symbol(for: appState.currency))
+                    .font(.lato(size: 32, weight: .semibold))
+                    .foregroundStyle(amountText.isEmpty
+                                     ? AppTheme.text.opacity(0.36)
+                                     : (kind == .income ? AppTheme.positive : AppTheme.text))
+                    .tracking(-0.4)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
 
-            TextField(appState.currency.fractionDigits == 0 ? "0" : "0.00", text: $amountText)
-                .font(.lato(size: 40, weight: .semibold))
-                .tracking(-0.6)
-                .monospacedDigit()
-                .foregroundStyle(kind == .income ? AppTheme.positive : AppTheme.text)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.leading)
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .focused($amountFocused)
-            Spacer()
+                TextField(appState.currency.fractionDigits == 0 ? "0" : "0.00", text: $amountText)
+                    .font(.lato(size: 40, weight: .semibold))
+                    .tracking(-0.6)
+                    .monospacedDigit()
+                    .foregroundStyle(kind == .income ? AppTheme.positive : AppTheme.text)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .focused($amountFocused)
+                Spacer()
+            }
+            // The forgiving fallback / rescue tiers guess the amount itself
+            // (no labeled total) — the money hero says so (FR-016).
+            if guessedFields.contains(.amount) { guessedTag }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -1598,10 +1659,14 @@ struct AddTransactionSheet: View {
 
     private var dateRow: some View {
         HStack(spacing: 12) {
-            Text("Date")
-                .font(.lato(size: 15))
-                .foregroundStyle(AppTheme.text.opacity(0.58))
-                .frame(width: 96, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Date")
+                    .font(.lato(size: 15))
+                    .foregroundStyle(AppTheme.text.opacity(0.58))
+                if guessedFields.contains(.date) { guessedTag }
+            }
+            .frame(width: 96, alignment: .leading)
+            .accessibilityElement(children: .combine)
             Spacer()
             DatePicker("", selection: $date, displayedComponents: [.date])
                 .labelsHidden()

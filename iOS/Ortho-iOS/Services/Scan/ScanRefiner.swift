@@ -1,10 +1,15 @@
 // Optional on-device refinement via Apple's Foundation Models (spec 014,
-// research R4). Strictly additive polish on the heuristic baseline:
-//   • merchant display cleanup ("TST* BLUE BOTTLE 04722" → "Blue Bottle")
-//   • a category suggestion ONLY when history and the rule table were silent
-// Never amounts, never dates — those stay deterministic. Any failure,
-// timeout (~2 s), or unavailability returns the input unchanged (FR-018).
-// Receipt path only; statement rows already get the CLI rule table.
+// research R4; extraction rescue added post-T037). Two roles, both strictly
+// bounded by the deterministic baseline:
+//   • POLISH (refineReceipt): merchant display cleanup ("TST* BLUE BOTTLE
+//     04722" → "Blue Bottle") and a category suggestion ONLY when history
+//     and the rule table were silent. Never amounts, never dates.
+//   • RESCUE (rescue): when every deterministic tier — including the
+//     forgiving fallback — got nothing from a capture that DID have text,
+//     hand the raw OCR text to the model and prefill its answer with every
+//     field marked Guessed. Amounts/dates it proposes re-parse through the
+//     same ScanHeuristics primitives, never free-form.
+// Any failure, timeout, or unavailability degrades to the input (FR-018).
 // NEVER runs in fixture tests or under -uiDemoScan (determinism contract).
 
 import Foundation
@@ -79,6 +84,72 @@ enum ScanRefiner {
         return nil
         #endif
     }
+
+    // MARK: - Extraction rescue (post-T037 device feedback)
+
+    /// Last-chance tier for a failed parse. Returns nil unless the model is
+    /// available AND produced a usable amount; the caller then treats the
+    /// result exactly like a fallback receipt. 5 s hard timeout — longer
+    /// than polish because the alternative here is the failure copy, not a
+    /// slightly plainer prefill.
+    static func rescue(_ document: ScanDocumentText, context: ScanContext) async -> ParsedCandidate? {
+        #if canImport(FoundationModels)
+        guard #available(iOS 26.0, *), isAvailable else { return nil }
+        let text = document.pages.flatMap { page in
+            page.lines.map(\.text)
+                + page.tables.flatMap { $0.rows.map { $0.joined(separator: "  ") } }
+        }.joined(separator: "\n")
+        let prompt = String(text.prefix(2000)).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !prompt.isEmpty else { return nil }
+
+        let work = Task { () -> ExtractedTransaction? in
+            let session = LanguageModelSession(instructions: """
+                You extract one financial transaction from OCR text of a \
+                receipt, screenshot, or bank statement. Find the merchant or \
+                payee, the transaction date, the amount actually paid \
+                (prefer a grand total over item prices), and whether money \
+                was spent (debit) or received (credit). Use empty strings \
+                for anything you cannot find.
+                """)
+            return try? await session.respond(
+                to: prompt,
+                generating: ExtractedTransaction.self
+            ).content
+        }
+        let timeout = Task {
+            try? await Task.sleep(for: .seconds(5))
+            work.cancel()
+        }
+        let extracted = await work.value
+        timeout.cancel()
+        guard let extracted,
+              let amount = ScanHeuristics.parseAmount(extracted.amount),
+              amount.minorUnits != 0 else { return nil }
+
+        let merchant = ScanHeuristics.cleanMerchant(extracted.merchant)
+        var claimed: Set<Transaction.ID> = []
+        var candidate = ParsedCandidate(
+            merchantRaw: merchant,
+            merchant: merchant,
+            date: ScanHeuristics.fullDate(in: extracted.date),
+            amountCents: abs(amount.minorUnits),
+            direction: extracted.direction.lowercased() == "credit" || amount.negative
+                ? .credit : .debit,
+            currency: amount.currency ?? context.defaultCurrency
+        )
+        candidate.guesses.insert(.amount)
+        if !merchant.isEmpty { candidate.guesses.insert(.merchant) }
+        if candidate.date != nil { candidate.guesses.insert(.date) }
+        if candidate.currency != .usd {
+            candidate.originalAmount = Decimal(candidate.amountCents)
+                / pow(Decimal(10), candidate.currency.fractionDigits)
+            candidate.guesses.insert(.currency)
+        }
+        return ScanInference.enrich(candidate, context: context, claimed: &claimed)
+        #else
+        return nil
+        #endif
+    }
 }
 
 #if canImport(FoundationModels)
@@ -89,5 +160,18 @@ private struct RefinedMerchant {
     var name: String
     @Guide(description: "One of: coffee, groceries, dining, subs, fuel, rent, health, transit, utilities, entertainment, none")
     var category: String
+}
+
+@available(iOS 26.0, *)
+@Generable
+private struct ExtractedTransaction {
+    @Guide(description: "The merchant or payee's name, empty if unknown")
+    var merchant: String
+    @Guide(description: "Transaction date as YYYY-MM-DD, empty if unknown")
+    var date: String
+    @Guide(description: "The amount with its currency symbol or code, e.g. $24.51 or EUR 23,50 — empty if unknown")
+    var amount: String
+    @Guide(description: "debit if money was spent, credit if money was received or refunded")
+    var direction: String
 }
 #endif

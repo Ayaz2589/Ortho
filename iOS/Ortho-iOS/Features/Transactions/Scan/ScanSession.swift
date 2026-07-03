@@ -8,6 +8,7 @@
 
 import SwiftUI
 import Observation
+import os
 
 @Observable
 final class ScanSession {
@@ -35,6 +36,10 @@ final class ScanSession {
     }
 
     private(set) var phase: Phase = .idle
+    /// Extracted text of the last capture — in-memory only, dies with the
+    /// session like everything else here (FR-003). Read by the DEBUG
+    /// failure diagnostics so the device itself can show what OCR saw.
+    private(set) var lastDocument: ScanDocumentText?
     private(set) var candidates: [ParsedCandidate] = []
     private(set) var dispositions: [UUID: Disposition] = [:]
     private(set) var receiptCandidate: ParsedCandidate?
@@ -76,14 +81,20 @@ final class ScanSession {
 
     // MARK: - Processing
 
+    /// `rescue` is the on-device model's extraction fallback: consulted only
+    /// when the deterministic parse yields `.none` on a capture that DID
+    /// have text. Nil under -uiDemoScan and in fixtures — determinism holds
+    /// where it is contractual, and the spinner stays up while it runs.
+    typealias Rescue = @Sendable (ScanDocumentText) async -> ParsedCandidate?
+
     @MainActor
-    func process(images: [UIImage], context: ScanContext) async {
-        await run(context: context) { try await ScanTextExtractor.extract(images: images) }
+    func process(images: [UIImage], context: ScanContext, rescue: Rescue? = nil) async {
+        await run(context: context, rescue: rescue) { try await ScanTextExtractor.extract(images: images) }
     }
 
     @MainActor
-    func process(pdfAt url: URL, context: ScanContext) async {
-        await run(context: context) { try await ScanTextExtractor.extract(pdfAt: url) }
+    func process(pdfAt url: URL, context: ScanContext, rescue: Rescue? = nil) async {
+        await run(context: context, rescue: rescue) { try await ScanTextExtractor.extract(pdfAt: url) }
     }
 
     /// One lifecycle for both sources. The heavy work (OCR / PDF render /
@@ -93,16 +104,23 @@ final class ScanSession {
     /// spinner (R12).
     @MainActor
     private func run(context: ScanContext,
+                     rescue: Rescue?,
                      _ extract: @escaping @Sendable () async throws -> ScanDocumentText) async {
         phase = .parsing
-        let result = await Task.detached(priority: .userInitiated) { () -> ScanParseResult in
+        let (document, parsed) = await Task.detached(priority: .userInitiated) { () -> (ScanDocumentText?, ScanParseResult) in
             do {
                 let document = try await extract()
-                return ScanParser.parse(document, context: context)
+                return (document, ScanParser.parse(document, context: context))
             } catch {
-                return .none
+                return (nil, .none)
             }
         }.value
+        lastDocument = document
+        var result = parsed
+        if case .none = result, let rescue, let document, !document.isEmpty,
+           let candidate = await rescue(document) {
+            result = .receipt(candidate)
+        }
         handle(result)
     }
 
@@ -110,6 +128,16 @@ final class ScanSession {
     private func handle(_ result: ScanParseResult) {
         switch result {
         case .none:
+            #if DEBUG
+            // The device is the debugger for real-world captures: CI's
+            // synthetic fixtures passing ≠ real photos working, and this
+            // text never reaches CI logs otherwise.
+            if let document = lastDocument, !document.isEmpty {
+                Logger(subsystem: Bundle.main.bundleIdentifier ?? "Ortho",
+                       category: "scan")
+                    .debug("parse failed; extracted: \(document.allLines.map(\.text).joined(separator: " ⏎ "), privacy: .public)")
+            }
+            #endif
             phase = .failed
         case .receipt(let candidate):
             receiptCandidate = candidate
@@ -177,6 +205,7 @@ final class ScanSession {
 
     func reset() {
         phase = .idle
+        lastDocument = nil
         candidates = []
         dispositions = [:]
         receiptCandidate = nil
