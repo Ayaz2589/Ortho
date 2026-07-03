@@ -291,6 +291,15 @@ There are **no Makefile targets for iOS** — the root `Makefile` only wraps the
   enables only when live fast-OCR sees readable text, auto-capture needs ~2.5 s of
   sustained readability, and captures are deskewed via document segmentation. One
   capture per camera session; multi-page statements go through the PDF/file source.
+  - **Gotcha — the live-OCR frame must be oriented.** `AVCaptureVideoDataOutput`
+    delivers sensor-native *landscape* buffers, so a portrait-held receipt's text is
+    sideways to `VNRecognizeText`; without a `CGImagePropertyOrientation` it finds no
+    lines and the shutter **never arms**. The gate feeds the handler an orientation
+    derived from the **interface** orientation (`.portrait → .right`), not the
+    accelerometer/`RotationCoordinator` horizon angle — interface orientation stays
+    upright-stable when the phone lies flat over a receipt (the primary posture),
+    where gravity's roll is ambiguous. Captured once at open; a mid-session rotation
+    keeps the launch orientation. The photo path is separate (EXIF + `orientationNormalized`).
 
 ## 9. Cross-links
 

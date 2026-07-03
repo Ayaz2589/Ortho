@@ -16,6 +16,7 @@ import SwiftUI
 import AVFoundation
 import Vision
 import CoreImage
+import ImageIO
 import UIKit
 
 struct ScanCameraView: View {
@@ -70,6 +71,7 @@ struct ScanCameraView: View {
         }
         .task {
             engine.onImage = onCapture
+            engine.updateAnalysisOrientation(Self.currentInterfaceOrientation())
             await engine.start()
         }
         .onDisappear { engine.stop() }
@@ -119,6 +121,19 @@ struct ScanCameraView: View {
                 .buttonStyle(.plain)
             }
         }
+    }
+
+    /// Interface orientation (not device/gravity) drives the live-OCR image
+    /// orientation. Interface orientation holds its last upright value when the
+    /// phone lies flat over a receipt — the primary scan posture — where the
+    /// accelerometer's roll is ambiguous. Captured once when the camera opens;
+    /// a mid-session device rotation keeps the launch orientation (portrait
+    /// scanning is the norm, and the gate already works there).
+    @MainActor
+    private static func currentInterfaceOrientation() -> UIInterfaceOrientation {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first?.interfaceOrientation ?? .portrait
     }
 }
 
@@ -176,6 +191,27 @@ final class ScanCameraEngine {
         core.stop()
     }
 
+    /// Tell the capture core how to orient live frames for OCR, from the
+    /// current interface orientation.
+    func updateAnalysisOrientation(_ interface: UIInterfaceOrientation) {
+        core.setAnalysisOrientation(Self.cgOrientation(for: interface))
+    }
+
+    /// Back-camera buffer orientation per interface orientation, so live
+    /// `VNRecognizeText` reads upright text. Portrait → `.right` is the case the
+    /// shutter gate hinges on: the sensor delivers landscape-native buffers, so
+    /// without this a portrait receipt's text is analyzed sideways, never hits
+    /// two readable lines, and the shutter never arms.
+    private static func cgOrientation(for interface: UIInterfaceOrientation) -> CGImagePropertyOrientation {
+        switch interface {
+        case .portrait:           return .right
+        case .portraitUpsideDown: return .left
+        case .landscapeLeft:      return .down
+        case .landscapeRight:     return .up
+        default:                  return .right
+        }
+    }
+
     func capture() {
         guard state == .running, !captured else { return }
         captured = true
@@ -228,6 +264,10 @@ private nonisolated final class CameraCore: NSObject,
     private let videoOutput = AVCaptureVideoDataOutput()
     private let photoOutput = AVCapturePhotoOutput()
     private var lastAnalysis: TimeInterval = 0
+    /// Orientation of the live sample buffers for OCR. Set from the main actor
+    /// (interface orientation), read on `queue`. Defaults to portrait's `.right`
+    /// so the shutter can arm before the first orientation update lands.
+    private var analysisOrientation: CGImagePropertyOrientation = .right
 
     /// False when no camera input can be attached (simulator).
     func configureAndStart() async -> Bool {
@@ -256,6 +296,12 @@ private nonisolated final class CameraCore: NSObject,
         queue.async { self.session.stopRunning() }
     }
 
+    /// Serialized onto `queue` so the sample-buffer delegate reads a consistent
+    /// value. `CGImagePropertyOrientation` is Sendable.
+    func setAnalysisOrientation(_ orientation: CGImagePropertyOrientation) {
+        queue.async { self.analysisOrientation = orientation }
+    }
+
     func capturePhoto() {
         queue.async {
             self.photoOutput.capturePhoto(with: AVCapturePhotoSettings(), delegate: self)
@@ -274,7 +320,11 @@ private nonisolated final class CameraCore: NSObject,
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .fast
         request.usesLanguageCorrection = false
-        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, options: [:])
+        // Orient the sensor-native (landscape) buffer to upright, or the
+        // recognizer reads a portrait receipt's text sideways and finds nothing.
+        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer,
+                                            orientation: analysisOrientation,
+                                            options: [:])
         try? handler.perform([request])
         let readableLines = (request.results ?? []).filter { $0.confidence >= 0.3 }.count
         onTextPresence?(readableLines >= 2)
