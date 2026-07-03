@@ -24,7 +24,7 @@ Ortho is one product on three surfaces (iOS canonical, web mirror, terminal CLI)
 
 ```
 Ortho/
-├── Makefile                  # ingest / ingest-help / tx-list / tx-add / tx-edit / tx-rm
+├── Makefile                  # ingest / ingest-help / tx-list / tx-add / tx-edit / tx-rm / repair-dates
 ├── .nvmrc                    # "22" — Node version for all JS tooling
 ├── .gitignore                # root + cross-cutting ignores (subdirs have their own)
 ├── CLAUDE.md                 # agent working notes: points to the CURRENT plan + session continuity
@@ -39,14 +39,14 @@ Ortho/
 │   └── settings.local.json   # GITIGNORED — machine-local Claude settings
 ├── .specify/                 # TRACKED — Spec Kit config & machinery
 │   ├── memory/constitution.md    # THE project constitution (design + testing principles)
-│   ├── feature.json              # points at the current feature dir (specs/012-…)
+│   ├── feature.json              # points at the current feature dir (specs/014-…)
 │   ├── templates/                # spec / plan / tasks / checklist / constitution templates
 │   ├── scripts/bash/             # create-new-feature.sh, setup-plan.sh, setup-tasks.sh,
 │   │                             # check-prerequisites.sh, common.sh
 │   ├── workflows/speckit/        # bundled "Full SDD Cycle" workflow (specify→plan→tasks→implement)
 │   ├── extensions/agent-context/ # refreshes agent context after specify/plan (hooks in extensions.yml)
 │   └── integrations/             # claude.manifest.json, speckit.manifest.json
-├── specs/                    # one numbered dir per feature, 001 … 012 (sequential)
+├── specs/                    # one numbered dir per feature, 001 … 015 (sequential)
 │   └── NNN-short-name/       # spec.md, plan.md, research.md, data-model.md,
 │                             # quickstart.md, tasks.md, contracts/, checklists/
 ├── node_modules/.vite/       # stray Vitest cache from a root-level run — ignorable, gitignored
@@ -124,11 +124,11 @@ The root `.gitignore` states its policy in its own header: **app subdirectories 
 `​.claude/context-summaries/latest.md` is the most recent session handoff; dated files alongside it are older ones. The root `CLAUDE.md` instructs: **at session start, read `latest.md` if it exists** to recover prior state (work done, decisions, pending items). Summaries record commits made, key decisions (e.g. "demo data removed from iOS — do NOT reintroduce"), and gotchas — treat them as authoritative recent history.
 
 ### Root `CLAUDE.md`
-Two instructions only: (1) read the **current plan** — it points at `specs/012-household-reimbursement/plan.md` for technologies, structure, and shell commands; (2) the session-continuity rule above. When the active feature changes, this pointer changes with it (and `.specify/feature.json` tracks the same thing: `{"feature_directory": "specs/012-household-reimbursement"}`).
+It points at (1) the **current plan** — `specs/014-receipt-statement-scan/plan.md` for technologies, structure, and shell commands; (2) the deep-dive docs (`docs/index.md` and the per-subsystem guides); (3) the iOS CI workflow that provides compile/test feedback; and (4) the session-continuity rule above. When the active feature changes, this pointer changes with it (and `.specify/feature.json` tracks the same thing: `{"feature_directory": "specs/014-receipt-statement-scan"}`).
 
 ## 7. `specs/` + `.specify/` — the Spec Kit process (overview)
 
-Features move through **Spec-Driven Development**: `specify → plan → tasks → implement`, each step a skill, each artifact committed. Twelve features exist so far (`specs/001-desktop-layout` … `specs/012-household-reimbursement`), numbered sequentially.
+Features move through **Spec-Driven Development**: `specify → plan → tasks → implement`, each step a skill, each artifact committed. Fifteen features exist so far (`specs/001-desktop-layout` … `specs/015-test-feature-flags`), numbered sequentially.
 
 A mature feature directory contains:
 
@@ -163,7 +163,7 @@ Verification convention (from `README.md`): favor **typecheck + tests + visual r
 
 ## 9. Key files to read first
 
-1. `Makefile` — all six targets and their flag→CLI mapping.
+1. `Makefile` — all seven targets and their flag→CLI mapping.
 2. `README.md` — project overview, monorepo layout, getting-started per subsystem, workflow summary.
 3. `CLAUDE.md` — pointer to the current plan + the session-continuity rule.
 4. `PARITY.md` — the parity matrix across web/iOS/CLI and the audit ledger; states which shared modules/vectors pin each capability.
@@ -173,8 +173,8 @@ Verification convention (from `README.md`): favor **typecheck + tests + visual r
 8. `.claude/skills/remember/SKILL.md` — how session summaries are produced.
 9. `.claude/context-summaries/latest.md` — the most recent session handoff (local only).
 10. `web/scripts/import/README.md` — full CLI documentation (supported banks, pipeline, exit codes, env).
-11. `specs/012-household-reimbursement/plan.md` — the current feature's plan (exemplar of the plan format + Constitution Check).
-12. `specs/012-household-reimbursement/tasks.md` — exemplar of the task format and phase ordering.
+11. `specs/014-receipt-statement-scan/plan.md` — the current feature's plan (exemplar of the plan format + Constitution Check).
+12. `specs/014-receipt-statement-scan/tasks.md` — exemplar of the task format and phase ordering.
 13. `.specify/feature.json` — which feature directory is current.
 14. `.specify/extensions.yml` — the after-specify/after-plan agent-context hooks.
 15. `.nvmrc` — the Node pin.

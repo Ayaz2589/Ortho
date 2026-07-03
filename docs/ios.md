@@ -73,8 +73,8 @@ iOS/
 │   │   ├── Transactions/                    # TransactionsView, TransactionRow, Add/Detail/Filter/CopyPicker sheets,
 │   │   │   ├── TransactionSplits.swift      # vector-locked split math (spec 007) — mirror of web/lib/splits.ts
 │   │   │   ├── TransactionFilters.swift     # vector-locked filtering (spec 006) — mirror of web/lib/transactionFilters.ts
-│   │   │   └── Scan/                        # spec 014 — scan UI: ScanSession state machine, document-camera
-│   │   │                                    # wrapper, statement interstitial + summary (wizard chrome lives
+│   │   │   └── Scan/                        # spec 014 — scan UI: ScanSession state machine, the custom AVFoundation scan
+│   │   │                                    # camera (`ScanCameraView`), statement interstitial + summary (wizard chrome lives
 │   │   │                                    # in AddTransactionSheet as its fourth prefill source)
 │   │   ├── Housing/                         # HousingView (count-aware), PropertyDetail/Content, Add sheets,
 │   │   │                                    # MortgageCards, MultifamilyCards, RentalCards
@@ -119,7 +119,7 @@ iOS/
 
 ### Test-build feature flags (spec 015)
 
-A **Developer** section in `SettingsView` exposes two toggles — **Use test data** and **Bypass auth** — that let a tester exercise the app on a disposable in-memory dataset without ever writing to the live shared backend.
+A **Feature flags** section in `SettingsView` exposes two toggles — **Use test data** and **Bypass auth** — that let a tester exercise the app on a disposable in-memory dataset without ever writing to the live shared backend.
 - **Gating:** the section renders only when `Config/TestBuild.isTestBuild` is true — `#if DEBUG` OR a TestFlight `sandboxReceipt` — so it shows on DEBUG + TestFlight and is inert in an App Store release. `Config/FeatureFlags` reads the `@AppStorage` keys `ff_useTestData` / `ff_bypassAuth` but **force-returns `false` off a test build**, so a value written on a Debug/TestFlight install can never flip behavior in App Store (FR-003; injectable `isTestBuild`/`defaults` for tests).
 - **Seeding + auth:** `Ortho_iOSApp.useSeededData` = `isUIDemo || FeatureFlags.effectiveUseTestData()` (bypass implies test data). When true it constructs `AppState(testDataEnabled: true)` (sample-seeded), renders `RootTabView` directly, and **skips `observeAuthChanges()`** — no auth, no server traffic. Flags apply at launch (relaunch to apply, like `-uiDemo`).
 - **Isolation:** `AppState.testDataEnabled` guards the network `Task` in *every* optimistic mutator and early-returns `loadAllFromServer`, so test-mode reads/writes stay local (this also fixes the old `-uiDemo` "adds a row that deletes itself" bug). The refreshed sample dataset (`Person.sample`, modernized `Transaction.sample` with `paidBy` + a `.transfer` + a ~3-month span, `Budget.sample`, `RentalPayment.sample` + a rental `Property.sample`) is Person-keyed so balances/splits resolve. Covered by `Ortho-iOSTests/FeatureFlagsTests.swift`. Outside the golden-vector harness (PARITY.md).
