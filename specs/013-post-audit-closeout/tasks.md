@@ -182,7 +182,7 @@ stories; note only the cross-story file-contention rule:*
 
 - [X] T045 [US2] Implement `web/scripts/maintenance/repair-legacy-dates.ts`: pure functions + report format + `makeClient` reuse (`scripts/import/db/client.ts`) + APPLY confirmation prompt (`type "repair"`, structurally unskippable) → T043/T044 **GREEN**
 - [X] T046 [US2] Add `repair-dates` target to root `Makefile` (`DRY_RUN` default, `APPLY=1`, `ADMIN=1` pass-through; help text) and a one-line mention in `docs/makefile.md`
-- [ ] T047 [US2] **[OPERATOR-ASSISTED]** Run the live dry run: `make repair-dates` (OTP sign-in needs the operator's emailed code, or ADMIN=1 if they provide the service-role key in `web/.env.local`); deliver the full report (repairable + ambiguous rows) to the user — **do not proceed to APPLY**
+- [X] T047 [US2] **[OPERATOR-ASSISTED]** Run the live dry run: `make repair-dates` (OTP sign-in needs the operator's emailed code, or ADMIN=1 if they provide the service-role key in `web/.env.local`); deliver the full report (repairable + ambiguous rows) to the user — **do not proceed to APPLY**
 
 **Checkpoint**: suites green; dry-run report in the operator's hands
 
@@ -205,8 +205,8 @@ stories; note only the cross-story file-contention rule:*
 > **HARD GATE: T051 runs only after the user has reviewed T047's report and explicitly said to
 > apply, in conversation. Never run APPLY autonomously (spec FR-005, plan §Verification).**
 
-- [ ] T051 [US2] **[OPERATOR-GATED]** `make repair-dates APPLY=1` (operator types the confirmation); capture and report per-row results verbatim
-- [ ] T052 [US2] Idempotence + success proof: re-run `make repair-dates` → expect `0 repairable` with only deferred ambiguous rows listed (SC-002); report ambiguous rows for per-row operator decisions (out of automated scope)
+- [X] T051 [US2] **[OPERATOR-GATED]** `make repair-dates APPLY=1` (operator types the confirmation); capture and report per-row results verbatim
+- [X] T052 [US2] Idempotence + success proof: re-run `make repair-dates` → expect `0 repairable` with only deferred ambiguous rows listed (SC-002); report ambiguous rows for per-row operator decisions (out of automated scope)
 
 ---
 
