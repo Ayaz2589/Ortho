@@ -19,6 +19,13 @@ Capture (image|PDF)
   → ScanRefiner.refine(_ result:) async -> ScanParseResult   // OPTIONAL stage
       • availability-gated; ≤2 s; merchant cleanup + category-when-silent only
       • MUST return input unchanged on any failure/timeout/unavailability
+  → ScanRefiner.rescue(_ doc:, context:) async -> ParsedCandidate?  // OPTIONAL, post-T037
+      • consulted by ScanSession ONLY when parse() returned .none on a
+        capture that had text, and only via an injected rescue closure —
+        nil in fixtures and under -uiDemoScan, so determinism holds where
+        it is contractual
+      • availability-gated; ≤5 s; the model's amount/date re-parse through
+        ScanHeuristics primitives (never free-form); every field Guessed
 ```
 
 ## Hard guarantees
@@ -33,8 +40,12 @@ Capture (image|PDF)
    inference follows the CLI algorithm (`web/scripts/import/engine/dates.ts`): resolve
    MM/DD within the statement period, noon-UTC on save via the form's existing
    convention (FR-019). Unparseable date ⇒ `nil`, never fabricated.
-5. **Detection order** (research R5): ≥3 rows ⇒ statement; else confident grand total ⇒
-   receipt; else 1–2 rows ⇒ statement; else `.none`.
+5. **Detection order** (research R5 + post-T037 forgiving tier): ≥3 rows ⇒ statement;
+   else confident grand total ⇒ receipt; else 1–2 rows ⇒ statement; else any
+   money-shaped amount in the text ⇒ best-effort receipt with merchant/amount/date
+   (and FX currency) all in `guesses`; else `.none`. Statement rows accept both
+   `MM/DD` and English month-name dates ("Jul 1", optional year). "Couldn't read
+   this" is reserved for captures whose text has no money shape at all.
 6. **Payment rows** (FR-012): patterns ported from `engine/exclusions.ts` plus
    `PAYMENT THANK YOU` / `AUTOPAY` variants; matched rows get `isPaymentRow = true`.
 7. **Duplicates** (FR-015): key = (calendar day, amountCents) vs existing transactions
@@ -85,6 +96,8 @@ refiner), and asserts the candidate list field-by-field. Minimum fixture set:
 | `receipt-duplicate.png` + context.existing | receipt duplicate line (FR-015) |
 | `statement-card.pdf` (text layer, multi-page) | table rows, credits/debits, payment row default-skip, duplicate pre-skip counts (SC-002, SC-005) |
 | `statement-scanned.png` | image statement through the OCR table path |
+| `statement-screenshot.png` | web-banking screenshot: month-name dates, CR credit, payment row (post-T037) |
+| `receipt-no-total.png` | unlabeled total → forgiving fallback tier, merchant/amount/date Guessed (post-T037) |
 | `unreadable.png` | `.none` → failure copy path (FR-017) |
 
 Adding a fixture = drop files in the folder (filesystem-synchronized target — no

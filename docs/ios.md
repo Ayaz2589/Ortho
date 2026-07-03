@@ -265,13 +265,18 @@ There are **no Makefile targets for iOS** — the root `Makefile` only wraps the
 - `iOS/build/`, `iOS/build-device/`, `iOS/temp/`, and `Resources/legacy-import.json` are gitignored local artifacts / personal financial data — never commit or rely on them.
 - FX rates come from floatrates.com with hardcoded fallbacks; rates refresh at most once per launch when the 24h cache is stale (no foreground refresh).
 - `LegacyImporter` / `TDBankMay2026Importer` are DEBUG-only one-shot seeders scheduled for deletion — don't build on them.
-- **Scan (spec 014) known limitation, fix in progress:** the parse decision layer currently
-  accepts a capture ONLY with a labeled grand total (TOTAL/AMOUNT DUE/BALANCE DUE) or strict
-  `MM/DD … $x.xx` statement rows — real-world captures (transaction screenshots with no TOTAL
-  label, receipt photos with one garbled line) fall through to "Couldn't read this" even though
-  OCR read them fine (device-verified 2026-07-03). Planned: a forgiving best-effort prefill tier
-  (everything tagged Guessed), Foundation-Models extraction fallback on failure, and DEBUG
-  diagnostics on the failure state. Synthetic fixtures passing in CI ≠ real photos working.
+- **Scan (spec 014) is deliberately forgiving on real-world captures** (post-T037 device
+  feedback, 2026-07-03): after the strict tiers (labeled grand total, `MM/DD`/month-name
+  statement rows), any capture whose text still contains a money-shaped amount prefills
+  best-effort — strongest currency-marked amount, top plausible merchant line, any full
+  date — with merchant/amount/date ALL tagged Guessed. Only truly money-free text shows
+  "Couldn't read this", and on capable hardware `ScanRefiner.rescue` first hands the raw
+  OCR text to on-device Foundation Models (never in fixtures or `-uiDemoScan`). In DEBUG
+  builds the failure state grows a "What the scan read" disclosure (plus an os_log line,
+  category `scan`) so a failing photo can be debugged on the device and turned into a
+  fixture. Remember: synthetic fixtures passing in CI ≠ real photos working — lock any
+  new real-world shape with a fixture (`statement-screenshot`, `receipt-no-total` are the
+  post-T037 examples).
 
 ## 9. Cross-links
 

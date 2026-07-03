@@ -288,6 +288,33 @@ contains the scan shots per contracts/uidemo-scan.md.
       Photos/Files sources, permission-denial path, airplane-mode parse, SC-003 timing,
       Foundation-Models refinement on device) — report results; out of sandbox scope
 
+## Phase 9: Post-T037 device-feedback fixes (2026-07-03)
+
+T037's first pass found every real-world capture failing ("Couldn't read this"):
+web-banking screenshots have no TOTAL label and month-name dates; one garbled
+total line sank real receipt photos. Diagnosis: the decision layer was too
+strict, and Foundation Models only ever ran AFTER a successful parse. Three
+fixes agreed with the operator ("add all three"):
+
+- [X] T038 Forgiving fallback tier: month-name statement rows + full dates in
+      `ScanHeuristics`; `strongestAmount` (currency-marked preferred, else largest);
+      `ScanParser` tier 4 best-effort receipt with merchant/amount/date all Guessed
+      (`GuessedField` gains `.amount`/`.date`; hero + date row show/clear the tags).
+      Locked by fixtures `statement-screenshot.png` + `receipt-no-total.png`
+      (+ expected JSON, unit tests, and a `fallback` CI screenshot)
+- [X] T039 Foundation-Models extraction rescue: `ScanRefiner.rescue` (@Generable
+      `ExtractedTransaction`, ≤5 s, amounts/dates re-parsed through the heuristics)
+      consulted by `ScanSession` via an injected rescue closure ONLY when parse
+      returned `.none` on a text-bearing capture — nil in fixtures/`-uiDemoScan`,
+      so the determinism contract is untouched
+- [X] T040 Device diagnostics: session retains the extracted `ScanDocumentText`
+      (in-memory, FR-003); DEBUG-only "What the scan read" disclosure on the
+      failure state + os_log (category `scan`) — the phone becomes the debugger,
+      and failing captures become fixtures
+- [ ] T041 **[OPERATOR-PENDING]** Re-run the T037 checklist on device with the
+      fixes in place (the original failing captures should now prefill), then the
+      remaining items: permission-denial, airplane mode, SC-003 timing
+
 ---
 
 ## Authoring notes (implementation)
