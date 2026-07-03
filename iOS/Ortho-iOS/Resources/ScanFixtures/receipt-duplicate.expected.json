@@ -1,0 +1,31 @@
+{
+  "kind": "receipt",
+  "context": {
+    "referenceDate": "2026-07-03",
+    "existing": [
+      { "id": "e0000000-0000-4000-8000-000000000001",
+        "date": "2026-07-02", "amountCents": 5428 }
+    ],
+    "history": [
+      { "merchant": "Trader Joe's", "category": "groceries", "count": 12,
+        "lastDate": "2026-07-01",
+        "owners": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"] }
+    ]
+  },
+  "candidates": [
+    {
+      "merchantRaw": "TRADER JOE'S",
+      "merchant": "Trader Joe's",
+      "date": "2026-07-02",
+      "amountCents": 5428,
+      "direction": "debit",
+      "currency": "usd",
+      "originalAmount": null,
+      "isPaymentRow": false,
+      "categoryGuess": "groceries",
+      "ownersGuess": ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"],
+      "duplicateOf": "e0000000-0000-4000-8000-000000000001",
+      "guesses": ["category", "owners"]
+    }
+  ]
+}

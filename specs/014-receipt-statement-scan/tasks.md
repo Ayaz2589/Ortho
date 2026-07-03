@@ -33,16 +33,16 @@ project is filesystem-synchronized — new Swift/resource files need NO pbxproj 
 
 **Purpose**: Baselines, fixture tooling, and the draft PR that carries the work.
 
-- [ ] T001 Baseline: `cd web && npm install && npx tsc --noEmit && npm test` all green
+- [X] T001 Baseline: `cd web && npm install && npx tsc --noEmit && npm test` all green
       (record count); confirm branch `014-receipt-statement-scan`; skim
       `docs/ios.md` §demo-mode + `web/scripts/import/engine/{dates,dedupe,categorize,exclusions}.ts`
       (the conventions being ported)
-- [ ] T002 Commit the spec-kit artifacts (spec.md, plan.md, research.md, data-model.md,
+- [X] T002 Commit the spec-kit artifacts (spec.md, plan.md, research.md, data-model.md,
       contracts/, quickstart.md, checklists/, CLAUDE.md pointer) as
       `spec(014): receipt & statement scanning — spec, plan, contracts, tasks`; push and
       open a **draft PR** `014: receipt & statement scanning` against `main` (note in the
       body it's stacked on the open 013 PR until that merges)
-- [ ] T003 Build the synthetic fixture set per contracts/scan-parser.md §Fixture format:
+- [X] T003 Build the synthetic fixture set per contracts/scan-parser.md §Fixture format:
       generate (script of choice, e.g. Python Pillow/reportlab — throwaway, not committed)
       `receipt-grocery.png`, `receipt-restaurant.png`, `receipt-eur.png`,
       `receipt-duplicate.png`, `statement-card.pdf` (2 pages, text layer, ≥12 rows incl. 1
@@ -59,12 +59,12 @@ project is filesystem-synchronized — new Swift/resource files need NO pbxproj 
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 Create `iOS/Ortho-iOS/Services/Scan/ScanModels.swift` — `ScanDocumentText`
+- [X] T004 Create `iOS/Ortho-iOS/Services/Scan/ScanModels.swift` — `ScanDocumentText`
       (pages/lines/tables + normalized frames), `ParsedCandidate`, `GuessedField`,
       `ScanParseResult`, `ScanContext` (existingTransactions, people, defaultCurrency,
       injected referenceDate) exactly per data-model.md; header comment naming the
       contract file
-- [ ] T005 Write the `*.expected.json` files for every T003 fixture in
+- [X] T005 Write the `*.expected.json` files for every T003 fixture in
       `iOS/Ortho-iOS/Resources/ScanFixtures/` per the contracts/scan-parser.md schema —
       these are the assertions of record; hand-computed values, authored BEFORE any
       parser code exists
