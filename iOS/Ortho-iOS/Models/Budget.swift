@@ -30,3 +30,16 @@ struct Budget: Identifiable, Hashable, Codable {
         case monthlyLimitCents = "monthly_limit_cents"
     }
 }
+
+// MARK: - Sample data
+
+extension Budget {
+    /// Seeded budgets on categories present in `Transaction.sample`, so the
+    /// dashboard budget widget and the Settings "Budgets" peek are non-empty in
+    /// the -uiDemo / test-data seed (spec 015).
+    static let sample: [Budget] = [
+        Budget(householdID: Household.homeSample.id, category: .groceries, monthlyLimitCents: 60_000),
+        Budget(householdID: Household.homeSample.id, category: .dining,    monthlyLimitCents: 25_000),
+        Budget(householdID: Household.homeSample.id, category: .utilities, monthlyLimitCents: 15_000),
+    ]
+}

@@ -266,6 +266,10 @@ const catalog: Record<string, string> = {
   "You're {0} over this month: {1} out vs {2} in.": "이번 달 {0} 초과: 지출 {1}, 수입 {2}.",
   "You're {0} over your {1} limit with {2} days left.": "{0}일 남았는데, {1} 한도를 {2} 초과했습니다.",
   // — web-only keys (translated 2026-07-02) —
+  "Developer": "개발자",
+  "Use test data": "테스트 데이터 사용",
+  "Bypass auth": "인증 건너뛰기",
+  "Only visible on test builds. Test data runs the app on a disposable in-memory dataset — nothing is saved to your real account.": "테스트 빌드에서만 표시됩니다. 테스트 데이터는 일회용 인메모리 데이터셋으로 앱을 실행하며, 실제 계정에는 아무것도 저장되지 않습니다.",
   "{0} → {1}.": "{0} → {1}.",
   "“{0}”": "“{0}”",
   "{0} amount": "{0} 금액",

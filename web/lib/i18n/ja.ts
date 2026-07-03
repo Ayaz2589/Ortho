@@ -266,6 +266,10 @@ const catalog: Record<string, string> = {
   "You're {0} over this month: {1} out vs {2} in.": "今月{0}超過: 支出{1}に対して収入{2}。",
   "You're {0} over your {1} limit with {2} days left.": "残り{0}日で、{1}の上限を{2}超過しています。",
   // — web-only keys (translated 2026-07-02) —
+  "Developer": "開発者",
+  "Use test data": "テストデータを使用",
+  "Bypass auth": "認証をスキップ",
+  "Only visible on test builds. Test data runs the app on a disposable in-memory dataset — nothing is saved to your real account.": "テストビルドでのみ表示されます。テストデータは使い捨てのメモリ内データセットでアプリを実行し、実際のアカウントには何も保存されません。",
   "{0} → {1}.": "{0} → {1}。",
   "“{0}”": "「{0}」",
   "{0} amount": "{0}の金額",

@@ -253,3 +253,14 @@ These shape which rows exist and what the apps display, but have no cross-surfac
   a scanned receipt has no reliable source card, unlike an import run — and an unmatched merchant keeps
   the form's default category instead of the CLI's `entertainment` fallback. Reimbursement remains
   unpickable: card-payment/transfer statement rows are flagged and default-skipped, never expenses.
+- **Test-build feature flags (spec 015) — intentional per-surface gating divergence.** A Settings →
+  Developer section (Use test data + Bypass auth) exists on both apps but is gated by *different*
+  mechanisms because the platforms differ, and this is deliberate, not drift: iOS gates at
+  **compile/receipt time** (`Config/TestBuild.swift`: `#if DEBUG` OR the TestFlight sandbox receipt;
+  `FeatureFlags` force-false off a test build), web gates at **build-env time**
+  (`lib/test-build.ts`: `NEXT_PUBLIC_VERCEL_ENV`/`NODE_ENV`, dead-code-eliminated in production).
+  Test-data isolation also differs by necessity — iOS guards each optimistic mutator's network
+  `Task` (`AppState.testDataEnabled`); web swaps the single `createClient()` handle for an in-memory
+  seeded client (`lib/testdata/`). The feature is **outside** the golden-vector harness (no money/date
+  math), so it carries no shared vector; the refreshed sample dataset (`Person.sample` etc. on iOS,
+  `lib/testdata/seed.ts` on web) is per-surface, not vectored.

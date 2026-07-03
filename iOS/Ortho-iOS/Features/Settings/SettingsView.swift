@@ -5,6 +5,10 @@ struct SettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("appearance") private var appearanceRaw: String = AppearanceMode.system.rawValue
     @AppStorage("language") private var languageRaw: String = AppLanguage.system.rawValue
+    // Test-build feature flags (spec 015). Not #if DEBUG — the section shows on
+    // TestFlight too (see TestBuild), so the state must exist in Release builds.
+    @AppStorage("ff_useTestData") private var ffUseTestData = false
+    @AppStorage("ff_bypassAuth") private var ffBypassAuth = false
     @State private var showingAddCard = false
     @State private var showingSignOutConfirm = false
     #if DEBUG
@@ -22,6 +26,57 @@ struct SettingsView: View {
 
     private var language: AppLanguage {
         AppLanguage(rawValue: languageRaw) ?? .system
+    }
+
+    // MARK: - Feature flags (test builds only, spec 015)
+
+    private var featureFlagsSection: some View {
+        Group {
+            sectionLabel("Feature flags")
+
+            VStack(spacing: 0) {
+                featureFlagRow(title: "Use test data", systemImage: "flask", isOn: $ffUseTestData)
+                RowSeparator(density: .comfortable)
+                featureFlagRow(title: "Bypass auth", systemImage: "key", isOn: $ffBypassAuth)
+            }
+            .background(AppTheme.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+
+            Text("Only visible on test builds. Test data runs the app on a disposable in-memory dataset — nothing is saved to your real account. Relaunch to apply.")
+                .font(.lato(size: 13))
+                .foregroundStyle(AppTheme.text.opacity(0.36))
+                .lineSpacing(2)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
+        }
+    }
+
+    private func featureFlagRow(
+        title: LocalizedStringKey,
+        systemImage: String,
+        isOn: Binding<Bool>
+    ) -> some View {
+        Toggle(isOn: isOn) {
+            HStack(spacing: 14) {
+                Circle()
+                    .fill(AppTheme.text.opacity(0.05))
+                    .frame(width: 40, height: 40)
+                    .overlay(
+                        Image(systemName: systemImage)
+                            .font(.system(size: 16))
+                            .foregroundStyle(AppTheme.text2)
+                    )
+                Text(title)
+                    .font(.lato(size: 17, weight: .medium))
+                    .foregroundStyle(AppTheme.text)
+            }
+        }
+        .tint(AppTheme.accent)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(minHeight: 64)
     }
 
     var body: some View {
@@ -162,6 +217,12 @@ struct SettingsView: View {
                         .padding(.horizontal, 24)
                         .padding(.bottom, 24)
                     #endif
+
+                    // Test-build feature flags — shown on DEBUG + TestFlight
+                    // (TestBuild.isTestBuild), compiled/gated out of App Store.
+                    if TestBuild.isTestBuild {
+                        featureFlagsSection
+                    }
 
                     // Bottom breathing room so the tab bar doesn't clip the
                     // last row. The NavigationStack toolbar-hidden chrome

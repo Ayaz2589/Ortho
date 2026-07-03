@@ -23,3 +23,20 @@ struct RentalPayment: Identifiable, Hashable, Codable {
         self.note = note
     }
 }
+
+// MARK: - Sample data
+
+extension RentalPayment {
+    /// Seeded payments against the sample rental (`Property.rentalSampleID`), so
+    /// the rental payment-history view is non-empty in the -uiDemo / test-data
+    /// seed (spec 015).
+    static let sample: [RentalPayment] = {
+        let cal = Calendar.current
+        let base = cal.startOfDay(for: Date())
+        func daysAgo(_ d: Int) -> Date { cal.date(byAdding: .day, value: -d, to: base) ?? base }
+        return [
+            RentalPayment(propertyID: Property.rentalSampleID, amount: 285_000, date: daysAgo(6)),
+            RentalPayment(propertyID: Property.rentalSampleID, amount: 285_000, date: daysAgo(37), note: "On time"),
+        ]
+    }()
+}

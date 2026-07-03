@@ -117,6 +117,13 @@ iOS/
 4. On sign-in, `ensureCurrentUser` (one-shot per auth ID via `bootstrappedAuthID`) kicks off `bootstrapUserSession`: (a) upsert `public.users` (needed by the `transactions.created_by` FK), (b) `HouseholdsAPI.findOrCreate` the default household, (c) reset in-memory data, (d) `loadAllFromServer()` — a parallel `withTaskGroup` fetching people, transactions, cards, properties, rental payments, budgets. Failure sets `bootstrapDidFail` → `BootstrapRecoveryView` with Retry (`retryBootstrap()`).
 5. `signOut()` tears down every collection and the household selection regardless of network result. **No single-active-platform lock** — iOS and web sessions coexist (feature `010`); the 30-day cap is Supabase's server-side session timebox.
 
+### Test-build feature flags (spec 015)
+
+A **Developer** section in `SettingsView` exposes two toggles — **Use test data** and **Bypass auth** — that let a tester exercise the app on a disposable in-memory dataset without ever writing to the live shared backend.
+- **Gating:** the section renders only when `Config/TestBuild.isTestBuild` is true — `#if DEBUG` OR a TestFlight `sandboxReceipt` — so it shows on DEBUG + TestFlight and is inert in an App Store release. `Config/FeatureFlags` reads the `@AppStorage` keys `ff_useTestData` / `ff_bypassAuth` but **force-returns `false` off a test build**, so a value written on a Debug/TestFlight install can never flip behavior in App Store (FR-003; injectable `isTestBuild`/`defaults` for tests).
+- **Seeding + auth:** `Ortho_iOSApp.useSeededData` = `isUIDemo || FeatureFlags.effectiveUseTestData()` (bypass implies test data). When true it constructs `AppState(testDataEnabled: true)` (sample-seeded), renders `RootTabView` directly, and **skips `observeAuthChanges()`** — no auth, no server traffic. Flags apply at launch (relaunch to apply, like `-uiDemo`).
+- **Isolation:** `AppState.testDataEnabled` guards the network `Task` in *every* optimistic mutator and early-returns `loadAllFromServer`, so test-mode reads/writes stay local (this also fixes the old `-uiDemo` "adds a row that deletes itself" bug). The refreshed sample dataset (`Person.sample`, modernized `Transaction.sample` with `paidBy` + a `.transfer` + a ~3-month span, `Budget.sample`, `RentalPayment.sample` + a rental `Property.sample`) is Person-keyed so balances/splits resolve. Covered by `Ortho-iOSTests/FeatureFlagsTests.swift`. Outside the golden-vector harness (PARITY.md).
+
 ### Data layer (Supabase)
 
 - The `SupabaseClient` is created once in `AppState.init` from `App/SupabaseConfig.swift` (**gitignored**; copy `SupabaseConfig.swift.template` and fill in the project URL + publishable key — RLS, not key secrecy, protects data).

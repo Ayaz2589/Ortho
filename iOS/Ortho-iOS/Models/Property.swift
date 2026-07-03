@@ -123,9 +123,13 @@ extension Property {
 }
 
 extension Property {
+    /// Stable id for the seeded rental so `RentalPayment.sample` references it.
+    static let rentalSampleID = UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
+
     /// Seeded so the Housing tab isn't an empty state on first launch.
     /// Numbers picked to produce a realistic mid-life mortgage view (closed
-    /// roughly a decade ago, ~6.85% rate, ~$340k remaining of a $435k loan).
+    /// roughly a decade ago, ~6.85% rate, ~$340k remaining of a $435k loan),
+    /// plus a rental so the rental/payment-history view is exercised too.
     static let sample: [Property] = {
         let closing = Calendar.current.date(
             from: DateComponents(year: 2016, month: 5, day: 18)
@@ -143,6 +147,22 @@ extension Property {
                 autoPaySource: "ACH · Joint"
             )
         )
-        return [primary]
+        let leaseStart = Calendar.current.date(from: DateComponents(year: 2025, month: 9, day: 1)) ?? Date()
+        let leaseEnd = Calendar.current.date(from: DateComponents(year: 2026, month: 8, day: 31)) ?? Date()
+        let rental = Property(
+            id: rentalSampleID,
+            householdID: Household.homeSample.id,
+            kind: .rental,
+            address: "88 Birch Street",
+            nickname: "Birch rental",
+            lease: LeaseInfo(
+                monthlyRent: 285_000,          // $2,850.00 / mo
+                leaseStart: leaseStart,
+                leaseEnd: leaseEnd,
+                securityDepositCents: 285_000,
+                paidWithSource: "ACH · Joint"
+            )
+        )
+        return [primary, rental]
     }()
 }

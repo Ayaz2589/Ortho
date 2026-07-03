@@ -15,6 +15,7 @@ import { ReadingColumn } from '@/components/layout'
 import { SectionCard, LinkRow, CardRow, AddRow, ActionRow } from '@/components/settings/rows'
 import { ChoiceRow } from '@/components/settings/ChoiceRows'
 import { AddCardModal } from '@/components/settings/AddCardModal'
+import { FlagsSection } from '@/components/settings/flags-section'
 import {
   type Appearance,
   applyAppearance,
@@ -230,6 +231,9 @@ export default function SettingsPage() {
             )}
           </SectionCard>
         </section>
+
+        {/* Developer / feature flags — self-gated to test builds only. */}
+        <FlagsSection />
       </div>
 
       <AddCardModal open={addingCard} onClose={() => setAddingCard(false)} />

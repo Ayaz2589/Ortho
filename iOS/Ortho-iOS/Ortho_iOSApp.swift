@@ -29,28 +29,47 @@ struct Ortho_iOSApp: App {
         #endif
     }
 
+    /// Seed + run on the in-memory sample dataset, skipping auth and all server
+    /// traffic. True for the DEBUG `-uiDemo` CI path OR the spec-015 test-build
+    /// feature flags (`FeatureFlags.effectiveUseTestData`, which is forced false
+    /// off a test build). Read once at launch; toggling a flag applies on next
+    /// relaunch (like `-uiDemo`).
+    private static var useSeededData: Bool {
+        isUIDemo || FeatureFlags.effectiveUseTestData()
+    }
+
     private static func makeAppState() -> AppState {
-        guard isUIDemo else {
-            return AppState(
-                users: [], transactions: [], cards: [],
-                households: [], properties: [], rentalPayments: [], budgets: []
-            )
-        }
-        let state = AppState()
         #if DEBUG
-        state.isUIDemoSession = true
-        // -uiDemoScan <fixture> [-uiDemoScanStep <interstitial|row|summary>]:
-        // run the named bundled fixture through the REAL scan pipeline for CI
-        // screenshots (spec 014, contracts/uidemo-scan.md). The demo store is
-        // seeded with anchor rows matching the fixtures' duplicate days so
-        // duplicate detection has something real to find.
-        if let fixture = argumentValue("-uiDemoScan") {
-            state.uiDemoScanFixture = fixture
-            state.uiDemoScanStep = argumentValue("-uiDemoScanStep")
-            state.transactions.append(contentsOf: demoScanAnchors())
+        // -uiDemo / -uiDemoScan CI path (spec 014): seeded sample data marked as
+        // a demo session so its optimistic mutators stay local (isUIDemoSession).
+        if isUIDemo {
+            let state = AppState()
+            state.isUIDemoSession = true
+            // -uiDemoScan <fixture> [-uiDemoScanStep <interstitial|row|summary>]:
+            // run the named bundled fixture through the REAL scan pipeline for CI
+            // screenshots (spec 014, contracts/uidemo-scan.md). The demo store is
+            // seeded with anchor rows matching the fixtures' duplicate days so
+            // duplicate detection has something real to find.
+            if let fixture = argumentValue("-uiDemoScan") {
+                state.uiDemoScanFixture = fixture
+                state.uiDemoScanStep = argumentValue("-uiDemoScanStep")
+                state.transactions.append(contentsOf: demoScanAnchors())
+            }
+            return state
         }
         #endif
-        return state
+        // Test-build feature flag (spec 015): seeded sample data whose optimistic
+        // mutators stay local via AppState.testDataEnabled (forced false off a
+        // test build, so this is a no-op in production).
+        if FeatureFlags.effectiveUseTestData() {
+            return AppState(testDataEnabled: true)
+        }
+        // Normal launch: empty store; populated from Supabase after sign-in.
+        return AppState(
+            users: [], transactions: [], cards: [],
+            households: [], people: [], properties: [], rentalPayments: [], budgets: [],
+            testDataEnabled: false
+        )
     }
 
     #if DEBUG
@@ -136,7 +155,7 @@ struct Ortho_iOSApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if Self.isUIDemo {
+                if Self.useSeededData {
                     RootTabView()
                 } else {
                 switch appState.authPhase {
@@ -162,9 +181,10 @@ struct Ortho_iOSApp: App {
             .task {
                 // First emission carries the SDK's restored session (or
                 // nil), so this doubles as launch-time session restore.
-                // Skipped in UI-demo mode — the sample state must not be
-                // replaced by a real (empty) session.
-                if Self.isUIDemo { return }
+                // Skipped in seeded (UI-demo / test-data) mode — the sample
+                // state must not be replaced by a real (empty) session, and no
+                // server/auth traffic should occur.
+                if Self.useSeededData { return }
                 await appState.observeAuthChanges()
             }
             .task(id: languageRaw) {
