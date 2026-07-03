@@ -81,7 +81,7 @@ refiner), and asserts the candidate list field-by-field. Minimum fixture set:
 |---|---|
 | `receipt-grocery.png` | baseline receipt: merchant/date/total (SC-001) |
 | `receipt-restaurant.png` | labeled TOTAL among line items → receipt not statement (R5 tie-break) |
-| `receipt-eur.png` | foreign currency → originalAmount + currency (FR-014) |
+| `receipt-eur.pdf` | foreign currency → originalAmount + currency (FR-014) — text-layer PDF so the FX logic is locked deterministically |
 | `receipt-duplicate.png` + context.existing | receipt duplicate line (FR-015) |
 | `statement-card.pdf` (text layer, multi-page) | table rows, credits/debits, payment row default-skip, duplicate pre-skip counts (SC-002, SC-005) |
 | `statement-scanned.png` | image statement through the OCR table path |

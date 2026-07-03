@@ -301,6 +301,27 @@ contains the scan shots per contracts/uidemo-scan.md.
 - T028 required NO web catalog edits: all scan keys are iOS-only, which the
   catalog-parity suite handles natively (verified green locally).
 
+## Deferred cleanups (from the 7-angle implementation review — real but non-blocking)
+
+- Six copies of the accent-capsule button recipe across the scan flow (+ the
+  pre-existing ones) — extract a shared capsule ButtonStyle in DesignSystem.
+- Noon-UTC construction now exists in three DEBUG/demo places besides the
+  form's `noonUTC(ofLocalDay:)` — consolidate into one Date helper.
+- `ScanHeuristics.parseAmount` converts Decimal→minor units via a Double
+  round-trip; share an exact-decimal `Money.minorUnits(_:fractionDigits:)`
+  with `Money.toUSDCents` instead.
+- `convertedFromNote` and the duplicate-line date format bypass the
+  `Money`/`DateFormatters` conventions (unlocalized grouping / FormatStyle vs
+  CLDR pattern drift).
+- `scanCaptionVisible` is derivable from `phase == .receiptPrefilled &&
+  appliedScan != nil`; `sheetNav`'s wizard/normal button branches duplicate
+  their modifier chains.
+- `ScanRefiner`'s 2 s timeout still `await work.value` after cancel — a
+  slow-to-cancel model call delays the (edit-guarded, so harmless) refined
+  re-apply; a task-group race would make the timeout hard.
+- CI scan screenshots use fixed `sleep 10` × 15 launches (~2.5 min of pure
+  sleep) — a readiness poll would trim most of it.
+
 ## Dependencies & Execution Order
 
 ```

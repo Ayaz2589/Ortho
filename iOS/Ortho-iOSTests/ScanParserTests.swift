@@ -27,9 +27,12 @@ final class ScanParserTests: XCTestCase {
     }
 
     /// Foreign-currency receipt: EUR total with comma decimals fills
-    /// originalAmount + currency; the amount is NEVER treated as USD (FR-014).
+    /// originalAmount + currency; the amount is NEVER treated as USD
+    /// (FR-014). A text-layer PDF on purpose: this fixture locks the FX
+    /// *logic* deterministically — image-OCR variance is covered by the
+    /// other receipt fixtures.
     func testReceiptEUR() async throws {
-        try await assertFixture("receipt-eur", ext: "png")
+        try await assertFixture("receipt-eur", ext: "pdf")
     }
 
     /// Same-amount-same-day match against context.existing claims exactly
@@ -265,16 +268,18 @@ final class ScanParserTests: XCTestCase {
             }
             doc = try await ScanTextExtractor.extract(images: [image])
         }
-        // Diagnostic breadcrumb: when an assertion below fails on CI, the
-        // exact extractor output is the evidence needed to fix heuristics
-        // without a local simulator.
-        for (p, page) in doc.pages.enumerated() {
-            print("EXTRACTED \(name) page\(p) lines: \(page.lines.map(\.text))")
-            if !page.tables.isEmpty {
-                print("EXTRACTED \(name) page\(p) tables: \(page.tables.map(\.rows))")
-            }
-        }
         return (doc, expected)
+    }
+
+    /// The extractor's output, compact — appended to failure MESSAGES (CI's
+    /// xcodebuild filter drops test stdout, so print() diagnostics never
+    /// surface; assertion messages do).
+    private func dump(_ doc: ScanDocumentText) -> String {
+        doc.pages.enumerated().map { index, page in
+            var out = "p\(index) lines=\(page.lines.map(\.text))"
+            if !page.tables.isEmpty { out += " tables=\(page.tables.map(\.rows))" }
+            return out
+        }.joined(separator: " | ")
     }
 
     private func day(_ s: String) throws -> DateComponents {
@@ -310,6 +315,7 @@ final class ScanParserTests: XCTestCase {
         let (doc, expected) = try await extractFixture(name, ext: ext)
         let context = try makeContext(expected.context)
         let result = ScanParser.parse(doc, context: context)
+        let diag = dump(doc)
 
         let candidates: [ParsedCandidate]
         switch (expected.kind, result) {
@@ -320,21 +326,24 @@ final class ScanParserTests: XCTestCase {
         case ("statement", .statement(let cs)):
             candidates = cs
         default:
-            XCTFail("\(name): expected kind '\(expected.kind)', got \(label(of: result))",
+            XCTFail("\(name): expected kind '\(expected.kind)', got \(label(of: result)) — EXTRACTED \(diag)",
                     file: file, line: line)
             return
         }
 
         XCTAssertEqual(candidates.count, expected.candidates.count,
-                       "\(name): candidate count", file: file, line: line)
+                       "\(name): candidate count — EXTRACTED \(diag)", file: file, line: line)
         for (i, (got, want)) in zip(candidates, expected.candidates).enumerated() {
-            try assertCandidate(got, want, "\(name)[\(i)]", file: file, line: line)
+            try assertCandidate(got, want, "\(name)[\(i)]", diagnostics: diag, file: file, line: line)
         }
     }
 
     private func assertCandidate(_ got: ParsedCandidate, _ want: ExpectedCandidate,
-                                 _ ctx: String,
+                                 _ rawCtx: String, diagnostics: String,
                                  file: StaticString, line: UInt) throws {
+        // Lazily-evaluated assert messages: the diagnostics only render on
+        // an actual failure.
+        let ctx = "\(rawCtx) [EXTRACTED \(diagnostics)]"
         XCTAssertEqual(got.merchantRaw, want.merchantRaw, "\(ctx) merchantRaw", file: file, line: line)
         XCTAssertEqual(got.merchant, want.merchant, "\(ctx) merchant", file: file, line: line)
         if let d = want.date {
