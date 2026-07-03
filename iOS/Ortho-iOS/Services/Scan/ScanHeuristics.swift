@@ -9,7 +9,7 @@
 
 import Foundation
 
-enum ScanHeuristics {
+nonisolated enum ScanHeuristics {
 
     // MARK: - Merchant text
 
@@ -66,14 +66,17 @@ enum ScanHeuristics {
         return AmountToken(minorUnits: minor, negative: negative, currency: currency)
     }
 
+    /// Letter-boundary lookarounds instead of \b: OCR often drops the space
+    /// ("EUR23,50"), and \b fails between a letter and a digit.
     private static func detectCurrency(in text: String) -> Currency? {
         let upper = text.uppercased()
-        if upper.contains("€") || matches(upper, pattern: "\\bEUR\\b") { return .eur }
-        if upper.contains("£") || matches(upper, pattern: "\\bGBP\\b") { return .gbp }
-        if matches(upper, pattern: "\\bJPY\\b") || upper.contains("¥") { return .jpy }
-        if matches(upper, pattern: "\\bCNY\\b|\\bRMB\\b") { return .cny }
-        if matches(upper, pattern: "\\bCAD\\b") { return .cad }
-        if matches(upper, pattern: "\\bBDT\\b") || upper.contains("৳") { return .bdt }
+        func code(_ c: String) -> Bool { matches(upper, pattern: "(?<![A-Z])(?:\(c))(?![A-Z])") }
+        if upper.contains("€") || code("EUR") { return .eur }
+        if upper.contains("£") || code("GBP") { return .gbp }
+        if upper.contains("¥") || code("JPY") { return .jpy }
+        if code("CNY|RMB") { return .cny }
+        if code("CAD") { return .cad }
+        if upper.contains("৳") || code("BDT") { return .bdt }
         return nil
     }
 
@@ -151,32 +154,47 @@ enum ScanHeuristics {
 
     /// One "MM/DD  DESCRIPTION  $AMOUNT" line → a row. The trailing token
     /// must be a decimal money amount; lines without a leading date (headers,
-    /// balances, period lines) never match.
-    static func statementRow(from line: String) -> StatementRow? {
+    /// balances, period lines) never match. A trailing "CR" is the credit
+    /// notation used instead of a minus sign on Amex/Chase-style statements —
+    /// it flips the sign (FR-011).
+    static func statementRow(from line: String, defaultCurrency: Currency = .usd) -> StatementRow? {
         guard let match = firstGroups(
             in: line,
-            pattern: "^\\s*(\\d{1,2})/(\\d{1,2})\\s+(.+?)\\s+(-?[$€£]?\\s?-?[0-9][0-9,]*\\.\\d{2})(?:\\s*CR)?\\s*$"
+            pattern: "^\\s*(\\d{1,2})/(\\d{1,2})\\s+(.+?)\\s+(-?[$€£]?\\s?-?[0-9][0-9,]*\\.\\d{2})(\\s*CR)?\\s*$"
         ) else { return nil }
         guard let month = Int(match[0]), let day = Int(match[1]),
               (1...12).contains(month), (1...31).contains(day) else { return nil }
         let description = match[2].trimmingCharacters(in: .whitespaces)
-        guard !description.isEmpty, let amount = parseAmount(match[3]) else { return nil }
+        guard !description.isEmpty,
+              var amount = parseAmount(match[3], defaultCurrency: defaultCurrency) else { return nil }
+        if !match[4].isEmpty {
+            amount = AmountToken(minorUnits: amount.minorUnits, negative: true, currency: amount.currency)
+        }
         return StatementRow(month: month, day: day, description: description, amount: amount)
     }
 
     /// A table row (structured OCR) → the same shape: first date-bearing cell
     /// + last amount-bearing cell + the rest as description.
-    static func statementRow(fromCells cells: [String]) -> StatementRow? {
-        statementRow(from: cells.joined(separator: "  "))
+    static func statementRow(fromCells cells: [String], defaultCurrency: Currency = .usd) -> StatementRow? {
+        statementRow(from: cells.joined(separator: "  "), defaultCurrency: defaultCurrency)
     }
 
     // MARK: - Receipt grand total
 
     private static let totalLabelPattern = "(?<!SUB)TOTAL\\b|AMOUNT DUE|BALANCE DUE"
 
+    /// A token/line only counts as money for TOTAL purposes when it looks
+    /// like money: a two-digit decimal part or an explicit currency marker.
+    /// This keeps "TOTAL ITEMS SOLD 12", years, and zip codes from ever
+    /// becoming a receipt total.
+    private static func looksLikeMoney(_ text: String) -> Bool {
+        matches(text, pattern: "[.,][0-9]{2}(?![0-9])|[$€£¥৳]|(?<![A-Z])(?:EUR|GBP|JPY|CNY|CAD|BDT)(?![A-Z])")
+    }
+
     /// A line that is nothing but one money token (an OCR column fragment).
     static func isAmountOnly(_ line: String) -> Bool {
         matches(line, pattern: "^\\s*(?:EUR|GBP|JPY|CNY|CAD|BDT)?\\s*[-$€£¥]*\\s?-?[0-9][0-9.,]*\\s*$")
+            && looksLikeMoney(line)
     }
 
     /// The labeled grand total: TOTAL / AMOUNT DUE / BALANCE DUE — never
@@ -208,26 +226,37 @@ enum ScanHeuristics {
             }
         }
         if found == nil, sawLabel {
-            found = lines.lazy
+            let amountOnly = lines
                 .filter { isAmountOnly($0) }
-                .compactMap { lastAmount(in: $0, defaultCurrency: defaultCurrency) }
-                .filter { $0.minorUnits > 0 }
-                .max { $0.minorUnits < $1.minorUnits }
+                .compactMap { line -> (token: AmountToken, marked: Bool)? in
+                    guard let token = lastAmount(in: line, defaultCurrency: defaultCurrency),
+                          token.minorUnits > 0 else { return nil }
+                    let marked = token.currency != nil || matches(line, pattern: "[$€£¥৳]")
+                    return (token, marked)
+                }
+            // Receipts mark the total with the currency ("$87.34",
+            // "EUR 23,50") while item prices are bare — the LAST marked
+            // amount is the strongest signal; the largest bare amount is
+            // the fallback of the fallback.
+            found = amountOnly.last(where: \.marked)?.token
+                ?? amountOnly.map(\.token).max { $0.minorUnits < $1.minorUnits }
         }
         return found
     }
 
-    /// The last money token in a line (labels sit left, amounts right).
-    /// Zero tokens are skipped — "TOTAL FEES $0.00" is never a grand total.
+    /// The last money-shaped token in a line (labels sit left, amounts
+    /// right). Bare integers ("SOLD 12", "DUE BY 07/15/2026") never qualify;
+    /// zero tokens are skipped — "TOTAL FEES $0.00" is never a grand total.
     static func lastAmount(in line: String, defaultCurrency: Currency = .usd) -> AmountToken? {
-        let pattern = "(?:EUR|GBP|JPY|CNY|CAD|BDT)?\\s*[-$€£¥]*\\s?-?[0-9][0-9.,]*"
-        guard let re = try? NSRegularExpression(pattern: pattern) else { return nil }
+        guard let re = regex("(?:EUR|GBP|JPY|CNY|CAD|BDT)?\\s*[-$€£¥]*\\s?-?[0-9][0-9.,]*") else { return nil }
         let range = NSRange(line.startIndex..., in: line)
         for match in re.matches(in: line, range: range).reversed() {
             guard let r = Range(match.range, in: line) else { continue }
-            if let token = parseAmount(String(line[r]), defaultCurrency: defaultCurrency),
-               token.minorUnits != 0 {
-                return token
+            let token = String(line[r])
+            guard looksLikeMoney(token) else { continue }
+            if let amount = parseAmount(token, defaultCurrency: defaultCurrency),
+               amount.minorUnits != 0 {
+                return amount
             }
         }
         return nil
@@ -302,13 +331,13 @@ enum ScanHeuristics {
     }
 
     /// Capture groups of the first match (1-based groups returned 0-based).
+    /// Unmatched optional groups come back as empty strings.
     private static func firstGroups(in text: String, pattern: String) -> [String]? {
         guard let re = regex(pattern),
               let match = re.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) else { return nil }
         var groups: [String] = []
         for i in 1..<match.numberOfRanges {
-            guard let r = Range(match.range(at: i), in: text) else { return nil }
-            groups.append(String(text[r]))
+            groups.append(Range(match.range(at: i), in: text).map { String(text[$0]) } ?? "")
         }
         return groups
     }

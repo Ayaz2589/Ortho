@@ -77,6 +77,10 @@ struct AddTransactionSheet: View {
     /// when the user's edit moves a field AWAY from the applied value.
     @State private var appliedScan: ParsedCandidate?
     @State private var appliedAmountText: String = ""
+    /// The owner set apply() actually wrote (the guess INTERSECTED with
+    /// current membership) — the clear-guard must compare against this, not
+    /// the raw guess, or apply()'s own mutation strips the tag.
+    @State private var appliedOwners: Set<User.ID> = []
     @State private var scanCaptionVisible = false
     /// Resolved "Looks like a duplicate of …" line (receipt path, FR-015).
     @State private var duplicateNote: String?
@@ -295,7 +299,15 @@ struct AddTransactionSheet: View {
             case .receiptPrefilled:
                 if let candidate = scanSession.receiptCandidate { apply(candidate) }
             case .reviewing:
+                showingCopyPicker = false
                 if let candidate = scanSession.currentCandidate { apply(candidate) }
+            case .parsing, .failed, .interstitial:
+                // A new capture (or its failure) supersedes any previous scan
+                // chrome — never show "Filled from scan" or a stale duplicate
+                // line next to the failure copy.
+                scanCaptionVisible = false
+                duplicateNote = nil
+                showingCopyPicker = false
             default:
                 break
             }
@@ -482,11 +494,13 @@ struct AddTransactionSheet: View {
                 resetSplitsToEven()
             }
             // Delay focus so sheet finishes presenting before the keyboard
-            // rises. Demo-scan screenshots keep the keyboard down so the
-            // prefilled fields and Guessed markers stay visible.
-            var autoFocus = true
+            // rises. formBody re-appears when the wizard replaces the
+            // interstitial — only the pristine first appearance should focus
+            // (a keyboard over a prefilled wizard row hides the review).
+            // Demo-scan screenshots keep the keyboard down entirely.
+            var autoFocus = scanSession.phase == .idle
             #if DEBUG
-            autoFocus = appState.uiDemoScanFixture == nil
+            if appState.uiDemoScanFixture != nil { autoFocus = false }
             startDemoScanIfNeeded()
             #endif
             if autoFocus {
@@ -512,8 +526,7 @@ struct AddTransactionSheet: View {
         }
         .onChange(of: selectedOwners) { _, newOwners in
             resetSplitsToEven()
-            if guessedFields.contains(.owners),
-               newOwners != Set(appliedScan?.ownersGuess ?? []) {
+            if guessedFields.contains(.owners), newOwners != appliedOwners {
                 guessedFields.remove(.owners)
             }
         }
@@ -537,7 +550,6 @@ struct AddTransactionSheet: View {
         .onChange(of: amountText) { _, newValue in
             if newValue != appliedAmountText {
                 guessedFields.remove(.currency)
-                guessedFields.remove(.amount)
             }
         }
         .sheet(isPresented: $showingCopyPicker) {
@@ -559,7 +571,11 @@ struct AddTransactionSheet: View {
             if !appState.transactions.isEmpty {
                 copyFromRecentButton
             }
-            scanCapsule
+            // No Scan in a settle-up sheet: a scan prefill would silently
+            // flip the pre-seeded Transfer into an expense (US1 scope).
+            if settleUp == nil {
+                scanCapsule
+            }
             Spacer()
         }
     }
@@ -1067,6 +1083,10 @@ struct AddTransactionSheet: View {
         duplicateNote = nil
 
         kind = candidate.direction == .credit ? .income : .expense
+        // The onChange(of: kind) source fixup can't be relied on here — the
+        // first wizard row applies while formBody is unmounted (interstitial
+        // → reviewing), so re-establish source validity directly.
+        if !sources.contains(source) { source = sources.first ?? "" }
         merchant = candidate.merchant
         if kind == .expense {
             if let guess = candidate.categoryGuess, guess != .income, guess != .transfer {
@@ -1077,19 +1097,24 @@ struct AddTransactionSheet: View {
             }
         }
         // Parsed calendar day → the picker's local Date; the existing
-        // noon-UTC convention applies on save (FR-019). nil ⇒ form default,
-        // never a fabricated date.
+        // noon-UTC convention applies on save (FR-019). No parsed date:
+        // wizard rows reset to today (fresh row), the receipt path leaves
+        // whatever the user already picked — never a fabricated date.
         if let day = candidate.date, let parsed = Calendar.current.date(from: day) {
             date = parsed
-        } else {
+        } else if scanSession.isWizardActive {
             date = .now
         }
 
         // Amount: USD cents directly, or a foreign total converted through
-        // the existing rates — never foreign-as-USD (FR-014).
+        // the existing rates — never foreign-as-USD (FR-014). A foreign
+        // candidate missing originalAmount (belt-and-braces — the parser
+        // always sets it) derives it from the minor units.
         if candidate.currency == .usd {
             amountText = displayAmountString(cents: candidate.amountCents)
-        } else if let original = candidate.originalAmount {
+        } else {
+            let original = candidate.originalAmount
+                ?? Decimal(candidate.amountCents) / pow(Decimal(10), candidate.currency.fractionDigits)
             let usdCents = Money.toUSDCents(original,
                                             from: candidate.currency,
                                             rate: appState.rate(for: candidate.currency))
@@ -1098,19 +1123,20 @@ struct AddTransactionSheet: View {
         originalAmountText = ""
         appliedAmountText = amountText
 
-        // Owners: history guess intersected with current membership; wizard
-        // rows without a guess reset to the default single owner.
+        // Owners: history guess intersected with current membership; a fully
+        // invalid guess (departed members) falls back to the default single
+        // owner in the wizard — never a stale carry-over from the prior row.
         let validIDs = Set(availableOwners.map(\.id))
-        if let owners = candidate.ownersGuess {
-            let valid = Set(owners).intersection(validIDs)
-            if valid.isEmpty {
-                guessedFields.remove(.owners)
-            } else {
-                selectedOwners = valid
+        let guessedOwners = candidate.ownersGuess.map { Set($0).intersection(validIDs) } ?? []
+        if !guessedOwners.isEmpty {
+            selectedOwners = guessedOwners
+        } else {
+            guessedFields.remove(.owners)
+            if scanSession.isWizardActive, let me = appState.currentPersonID {
+                selectedOwners = [me]
             }
-        } else if scanSession.isWizardActive {
-            if let me = appState.currentPersonID { selectedOwners = [me] }
         }
+        appliedOwners = selectedOwners
         if paidBy == nil {
             paidBy = appState.currentPersonID ?? appState.householdMembers.first?.id
         }
@@ -1156,11 +1182,17 @@ struct AddTransactionSheet: View {
     private func startParse(_ operation: @escaping () async -> Void) {
         Task {
             await operation()
-            if scanRefinementEnabled, scanSession.phase == .receiptPrefilled,
-               let candidate = scanSession.receiptCandidate,
-               let refined = await ScanRefiner.refineReceipt(candidate) {
-                apply(refined)
-            }
+            guard scanRefinementEnabled, scanSession.phase == .receiptPrefilled,
+                  let candidate = scanSession.receiptCandidate,
+                  let refined = await ScanRefiner.refineReceipt(candidate) else { return }
+            // Refinement is polish, not truth: if the user already touched
+            // the form after the heuristic prefill, their edits win —
+            // re-applying would clobber them and resurrect cleared tags.
+            let untouched = scanSession.phase == .receiptPrefilled
+                && merchant == candidate.merchant
+                && amountText == appliedAmountText
+                && selectedOwners == appliedOwners
+            if untouched { apply(refined) }
         }
     }
 
@@ -1212,13 +1244,25 @@ struct AddTransactionSheet: View {
         let owners: Set<Person.ID> = me.map { [$0] } ?? []
         let day = candidate.date.flatMap { Calendar.current.date(from: $0) } ?? .now
         let isCredit = candidate.direction == .credit
+        // Same FX rule as apply(): foreign minor units are never stored as
+        // USD cents directly (FR-014).
+        let cents: Int64
+        if candidate.currency == .usd {
+            cents = candidate.amountCents
+        } else {
+            let original = candidate.originalAmount
+                ?? Decimal(candidate.amountCents) / pow(Decimal(10), candidate.currency.fractionDigits)
+            cents = Money.toUSDCents(original,
+                                     from: candidate.currency,
+                                     rate: appState.rate(for: candidate.currency))
+        }
         return Transaction(
             merchant: candidate.merchant,
             category: isCredit ? .income : (candidate.categoryGuess ?? .groceries),
             kind: isCredit ? .income : .expense,
-            amount: candidate.amountCents,
+            amount: cents,
             ownerIDs: owners,
-            shares: me.map { [$0: candidate.amountCents] } ?? [:],
+            shares: me.map { [$0: cents] } ?? [:],
             source: appState.cards.first?.name ?? "",
             date: Self.noonUTC(ofLocalDay: day),
             householdID: appState.currentHouseholdID,

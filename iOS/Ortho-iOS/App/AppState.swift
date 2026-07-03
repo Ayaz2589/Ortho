@@ -367,6 +367,9 @@ final class AppState {
         guard let idx = transactions.firstIndex(where: { $0.id == tx.id }) else { return }
         let previous = transactions[idx]
         transactions[idx] = tx
+        #if DEBUG
+        if isUIDemoSession { return }  // demo sessions are local-only
+        #endif
         Task {
             do {
                 try await transactionsAPI.update(tx, previous: previous)
@@ -385,6 +388,9 @@ final class AppState {
     /// the row at the end (loses original position — acceptable for v1).
     func deleteTransaction(_ tx: Transaction) {
         transactions.removeAll { $0.id == tx.id }
+        #if DEBUG
+        if isUIDemoSession { return }  // demo sessions are local-only
+        #endif
         Task {
             do {
                 try await transactionsAPI.delete(id: tx.id)

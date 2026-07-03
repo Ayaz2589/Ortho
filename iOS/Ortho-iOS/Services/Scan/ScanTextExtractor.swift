@@ -12,11 +12,11 @@ import UIKit
 import Vision
 import PDFKit
 
-enum ScanExtractionError: Error {
+nonisolated enum ScanExtractionError: Error {
     case unreadableCapture
 }
 
-enum ScanTextExtractor {
+nonisolated enum ScanTextExtractor {
 
     // MARK: - Images (camera / photo library / image files)
 

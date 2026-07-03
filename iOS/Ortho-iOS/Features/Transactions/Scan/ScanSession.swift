@@ -78,27 +78,31 @@ final class ScanSession {
 
     @MainActor
     func process(images: [UIImage], context: ScanContext) async {
-        phase = .parsing
-        let result: ScanParseResult
-        do {
-            let document = try await ScanTextExtractor.extract(images: images)
-            result = ScanParser.parse(document, context: context)
-        } catch {
-            result = .none
-        }
-        handle(result)
+        await run(context: context) { try await ScanTextExtractor.extract(images: images) }
     }
 
     @MainActor
     func process(pdfAt url: URL, context: ScanContext) async {
+        await run(context: context) { try await ScanTextExtractor.extract(pdfAt: url) }
+    }
+
+    /// One lifecycle for both sources. The heavy work (OCR / PDF render /
+    /// regex parse) runs in a DETACHED task: the app builds with
+    /// default-MainActor isolation, so anything less would put Vision's
+    /// synchronous recognition on the main thread behind the "Reading…"
+    /// spinner (R12).
+    @MainActor
+    private func run(context: ScanContext,
+                     _ extract: @escaping @Sendable () async throws -> ScanDocumentText) async {
         phase = .parsing
-        let result: ScanParseResult
-        do {
-            let document = try await ScanTextExtractor.extract(pdfAt: url)
-            result = ScanParser.parse(document, context: context)
-        } catch {
-            result = .none
-        }
+        let result = await Task.detached(priority: .userInitiated) { () -> ScanParseResult in
+            do {
+                let document = try await extract()
+                return ScanParser.parse(document, context: context)
+            } catch {
+                return .none
+            }
+        }.value
         handle(result)
     }
 

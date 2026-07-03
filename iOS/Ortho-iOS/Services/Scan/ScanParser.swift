@@ -9,7 +9,7 @@
 
 import Foundation
 
-enum ScanParser {
+nonisolated enum ScanParser {
 
     static func parse(_ document: ScanDocumentText, context: ScanContext) -> ScanParseResult {
         guard !document.isEmpty else { return .none }
@@ -23,16 +23,20 @@ enum ScanParser {
                 + page.tables.flatMap { $0.rows.map { $0.joined(separator: "  ") } }
         }
         let period = ScanHeuristics.statementPeriod(in: texts)
-        let rows = statementRows(in: document)
+        let rows = statementRows(in: document, defaultCurrency: context.defaultCurrency)
+        // Arbitrate on USABLE candidates, not raw row matches — 3 zero-amount
+        // fee rows must not suppress a labeled receipt total or produce an
+        // empty ".statement([])" interstitial.
+        let rowCandidates = rows.isEmpty ? [] : candidates(from: rows, period: period, context: context)
 
-        if rows.count >= 3 {
-            return .statement(candidates(from: rows, period: period, context: context))
+        if rowCandidates.count >= 3 {
+            return .statement(rowCandidates)
         }
         if let total = ScanHeuristics.grandTotal(in: texts, defaultCurrency: context.defaultCurrency) {
             return .receipt(receiptCandidate(total: total, lineTexts: texts, context: context))
         }
-        if !rows.isEmpty {
-            return .statement(candidates(from: rows, period: period, context: context))
+        if !rowCandidates.isEmpty {
+            return .statement(rowCandidates)
         }
         return .none
     }
@@ -42,12 +46,17 @@ enum ScanParser {
     /// Rows in document order. Structured OCR may surface the same content as
     /// both a table and transcript lines — per page, whichever view yields
     /// more rows wins (never both, so nothing double-counts).
-    private static func statementRows(in document: ScanDocumentText) -> [ScanHeuristics.StatementRow] {
+    private static func statementRows(in document: ScanDocumentText,
+                                      defaultCurrency: Currency) -> [ScanHeuristics.StatementRow] {
         var rows: [ScanHeuristics.StatementRow] = []
         for page in document.pages {
-            let fromLines = page.lines.compactMap { ScanHeuristics.statementRow(from: $0.text) }
+            let fromLines = page.lines.compactMap {
+                ScanHeuristics.statementRow(from: $0.text, defaultCurrency: defaultCurrency)
+            }
             let fromTables = page.tables.flatMap { table in
-                table.rows.compactMap { ScanHeuristics.statementRow(fromCells: $0) }
+                table.rows.compactMap {
+                    ScanHeuristics.statementRow(fromCells: $0, defaultCurrency: defaultCurrency)
+                }
             }
             rows.append(contentsOf: fromTables.count > fromLines.count ? fromTables : fromLines)
         }

@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum ScanInference {
+nonisolated enum ScanInference {
 
     /// Enrich one candidate in place: history/category/owners guesses plus
     /// greedy one-to-one duplicate claiming against `claimed` (FR-015).

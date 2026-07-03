@@ -10,7 +10,7 @@ import CoreGraphics
 /// Engine-agnostic text of one capture. Frames are normalized (0–1),
 /// origin top-left, so "bottom of the receipt" heuristics work regardless
 /// of source resolution.
-struct ScanDocumentText: Equatable {
+nonisolated struct ScanDocumentText: Equatable {
     struct Line: Equatable {
         var text: String
         var frame: CGRect
@@ -37,13 +37,16 @@ struct ScanDocumentText: Equatable {
 }
 
 /// Which prefill fields are inferences (vs direct extraction). Drives the
-/// text3 "Guessed" affordance — cleared per field on first user edit (FR-016).
-enum GuessedField: String, Codable, Hashable {
-    case merchant, date, amount, category, owners, currency
+/// text3 "Guessed" affordance — cleared per field on first user edit
+/// (FR-016). Only fields some tier actually infers are cases: merchant
+/// (refiner), category/owners (history + rule table), currency (FX
+/// detection). Extracted date/amount are never "guesses".
+nonisolated enum GuessedField: String, Codable, Hashable {
+    case merchant, category, owners, currency
 }
 
 /// One potential transaction extracted from a capture.
-struct ParsedCandidate: Identifiable, Equatable {
+nonisolated struct ParsedCandidate: Identifiable, Equatable {
     enum Direction: String, Codable {
         case debit   // prefills as expense
         case credit  // prefills as income (flippable, FR-011)
@@ -109,7 +112,7 @@ struct ParsedCandidate: Identifiable, Equatable {
 }
 
 /// Outcome of parsing one capture.
-enum ScanParseResult: Equatable {
+nonisolated enum ScanParseResult: Equatable {
     /// Single confident grand total — prefill the open form in place.
     case receipt(ParsedCandidate)
     /// Ordered transaction rows (1+) — statement interstitial + wizard.
@@ -120,7 +123,7 @@ enum ScanParseResult: Equatable {
 
 /// The household's past behavior with one merchant, pre-aggregated so the
 /// parser stays pure (no Transaction traversal inside the pipeline).
-struct MerchantHistory: Equatable {
+nonisolated struct MerchantHistory: Equatable {
     /// Normalized key — see `ScanHeuristics.normalizeMerchant`.
     var normalizedMerchant: String
     /// The household's own display spelling (most recent).
@@ -135,7 +138,7 @@ struct MerchantHistory: Equatable {
 }
 
 /// Existing-transaction shadow used for duplicate matching (FR-015).
-struct ExistingTransactionDay: Equatable {
+nonisolated struct ExistingTransactionDay: Equatable {
     var id: Transaction.ID
     /// Local calendar day (year/month/day).
     var day: DateComponents
@@ -144,7 +147,7 @@ struct ExistingTransactionDay: Equatable {
 
 /// Everything the parser needs from the outside world, injected (never the
 /// real clock, never live collections — constitution VI / contract §purity).
-struct ScanContext {
+nonisolated struct ScanContext {
     var existing: [ExistingTransactionDay]
     var history: [MerchantHistory]
     var defaultCurrency: Currency

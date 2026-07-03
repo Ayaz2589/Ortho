@@ -112,6 +112,33 @@ final class ScanParserTests: XCTestCase {
         XCTAssertNil(rows[2].duplicateOf)
     }
 
+    /// "CR" suffix is the minus-less credit notation (Amex/Chase): the row
+    /// must come out negative → income prefill (FR-011).
+    func testCRSuffixIsCredit() {
+        let row = ScanHeuristics.statementRow(from: "06/22  REFUND AMAZON MKTP  $25.00 CR")
+        XCTAssertNotNil(row)
+        XCTAssertEqual(row?.amount.negative, true)
+        XCTAssertEqual(row?.amount.minorUnits, 2500)
+        // And the plain debit row still parses unchanged.
+        let debit = ScanHeuristics.statementRow(from: "06/03  STARBUCKS  $6.45")
+        XCTAssertEqual(debit?.amount.negative, false)
+    }
+
+    /// TOTAL-labeled lines whose trailing number is not money-shaped
+    /// ("TOTAL ITEMS SOLD 12", "AMOUNT DUE BY 07/15/2026") must never
+    /// override the real labeled total.
+    func testTotalLabelRequiresMoneyShapedAmount() {
+        let lines = [
+            "CORNER PLACE",
+            "TOTAL  $14.25",
+            "TOTAL ITEMS SOLD 12",
+            "AMOUNT DUE BY 07/15/2026",
+        ]
+        let total = ScanHeuristics.grandTotal(in: lines)
+        XCTAssertEqual(total?.minorUnits, 1425)
+        XCTAssertNil(ScanHeuristics.grandTotal(in: ["TOTAL ITEMS SOLD 12"]))
+    }
+
     // MARK: - Inference tiers (US3, FR-013)
 
     /// No history, no rule match ⇒ categoryGuess nil — the form default
@@ -237,6 +264,15 @@ final class ScanParserTests: XCTestCase {
                 throw FixtureError(message: "unreadable fixture \(name).\(ext)")
             }
             doc = try await ScanTextExtractor.extract(images: [image])
+        }
+        // Diagnostic breadcrumb: when an assertion below fails on CI, the
+        // exact extractor output is the evidence needed to fix heuristics
+        // without a local simulator.
+        for (p, page) in doc.pages.enumerated() {
+            print("EXTRACTED \(name) page\(p) lines: \(page.lines.map(\.text))")
+            if !page.tables.isEmpty {
+                print("EXTRACTED \(name) page\(p) tables: \(page.tables.map(\.rows))")
+            }
         }
         return (doc, expected)
     }

@@ -41,9 +41,9 @@ One potential transaction (spec Key Entity "Parsed candidate").
 | `ownersGuess` | `[Person.ID]?` | owners of the most recent history match; `nil` = form defaults. (A `splitGuess` was considered and dropped: rescaling a historical custom split to a new amount is money math the form's own split editor already owns — the guess covers the owner set, the split method stays the form's default even.) |
 | `duplicateOf` | `Transaction.ID?` | at most one claimed existing transaction (FR-015) |
 
-`GuessedField`: `merchant | date | amount | category | owners | currency` — drives the
-text3 "guessed" affordance; cleared per-field on first user edit, never re-shown for
-that entry.
+`GuessedField`: `merchant | category | owners | currency` — drives the text3
+"guessed" affordance; cleared per-field on first user edit, never re-shown for
+that entry. (Extracted date/amount are never guesses, so they have no cases.)
 
 ### ScanParseResult
 
@@ -104,14 +104,21 @@ any → idle                                        // cancel/dismiss — captur
   back by the wizard (rollback is the existing per-write optimistic mechanism only).
 - Leaving the session in any phase releases all capture/document data (FR-003).
 
-## Prefill payload (`AddTransactionSheet` input)
+## Prefill application (`AddTransactionSheet`)
 
-### ScanPrefill
+### apply(_ candidate:) — the fourth prefill source
 
-Fourth prefill source, sibling of `SettleUpPrefill` / copy (R8): wraps one
-`ParsedCandidate` + `guesses`, applied on appear exactly like manual typing would be
-(same validation, FR-006). Wizard mode additionally carries `progress: (index, total)`
-and the three wizard actions; nil `scan` = today's unchanged form.
+The design sketch called this a `ScanPrefill` init-input (sibling of
+`SettleUpPrefill`), but scan prefills arrive **asynchronously** (after OCR), so
+the shipped shape is: the sheet owns the `ScanSession` as `@State`, observes its
+phase/cursor via `onChange`, and applies each candidate imperatively through one
+`apply(_:)` function that writes the same `@State` fields manual typing does
+(same validation, FR-006). Guess markers live in a `guessedFields` set plus
+`appliedScan`/`appliedAmountText`/`appliedOwners` snapshots; a marker clears when
+an edit moves the field AWAY from the snapshot value (value comparison, not
+event ordering — apply()'s own mutations can never clear a tag). Wizard chrome
+(progress header, Add-and-next/Skip/Stop) renders when the session is
+`.reviewing`; each accept is one `buildTransaction()` → existing optimistic add.
 
 ## Existing types touched (no shape changes)
 
