@@ -1,17 +1,23 @@
 // ScanDocumentText → ScanParseResult. Pure and deterministic: same document +
 // same context ⇒ identical result (spec 014, contracts/scan-parser.md).
-// Detection order is research R5 (+ the post-T037 forgiving tier) and is
-// binding:
-//   1. ≥3 transaction rows           → statement
-//   2. confident labeled grand total → receipt
-//   3. 1–2 transaction rows          → statement (a one-row wizard is still
+// Detection order is research R5 (+ the post-T037/T041 forgiving tiers) and
+// is binding:
+//   1. ≥3 one-line transaction rows  → statement
+//   2. ≥3 STACKED app-list rows      → statement (a photographed banking
+//                                      app/website spreads each transaction
+//                                      over 2–3 OCR lines; runs BEFORE the
+//                                      grand-total tier so a "Total balance"
+//                                      header can't turn a list into one
+//                                      receipt)
+//   3. confident labeled grand total → receipt
+//   4. 1–2 transaction rows          → statement (a one-row wizard is still
 //                                      a correct, reviewable outcome)
-//   4. any money-shaped text         → best-effort receipt, every field
+//   5. any money-shaped text         → best-effort receipt, every field
 //                                      Guessed (wrong guesses are cheap —
 //                                      review-before-add exists for exactly
 //                                      this; refusing to guess is the worse
 //                                      failure)
-//   5. otherwise                     → .none (calm failure copy)
+//   6. otherwise                     → .none (calm failure copy)
 
 import Foundation
 
@@ -37,6 +43,19 @@ nonisolated enum ScanParser {
 
         if rowCandidates.count >= 3 {
             return .statement(rowCandidates)
+        }
+        // Stacked app-list rows demand strong evidence (≥3 usable rows, each
+        // with its OWN claimed date line) precisely because they outrank the
+        // grand-total tier; receipts never produce per-row bare-date lines.
+        // Transcript lines ONLY — structured tables are already segmented
+        // (and may duplicate the transcript, which would double-count).
+        let stackedSource = document.pages.flatMap { $0.lines.map(\.text) }
+        let stacked = ScanHeuristics.stackedRows(in: stackedSource, defaultCurrency: context.defaultCurrency)
+        if stacked.count >= 3 {
+            let stackedCandidates = candidates(from: stacked, period: period, context: context)
+            if stackedCandidates.count >= 3 {
+                return .statement(stackedCandidates)
+            }
         }
         if let total = ScanHeuristics.grandTotal(in: texts, defaultCurrency: context.defaultCurrency) {
             return .receipt(receiptCandidate(total: total, lineTexts: texts, context: context))

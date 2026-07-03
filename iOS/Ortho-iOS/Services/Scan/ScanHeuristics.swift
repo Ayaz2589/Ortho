@@ -211,6 +211,15 @@ nonisolated enum ScanHeuristics {
             month = monthNumber(named[0])
             day = Int(named[1])
             match = named
+        } else if let inline = firstGroups(
+            in: line,
+            // Structured OCR joins an app-list cell into one string with the
+            // description FIRST: "UBER TRIP  Jul 1  $24.51" (post-T041).
+            pattern: "(?i)^\\s*(.+?)\\s+(\(monthNamePattern))\\.?\\s+(\\d{1,2})(?:,?\\s+\\d{4})?\\s+\(amountTail)"
+        ) {
+            month = monthNumber(inline[1])
+            day = Int(inline[2])
+            match = [inline[1], inline[2], inline[0], inline[3], inline[4]]
         }
         guard let month, let day, let match,
               (1...12).contains(month), (1...31).contains(day) else { return nil }
@@ -227,6 +236,135 @@ nonisolated enum ScanHeuristics {
     /// + last amount-bearing cell + the rest as description.
     static func statementRow(fromCells cells: [String], defaultCurrency: Currency = .usd) -> StatementRow? {
         statementRow(from: cells.joined(separator: "  "), defaultCurrency: defaultCurrency)
+    }
+
+    // MARK: - Stacked statement rows (app-list captures, post-T041)
+
+    /// Optional weekday prefix on a date line ("Tue, Jul 1"). Non-capturing.
+    private static let weekdayPrefixPattern =
+        "(?:(?:MON|TUE(?:S)?|WED(?:NES)?|THU(?:R(?:S)?)?|FRI|SAT(?:UR)?|SUN)(?:DAY)?\\.?,?\\s+)?"
+
+    /// A line that is NOTHING but a posting date — the date line of a bank
+    /// app/web list cell: "Jul 1", "Jul 1, 2026", "07/01", "07/01/2026",
+    /// optionally weekday-prefixed. Never a date embedded in prose.
+    static func bareDate(_ line: String) -> (month: Int, day: Int)? {
+        if let groups = firstGroups(
+            in: line,
+            pattern: "(?i)^\\s*\(weekdayPrefixPattern)(\(monthNamePattern))\\.?\\s+(\\d{1,2})(?:ST|ND|RD|TH)?(?:,?\\s+\\d{4})?\\s*$"
+        ), let month = monthNumber(groups[0]),
+           let day = Int(groups[1]), (1...31).contains(day) {
+            return (month, day)
+        }
+        if let groups = firstGroups(
+            in: line,
+            pattern: "(?i)^\\s*\(weekdayPrefixPattern)(\\d{1,2})/(\\d{1,2})(?:/\\d{2,4})?\\s*$"
+        ), let month = Int(groups[0]), let day = Int(groups[1]),
+           (1...12).contains(month), (1...31).contains(day) {
+            return (month, day)
+        }
+        return nil
+    }
+
+    /// Status words that ride along in app list cells but are never the
+    /// merchant ("Pending", "Posted"...).
+    private static let statusNoisePattern =
+        "(?i)^\\s*(?:PENDING|POSTED|PROCESSING|COMPLETED|DECLINED)\\s*$"
+
+    /// Reconstruct statement rows from STACKED app-list cells — the shape a
+    /// photo of a banking app/website produces: each transaction spreads
+    /// over 2–3 OCR lines (merchant / bare date / amount in some order), so
+    /// the one-line row regex never fires. Anchor on each amount (an
+    /// amount-only line, or a description line with a trailing amount);
+    /// match anchors to bare-date lines globally by proximity (nearest pair
+    /// first, each line claimable once — so a "Total balance" header can't
+    /// steal the first row's date), then claim the nearest description
+    /// looking back, then forward. Anchors that can't claim their OWN date
+    /// yield nothing — per-row dates are exactly what separates a
+    /// transaction list from a receipt's price column.
+    static func stackedRows(in lines: [String], defaultCurrency: Currency = .usd) -> [StatementRow] {
+        struct Anchor {
+            let index: Int
+            let amount: AmountToken
+            let inlineDesc: String?
+        }
+        var anchors: [Anchor] = []
+        var dateIndexes: [Int] = []
+        var descAvailable: Set<Int> = []
+
+        for (index, line) in lines.enumerated() {
+            if bareDate(line) != nil {
+                dateIndexes.append(index)
+                continue
+            }
+            if isAmountOnly(line) {
+                if let amount = lastAmount(in: line, defaultCurrency: defaultCurrency) {
+                    anchors.append(Anchor(index: index, amount: amount, inlineDesc: nil))
+                }
+                continue
+            }
+            guard line.rangeOfCharacter(from: .letters) != nil,
+                  !matches(line, pattern: statusNoisePattern) else { continue }
+            if let amount = lastAmount(in: line, defaultCurrency: defaultCurrency) {
+                // "UBER TRIP  $24.51" — merchant and amount share the line.
+                anchors.append(Anchor(index: index, amount: amount, inlineDesc: line))
+            } else {
+                descAvailable.insert(index)
+            }
+        }
+        guard anchors.count >= 2, dateIndexes.count >= 2 else { return [] }
+
+        // Every cell in one app lays out the same way, so its date is
+        // consistently on ONE side of its amount — but that side varies by
+        // app, and an amount can sit nearer the NEXT cell's date than its
+        // own. Try both directional readings (date after vs before the
+        // amount, ≤2 lines away, nearest-first greedy, each date claimable
+        // once) and keep whichever explains more rows; a "Total balance"
+        // header loses every claim it contests either way.
+        func assign(dateAfterAmount: Bool) -> [Int: Int] {   // anchor array idx → date line idx
+            var pairs: [(distance: Int, anchorIdx: Int, dateIdx: Int)] = []
+            for (a, anchor) in anchors.enumerated() {
+                for dateIdx in dateIndexes {
+                    guard dateAfterAmount ? dateIdx > anchor.index : dateIdx < anchor.index else { continue }
+                    let distance = abs(anchor.index - dateIdx)
+                    if distance <= 2 { pairs.append((distance, a, dateIdx)) }
+                }
+            }
+            pairs.sort { ($0.distance, $0.anchorIdx, $0.dateIdx) < ($1.distance, $1.anchorIdx, $1.dateIdx) }
+            var dateFor: [Int: Int] = [:]
+            var claimedDates: Set<Int> = []
+            for pair in pairs where dateFor[pair.anchorIdx] == nil && !claimedDates.contains(pair.dateIdx) {
+                dateFor[pair.anchorIdx] = pair.dateIdx
+                claimedDates.insert(pair.dateIdx)
+            }
+            return dateFor
+        }
+        let after = assign(dateAfterAmount: true)
+        let before = assign(dateAfterAmount: false)
+        let dateFor = after.count >= before.count ? after : before
+
+        var rows: [StatementRow] = []
+        for (a, anchor) in anchors.enumerated() {
+            guard let dateIdx = dateFor[a], let date = bareDate(lines[dateIdx]) else { continue }
+            var description = anchor.inlineDesc.map {
+                // Drop the trailing amount token from the shared line.
+                replace($0, pattern: "\\s*(?:EUR|GBP|JPY|CNY|CAD|BDT)?\\s*[-$€£¥]*\\s?-?[0-9][0-9.,]*(\\s*CR)?\\s*$", with: "")
+                    .trimmingCharacters(in: .whitespaces)
+            } ?? ""
+            if description.isEmpty {
+                // Nearest unclaimed description: back up to 3 lines, else 1 forward.
+                let back = (1...3).lazy.map { anchor.index - $0 }.first {
+                    descAvailable.contains($0)
+                }
+                let candidate = back ?? (descAvailable.contains(anchor.index + 1) ? anchor.index + 1 : nil)
+                guard let candidate else { continue }
+                descAvailable.remove(candidate)
+                description = lines[candidate].trimmingCharacters(in: .whitespaces)
+            }
+            guard !description.isEmpty else { continue }
+            rows.append(StatementRow(month: date.month, day: date.day,
+                                     description: description, amount: anchor.amount))
+        }
+        return rows
     }
 
     // MARK: - Receipt grand total

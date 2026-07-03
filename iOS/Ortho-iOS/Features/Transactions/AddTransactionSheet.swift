@@ -317,13 +317,12 @@ struct AddTransactionSheet: View {
             apply(candidate)
         }
         .fullScreenCover(isPresented: $showingDocCamera) {
-            DocumentCameraView { images in
+            ScanCameraView { image in
                 showingDocCamera = false
-                startParse { await scanSession.process(images: images, context: scanContext(), rescue: scanRescuer()) }
+                startParse { await scanSession.process(images: [image], context: scanContext(), rescue: scanRescuer()) }
             } onCancel: {
                 showingDocCamera = false
             }
-            .ignoresSafeArea()
         }
         .photosPicker(isPresented: $photosPickerPresented, selection: $photoItem, matching: .images)
         .onChange(of: photoItem) { _, item in

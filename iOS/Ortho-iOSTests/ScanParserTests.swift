@@ -87,6 +87,16 @@ final class ScanParserTests: XCTestCase {
         try await assertFixture("statement-screenshot", ext: "png")
     }
 
+    /// PHOTO of a banking app list (post-T041 device feedback): each
+    /// transaction is a stacked cell — merchant + amount on one visual row,
+    /// a bare date beneath — and a "Total balance" header sits on top. The
+    /// stacked tier must reconstruct all four rows and the balance line
+    /// must NOT become a receipt total ("it totals them") or a lone
+    /// fallback item.
+    func testStatementAppList() async throws {
+        try await assertFixture("statement-app-list", ext: "png")
+    }
+
     /// The CLI year-inference convention (engine/dates.ts): a December row
     /// in a Dec→Jan statement period resolves to the PERIOD's earlier year.
     func testYearInferenceAcrossBoundary() {
@@ -176,6 +186,88 @@ final class ScanParserTests: XCTestCase {
         XCTAssertEqual(ScanHeuristics.fullDate(in: "DECEMBER 31 2025"),
                        DateComponents(year: 2025, month: 12, day: 31))
         XCTAssertNil(ScanHeuristics.fullDate(in: "Jul 1"), "no year — never fabricate one here")
+    }
+
+    /// Stacked app-list cells (post-T041): merchant+amount share a line,
+    /// the bare date sits on its own line — in either vertical order — and
+    /// a "Total balance" header must lose every date-claim to the real rows.
+    func testStackedRowsFromAppList() {
+        // Date BELOW each cell (Amex/Chase app shape) + balance trap.
+        let below = [
+            "Activity",
+            "Total balance  $612.45",
+            "UBER TRIP HELP.UBER.COM  $24.51",
+            "Jul 1",
+            "STARBUCKS COFFEE #1234  $6.45",
+            "Jun 30",
+            "NETFLIX.COM  $22.99",
+            "Jun 27",
+        ]
+        let rowsBelow = ScanHeuristics.stackedRows(in: below)
+        XCTAssertEqual(rowsBelow.count, 3)
+        XCTAssertEqual(rowsBelow[0].description, "UBER TRIP HELP.UBER.COM")
+        XCTAssertEqual(rowsBelow[0].month, 7)
+        XCTAssertEqual(rowsBelow[0].day, 1)
+        XCTAssertEqual(rowsBelow[0].amount.minorUnits, 2451)
+        XCTAssertEqual(rowsBelow[1].amount.minorUnits, 645)
+        XCTAssertFalse(rowsBelow.contains { $0.amount.minorUnits == 61245 },
+                       "the Total balance header must never become a row")
+
+        // Fully stacked cells, date ABOVE (merchant / amount on separate lines).
+        let above = [
+            "Tue, Jul 1",
+            "UBER TRIP",
+            "$24.51",
+            "Jun 30",
+            "STARBUCKS",
+            "$6.45",
+            "Jun 28",
+            "H MART",
+            "$63.20",
+        ]
+        let rowsAbove = ScanHeuristics.stackedRows(in: above)
+        XCTAssertEqual(rowsAbove.count, 3)
+        XCTAssertEqual(rowsAbove[0].description, "UBER TRIP")
+        XCTAssertEqual(rowsAbove[0].month, 7)
+        XCTAssertEqual(rowsAbove[2].description, "H MART")
+        XCTAssertEqual(rowsAbove[2].amount.minorUnits, 6320)
+    }
+
+    /// A receipt's price column can never become stacked rows: item lines
+    /// carry trailing amounts but there are no per-row bare-date lines.
+    func testStackedRowsIgnoreReceipts() {
+        let receipt = [
+            "BODEGA MARKET",
+            "07/02/2026 11:18 AM",
+            "COLD BREW  4.50",
+            "BEC SANDWICH  6.75",
+            "SELTZER  2.25",
+            "$13.50",
+        ]
+        XCTAssertTrue(ScanHeuristics.stackedRows(in: receipt).isEmpty)
+    }
+
+    /// Bare-date lines: nothing but a posting date (optionally weekday-
+    /// prefixed); dates embedded in prose never qualify.
+    func testBareDate() {
+        XCTAssertEqual(ScanHeuristics.bareDate("Jul 1")?.month, 7)
+        XCTAssertEqual(ScanHeuristics.bareDate("Jul 1, 2026")?.day, 1)
+        XCTAssertEqual(ScanHeuristics.bareDate("Tue, Jul 1")?.month, 7)
+        XCTAssertEqual(ScanHeuristics.bareDate("07/01")?.month, 7)
+        XCTAssertEqual(ScanHeuristics.bareDate("07/01/2026")?.day, 1)
+        XCTAssertNil(ScanHeuristics.bareDate("07/02/2026 11:18 AM"))
+        XCTAssertNil(ScanHeuristics.bareDate("DUE BY Jul 1"))
+        XCTAssertNil(ScanHeuristics.bareDate("Pending"))
+    }
+
+    /// Structured OCR may join an app-list cell into one string with the
+    /// description first — that is a statement row too.
+    func testInlineDescFirstStatementRow() {
+        let row = ScanHeuristics.statementRow(from: "UBER TRIP HELP.UBER.COM  Jul 1  $24.51")
+        XCTAssertEqual(row?.month, 7)
+        XCTAssertEqual(row?.day, 1)
+        XCTAssertEqual(row?.description, "UBER TRIP HELP.UBER.COM")
+        XCTAssertEqual(row?.amount.minorUnits, 2451)
     }
 
     // MARK: - Forgiving fallback tier (post-T037 device feedback)
