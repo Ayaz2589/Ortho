@@ -83,7 +83,7 @@ receipt-grocery` screenshot shows the prefilled form (wired fully in US4, stub h
 
 ### Tests for User Story 1 (write first — they must fail without the implementation)
 
-- [ ] T006 [US1] Create `iOS/Ortho-iOSTests/ScanParserTests.swift`: fixture loader
+- [X] T006 [US1] Create `iOS/Ortho-iOSTests/ScanParserTests.swift`: fixture loader
       reading `ScanFixtures` + expected JSON from the APP bundle (research R9 — no
       pbxproj), decode helpers, and receipt test cases: `receipt-grocery`,
       `receipt-restaurant` (labeled TOTAL beats row-count — R5 tie-break),
@@ -91,34 +91,34 @@ receipt-grocery` screenshot shows the prefilled form (wired fully in US4, stub h
 
 ### Implementation for User Story 1
 
-- [ ] T007 [P] [US1] Create `iOS/Ortho-iOS/Services/Scan/ScanTextExtractor.swift` —
+- [X] T007 [P] [US1] Create `iOS/Ortho-iOS/Services/Scan/ScanTextExtractor.swift` —
       image → `ScanDocumentText` via `RecognizeDocumentsRequest` (tables + lines +
       frames), fallback `RecognizeTextRequest` Y-clustering; async, off-main; capture
       data released after extraction (FR-003); no parsing decisions (contract §stages)
-- [ ] T008 [P] [US1] Create `iOS/Ortho-iOS/Services/Scan/ScanHeuristics.swift` (receipt
+- [X] T008 [P] [US1] Create `iOS/Ortho-iOS/Services/Scan/ScanHeuristics.swift` (receipt
       half): amount-token → cents (no FP dollar math, FR-023), date formats → 
       `DateComponents`, grand-total detection (TOTAL/AMOUNT DUE/bottom-emphasized per
       R5), merchant-line pick + processor-prefix normalizer (`TST*`, `SQ *`, digits) —
       pure, `en_US_POSIX`-invariant
-- [ ] T009 [US1] Create `iOS/Ortho-iOS/Services/Scan/ScanParser.swift` — detection
+- [X] T009 [US1] Create `iOS/Ortho-iOS/Services/Scan/ScanParser.swift` — detection
       order R5 (≥3 rows / confident total / 1–2 rows / none), receipt path emitting one
       `ParsedCandidate` (amount>0 enforced); statement path returns rows parsed so far
       (fleshed out in US2); deterministic per contract
-- [ ] T010 [US1] Create `iOS/Ortho-iOS/Features/Transactions/Scan/ScanCaptureView.swift`
+- [X] T010 [US1] Create `iOS/Ortho-iOS/Features/Transactions/Scan/ScanCaptureView.swift`
       + `ScanSession.swift` — source menu plumbing (`VNDocumentCameraViewController`
       representable, `PhotosPicker`, `.fileImporter`), phases
       idle→capturing→parsing→receiptPrefilled|failed (interstitial arm stubbed), Retake
       reopens last source, cancel restores untouched form, all capture data released on
       idle (data-model §transitions)
-- [ ] T011 [US1] Modify `iOS/Ortho-iOS/Features/Transactions/AddTransactionSheet.swift` —
+- [X] T011 [US1] Modify `iOS/Ortho-iOS/Features/Transactions/AddTransactionSheet.swift` —
       Scan capsule (add-mode, non-transfer only, `doc.viewfinder`, capsule style) next to
       "Copy from recent"; "Reading…" inline state; `ScanPrefill` application (4th prefill
       source alongside SettleUpPrefill/copy — same validation, FR-006); "Filled from
       scan" caption; quiet failure block + Retake (contract scan-ui-flow §Entry/§Receipt/§Failure)
-- [ ] T012 [US1] Add US1 string keys (`scan.capsule`, `scan.source.*`, `scan.reading`,
+- [X] T012 [US1] Add US1 string keys (`scan.capsule`, `scan.source.*`, `scan.reading`,
       `scan.filled_caption`, `scan.failed.*`) to `iOS/Ortho-iOS/Localizable.xcstrings`
       with en/bn/es/ja/zh-Hans/ko values (terminology consistent with existing catalog)
-- [ ] T013 [US1] Add `INFOPLIST_KEY_NSCameraUsageDescription` build setting to
+- [X] T013 [US1] Add `INFOPLIST_KEY_NSCameraUsageDescription` build setting to
       `iOS/Ortho-iOS.xcodeproj/project.pbxproj` (all configurations; plain-text edit —
       the ONLY pbxproj change in the feature)
 
@@ -136,7 +136,7 @@ wizard walk adds exactly the accepted rows.
 
 ### Tests for User Story 2 (write first)
 
-- [ ] T014 [US2] Extend `iOS/Ortho-iOSTests/ScanParserTests.swift`: `statement-card`
+- [X] T014 [US2] Extend `iOS/Ortho-iOSTests/ScanParserTests.swift`: `statement-card`
       (multi-page order, credits→income, `PAYMENT THANK YOU` → `isPaymentRow`,
       duplicate rows claimed greedily one-to-one vs `context.existing`, within-batch
       twins both kept), `statement-scanned` (OCR-table path), noon-UTC/year-inference
@@ -144,33 +144,33 @@ wizard walk adds exactly the accepted rows.
 
 ### Implementation for User Story 2
 
-- [ ] T015 [P] [US2] Extend `iOS/Ortho-iOS/Services/Scan/ScanTextExtractor.swift` — PDF
+- [X] T015 [P] [US2] Extend `iOS/Ortho-iOS/Services/Scan/ScanTextExtractor.swift` — PDF
       branch: PDFKit text-layer first, render(2×)+OCR only for layerless pages,
       per-page sequential processing, pages concatenated in order (R3, R12)
-- [ ] T016 [US2] Extend `iOS/Ortho-iOS/Services/Scan/ScanHeuristics.swift` — statement
+- [X] T016 [US2] Extend `iOS/Ortho-iOS/Services/Scan/ScanHeuristics.swift` — statement
       half, porting `web/scripts/import/engine` conventions (R6): row parse from tables
       + line fallback, MM/DD + statement-period → year inference (dates.ts algorithm),
       credit/debit direction, payment/exclusion regex table (exclusions.ts +
       `PAYMENT THANK YOU`/`AUTOPAY`), duplicate key (calendar-day, amountCents) greedy
       matcher (FR-015 — key divergence from CLI documented in R6)
-- [ ] T017 [US2] Complete the statement arm of
+- [X] T017 [US2] Complete the statement arm of
       `iOS/Ortho-iOS/Services/Scan/ScanParser.swift` — ordered candidates, ≥1-row
       statement outcome (R5 rule 3), dedup + payment flags applied via T016
-- [ ] T018 [P] [US2] Create
+- [X] T018 [P] [US2] Create
       `iOS/Ortho-iOS/Features/Transactions/Scan/StatementInterstitialView.swift` and
       `ScanSummaryView.swift` per contracts/scan-ui-flow.md §Interstitial/§Summary
       (counts plural-aware, toggle default ON, Cancel discards session; summary Done
       dismisses + releases)
-- [ ] T019 [US2] Wizard chrome in
+- [X] T019 [US2] Wizard chrome in
       `iOS/Ortho-iOS/Features/Transactions/AddTransactionSheet.swift`: progress header
       `{i} of {n}`, `Add and next`/`Add and finish` (exactly one
       `appState.addTransaction` per accept, FR-009), `Skip`, toolbar `Stop`; server
       failure keeps the wizard on the failed row behind the standard rollback alert
-- [ ] T020 [US2] Complete the `ScanSession` state machine in
+- [X] T020 [US2] Complete the `ScanSession` state machine in
       `iOS/Ortho-iOS/Features/Transactions/Scan/ScanSession.swift`:
       interstitial→reviewing(cursor)→summary, dispositions, pre-skip of payment rows +
       (toggle-conditional) duplicates, counts; invariants per data-model.md
-- [ ] T021 [US2] Add US2 keys (`scan.interstitial.*`, `scan.wizard.*`,
+- [X] T021 [US2] Add US2 keys (`scan.interstitial.*`, `scan.wizard.*`,
       `scan.summary.*`) to `iOS/Ortho-iOS/Localizable.xcstrings` ×6 with plural
       variants; বাংলা Latin digits ride the existing locale
 
@@ -188,7 +188,7 @@ category/split cases green; `receipt-duplicate` shows the inline line.
 
 ### Tests for User Story 3 (write first)
 
-- [ ] T022 [US3] Extend `iOS/Ortho-iOSTests/ScanParserTests.swift`: `receipt-eur`
+- [X] T022 [US3] Extend `iOS/Ortho-iOSTests/ScanParserTests.swift`: `receipt-eur`
       (FR-014 — original amount, never foreign-as-USD), `receipt-duplicate`
       (`duplicateOf` claimed, FR-015), history-tier cases from fixture `context.history`
       (dominant category, ties→most recent; owners/split from most recent match; CLI
@@ -197,25 +197,25 @@ category/split cases green; `receipt-duplicate` shows the inline line.
 
 ### Implementation for User Story 3
 
-- [ ] T023 [P] [US3] Create `iOS/Ortho-iOS/Services/Scan/ScanInference.swift` —
+- [X] T023 [P] [US3] Create `iOS/Ortho-iOS/Services/Scan/ScanInference.swift` —
       merchant normalizer reuse, history matcher (frequency → recency), owners/split
       guess from most recent match, categorize rule table ported from
       `web/scripts/import/engine/categorize.ts` (tier 2), duplicate matcher hookup;
       pure, context-injected
-- [ ] T024 [P] [US3] Create `iOS/Ortho-iOS/Services/Scan/ScanRefiner.swift` —
+- [X] T024 [P] [US3] Create `iOS/Ortho-iOS/Services/Scan/ScanRefiner.swift` —
       `SystemLanguageModel` availability gate, `@Generable` merchant-cleanup +
       category-when-silent constrained to `TransactionCategory`, ~2 s timeout,
       input-unchanged on any failure (R4); disabled under `-uiDemoScan` and in tests
-- [ ] T025 [US3] Guessed affordances in
+- [X] T025 [US3] Guessed affordances in
       `iOS/Ortho-iOS/Features/Transactions/AddTransactionSheet.swift`: text3 `Guessed`
       label beside guessed fields' labels, cleared permanently per field on first edit
       (FR-016); VoiceOver "guessed value" labels (contract §Accessibility)
-- [ ] T026 [US3] Receipt duplicate caption above Add in
+- [X] T026 [US3] Receipt duplicate caption above Add in
       `iOS/Ortho-iOS/Features/Transactions/AddTransactionSheet.swift` —
       `scan.duplicate_line` with merchant + localized date, informational only; FX
       prefill path: candidate `currency != .usd` seeds the existing original-amount
       field via existing `Money` conversion (FR-014)
-- [ ] T027 [US3] Add US3 keys (`scan.guessed`, `scan.duplicate_line`) to
+- [X] T027 [US3] Add US3 keys (`scan.guessed`, `scan.duplicate_line`) to
       `iOS/Ortho-iOS/Localizable.xcstrings` ×6
 
 **Checkpoint**: all in-app behavior complete.
@@ -232,17 +232,17 @@ contains the scan shots per contracts/uidemo-scan.md.
 
 ### Implementation for User Story 4
 
-- [ ] T028 [US4] Web catalog parity: add the shared-key translations to
+- [X] T028 [US4] Web catalog parity: add the shared-key translations to
       `web/lib/i18n/*.ts` byte-identically where the catalog-parity contract requires,
       and extend `web/test/i18n/catalog-parity.test.ts` allowlists for iOS-only
       `scan.*` keys as designed in spec 013; then `cd web && npx tsc --noEmit && npm
       test` — ALL green locally (US4 #4). This is the only web change permitted
-- [ ] T029 [US4] `-uiDemoScan <fixture>` + `-uiDemoScanStep
+- [X] T029 [US4] `-uiDemoScan <fixture>` + `-uiDemoScanStep
       <interstitial|row|summary>` in `iOS/Ortho-iOS/Ortho_iOSApp.swift` (+
       `RootTabView`/`TransactionsView` presentation glue as needed): implies `-uiDemo`,
       injected referenceDate, real pipeline, refiner off, unknown fixture ⇒
       assertionFailure, `#if DEBUG` throughout (contracts/uidemo-scan.md)
-- [ ] T030 [US4] Extend `.github/workflows/ios-ci.yml` screenshot matrix:
+- [X] T030 [US4] Extend `.github/workflows/ios-ci.yml` screenshot matrix:
       `<lang>-scan-receipt.png` ×6 (`receipt-duplicate` fixture),
       `en|bn|ja-scan-{interstitial,row,summary}.png` (`statement-card` +
       `-uiDemoScanStep`), artifact naming per contract
@@ -289,6 +289,17 @@ contains the scan shots per contracts/uidemo-scan.md.
       Foundation-Models refinement on device) — report results; out of sandbox scope
 
 ---
+
+## Authoring notes (implementation)
+
+- The Services pipeline files (extractor/heuristics/parser/inference) were
+  authored as complete units within the US1 batch for file coherence; the
+  statement halves listed under US2/US3 landed in the same files. Tests and
+  expected-JSON were still authored before the implementation they lock.
+- New catalog keys use the repo's literal-English-key convention (not the
+  contract's illustrative `scan.*` names).
+- T028 required NO web catalog edits: all scan keys are iOS-only, which the
+  catalog-parity suite handles natively (verified green locally).
 
 ## Dependencies & Execution Order
 
