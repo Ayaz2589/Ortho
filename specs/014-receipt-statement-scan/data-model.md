@@ -38,7 +38,7 @@ One potential transaction (spec Key Entity "Parsed candidate").
 | `isPaymentRow` | `Bool` | FR-012 exclusion patterns matched |
 | `guesses` | `Set<GuessedField>` | which prefill fields are inferences (FR-016) |
 | `categoryGuess` | `TransactionCategory?` | R7 tiers; `nil` = form default |
-| `ownersGuess` | `[Person.ID]?` / `splitGuess: [Person.ID: Int64]?` | from history match; `nil` = form defaults |
+| `ownersGuess` | `[Person.ID]?` | owners of the most recent history match; `nil` = form defaults. (A `splitGuess` was considered and dropped: rescaling a historical custom split to a new amount is money math the form's own split editor already owns — the guess covers the owner set, the split method stays the form's default even.) |
 | `duplicateOf` | `Transaction.ID?` | at most one claimed existing transaction (FR-015) |
 
 `GuessedField`: `merchant | date | amount | category | owners | currency` — drives the

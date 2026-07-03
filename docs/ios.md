@@ -46,6 +46,13 @@ iOS/
 │   │   ├── Balances.swift           # balanceBetween — settle-up math, golden-vector-locked (spec 012)
 │   │   ├── InsightEngine.swift      # pure 8-rule recommendation engine, golden-vector-locked
 │   │   ├── Localizer.swift          # locale bridge for non-view formatters
+│   │   ├── Scan/                    # spec 014 — on-device receipt/statement scanning (pure pipeline)
+│   │   │   ├── ScanModels.swift         # ScanDocumentText / ParsedCandidate / ScanParseResult / ScanContext
+│   │   │   ├── ScanTextExtractor.swift  # Vision structured OCR (+ line-cluster fallback) & PDFKit text layer
+│   │   │   ├── ScanHeuristics.swift     # regex totals/dates/amounts; CLI-ported category/exclusion tables
+│   │   │   ├── ScanParser.swift         # receipt-vs-statement detection (R5) → candidates; deterministic
+│   │   │   ├── ScanInference.swift      # history-first category/owners guesses + duplicate claiming
+│   │   │   └── ScanRefiner.swift        # optional FoundationModels merchant cleanup (availability-gated)
 │   │   └── LegacyImporter.swift, TDBankMay2026Importer.swift   # DEBUG-only one-shot seeders
 │   ├── DesignSystem/
 │   │   ├── AppTheme.swift           # color tokens (bg/surface/text/text2/text3/hairline/accent/positive/destructive)
@@ -65,7 +72,10 @@ iOS/
 │   │   │                                    # DailySpendTrend, BudgetProgress, HousingSnapshot cards
 │   │   ├── Transactions/                    # TransactionsView, TransactionRow, Add/Detail/Filter/CopyPicker sheets,
 │   │   │   ├── TransactionSplits.swift      # vector-locked split math (spec 007) — mirror of web/lib/splits.ts
-│   │   │   └── TransactionFilters.swift     # vector-locked filtering (spec 006) — mirror of web/lib/transactionFilters.ts
+│   │   │   ├── TransactionFilters.swift     # vector-locked filtering (spec 006) — mirror of web/lib/transactionFilters.ts
+│   │   │   └── Scan/                        # spec 014 — scan UI: ScanSession state machine, document-camera
+│   │   │                                    # wrapper, statement interstitial + summary (wizard chrome lives
+│   │   │                                    # in AddTransactionSheet as its fourth prefill source)
 │   │   ├── Housing/                         # HousingView (count-aware), PropertyDetail/Content, Add sheets,
 │   │   │                                    # MortgageCards, MultifamilyCards, RentalCards
 │   │   ├── Insights/                        # InsightCard + InsightsCardStack (renders InsightEngine output)
@@ -191,6 +201,16 @@ raw values plus `"zh-Hans"`; defined in `Ortho_iOSApp.swift`, riding the same en
 path as the in-app language picker). This is what CI screenshots; locally, add the arguments under
 Product → Scheme → Edit Scheme → Run → Arguments. Compiled out of release builds
 (`Ortho_iOSApp.isUIDemo`, `RootTabView.selection`).
+
+**Scan demo (spec 014):** `-uiDemoScan <fixture>` (implies `-uiDemo`) feeds a bundled fixture from
+`Resources/ScanFixtures/` through the REAL extract→parse→infer pipeline against the demo store
+(seeded with anchor rows so duplicate detection fires) and opens the Transactions add sheet on the
+result — a receipt fixture prefills the form, a statement fixture lands on the interstitial;
+`-uiDemoScanStep <interstitial|row|summary>` advances the statement flow for screenshots. The
+Foundation-Models refiner is disabled here so shots are deterministic. The same fixtures are
+asserted field-by-field by `Ortho-iOSTests/ScanParserTests.swift` against their
+`<name>.expected.json` (loaded from the APP bundle — no test-target pbxproj resources). CI
+screenshots the scan flow per language as `<lang>-scan-<receipt|interstitial|row|summary>.png`.
 
 Prerequisite: create the gitignored config once:
 

@@ -68,7 +68,14 @@
 - Money renders through existing `Money` formatting (tabular, U+2212, never
   abbreviated). Dynamic type respected like the rest of the form.
 
-## New string catalog keys (binding names)
+## New string catalog keys
+
+> **Implementation note:** the repo's catalog convention is literal-English
+> keys (e.g. `"Scan"`, `"Filled from scan — review before adding"`), so the
+> dotted names below are illustrative identifiers, not the actual keys. The
+> shipped keys are the English strings named throughout this contract, added
+> to `Localizable.xcstrings` ×6 languages; all are iOS-only per the
+> catalog-parity suite's shared-key rules.
 
 `scan.capsule`, `scan.source.camera`, `scan.source.library`, `scan.source.file`,
 `scan.reading`, `scan.filled_caption`, `scan.duplicate_line %@ %@`,
