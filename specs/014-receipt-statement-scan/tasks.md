@@ -255,14 +255,14 @@ contains the scan shots per contracts/uidemo-scan.md.
 
 **Purpose**: the ONE push carrying all iOS work, then the CI loop (013 discipline).
 
-- [ ] T031 Pre-push review: `git status`/`git diff` over `iOS/**`,
+- [X] T031 Pre-push review: `git status`/`git diff` over `iOS/**`,
       `.github/workflows/ios-ci.yml`, `web/**` — exactly the staged work, fixtures
       present, no stray files, no golden-vector diffs (SC-007); logical commits per
       story are fine, **one push**
-- [ ] T032 `GH_TOKEN=placeholder gh run watch --exit-status`; on red:
+- [X] T032 `GH_TOKEN=placeholder gh run watch --exit-status`; on red:
       `gh run view --log-failed`, fix, re-push (fix-up pushes only) until **GREEN** —
       build + ScanParserTests + all 7 existing parity suites
-- [ ] T033 Download `simulator-screenshots`
+- [X] T033 Download `simulator-screenshots`
       (`gh api repos/Ayaz2589/Ortho/actions/runs/<run>/artifacts` →
       `.../artifacts/<id>/zip`); walk quickstart.md §3 checklist (translated, no
       overflow/tofu, Latin digits in বাংলা, guessed markers + duplicate line visible,
@@ -274,13 +274,13 @@ contains the scan shots per contracts/uidemo-scan.md.
 
 ## Phase 8: Polish & Cross-Cutting
 
-- [ ] T034 [P] PARITY.md: 014 note — scan = deliberate iOS-only input method (web
+- [X] T034 [P] PARITY.md: 014 note — scan = deliberate iOS-only input method (web
       equivalent: CLI ingest), ported-convention table incl. the duplicate-key
       divergence (R6), Reimbursement-never-pickable reaffirmed (FR-022)
-- [ ] T035 [P] Docs refresh: `docs/ios.md` (Services/Scan pipeline, fixtures,
+- [X] T035 [P] Docs refresh: `docs/ios.md` (Services/Scan pipeline, fixtures,
       `-uiDemoScan`, screenshot matrix), `docs/index.md` if the cross-cutting list
       needs the scan divergence, `CI-SETUP.local.md` (new screenshot names)
-- [ ] T036 Final gates: `cd web && npx tsc --noEmit && npm test` green; latest CI run
+- [X] T036 Final gates: `cd web && npx tsc --noEmit && npm test` green; latest CI run
       green; walk quickstart.md confirming every US validation satisfied or explicitly
       operator-pending; then mark the draft PR **ready for review** with story summary,
       screenshot links, and the operator-pending list
