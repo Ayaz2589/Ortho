@@ -172,17 +172,47 @@ enum ScanHeuristics {
 
     // MARK: - Receipt grand total
 
-    /// The labeled grand total: TOTAL / AMOUNT DUE / BALANCE DUE / GRAND
-    /// TOTAL — never SUBTOTAL, never zero. Receipts repeat totals near the
-    /// bottom, so the LAST labeled match wins.
+    private static let totalLabelPattern = "(?<!SUB)TOTAL\\b|AMOUNT DUE|BALANCE DUE"
+
+    /// A line that is nothing but one money token (an OCR column fragment).
+    static func isAmountOnly(_ line: String) -> Bool {
+        matches(line, pattern: "^\\s*(?:EUR|GBP|JPY|CNY|CAD|BDT)?\\s*[-$€£¥]*\\s?-?[0-9][0-9.,]*\\s*$")
+    }
+
+    /// The labeled grand total: TOTAL / AMOUNT DUE / BALANCE DUE — never
+    /// SUBTOTAL, never zero. Receipts repeat totals near the bottom, so the
+    /// LAST labeled match wins. OCR robustness (label and amount need not
+    /// share a line — structured OCR splits columns and tables):
+    ///   a) amount on the label's own line,
+    ///   b) else an amount-only neighbor line (after, then before),
+    ///   c) else — some label existed but no adjacent amount — the largest
+    ///      amount among amount-only lines (column-ordered transcripts).
     static func grandTotal(in lines: [String], defaultCurrency: Currency = .usd) -> AmountToken? {
         var found: AmountToken?
-        for line in lines {
-            let upper = line.uppercased()
-            guard matches(upper, pattern: "(?<!SUB)TOTAL\\b|AMOUNT DUE|BALANCE DUE") else { continue }
-            guard let amount = lastAmount(in: line, defaultCurrency: defaultCurrency),
-                  amount.minorUnits > 0 else { continue }
-            found = amount
+        var sawLabel = false
+        for (index, line) in lines.enumerated() {
+            guard matches(line.uppercased(), pattern: totalLabelPattern) else { continue }
+            sawLabel = true
+            if let amount = lastAmount(in: line, defaultCurrency: defaultCurrency),
+               amount.minorUnits > 0 {
+                found = amount
+                continue
+            }
+            for neighbor in [index + 1, index - 1] where lines.indices.contains(neighbor) {
+                let text = lines[neighbor]
+                guard isAmountOnly(text),
+                      let amount = lastAmount(in: text, defaultCurrency: defaultCurrency),
+                      amount.minorUnits > 0 else { continue }
+                found = amount
+                break
+            }
+        }
+        if found == nil, sawLabel {
+            found = lines.lazy
+                .filter { isAmountOnly($0) }
+                .compactMap { lastAmount(in: $0, defaultCurrency: defaultCurrency) }
+                .filter { $0.minorUnits > 0 }
+                .max { $0.minorUnits < $1.minorUnits }
         }
         return found
     }

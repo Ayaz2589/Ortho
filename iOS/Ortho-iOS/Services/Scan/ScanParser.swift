@@ -14,15 +14,22 @@ enum ScanParser {
     static func parse(_ document: ScanDocumentText, context: ScanContext) -> ScanParseResult {
         guard !document.isEmpty else { return .none }
 
-        let lineTexts = document.allLines.map(\.text)
-        let period = ScanHeuristics.statementPeriod(in: lineTexts)
+        // Structured OCR may hive tabular regions (a receipt's item list, a
+        // statement's rows) into tables and keep only the rest as transcript
+        // lines — so text searches (period, merchant, grand total) see BOTH,
+        // in per-page document order.
+        let texts = document.pages.flatMap { page in
+            page.lines.map(\.text)
+                + page.tables.flatMap { $0.rows.map { $0.joined(separator: "  ") } }
+        }
+        let period = ScanHeuristics.statementPeriod(in: texts)
         let rows = statementRows(in: document)
 
         if rows.count >= 3 {
             return .statement(candidates(from: rows, period: period, context: context))
         }
-        if let total = ScanHeuristics.grandTotal(in: lineTexts, defaultCurrency: context.defaultCurrency) {
-            return .receipt(receiptCandidate(total: total, lineTexts: lineTexts, context: context))
+        if let total = ScanHeuristics.grandTotal(in: texts, defaultCurrency: context.defaultCurrency) {
+            return .receipt(receiptCandidate(total: total, lineTexts: texts, context: context))
         }
         if !rows.isEmpty {
             return .statement(candidates(from: rows, period: period, context: context))

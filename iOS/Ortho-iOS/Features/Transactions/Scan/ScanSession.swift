@@ -63,8 +63,11 @@ final class ScanSession {
         dispositions.values.filter { $0 == .leftOutDuplicate }.count
     }
 
+    /// Non-nil only while reviewing — callers loop on this (the demo
+    /// auto-accept does literally), so it MUST go nil when the wizard ends.
     var currentCandidate: ParsedCandidate? {
-        queue.indices.contains(cursor) ? queue[cursor] : nil
+        guard phase == .reviewing, queue.indices.contains(cursor) else { return nil }
+        return queue[cursor]
     }
 
     var isLastRow: Bool { cursor >= queue.count - 1 }
