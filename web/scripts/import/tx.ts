@@ -12,7 +12,7 @@ import { filterTransactions } from '../../lib/transactionFilters'
 import { renderTable, renderDetail } from './engine/render'
 import { validateAmount, validateMerchant, validateCategory, parseDay, todayISO } from './engine/validate'
 import { validateCustomSplit } from './engine/split'
-import { computeShares, orderedOwnerIds, type SplitInput } from '../../lib/splits'
+import { computeShares, orderedOwnerIds, seedSplit, type SplitInput } from '../../lib/splits'
 import { parseFlags, flagStr as str, type Flags } from './engine/args'
 import type { Transaction, TransactionCategory, TransactionKind, Person } from '../../lib/types'
 
@@ -50,10 +50,14 @@ async function pickOwnersAndSplit(
 ): Promise<{ ownerIds: string[]; shares: Record<string, number> }> {
   people.forEach((u, i) => console.log(`  ${i + 1}. ${u.name}`))
   const sel = await rl.question('Owners (comma-separated numbers): ')
-  let ownerIds = sel
-    .split(',')
-    .map((s) => people[Number(s.trim()) - 1]?.id)
-    .filter((x): x is string => Boolean(x))
+  let ownerIds = [
+    ...new Set(
+      sel
+        .split(',')
+        .map((s) => people[Number(s.trim()) - 1]?.id)
+        .filter((x): x is string => Boolean(x))
+    ),
+  ]
   if (ownerIds.length === 0) ownerIds = [fallbackOwnerId]
 
   let split: SplitInput = { method: 'even' }
@@ -199,6 +203,11 @@ async function cmdEdit(flags: Flags, rl: readline.Interface): Promise<void> {
   console.log('\nCurrent:\n' + renderDetail(tx))
   console.log('\nEdit — blank keeps the current value.')
 
+  // Capture the stored split BEFORE any edits, so a no-op edit round-trips
+  // losslessly (matches the apps' seedSplit-based edit form).
+  const originalAmount = tx.amount_cents
+  const originalShares = { ...tx.shares }
+
   const m = (await rl.question(`Merchant [${tx.merchant}]: `)).trim()
   if (m) tx.merchant = validateMerchant(m)
   const a = (await rl.question(`Amount [${(tx.amount_cents / 100).toFixed(2)}]: `)).trim()
@@ -219,8 +228,25 @@ async function cmdEdit(flags: Flags, rl: readline.Interface): Promise<void> {
     tx.owner_ids = picked.ownerIds
     tx.shares = picked.shares
   } else {
-    // Re-derive an even split so shares always sum to the (possibly edited) amount.
-    tx.shares = computeShares(tx.amount_cents, orderedOwnerIds(tx.owner_ids), { method: 'even' })
+    // Owners kept — preserve the STORED split rather than flattening to even
+    // (the old behavior silently destroyed a custom split whenever the operator
+    // edited any other field). Reconstruct the split from the original shares:
+    const ordered = orderedOwnerIds(tx.owner_ids)
+    const seed = seedSplit(originalAmount, ordered, originalShares)
+    if (seed.method === 'even' || tx.amount_cents === originalAmount) {
+      // Even split, or amount unchanged: reapply the stored split as-is (an even
+      // split re-derives cleanly to the new amount; an unchanged custom split
+      // round-trips to the exact stored cents).
+      tx.shares = computeShares(tx.amount_cents, ordered, seed)
+    } else {
+      // Custom split AND the amount changed, so the stored cents no longer sum to
+      // the total. Preserve the per-owner RATIO (convert to percentages, which
+      // sum to 100 exactly) and recompute against the new amount — never silently
+      // flatten to even, never write a share/total mismatch.
+      const percents: Record<string, number> = {}
+      for (const oid of ordered) percents[oid] = ((originalShares[oid] ?? 0) / originalAmount) * 100
+      tx.shares = computeShares(tx.amount_cents, ordered, { method: 'percent', percents })
+    }
   }
   tx.updated_at = new Date().toISOString()
 

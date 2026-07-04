@@ -39,4 +39,9 @@ describe('parseDay / todayISO', () => {
   it('todayISO uses the injected clock at noon UTC', () => {
     expect(todayISO(new Date('2026-06-15T09:30:00Z'))).toBe('2026-06-15T12:00:00.000Z')
   })
+  it('todayISO uses the America/New_York day, not the UTC day (evening ET)', () => {
+    // 01:00Z on Jul 4 is 21:00 ET on Jul 3 — the row belongs to Jul 3, matching
+    // the noon-UTC-of-the-NY-day convention (regression guard for the UTC-day bug).
+    expect(todayISO(new Date('2026-07-04T01:00:00Z'))).toBe('2026-07-03T12:00:00.000Z')
+  })
 })
