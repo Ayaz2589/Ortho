@@ -66,6 +66,20 @@ func computeShares<ID: Hashable>(_ amountCents: Int64, _ owners: [ID], _ split: 
         leftover -= 1
         i += 1
     }
+    // Over-allocation guard: entered percents may total up to 100 + percentTolerance,
+    // so the floored bases can sum to MORE than amountCents (negative leftover). Reclaim
+    // the excess one cent per owner in list order, skipping owners already at zero so no
+    // share goes negative. Terminates because the positive bases sum to `assigned`
+    // (> amountCents >= 0), leaving enough reclaimable cents. No-op for even splits and
+    // percents totalling <= 100, so the golden vectors are unchanged.
+    while leftover < 0 {
+        let id = owners[i % n]
+        if (out[id] ?? 0) > 0 {
+            out[id, default: 0] -= 1
+            leftover += 1
+        }
+        i += 1
+    }
     return out
 }
 

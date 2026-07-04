@@ -327,6 +327,9 @@ const SPLIT_CASES: SplitCase[] = [
   { name: 'percent-clean', amountCents: 10000, owners: ['a', 'b'], split: { method: 'percent', percents: { a: 70, b: 30 } } },
   { name: 'percent-uneven-remainder', amountCents: 10000, owners: ['a', 'b', 'c'], split: { method: 'percent', percents: { a: 33.33, b: 33.33, c: 33.34 } } },
   { name: 'percent-remainder-to-first', amountCents: 100, owners: ['a', 'b', 'c'], split: { method: 'percent', percents: { a: 33.33, b: 33.33, c: 33.34 } } },
+  // Percents total 100 + tolerance (100.4): floored bases over-allocate, so the
+  // reclaim path must pull shares back down to sum exactly to amountCents.
+  { name: 'percent-over-tolerance-reclaim', amountCents: 10000, owners: ['a', 'b'], split: { method: 'percent', percents: { a: 50.4, b: 50 } } },
   { name: 'value-exact', amountCents: 10000, owners: ['a', 'b'], split: { method: 'value', values: { a: 6000, b: 4000 } } },
   { name: 'value-uneven', amountCents: 10001, owners: ['a', 'b'], split: { method: 'value', values: { a: 5001, b: 5000 } } },
   { name: 'order-matters', amountCents: 10001, owners: ['b', 'a'], split: { method: 'even' } },

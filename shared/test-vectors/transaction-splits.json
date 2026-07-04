@@ -157,6 +157,25 @@
       }
     },
     {
+      "name": "percent-over-tolerance-reclaim",
+      "amountCents": 10000,
+      "owners": [
+        "a",
+        "b"
+      ],
+      "split": {
+        "method": "percent",
+        "percents": {
+          "a": 50.4,
+          "b": 50
+        }
+      },
+      "expected": {
+        "a": 5020,
+        "b": 4980
+      }
+    },
+    {
       "name": "value-exact",
       "amountCents": 10000,
       "owners": [

@@ -56,6 +56,30 @@ describe('computeShares', () => {
   it('no owners → empty', () => {
     expect(computeShares(100, [], { method: 'even' })).toEqual({})
   })
+
+  it('reclaims cents when percents total just over 100 (within tolerance)', () => {
+    // 50.4 + 50 = 100.4 passes validateSplit (±0.5) but floors to 5040+5000=10040,
+    // 40¢ over. The reclaim path must pull shares back to sum exactly to the amount.
+    const r = computeShares(10000, ['a', 'b'], { method: 'percent', percents: { a: 50.4, b: 50 } })
+    expect(sum(r)).toBe(10000)
+    expect(r).toEqual({ a: 5020, b: 4980 })
+  })
+
+  it('never emits a negative share for any accepted percent split', () => {
+    // Sweep amounts and owner counts with the maximum accepted over-allocation
+    // (one owner carrying the full +0.5 tolerance), which is the worst case for
+    // driving a low-percent owner below zero.
+    for (const amt of [1, 99, 100, 1000, 10001, 33333, 999999]) {
+      for (const owners of [['a', 'b'], ['a', 'b', 'c'], ['a', 'b', 'c', 'd']]) {
+        const each = 100 / owners.length
+        const percents: Record<string, number> = {}
+        owners.forEach((id, idx) => (percents[id] = idx === 0 ? each + 0.5 : each))
+        const r = computeShares(amt, owners, { method: 'percent', percents })
+        expect(sum(r)).toBe(amt)
+        for (const id of owners) expect(r[id]).toBeGreaterThanOrEqual(0)
+      }
+    }
+  })
 })
 
 describe('validateSplit', () => {
