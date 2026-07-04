@@ -1,0 +1,62 @@
+# Web CI — typechecks, tests, and vector-drift-checks the Next.js app on Linux.
+# Complements ios-ci.yml: before this, the web app had NO CI gate, so a failing
+# `tsc` or a stale golden vector could merge silently (only `npm test` was ever
+# run, and locally). Runs on any change to web/ or the shared vectors it asserts.
+name: Web CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "shared/test-vectors/**"
+      - ".github/workflows/web-ci.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - "shared/test-vectors/**"
+      - ".github/workflows/web-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: web-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck-and-test:
+    name: Typecheck, test & vector drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
+
+      # Golden vectors are generated from the TS engines and asserted by BOTH the
+      # web and iOS parity suites. If a change touched a parity engine without
+      # regenerating, the committed JSON drifts — catch it here rather than at the
+      # macOS iOS run.
+      - name: Check golden-vector drift
+        run: |
+          npm run gen:vectors
+          if ! git diff --quiet ../shared/test-vectors; then
+            echo "::error::shared/test-vectors is stale — run 'cd web && npm run gen:vectors' and commit the result."
+            git diff --stat ../shared/test-vectors
+            exit 1
+          fi

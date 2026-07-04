@@ -17,6 +17,9 @@ import { DashboardDesktop } from '@/components/web/DashboardDesktop'
 import { TransactionsDesktop } from '@/components/web/TransactionsDesktop'
 import es from '@/lib/i18n/es'
 import ja from '@/lib/i18n/ja'
+import bn from '@/lib/i18n/bn'
+import zh from '@/lib/i18n/zh'
+import ko from '@/lib/i18n/ko'
 
 function dataset(date: string) {
   return {
@@ -89,6 +92,9 @@ const DASH_KEYS = ['Dashboard', 'Income', 'Expenses', 'Housing'] as const
 for (const [language, catalog] of [
   ['Español', es],
   ['日本語', ja],
+  ['বাংলা', bn],
+  ['简体中文', zh],
+  ['한국어', ko],
 ] as const) {
   describe(`dashboard chrome under ${language}`, () => {
     it('renders catalog values with no English fallback', async () => {
