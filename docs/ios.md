@@ -46,6 +46,13 @@ iOS/
 │   │   ├── Balances.swift           # balanceBetween — settle-up math, golden-vector-locked (spec 012)
 │   │   ├── InsightEngine.swift      # pure 8-rule recommendation engine, golden-vector-locked
 │   │   ├── Localizer.swift          # locale bridge for non-view formatters
+│   │   ├── Scan/                    # spec 014 — on-device receipt/statement scanning (pure pipeline)
+│   │   │   ├── ScanModels.swift         # ScanDocumentText / ParsedCandidate / ScanParseResult / ScanContext
+│   │   │   ├── ScanTextExtractor.swift  # Vision structured OCR (+ line-cluster fallback) & PDFKit text layer
+│   │   │   ├── ScanHeuristics.swift     # regex totals/dates/amounts; CLI-ported category/exclusion tables
+│   │   │   ├── ScanParser.swift         # receipt-vs-statement detection (R5) → candidates; deterministic
+│   │   │   ├── ScanInference.swift      # history-first category/owners guesses + duplicate claiming
+│   │   │   └── ScanRefiner.swift        # optional FoundationModels merchant cleanup (availability-gated)
 │   │   └── LegacyImporter.swift, TDBankMay2026Importer.swift   # DEBUG-only one-shot seeders
 │   ├── DesignSystem/
 │   │   ├── AppTheme.swift           # color tokens (bg/surface/text/text2/text3/hairline/accent/positive/destructive)
@@ -65,7 +72,10 @@ iOS/
 │   │   │                                    # DailySpendTrend, BudgetProgress, HousingSnapshot cards
 │   │   ├── Transactions/                    # TransactionsView, TransactionRow, Add/Detail/Filter/CopyPicker sheets,
 │   │   │   ├── TransactionSplits.swift      # vector-locked split math (spec 007) — mirror of web/lib/splits.ts
-│   │   │   └── TransactionFilters.swift     # vector-locked filtering (spec 006) — mirror of web/lib/transactionFilters.ts
+│   │   │   ├── TransactionFilters.swift     # vector-locked filtering (spec 006) — mirror of web/lib/transactionFilters.ts
+│   │   │   └── Scan/                        # spec 014 — scan UI: ScanSession state machine, the custom AVFoundation scan
+│   │   │                                    # camera (`ScanCameraView`), statement interstitial + summary (wizard chrome lives
+│   │   │                                    # in AddTransactionSheet as its fourth prefill source)
 │   │   ├── Housing/                         # HousingView (count-aware), PropertyDetail/Content, Add sheets,
 │   │   │                                    # MortgageCards, MultifamilyCards, RentalCards
 │   │   ├── Insights/                        # InsightCard + InsightsCardStack (renders InsightEngine output)
@@ -109,7 +119,7 @@ iOS/
 
 ### Test-build feature flags (spec 015)
 
-A **Developer** section in `SettingsView` exposes two toggles — **Use test data** and **Bypass auth** — that let a tester exercise the app on a disposable in-memory dataset without ever writing to the live shared backend.
+A **Feature flags** section in `SettingsView` exposes two toggles — **Use test data** and **Bypass auth** — that let a tester exercise the app on a disposable in-memory dataset without ever writing to the live shared backend.
 - **Gating:** the section renders only when `Config/TestBuild.isTestBuild` is true — `#if DEBUG` OR a TestFlight `sandboxReceipt` — so it shows on DEBUG + TestFlight and is inert in an App Store release. `Config/FeatureFlags` reads the `@AppStorage` keys `ff_useTestData` / `ff_bypassAuth` but **force-returns `false` off a test build**, so a value written on a Debug/TestFlight install can never flip behavior in App Store (FR-003; injectable `isTestBuild`/`defaults` for tests).
 - **Seeding + auth:** `Ortho_iOSApp.useSeededData` = `isUIDemo || FeatureFlags.effectiveUseTestData()` (bypass implies test data). When true it constructs `AppState(testDataEnabled: true)` (sample-seeded), renders `RootTabView` directly, and **skips `observeAuthChanges()`** — no auth, no server traffic. Flags apply at launch (relaunch to apply, like `-uiDemo`).
 - **Isolation:** `AppState.testDataEnabled` guards the network `Task` in *every* optimistic mutator and early-returns `loadAllFromServer`, so test-mode reads/writes stay local (this also fixes the old `-uiDemo` "adds a row that deletes itself" bug). The refreshed sample dataset (`Person.sample`, modernized `Transaction.sample` with `paidBy` + a `.transfer` + a ~3-month span, `Budget.sample`, `RentalPayment.sample` + a rental `Property.sample`) is Person-keyed so balances/splits resolve. Covered by `Ortho-iOSTests/FeatureFlagsTests.swift`. Outside the golden-vector harness (PARITY.md).
@@ -199,6 +209,16 @@ path as the in-app language picker). This is what CI screenshots; locally, add t
 Product → Scheme → Edit Scheme → Run → Arguments. Compiled out of release builds
 (`Ortho_iOSApp.isUIDemo`, `RootTabView.selection`).
 
+**Scan demo (spec 014):** `-uiDemoScan <fixture>` (implies `-uiDemo`) feeds a bundled fixture from
+`Resources/ScanFixtures/` through the REAL extract→parse→infer pipeline against the demo store
+(seeded with anchor rows so duplicate detection fires) and opens the Transactions add sheet on the
+result — a receipt fixture prefills the form, a statement fixture lands on the interstitial;
+`-uiDemoScanStep <interstitial|row|summary>` advances the statement flow for screenshots. The
+Foundation-Models refiner is disabled here so shots are deterministic. The same fixtures are
+asserted field-by-field by `Ortho-iOSTests/ScanParserTests.swift` against their
+`<name>.expected.json` (loaded from the APP bundle — no test-target pbxproj resources). CI
+screenshots the scan flow per language as `<lang>-scan-<receipt|interstitial|row|summary>.png`.
+
 Prerequisite: create the gitignored config once:
 
 ```sh
@@ -252,6 +272,34 @@ There are **no Makefile targets for iOS** — the root `Makefile` only wraps the
 - `iOS/build/`, `iOS/build-device/`, `iOS/temp/`, and `Resources/legacy-import.json` are gitignored local artifacts / personal financial data — never commit or rely on them.
 - FX rates come from floatrates.com with hardcoded fallbacks; rates refresh at most once per launch when the 24h cache is stale (no foreground refresh).
 - `LegacyImporter` / `TDBankMay2026Importer` are DEBUG-only one-shot seeders scheduled for deletion — don't build on them.
+- **Scan (spec 014) is deliberately forgiving on real-world captures** (post-T037/T041
+  device feedback, 2026-07-03): after one-line statement rows (`MM/DD`, month-name, or
+  description-first joins), STACKED app-list rows reconstruct a photographed banking
+  app/website (each transaction spread over 2–3 OCR lines with its own bare-date line;
+  this tier outranks the grand total so a "Total balance" header can't collapse a list
+  into one receipt). Then: labeled grand total → receipt; any money-shaped text →
+  best-effort prefill with merchant/amount/date ALL tagged Guessed. Only truly
+  money-free text shows "Couldn't read this", and on capable hardware
+  `ScanRefiner.rescue` first hands the raw OCR text to on-device Foundation Models
+  (never in fixtures or `-uiDemoScan`). In DEBUG builds the failure state grows a
+  "What the scan read" disclosure (plus an os_log line, category `scan`) so a failing
+  photo can be debugged on the device and turned into a fixture. Remember: synthetic
+  fixtures passing in CI ≠ real photos working — lock any new real-world shape with a
+  fixture (`statement-screenshot`, `receipt-no-total`, `statement-app-list`).
+- **The scan camera is a custom AVFoundation view** (`ScanCameraView`, post-T041 — the
+  VisionKit document camera auto-fired before users lined up the shot): the shutter
+  enables only when live fast-OCR sees readable text, auto-capture needs ~2.5 s of
+  sustained readability, and captures are deskewed via document segmentation. One
+  capture per camera session; multi-page statements go through the PDF/file source.
+  - **Gotcha — the live-OCR frame must be oriented.** `AVCaptureVideoDataOutput`
+    delivers sensor-native *landscape* buffers, so a portrait-held receipt's text is
+    sideways to `VNRecognizeText`; without a `CGImagePropertyOrientation` it finds no
+    lines and the shutter **never arms**. The gate feeds the handler an orientation
+    derived from the **interface** orientation (`.portrait → .right`), not the
+    accelerometer/`RotationCoordinator` horizon angle — interface orientation stays
+    upright-stable when the phone lies flat over a receipt (the primary posture),
+    where gravity's roll is ambiguous. Captured once at open; a mid-session rotation
+    keeps the launch orientation. The photo path is separate (EXIF + `orientationNormalized`).
 
 ## 9. Cross-links
 

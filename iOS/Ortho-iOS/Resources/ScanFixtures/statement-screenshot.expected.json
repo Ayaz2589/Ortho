@@ -1,0 +1,80 @@
+{
+  "kind": "statement",
+  "context": {
+    "referenceDate": "2026-07-03",
+    "existing": [],
+    "history": []
+  },
+  "candidates": [
+    {
+      "merchantRaw": "UBER TRIP HELP.UBER.COM",
+      "merchant": "UBER TRIP HELP.UBER.COM",
+      "date": "2026-07-01",
+      "amountCents": 2451,
+      "direction": "debit",
+      "currency": "usd",
+      "originalAmount": null,
+      "isPaymentRow": false,
+      "categoryGuess": "transit",
+      "ownersGuess": null,
+      "duplicateOf": null,
+      "guesses": ["category"]
+    },
+    {
+      "merchantRaw": "STARBUCKS COFFEE",
+      "merchant": "STARBUCKS COFFEE",
+      "date": "2026-06-30",
+      "amountCents": 645,
+      "direction": "debit",
+      "currency": "usd",
+      "originalAmount": null,
+      "isPaymentRow": false,
+      "categoryGuess": "coffee",
+      "ownersGuess": null,
+      "duplicateOf": null,
+      "guesses": ["category"]
+    },
+    {
+      "merchantRaw": "AMZN MKTP US*Z12AB3",
+      "merchant": "AMZN MKTP US*Z12AB3",
+      "date": "2026-06-28",
+      "amountCents": 5820,
+      "direction": "debit",
+      "currency": "usd",
+      "originalAmount": null,
+      "isPaymentRow": false,
+      "categoryGuess": null,
+      "ownersGuess": null,
+      "duplicateOf": null,
+      "guesses": []
+    },
+    {
+      "merchantRaw": "NETFLIX.COM",
+      "merchant": "NETFLIX.COM",
+      "date": "2026-06-27",
+      "amountCents": 2299,
+      "direction": "debit",
+      "currency": "usd",
+      "originalAmount": null,
+      "isPaymentRow": false,
+      "categoryGuess": "subs",
+      "ownersGuess": null,
+      "duplicateOf": null,
+      "guesses": ["category"]
+    },
+    {
+      "merchantRaw": "ONLINE PAYMENT - THANK YOU",
+      "merchant": "ONLINE PAYMENT - THANK YOU",
+      "date": "2026-06-25",
+      "amountCents": 50000,
+      "direction": "credit",
+      "currency": "usd",
+      "originalAmount": null,
+      "isPaymentRow": true,
+      "categoryGuess": null,
+      "ownersGuess": null,
+      "duplicateOf": null,
+      "guesses": []
+    }
+  ]
+}

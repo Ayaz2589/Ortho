@@ -1,0 +1,30 @@
+{
+  "kind": "statement",
+  "context": {
+    "referenceDate": "2026-07-03",
+    "existing": [],
+    "history": []
+  },
+  "candidates": [
+    { "merchantRaw": "H MART", "merchant": "H MART", "date": "2026-06-02",
+      "amountCents": 6320, "direction": "debit", "currency": "usd",
+      "originalAmount": null, "isPaymentRow": false,
+      "categoryGuess": "groceries", "ownersGuess": null, "duplicateOf": null,
+      "guesses": ["category"] },
+    { "merchantRaw": "EXXON MOBIL", "merchant": "EXXON MOBIL", "date": "2026-06-06",
+      "amountCents": 3875, "direction": "debit", "currency": "usd",
+      "originalAmount": null, "isPaymentRow": false,
+      "categoryGuess": "fuel", "ownersGuess": null, "duplicateOf": null,
+      "guesses": ["category"] },
+    { "merchantRaw": "DUNKIN", "merchant": "DUNKIN", "date": "2026-06-09",
+      "amountCents": 425, "direction": "debit", "currency": "usd",
+      "originalAmount": null, "isPaymentRow": false,
+      "categoryGuess": "coffee", "ownersGuess": null, "duplicateOf": null,
+      "guesses": ["category"] },
+    { "merchantRaw": "VERIZON WIRELESS", "merchant": "VERIZON WIRELESS", "date": "2026-06-11",
+      "amountCents": 7500, "direction": "debit", "currency": "usd",
+      "originalAmount": null, "isPaymentRow": false,
+      "categoryGuess": "utilities", "ownersGuess": null, "duplicateOf": null,
+      "guesses": ["category"] }
+  ]
+}

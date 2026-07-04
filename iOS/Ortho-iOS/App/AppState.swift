@@ -152,6 +152,25 @@ final class AppState {
     private static let fxStaleAfter: TimeInterval = 24 * 60 * 60
     private static let fxURL = URL(string: "https://www.floatrates.com/daily/usd.json")!
 
+    // MARK: - UI demo (DEBUG launch arguments — see docs/ios.md §6)
+
+    #if DEBUG
+    /// True when launched with `-uiDemo`: the sample store is local-only;
+    /// optimistic writes must never hop to the (dummy-configured) server.
+    var isUIDemoSession = false
+    /// `-uiDemoScan <fixture>` / `-uiDemoScanStep <step>` (spec 014): feed a
+    /// bundled fixture through the real scan pipeline for CI screenshots.
+    var uiDemoScanFixture: String?
+    var uiDemoScanStep: String?
+    /// Fixed "now" for demo scan parsing — fixtures and their expected
+    /// duplicates are pinned to calendar days around this date.
+    static let uiDemoScanReferenceDate: Date = {
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        return utc.date(from: DateComponents(year: 2026, month: 7, day: 3, hour: 12)) ?? .now
+    }()
+    #endif
+
     // MARK: - Init
 
     init(users: [User] = User.sample,
@@ -347,6 +366,11 @@ final class AppState {
         transactions.append(tx)
         // Test-data mode is strictly local — never hit the live backend (spec 015).
         guard !testDataEnabled else { return }
+        #if DEBUG
+        // Demo sessions are local-only — a sync against the dummy config
+        // would fail and roll the row back mid-screenshot (spec 014 wizard).
+        if isUIDemoSession { return }
+        #endif
         Task {
             do {
                 try await transactionsAPI.create(tx)
@@ -366,6 +390,9 @@ final class AppState {
         let previous = transactions[idx]
         transactions[idx] = tx
         guard !testDataEnabled else { return }
+        #if DEBUG
+        if isUIDemoSession { return }  // demo sessions are local-only
+        #endif
         Task {
             do {
                 try await transactionsAPI.update(tx, previous: previous)
@@ -385,6 +412,9 @@ final class AppState {
     func deleteTransaction(_ tx: Transaction) {
         transactions.removeAll { $0.id == tx.id }
         guard !testDataEnabled else { return }
+        #if DEBUG
+        if isUIDemoSession { return }  // demo sessions are local-only
+        #endif
         Task {
             do {
                 try await transactionsAPI.delete(id: tx.id)

@@ -239,6 +239,20 @@ These shape which rows exist and what the apps display, but have no cross-surfac
   `dashboard-month-scope.json`; see feature `011`).
 - **CLI only:** bank detection + per-bank PDF/CSV parsers (`profiles/*`), statement reconciliation, dedupe,
   merchant→category heuristics, exclusions, and `--admin` service-role mode.
+- **iOS only (spec `014`): receipt & statement scanning** — an *input method*, not a product-surface
+  divergence: a Scan capsule on the add form runs on-device OCR (camera / Photo Library / PDF via Files)
+  and prefills the existing form (receipt) or drives a sequential review wizard (statement); every save
+  goes through the same optimistic add path as manual entry, so nothing downstream diverges. The
+  web/desktop equivalent for statements is the CLI's `make ingest`. The statement half deliberately
+  **ports the CLI ingest conventions** (`iOS/Ortho-iOS/Services/Scan/ScanHeuristics.swift` mirrors
+  `web/scripts/import/engine/{dates,categorize,exclusions}.ts`: noon-UTC year-inferred posting dates,
+  the ordered merchant→category regex table, the card-payment exclusion patterns) — these tables are
+  convention mirrors to keep in sync BY HAND (they are input heuristics, not vectored finance math; the
+  parser is locked instead by its own fixture suite `ScanParserTests` + `Resources/ScanFixtures/`).
+  Two deliberate deltas from the CLI: the duplicate key is **(calendar day, amount)** household-wide —
+  a scanned receipt has no reliable source card, unlike an import run — and an unmatched merchant keeps
+  the form's default category instead of the CLI's `entertainment` fallback. Reimbursement remains
+  unpickable: card-payment/transfer statement rows are flagged and default-skipped, never expenses.
 - **Test-build feature flags (spec 015) — intentional per-surface gating divergence.** A Settings →
   Developer section (Use test data + Bypass auth) exists on both apps but is gated by *different*
   mechanisms because the platforms differ, and this is deliberate, not drift: iOS gates at

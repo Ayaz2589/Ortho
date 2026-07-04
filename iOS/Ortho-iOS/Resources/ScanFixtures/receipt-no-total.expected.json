@@ -1,0 +1,24 @@
+{
+  "kind": "receipt",
+  "context": {
+    "referenceDate": "2026-07-03",
+    "existing": [],
+    "history": []
+  },
+  "candidates": [
+    {
+      "merchantRaw": "BODEGA MARKET",
+      "merchant": "BODEGA MARKET",
+      "date": "2026-07-02",
+      "amountCents": 1350,
+      "direction": "debit",
+      "currency": "usd",
+      "originalAmount": null,
+      "isPaymentRow": false,
+      "categoryGuess": null,
+      "ownersGuess": null,
+      "duplicateOf": null,
+      "guesses": ["merchant", "amount", "date"]
+    }
+  ]
+}

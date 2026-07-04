@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/015-test-feature-flags/plan.md`
+`specs/014-receipt-statement-scan/plan.md`
 <!-- SPECKIT END -->
 
 ## Project documentation

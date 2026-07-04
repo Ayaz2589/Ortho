@@ -103,6 +103,10 @@ struct RootTabView: View {
            let tab = OrthoTab(rawValue: args[i + 1]) {
             return tab
         }
+        // -uiDemoScan drives the add sheet on the Transactions tab (spec 014).
+        if args.contains("-uiDemoScan") {
+            return .transactions
+        }
         #endif
         return .dashboard
     }()

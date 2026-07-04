@@ -74,7 +74,7 @@ shared TS functions but is deliberately **outside** the golden-vector harness.
 2. **Read `PARITY.md`** — the parity matrix and divergences; you will need it before touching any
    shared logic.
 3. **Read the root `CLAUDE.md`** — it points at the active feature plan (currently
-   `specs/012-household-reimbursement/plan.md`) and session-continuity notes
+   `specs/014-receipt-statement-scan/plan.md`) and session-continuity notes
    (`.claude/context-summaries/latest.md` if it exists).
 4. **Skim `.specify/memory/constitution.md`** — the design/testing constitution every plan gates
    on (tokens-only design, calm-over-dense, loss never red, test-first with golden vectors).
@@ -85,7 +85,7 @@ shared TS functions but is deliberately **outside** the golden-vector harness.
    screenshots on every push touching `iOS/**` or `shared/test-vectors/**` (see `docs/ios.md` §6).
 6. **Set up web**: `cd web && npm install && npm test` (Node 22 per root `.nvmrc`; on Linux ARM
    you may need `@rolldown/binding-linux-arm64-gnu` since macOS-installed `node_modules` lacks
-   Linux bindings). Expect the full suite green (619 tests as of 2026-07-02).
+   Linux bindings). Expect the full suite green (720 tests as of 2026-07-02).
 7. **Check env/credentials**: `web/.env.local` (gitignored) needs `NEXT_PUBLIC_SUPABASE_URL` +
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`; iOS needs the gitignored
    `iOS/Ortho-iOS/App/SupabaseConfig.swift` (create from the committed `.template`). This backend
@@ -93,7 +93,7 @@ shared TS functions but is deliberately **outside** the golden-vector harness.
 8. **If changing pure finance logic**: edit the TS side, `cd web && npm run gen:vectors`, mirror
    the change in Swift, run both test suites, and reconcile `PARITY.md`.
 9. **If adding a feature**: follow the Spec Kit flow (`specify → plan → tasks → implement`) into a
-   new numbered `specs/NNN-…/` directory; existing specs `001`–`012` show the shape.
+   new numbered `specs/NNN-…/` directory; existing specs `001`–`015` show the shape.
 10. **Then** open the subsystem doc (Section 3) for the area you're working in.
 
 ## 5. Cross-cutting concerns
@@ -128,7 +128,7 @@ shared TS functions but is deliberately **outside** the golden-vector harness.
   every plan gates on `.specify/memory/constitution.md`; `.specify/feature.json` + root
   `CLAUDE.md` point at the active feature; completed specs add rows to `PARITY.md`.
 - **Tooling boundaries.** The root `Makefile` is CLI-only (`ingest`, `ingest-help`, `tx-list`,
-  `tx-add`, `tx-edit`, `tx-rm` — thin `cd web && npx tsx scripts/import/…` wrappers); there are
+  `tx-add`, `tx-edit`, `tx-rm`, `repair-dates` — thin `cd web && npx tsx scripts/import/…` wrappers); there are
   **no iOS Make targets**. Node is pinned to 22 (`.nvmrc`). Everything JS runs on Linux;
   iOS build/test is macOS/Xcode-only.
 - **Trust order for docs.** Source code and `PARITY.md` outrank older docs: `iOS/ARCHITECTURE.md`

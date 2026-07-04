@@ -118,6 +118,30 @@ jobs:
           for TAB in dashboard transactions housing settings; do snap en "$TAB"; done
           for L in bn es ja zh-Hans ko; do snap "$L" dashboard; snap "$L" settings; done
           for L in bn ja; do snap "$L" transactions; snap "$L" housing; done
+          # Scan flow (spec 014): -uiDemoScan feeds a bundled fixture through
+          # the REAL parse pipeline (contracts/uidemo-scan.md). The receipt
+          # shot shows the prefilled form + Guessed markers + duplicate line;
+          # the statement fixture covers interstitial / wizard row / summary.
+          # OCR + sheet presentation need a beat longer than the tab shots.
+          snap_scan() {
+            local L="$1" FIXTURE="$2" STEP="$3" NAME="$4"
+            local ARGS=(-uiDemoScan "$FIXTURE")
+            if [ -n "$STEP" ]; then ARGS+=(-uiDemoScanStep "$STEP"); fi
+            if [ "$L" != "en" ]; then ARGS+=(-uiDemoLanguage "$L"); fi
+            xcrun simctl launch "$UDID" "$BUNDLE_ID" "${ARGS[@]}"
+            sleep 10
+            xcrun simctl io "$UDID" screenshot "screenshots/$L-scan-$NAME.png"
+            xcrun simctl terminate "$UDID" "$BUNDLE_ID" || true
+          }
+          for L in en bn es ja zh-Hans ko; do snap_scan "$L" receipt-duplicate "" receipt; done
+          # Forgiving fallback tier (post-T037): unlabeled total prefills
+          # best-effort with Guessed tags on merchant, amount, AND date.
+          snap_scan en receipt-no-total "" fallback
+          for L in en bn ja; do
+            snap_scan "$L" statement-card ""        interstitial
+            snap_scan "$L" statement-card row       row
+            snap_scan "$L" statement-card summary   summary
+          done
           ls -la screenshots/
 
       - name: Upload screenshots

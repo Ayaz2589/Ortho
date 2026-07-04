@@ -1,0 +1,24 @@
+{
+  "kind": "receipt",
+  "context": {
+    "referenceDate": "2026-07-03",
+    "existing": [],
+    "history": []
+  },
+  "candidates": [
+    {
+      "merchantRaw": "SAKAGURA",
+      "merchant": "SAKAGURA",
+      "date": "2026-06-28",
+      "amountCents": 7500,
+      "direction": "debit",
+      "currency": "usd",
+      "originalAmount": null,
+      "isPaymentRow": false,
+      "categoryGuess": "dining",
+      "ownersGuess": null,
+      "duplicateOf": null,
+      "guesses": ["category"]
+    }
+  ]
+}

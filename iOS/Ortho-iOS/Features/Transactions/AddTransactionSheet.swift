@@ -1,4 +1,6 @@
 import SwiftUI
+import PhotosUI
+import UniformTypeIdentifiers
 
 /// Modal sheet for adding a transaction (expense or income).
 ///
@@ -65,6 +67,29 @@ struct AddTransactionSheet: View {
 
     /// Drives the "Copy from recent" picker sheet. Add-mode only.
     @State private var showingCopyPicker: Bool = false
+
+    // MARK: Scan state (spec 014) — the fourth prefill source. The session
+    // lives here so it (and all capture data) dies with the sheet (FR-003).
+    @State private var scanSession = ScanSession()
+    /// Which prefilled fields are inferences; drives the "Guessed" tags.
+    @State private var guessedFields: Set<GuessedField> = []
+    /// The candidate whose values are currently applied — guess tags clear
+    /// when the user's edit moves a field AWAY from the applied value.
+    @State private var appliedScan: ParsedCandidate?
+    @State private var appliedAmountText: String = ""
+    /// The owner set apply() actually wrote (the guess INTERSECTED with
+    /// current membership) — the clear-guard must compare against this, not
+    /// the raw guess, or apply()'s own mutation strips the tag.
+    @State private var appliedOwners: Set<User.ID> = []
+    @State private var scanCaptionVisible = false
+    /// Resolved "Looks like a duplicate of …" line (receipt path, FR-015).
+    @State private var duplicateNote: String?
+    @State private var showingDocCamera = false
+    @State private var photosPickerPresented = false
+    @State private var photoItem: PhotosPickerItem?
+    @State private var fileImporterPresented = false
+    /// -uiDemoScan fixture already fed through the pipeline (DEBUG demo).
+    @State private var demoScanStarted = false
 
     @FocusState private var amountFocused: Bool
 
@@ -251,18 +276,110 @@ struct AddTransactionSheet: View {
     private var sources:       [String] { kind == .income ? Self.incomeSources : expenseSources }
 
     var body: some View {
+        Group {
+            switch scanSession.phase {
+            case .interstitial:
+                // Statement path: interstitial replaces the form body until
+                // Start review (FR-007). Cancel discards the session only —
+                // the form underneath is untouched.
+                StatementInterstitialView(session: scanSession) {
+                    scanSession.reset()
+                }
+            case .summary:
+                ScanSummaryView(session: scanSession) {
+                    scanSession.reset()
+                    dismiss()
+                }
+            default:
+                formBody
+            }
+        }
+        .onChange(of: scanSession.phase) { _, phase in
+            switch phase {
+            case .receiptPrefilled:
+                if let candidate = scanSession.receiptCandidate { apply(candidate) }
+            case .reviewing:
+                showingCopyPicker = false
+                if let candidate = scanSession.currentCandidate { apply(candidate) }
+            case .parsing, .failed, .interstitial:
+                // A new capture (or its failure) supersedes any previous scan
+                // chrome — never show "Filled from scan" or a stale duplicate
+                // line next to the failure copy.
+                scanCaptionVisible = false
+                duplicateNote = nil
+                showingCopyPicker = false
+            default:
+                break
+            }
+        }
+        .onChange(of: scanSession.cursor) { _, _ in
+            guard scanSession.isWizardActive, let candidate = scanSession.currentCandidate else { return }
+            apply(candidate)
+        }
+        .fullScreenCover(isPresented: $showingDocCamera) {
+            ScanCameraView { image in
+                showingDocCamera = false
+                startParse { await scanSession.process(images: [image], context: scanContext(), rescue: scanRescuer()) }
+            } onCancel: {
+                showingDocCamera = false
+            }
+        }
+        .photosPicker(isPresented: $photosPickerPresented, selection: $photoItem, matching: .images)
+        .onChange(of: photoItem) { _, item in
+            guard let item else { return }
+            photoItem = nil
+            startParse {
+                let image = (try? await item.loadTransferable(type: Data.self)).flatMap(UIImage.init(data:))
+                // No image → empty extraction → .none → the calm failed state.
+                await scanSession.process(images: image.map { [$0] } ?? [], context: scanContext(),
+                                          rescue: scanRescuer())
+            }
+        }
+        .fileImporter(isPresented: $fileImporterPresented,
+                      allowedContentTypes: [.pdf, .image]) { result in
+            guard case .success(let url) = result else { return }
+            startParse {
+                if url.pathExtension.lowercased() == "pdf" {
+                    await scanSession.process(pdfAt: url, context: scanContext(), rescue: scanRescuer())
+                } else {
+                    let scoped = url.startAccessingSecurityScopedResource()
+                    let image = (try? Data(contentsOf: url)).flatMap(UIImage.init(data:))
+                    if scoped { url.stopAccessingSecurityScopedResource() }
+                    await scanSession.process(images: image.map { [$0] } ?? [], context: scanContext(),
+                                              rescue: scanRescuer())
+                }
+            }
+        }
+    }
+
+    private var formBody: some View {
         VStack(alignment: .leading, spacing: 0) {
             sheetNav
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     // Add-mode only: quick-pick from a recent transaction
-                    // to pre-fill every field. Speeds up "the usual" entries
-                    // (subscriptions, regular merchants).
-                    if !isEditing && !appState.transactions.isEmpty {
-                        copyFromRecentButton
+                    // to pre-fill every field, or scan a receipt/statement
+                    // (spec 014). Hidden while the wizard drives the form.
+                    if !isEditing && !scanSession.isWizardActive {
+                        prefillCapsules
+                    }
+                    if scanSession.phase == .failed {
+                        scanFailedView
+                    }
+                    if scanCaptionVisible && !scanSession.isWizardActive {
+                        scanCaption
+                    }
+                    if let duplicateNote {
+                        duplicateNoteView(duplicateNote)
                     }
                     amountHero
+                    if let fxNote = convertedFromNote {
+                        Text(fxNote)
+                            .font(.lato(size: 13))
+                            .foregroundStyle(AppTheme.text.opacity(0.36))
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
                     directionToggle
 
                     if kind == .transfer {
@@ -280,7 +397,8 @@ struct AddTransactionSheet: View {
                             textRow(
                                 label: merchantLabel,
                                 placeholder: kind == .income ? "e.g. Acme Co. payroll" : "e.g. Whole Foods",
-                                text: $merchant
+                                text: $merchant,
+                                guessed: guessedFields.contains(.merchant)
                             )
                             if kind == .expense {
                                 divider
@@ -321,12 +439,17 @@ struct AddTransactionSheet: View {
                             .frame(maxWidth: 360, alignment: .leading)
                     }
 
-                    // Add-mode only: secondary affordance for batch entry.
-                    // Submits the current form and resets it for another
-                    // transaction without dismissing the sheet.
+                    // Add-mode only: secondary affordance for batch entry —
+                    // or the wizard's Skip while a statement review drives
+                    // the form (FR-008).
                     if !isEditing {
-                        saveAndAddAnotherButton
-                            .padding(.bottom, 24)
+                        if scanSession.isWizardActive {
+                            wizardSkipButton
+                                .padding(.bottom, 24)
+                        } else {
+                            saveAndAddAnotherButton
+                                .padding(.bottom, 24)
+                        }
                     }
                 }
                 .padding(.top, 8)
@@ -371,9 +494,20 @@ struct AddTransactionSheet: View {
                 seedDefaultTransferParties()
                 resetSplitsToEven()
             }
-            // Delay focus so sheet finishes presenting before the keyboard rises.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                amountFocused = true
+            // Delay focus so sheet finishes presenting before the keyboard
+            // rises. formBody re-appears when the wizard replaces the
+            // interstitial — only the pristine first appearance should focus
+            // (a keyboard over a prefilled wizard row hides the review).
+            // Demo-scan screenshots keep the keyboard down entirely.
+            var autoFocus = scanSession.phase == .idle
+            #if DEBUG
+            if appState.uiDemoScanFixture != nil { autoFocus = false }
+            startDemoScanIfNeeded()
+            #endif
+            if autoFocus {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                    amountFocused = true
+                }
             }
         }
         .onChange(of: kind) { _, newKind in
@@ -391,8 +525,43 @@ struct AddTransactionSheet: View {
             }
             resetSplitsToEven()
         }
-        .onChange(of: selectedOwners) { _, _ in
+        .onChange(of: selectedOwners) { _, newOwners in
             resetSplitsToEven()
+            if guessedFields.contains(.owners), newOwners != appliedOwners {
+                guessedFields.remove(.owners)
+            }
+        }
+        // Guess tags clear the moment an edit moves a field away from the
+        // scan-applied value (FR-016) — value comparison, not event order,
+        // so the apply() mutations themselves never clear anything.
+        .onChange(of: merchant) { _, newValue in
+            if guessedFields.contains(.merchant), newValue != appliedScan?.merchant {
+                guessedFields.remove(.merchant)
+            }
+            // Typing past a failed scan dismisses the quiet failure block.
+            if scanSession.phase == .failed, !newValue.isEmpty {
+                scanSession.retake()
+            }
+        }
+        .onChange(of: category) { _, newValue in
+            if guessedFields.contains(.category), newValue != appliedScan?.categoryGuess {
+                guessedFields.remove(.category)
+            }
+        }
+        .onChange(of: amountText) { _, newValue in
+            if newValue != appliedAmountText {
+                guessedFields.remove(.currency)
+                guessedFields.remove(.amount)
+            }
+        }
+        .onChange(of: date) { _, newValue in
+            guard guessedFields.contains(.date), let applied = appliedScan?.date else { return }
+            let day = Calendar.current.dateComponents([.year, .month, .day], from: newValue)
+            // Field-wise comparison — DateComponents == is stricter than
+            // "same calendar day" (calendar/isLeapMonth defaults differ).
+            if day.year != applied.year || day.month != applied.month || day.day != applied.day {
+                guessedFields.remove(.date)
+            }
         }
         .sheet(isPresented: $showingCopyPicker) {
             CopyTransactionPickerSheet { source in
@@ -404,31 +573,194 @@ struct AddTransactionSheet: View {
         }
     }
 
-    /// "Copy from recent" capsule shown at the top of the form in add mode.
-    /// Tapping opens `CopyTransactionPickerSheet`; pick a row to pre-fill
-    /// every field on this form (with a fresh id + today's date).
-    private var copyFromRecentButton: some View {
-        HStack {
+    /// Prefill capsule row (add mode): "Copy from recent" + "Scan" (spec 014).
+    /// Scanning is an input method for THIS form, not a destination — the
+    /// fourth prefill source alongside copy/settle-up (FR-001).
+    private var prefillCapsules: some View {
+        HStack(spacing: 10) {
             Spacer()
-            Button {
-                showingCopyPicker = true
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "doc.on.doc")
-                        .font(.lato(size: 13, weight: .semibold))
-                    Text("Copy from recent")
-                        .font(.lato(size: 14, weight: .semibold))
-                }
-                .foregroundStyle(AppTheme.accent)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(
-                    Capsule().fill(AppTheme.text.opacity(0.05))
-                )
+            if !appState.transactions.isEmpty {
+                copyFromRecentButton
             }
-            .buttonStyle(.plain)
+            // No Scan in a settle-up sheet: a scan prefill would silently
+            // flip the pre-seeded Transfer into an expense (US1 scope).
+            if settleUp == nil {
+                scanCapsule
+            }
             Spacer()
         }
+    }
+
+    /// "Copy from recent" capsule. Tapping opens `CopyTransactionPickerSheet`;
+    /// pick a row to pre-fill every field (fresh id + today's date).
+    private var copyFromRecentButton: some View {
+        Button {
+            showingCopyPicker = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "doc.on.doc")
+                    .font(.lato(size: 13, weight: .semibold))
+                Text("Copy from recent")
+                    .font(.lato(size: 14, weight: .semibold))
+            }
+            .foregroundStyle(AppTheme.accent)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                Capsule().fill(AppTheme.text.opacity(0.05))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// "Scan" capsule → Camera / Photo Library / Choose File (FR-002).
+    /// Shows a quiet "Reading…" state while the on-device parse runs.
+    private var scanCapsule: some View {
+        Menu {
+            Button {
+                scanSession.lastSource = .camera
+                showingDocCamera = true
+            } label: {
+                Label("Camera", systemImage: "camera")
+            }
+            Button {
+                scanSession.lastSource = .photoLibrary
+                photosPickerPresented = true
+            } label: {
+                Label("Photo Library", systemImage: "photo.on.rectangle")
+            }
+            Button {
+                scanSession.lastSource = .file
+                fileImporterPresented = true
+            } label: {
+                Label("Choose File", systemImage: "folder")
+            }
+        } label: {
+            HStack(spacing: 8) {
+                if scanSession.phase == .parsing {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Reading…")
+                        .font(.lato(size: 14, weight: .semibold))
+                } else {
+                    Image(systemName: "doc.viewfinder")
+                        .font(.lato(size: 13, weight: .semibold))
+                    Text("Scan")
+                        .font(.lato(size: 14, weight: .semibold))
+                }
+            }
+            .foregroundStyle(AppTheme.accent)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                Capsule().fill(AppTheme.text.opacity(0.05))
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(scanSession.phase == .parsing)
+        .accessibilityLabel("Scan")
+    }
+
+    /// Quiet caption after a receipt prefill (contract §Receipt path).
+    private var scanCaption: some View {
+        Text("Filled from scan — review before adding")
+            .font(.lato(size: 13))
+            .foregroundStyle(AppTheme.text.opacity(0.58))
+            .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    /// Calm failure state: quiet copy + Retake, no red, form untouched
+    /// (FR-017). Retake reopens the last-used source.
+    private var scanFailedView: some View {
+        VStack(spacing: 10) {
+            Text("Couldn't read this. Try a flatter, brighter photo.")
+                .font(.lato(size: 13))
+                .foregroundStyle(AppTheme.text.opacity(0.58))
+                .multilineTextAlignment(.center)
+            Button {
+                scanSession.retake()
+                switch scanSession.lastSource {
+                case .camera, nil: showingDocCamera = true
+                case .photoLibrary: photosPickerPresented = true
+                case .file: fileImporterPresented = true
+                }
+            } label: {
+                Text("Retake")
+                    .font(.lato(size: 14, weight: .semibold))
+                    .foregroundStyle(AppTheme.accent)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(AppTheme.text.opacity(0.05)))
+            }
+            .buttonStyle(.plain)
+            #if DEBUG
+            // Dev-only, deliberately unlocalized (verbatim): shows what OCR
+            // extracted so a failing real-world capture can be debugged on
+            // the device itself and turned into a fixture.
+            if let debugText = scanDebugText {
+                DisclosureGroup {
+                    ScrollView {
+                        Text(verbatim: debugText)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(AppTheme.text.opacity(0.58))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                    }
+                    .frame(maxHeight: 160)
+                } label: {
+                    Text(verbatim: "What the scan read (debug)")
+                        .font(.lato(size: 12))
+                        .foregroundStyle(AppTheme.text.opacity(0.44))
+                }
+                .tint(AppTheme.text.opacity(0.44))
+                .padding(.horizontal, 24)
+            }
+            #endif
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    #if DEBUG
+    /// The extractor's view of the failed capture — lines, then table rows.
+    private var scanDebugText: String? {
+        guard let document = scanSession.lastDocument, !document.isEmpty else { return nil }
+        let lineTexts = document.pages.flatMap { $0.lines.map(\.text) }
+        let tableTexts = document.pages
+            .flatMap(\.tables)
+            .flatMap { $0.rows.map { $0.joined(separator: " | ") } }
+        return (lineTexts + tableTexts).joined(separator: "\n")
+    }
+    #endif
+
+    /// One calm inline line — informational, never blocking (FR-015).
+    private func duplicateNoteView(_ note: String) -> some View {
+        Text(note)
+            .font(.lato(size: 13))
+            .foregroundStyle(AppTheme.text.opacity(0.58))
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.horizontal, 24)
+    }
+
+    /// FX note under the amount hero when a foreign total was converted
+    /// through the existing rates (FR-014).
+    private var convertedFromNote: String? {
+        guard guessedFields.contains(.currency),
+              let scan = appliedScan,
+              scan.currency != .usd,
+              let original = scan.originalAmount else { return nil }
+        let amount = String(format: "%.\(scan.currency.fractionDigits)f",
+                            NSDecimalNumber(decimal: original).doubleValue)
+        // Localizer.tr, not String(localized:) — the in-app language picker
+        // never changes Locale.current/bundle prefs (see Localizer.swift).
+        return Localizer.tr("Converted from \(scan.currency.code) \(amount)")
+    }
+
+    /// Tiny text3 "Guessed" tag under a field label (FR-016).
+    private var guessedTag: some View {
+        Text("Guessed")
+            .font(.lato(size: 11))
+            .foregroundStyle(AppTheme.text.opacity(0.36))
     }
 
     /// Secondary "Save and add another" capsule rendered below the form.
@@ -498,25 +830,53 @@ struct AddTransactionSheet: View {
 
     private var sheetNav: some View {
         ZStack {
-            Text(navTitle)
-                .font(.lato(size: 17, weight: .semibold))
-                .foregroundStyle(AppTheme.text)
-                .tracking(-0.3)
+            if scanSession.isWizardActive {
+                // Wizard progress header replaces the title (FR-008).
+                Text("\(scanSession.cursor + 1) of \(scanSession.queue.count)")
+                    .font(.lato(size: 17, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(AppTheme.text.opacity(0.58))
+                    .tracking(-0.3)
+            } else {
+                Text(navTitle)
+                    .font(.lato(size: 17, weight: .semibold))
+                    .foregroundStyle(AppTheme.text)
+                    .tracking(-0.3)
+            }
 
             HStack {
-                Button("Cancel") { dismiss() }
-                    .font(.lato(size: 17, weight: .medium))
-                    .foregroundStyle(AppTheme.accent)
-                    .buttonStyle(.plain)
-                Spacer()
-                Button(actionLabel) {
-                    submit(keepOpen: false)
+                if scanSession.isWizardActive {
+                    // Stop is always available; rows already added stay.
+                    Button("Stop") { scanSession.stop() }
+                        .font(.lato(size: 17, weight: .medium))
+                        .foregroundStyle(AppTheme.accent)
+                        .buttonStyle(.plain)
+                } else {
+                    Button("Cancel") { dismiss() }
+                        .font(.lato(size: 17, weight: .medium))
+                        .foregroundStyle(AppTheme.accent)
+                        .buttonStyle(.plain)
                 }
-                .font(.lato(size: 17, weight: .semibold))
-                .foregroundStyle(canAdd ? AppTheme.accent : AppTheme.text.opacity(0.36))
-                .disabled(!canAdd)
-                .buttonStyle(.plain)
-                .animation(.easeOut(duration: 0.12), value: canAdd)
+                Spacer()
+                if scanSession.isWizardActive {
+                    Button(scanSession.isLastRow ? "Add and finish" : "Add and next") {
+                        submitWizardRow()
+                    }
+                    .font(.lato(size: 17, weight: .semibold))
+                    .foregroundStyle(canAdd ? AppTheme.accent : AppTheme.text.opacity(0.36))
+                    .disabled(!canAdd)
+                    .buttonStyle(.plain)
+                    .animation(.easeOut(duration: 0.12), value: canAdd)
+                } else {
+                    Button(actionLabel) {
+                        submit(keepOpen: false)
+                    }
+                    .font(.lato(size: 17, weight: .semibold))
+                    .foregroundStyle(canAdd ? AppTheme.accent : AppTheme.text.opacity(0.36))
+                    .disabled(!canAdd)
+                    .buttonStyle(.plain)
+                    .animation(.easeOut(duration: 0.12), value: canAdd)
+                }
             }
         }
         .padding(.horizontal, 20)
@@ -539,11 +899,48 @@ struct AddTransactionSheet: View {
         return utc.date(from: comps) ?? date
     }
 
-    /// Build a Transaction from the current form state, hand it to the
-    /// parent, and either dismiss or reset for another entry. Returns
-    /// nothing — both paths run side effects.
+    /// Build a Transaction from the current form state and hand it to the
+    /// parent; either dismisses (parent) or resets for another entry.
     private func submit(keepOpen: Bool) {
-        guard let parsed = parsedAmount else { return }
+        guard let tx = buildTransaction() else { return }
+        onSubmit(tx, keepOpen)
+        if keepOpen { resetFormForAnotherEntry() }
+    }
+
+    /// One wizard row: exactly one pass through the existing optimistic add
+    /// (FR-009 — keepOpen so the parent never dismisses mid-wizard), then
+    /// advance. The next row is applied by the cursor onChange; the last row
+    /// flips the session to .summary.
+    private func submitWizardRow() {
+        guard let tx = buildTransaction() else { return }
+        onSubmit(tx, true)
+        scanSession.acceptCurrent()
+    }
+
+    /// Wizard secondary action: leave this row out and move on (FR-008).
+    private var wizardSkipButton: some View {
+        HStack {
+            Spacer()
+            Button {
+                scanSession.skipCurrent()
+            } label: {
+                Text("Skip")
+                    .font(.lato(size: 15, weight: .semibold))
+                    .foregroundStyle(AppTheme.accent)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(AppTheme.text.opacity(0.05)))
+            }
+            .buttonStyle(.plain)
+            Spacer()
+        }
+    }
+
+    /// The current form state as a Transaction, or nil while invalid. The
+    /// single construction path for Add, Save-and-add-another, and every
+    /// wizard row — scanning never gets its own save shape (FR-006).
+    private func buildTransaction() -> Transaction? {
+        guard let parsed = parsedAmount else { return nil }
         // Normalize the picked day once for both the transfer and the
         // expense/income paths (create and edit alike).
         let txDate = Self.noonUTC(ofLocalDay: date)
@@ -564,8 +961,8 @@ struct AddTransactionSheet: View {
         // through computeShares/validateSplit. Bypassed entirely by the balance
         // math except via balanceBetween.
         if kind == .transfer {
-            guard let from = transferFrom, let to = transferTo, from != to else { return }
-            let tx = Transaction(
+            guard let from = transferFrom, let to = transferTo, from != to else { return nil }
+            return Transaction(
                 id: editing?.id ?? UUID(),
                 merchant: "",
                 category: .transfer,
@@ -579,9 +976,6 @@ struct AddTransactionSheet: View {
                 createdBy: editing?.createdBy ?? appState.currentUserID,
                 paidBy: from
             )
-            onSubmit(tx, keepOpen)
-            if keepOpen { resetFormForAnotherEntry() }
-            return
         }
 
         // Owners in canonical order (shared `orderedOwnerIds`); shares are exact
@@ -604,7 +998,7 @@ struct AddTransactionSheet: View {
         let resolvedPaidBy: Person.ID? = kind == .expense
             ? (paidBy ?? appState.currentPersonID)
             : nil
-        let tx = Transaction(
+        return Transaction(
             id: editing?.id ?? UUID(),
             merchant: merchant.trimmingCharacters(in: .whitespaces),
             category: kind == .income ? .income : category,
@@ -618,10 +1012,6 @@ struct AddTransactionSheet: View {
             createdBy: editing?.createdBy ?? appState.currentUserID,
             paidBy: resolvedPaidBy
         )
-        onSubmit(tx, keepOpen)
-        if keepOpen {
-            resetFormForAnotherEntry()
-        }
     }
 
     /// Pre-fill every field from an existing transaction (the "copy from
@@ -655,6 +1045,11 @@ struct AddTransactionSheet: View {
         date = .now
         amountText = displayAmountString(cents: source.amount)
         originalAmountText = ""
+        // A copy prefill supersedes any scan prefill state.
+        scanCaptionVisible = false
+        duplicateNote = nil
+        guessedFields = []
+        appliedScan = nil
 
         // Transfer copy: carry over the sender/recipient (validated against
         // current membership) and nothing else.
@@ -717,7 +1112,222 @@ struct AddTransactionSheet: View {
         // resetSplitsToEven (called from onChange / explicitly here).
         resetSplitsToEven()
         amountFocused = true
+        // A new manual entry is no longer "filled from scan".
+        scanCaptionVisible = false
+        duplicateNote = nil
+        guessedFields = []
+        appliedScan = nil
     }
+
+    // MARK: - Scan prefill (spec 014)
+
+    /// Apply a parsed candidate to the form — the same fields the user would
+    /// type, through the same state, gated by the same validation (FR-006).
+    /// Guess tags are cleared later per field when an edit moves the value
+    /// AWAY from what was applied (FR-016).
+    private func apply(_ candidate: ParsedCandidate) {
+        appliedScan = candidate
+        guessedFields = candidate.guesses
+        duplicateNote = nil
+
+        kind = candidate.direction == .credit ? .income : .expense
+        // The onChange(of: kind) source fixup can't be relied on here — the
+        // first wizard row applies while formBody is unmounted (interstitial
+        // → reviewing), so re-establish source validity directly.
+        if !sources.contains(source) { source = sources.first ?? "" }
+        merchant = candidate.merchant
+        if kind == .expense {
+            if let guess = candidate.categoryGuess, guess != .income, guess != .transfer {
+                category = guess
+            } else {
+                category = .groceries
+                guessedFields.remove(.category)
+            }
+        }
+        // Parsed calendar day → the picker's local Date; the existing
+        // noon-UTC convention applies on save (FR-019). No parsed date:
+        // wizard rows reset to today (fresh row), the receipt path leaves
+        // whatever the user already picked — never a fabricated date.
+        if let day = candidate.date, let parsed = Calendar.current.date(from: day) {
+            date = parsed
+        } else if scanSession.isWizardActive {
+            date = .now
+        }
+
+        // Amount: USD cents directly, or a foreign total converted through
+        // the existing rates — never foreign-as-USD (FR-014). A foreign
+        // candidate missing originalAmount (belt-and-braces — the parser
+        // always sets it) derives it from the minor units.
+        if candidate.currency == .usd {
+            amountText = displayAmountString(cents: candidate.amountCents)
+        } else {
+            let original = candidate.originalAmount
+                ?? Decimal(candidate.amountCents) / pow(Decimal(10), candidate.currency.fractionDigits)
+            let usdCents = Money.toUSDCents(original,
+                                            from: candidate.currency,
+                                            rate: appState.rate(for: candidate.currency))
+            amountText = displayAmountString(cents: usdCents)
+        }
+        originalAmountText = ""
+        appliedAmountText = amountText
+
+        // Owners: history guess intersected with current membership; a fully
+        // invalid guess (departed members) falls back to the default single
+        // owner in the wizard — never a stale carry-over from the prior row.
+        let validIDs = Set(availableOwners.map(\.id))
+        let guessedOwners = candidate.ownersGuess.map { Set($0).intersection(validIDs) } ?? []
+        if !guessedOwners.isEmpty {
+            selectedOwners = guessedOwners
+        } else {
+            guessedFields.remove(.owners)
+            if scanSession.isWizardActive, let me = appState.currentPersonID {
+                selectedOwners = [me]
+            }
+        }
+        appliedOwners = selectedOwners
+        if paidBy == nil {
+            paidBy = appState.currentPersonID ?? appState.householdMembers.first?.id
+        }
+        resetSplitsToEven()
+
+        // Receipt duplicate line (the wizard pre-skips instead, FR-015).
+        if !scanSession.isWizardActive, let dupID = candidate.duplicateOf,
+           let dup = appState.transactions.first(where: { $0.id == dupID }) {
+            let name = dup.merchant.isEmpty ? dup.source : dup.merchant
+            let day = dup.date.formatted(.dateTime.month(.abbreviated).day()
+                .locale(Localizer.currentLocale))
+            duplicateNote = Localizer.tr("Looks like a duplicate of \(name), \(day) — add anyway?")
+        }
+        scanCaptionVisible = !scanSession.isWizardActive
+    }
+
+    /// Snapshot the world into a pure ScanContext at the pipeline boundary.
+    /// Under -uiDemoScan the reference date is fixed for determinism.
+    private func scanContext() -> ScanContext {
+        #if DEBUG
+        if appState.uiDemoScanFixture != nil {
+            return ScanInference.buildContext(transactions: appState.transactions,
+                                              defaultCurrency: .usd,
+                                              calendar: .current,
+                                              now: AppState.uiDemoScanReferenceDate)
+        }
+        #endif
+        return ScanInference.buildContext(transactions: appState.transactions,
+                                          defaultCurrency: .usd,
+                                          calendar: .current,
+                                          now: Date())
+    }
+
+    /// Whether the on-device refiner may run: capable hardware, and never in
+    /// demo/CI (screenshots must be deterministic — contracts/uidemo-scan.md).
+    private var scanRefinementEnabled: Bool {
+        #if DEBUG
+        if appState.uiDemoScanFixture != nil { return false }
+        #endif
+        return ScanRefiner.isAvailable
+    }
+
+    /// The on-device extraction rescue for parses the deterministic tiers
+    /// couldn't crack — nil whenever refinement is off, so the session's
+    /// pipeline stays fully deterministic in demo/CI.
+    private func scanRescuer() -> ScanSession.Rescue? {
+        guard scanRefinementEnabled else { return nil }
+        let context = scanContext()
+        return { document in await ScanRefiner.rescue(document, context: context) }
+    }
+
+    private func startParse(_ operation: @escaping () async -> Void) {
+        Task {
+            await operation()
+            guard scanRefinementEnabled, scanSession.phase == .receiptPrefilled,
+                  let candidate = scanSession.receiptCandidate,
+                  let refined = await ScanRefiner.refineReceipt(candidate) else { return }
+            // Refinement is polish, not truth: if the user already touched
+            // the form after the heuristic prefill, their edits win —
+            // re-applying would clobber them and resurrect cleared tags.
+            let untouched = scanSession.phase == .receiptPrefilled
+                && merchant == candidate.merchant
+                && amountText == appliedAmountText
+                && selectedOwners == appliedOwners
+            if untouched { apply(refined) }
+        }
+    }
+
+    #if DEBUG
+    /// -uiDemoScan: feed the named bundled fixture through the REAL pipeline
+    /// against the demo store (contracts/uidemo-scan.md). Step "row"/"summary"
+    /// advances the statement flow for screenshots.
+    private func startDemoScanIfNeeded() {
+        guard let fixture = appState.uiDemoScanFixture, !demoScanStarted else { return }
+        demoScanStarted = true
+        let bundle = Bundle.main
+        let pdf = bundle.url(forResource: fixture, withExtension: "pdf", subdirectory: "ScanFixtures")
+            ?? bundle.url(forResource: fixture, withExtension: "pdf")
+        let png = bundle.url(forResource: fixture, withExtension: "png", subdirectory: "ScanFixtures")
+            ?? bundle.url(forResource: fixture, withExtension: "png")
+        guard pdf != nil || png != nil else {
+            assertionFailure("-uiDemoScan: unknown fixture '\(fixture)'")
+            return
+        }
+        Task {
+            if let pdf {
+                await scanSession.process(pdfAt: pdf, context: scanContext())
+            } else if let png, let image = UIImage(contentsOfFile: png.path) {
+                await scanSession.process(images: [image], context: scanContext())
+            }
+            switch appState.uiDemoScanStep {
+            case "row":
+                if scanSession.phase == .interstitial { scanSession.startReview() }
+            case "summary":
+                // The form applies rows asynchronously, so a synchronous
+                // auto-accept builds each row's transaction directly from
+                // its candidate (demo store only — screenshots of the
+                // summary, contracts/uidemo-scan.md).
+                if scanSession.phase == .interstitial {
+                    scanSession.startReview()
+                    while let candidate = scanSession.currentCandidate {
+                        appState.addTransaction(demoTransaction(from: candidate))
+                        scanSession.acceptCurrent()
+                    }
+                }
+            default:
+                break
+            }
+        }
+    }
+
+    private func demoTransaction(from candidate: ParsedCandidate) -> Transaction {
+        let me = appState.currentPersonID ?? appState.householdMembers.first?.id
+        let owners: Set<Person.ID> = me.map { [$0] } ?? []
+        let day = candidate.date.flatMap { Calendar.current.date(from: $0) } ?? .now
+        let isCredit = candidate.direction == .credit
+        // Same FX rule as apply(): foreign minor units are never stored as
+        // USD cents directly (FR-014).
+        let cents: Int64
+        if candidate.currency == .usd {
+            cents = candidate.amountCents
+        } else {
+            let original = candidate.originalAmount
+                ?? Decimal(candidate.amountCents) / pow(Decimal(10), candidate.currency.fractionDigits)
+            cents = Money.toUSDCents(original,
+                                     from: candidate.currency,
+                                     rate: appState.rate(for: candidate.currency))
+        }
+        return Transaction(
+            merchant: candidate.merchant,
+            category: isCredit ? .income : (candidate.categoryGuess ?? .groceries),
+            kind: isCredit ? .income : .expense,
+            amount: cents,
+            ownerIDs: owners,
+            shares: me.map { [$0: cents] } ?? [:],
+            source: appState.cards.first?.name ?? "",
+            date: Self.noonUTC(ofLocalDay: day),
+            householdID: appState.currentHouseholdID,
+            createdBy: appState.currentUserID,
+            paidBy: isCredit ? nil : me
+        )
+    }
+    #endif
 
     // MARK: - Static formatters (used by init to pre-fill from `editing`)
 
@@ -732,28 +1342,33 @@ struct AddTransactionSheet: View {
     // MARK: - Amount hero
 
     private var amountHero: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Spacer()
-            Text(Money.symbol(for: appState.currency))
-                .font(.lato(size: 32, weight: .semibold))
-                .foregroundStyle(amountText.isEmpty
-                                 ? AppTheme.text.opacity(0.36)
-                                 : (kind == .income ? AppTheme.positive : AppTheme.text))
-                .tracking(-0.4)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
+        VStack(spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Spacer()
+                Text(Money.symbol(for: appState.currency))
+                    .font(.lato(size: 32, weight: .semibold))
+                    .foregroundStyle(amountText.isEmpty
+                                     ? AppTheme.text.opacity(0.36)
+                                     : (kind == .income ? AppTheme.positive : AppTheme.text))
+                    .tracking(-0.4)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
 
-            TextField(appState.currency.fractionDigits == 0 ? "0" : "0.00", text: $amountText)
-                .font(.lato(size: 40, weight: .semibold))
-                .tracking(-0.6)
-                .monospacedDigit()
-                .foregroundStyle(kind == .income ? AppTheme.positive : AppTheme.text)
-                .keyboardType(.decimalPad)
-                .multilineTextAlignment(.leading)
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .focused($amountFocused)
-            Spacer()
+                TextField(appState.currency.fractionDigits == 0 ? "0" : "0.00", text: $amountText)
+                    .font(.lato(size: 40, weight: .semibold))
+                    .tracking(-0.6)
+                    .monospacedDigit()
+                    .foregroundStyle(kind == .income ? AppTheme.positive : AppTheme.text)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .focused($amountFocused)
+                Spacer()
+            }
+            // The forgiving fallback / rescue tiers guess the amount itself
+            // (no labeled total) — the money hero says so (FR-016).
+            if guessedFields.contains(.amount) { guessedTag }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -771,8 +1386,11 @@ struct AddTransactionSheet: View {
     }
 
     /// Segments offered. Editing a transfer stays a transfer (and vice versa) —
-    /// the two row shapes aren't interchangeable. Add/settle-up offer all three.
+    /// the two row shapes aren't interchangeable. Add/settle-up offer all
+    /// three; wizard rows are credits/debits only — flippable, never
+    /// transfers (FR-011/FR-012).
     private var directionOptions: [TransactionKind] {
+        if scanSession.isWizardActive { return [.expense, .income] }
         guard let tx = editing else { return TransactionKind.allCases }
         return tx.kind == .transfer ? [.transfer] : [.expense, .income]
     }
@@ -825,12 +1443,17 @@ struct AddTransactionSheet: View {
             .padding(.leading, 16)
     }
 
-    private func textRow(label: LocalizedStringKey, placeholder: LocalizedStringKey, text: Binding<String>) -> some View {
+    private func textRow(label: LocalizedStringKey, placeholder: LocalizedStringKey,
+                         text: Binding<String>, guessed: Bool = false) -> some View {
         HStack(spacing: 12) {
-            Text(label)
-                .font(.lato(size: 15))
-                .foregroundStyle(AppTheme.text.opacity(0.58))
-                .frame(width: 96, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.lato(size: 15))
+                    .foregroundStyle(AppTheme.text.opacity(0.58))
+                if guessed { guessedTag }
+            }
+            .frame(width: 96, alignment: .leading)
+            .accessibilityElement(children: .combine)
             TextField(placeholder, text: text)
                 .font(.lato(size: 17, weight: .medium))
                 .tracking(-0.2)
@@ -846,11 +1469,15 @@ struct AddTransactionSheet: View {
     /// grows past 3-4 members.
     private var ownerRow: some View {
         HStack(alignment: .top, spacing: 12) {
-            Text("Owners")
-                .font(.lato(size: 15))
-                .foregroundStyle(AppTheme.text.opacity(0.58))
-                .frame(width: 96, alignment: .leading)
-                .padding(.top, 8)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Owners")
+                    .font(.lato(size: 15))
+                    .foregroundStyle(AppTheme.text.opacity(0.58))
+                if guessedFields.contains(.owners) { guessedTag }
+            }
+            .frame(width: 96, alignment: .leading)
+            .padding(.top, 8)
+            .accessibilityElement(children: .combine)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     ForEach(availableOwners) { u in
@@ -968,10 +1595,14 @@ struct AddTransactionSheet: View {
 
     private var categoryRow: some View {
         HStack(spacing: 12) {
-            Text("Category")
-                .font(.lato(size: 15))
-                .foregroundStyle(AppTheme.text.opacity(0.58))
-                .frame(width: 96, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Category")
+                    .font(.lato(size: 15))
+                    .foregroundStyle(AppTheme.text.opacity(0.58))
+                if guessedFields.contains(.category) { guessedTag }
+            }
+            .frame(width: 96, alignment: .leading)
+            .accessibilityElement(children: .combine)
             Spacer()
             Menu {
                 // Spend categories only — .income is locked to the income kind
@@ -1027,10 +1658,14 @@ struct AddTransactionSheet: View {
 
     private var dateRow: some View {
         HStack(spacing: 12) {
-            Text("Date")
-                .font(.lato(size: 15))
-                .foregroundStyle(AppTheme.text.opacity(0.58))
-                .frame(width: 96, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Date")
+                    .font(.lato(size: 15))
+                    .foregroundStyle(AppTheme.text.opacity(0.58))
+                if guessedFields.contains(.date) { guessedTag }
+            }
+            .frame(width: 96, alignment: .leading)
+            .accessibilityElement(children: .combine)
             Spacer()
             DatePicker("", selection: $date, displayedComponents: [.date])
                 .labelsHidden()

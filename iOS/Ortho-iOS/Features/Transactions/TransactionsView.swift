@@ -177,6 +177,15 @@ struct TransactionsView: View {
         }
         .background(AppTheme.bg)
         .safeAreaInset(edge: .top, spacing: 0) { titleAndSearch }
+        .onAppear {
+            // -uiDemoScan boots straight into the add sheet, which feeds the
+            // named fixture through the real pipeline (spec 014).
+            #if DEBUG
+            if appState.uiDemoScanFixture != nil, addSheetMode == nil {
+                addSheetMode = .fresh
+            }
+            #endif
+        }
         .sheet(isPresented: $filterSheetPresented) {
             FilterSheet(
                 criteria: $criteria,
