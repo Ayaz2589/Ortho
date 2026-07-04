@@ -30,6 +30,9 @@ import type {
   TransactionShare,
   Card,
   Property,
+  MortgageInfo,
+  LeaseInfo,
+  Unit,
   RentalPayment,
   Budget,
   TransactionCategory,
@@ -316,7 +319,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       // device-only local users into household_people (one-time).
       await ensureAccountPersonAndFoldLegacy(householdId, me)
 
-      await loadAll(householdId, householdName)
+      await loadAll(householdId, householdName, authUser.id)
     } catch (e) {
       setBootstrapFailed(true)
       setError(`Failed to load: ${(e as Error).message}`)
@@ -341,7 +344,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // mid-session sign-out/expiry (30-day timebox, failed refresh) clears state
   // and routes to sign-in immediately, not at the next navigation.
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((event) => {
+    const { data } = supabase.auth.onAuthStateChange((event: string) => {
       if (event !== 'SIGNED_OUT') return
       setCurrentUserId('')
       setCurrentUserEmail(null)
@@ -401,7 +404,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     } catch {}
   }
 
-  async function loadAll(householdId: string, householdName: string) {
+  async function loadAll(householdId: string, householdName: string, ownerId: string) {
     const [
       usersRes,
       peopleRes,
@@ -439,7 +442,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setPeople(peopleRows)
     setHousehold({
       id: householdId,
-      owner_id: currentUserId,
+      // Passed explicitly from the authenticated user id: during first bootstrap
+      // the `currentUserId` state is still '' in this closure (setCurrentUserId
+      // hasn't re-rendered yet), so reading it here produced a blank owner_id.
+      owner_id: ownerId,
       name: householdName,
       created_at: new Date().toISOString(),
     })
@@ -450,9 +456,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setCards((cardsRes.data as Card[]) ?? [])
 
     // stitch properties
-    const mort = new Map((mortRes.data ?? []).map((m: any) => [m.property_id, m]))
-    const lease = new Map((leaseRes.data ?? []).map((l: any) => [l.property_id, l]))
-    const unitsByProp = new Map<string, any[]>()
+    const mort = new Map<string, MortgageInfo>(
+      (mortRes.data ?? []).map((m: any) => [m.property_id as string, m as MortgageInfo])
+    )
+    const lease = new Map<string, LeaseInfo>(
+      (leaseRes.data ?? []).map((l: any) => [l.property_id as string, l as LeaseInfo])
+    )
+    const unitsByProp = new Map<string, Unit[]>()
     for (const u of unitsRes.data ?? []) {
       const arr = unitsByProp.get(u.property_id) ?? []
       arr.push(u)
