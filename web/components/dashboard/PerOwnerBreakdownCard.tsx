@@ -38,8 +38,11 @@ export function PerOwnerBreakdownCard({
           cents: spentBy(user.id, interval.start, interval.end),
         }))
         .sort((a, b) => b.cents - a.cents),
+    // `spentBy` closes over the store's `transactions`, so the aggregate must
+    // recompute when they change — otherwise the per-owner totals/bars freeze
+    // at pre-mutation values while every other dashboard card updates.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [householdMembers, interval.start, interval.end]
+    [householdMembers, transactions, interval.start, interval.end]
   )
 
   const maxCents = Math.max(1, ...entries.map((e) => e.cents))
