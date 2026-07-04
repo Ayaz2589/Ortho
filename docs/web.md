@@ -88,7 +88,7 @@ web/
 │   ├── gen-vectors.ts          # regenerates shared/test-vectors/*.json from the TS engines
 │   ├── import/                 # bank-statement import + tx CRUD CLI (engine/, profiles/, db/, cli.ts, tx.ts)
 │   └── maintenance/repair-legacy-dates.ts  # one-shot date repair (make repair-dates, dry-run by default)
-├── test/                       # 67 Vitest files, 726 tests (unit, jsdom component, *.parity.test.ts,
+├── test/                       # 67 Vitest files, 727 tests (unit, jsdom component, *.parity.test.ts,
 │   │                           #   i18n/ catalog + render-locale locks, import/ golden suites + fixtures/,
 │   │                           #   helpers/supabase-mock.ts)
 │   └── setup.ts                # jest-dom matchers + conditional RTL cleanup
@@ -170,7 +170,7 @@ npm install
 npm run dev              # http://localhost:3000
 npm run build            # next build
 npm start                # next start (after build)
-npm test                 # vitest run — 67 files / 726 tests (verified green, 2026-07-04)
+npm test                 # vitest run — 67 files / 727 tests (verified green, 2026-07-04)
 npm run test:coverage    # v8 coverage, thresholds enforced (see vitest.config.ts)
 npm run gen:vectors      # regenerate shared/test-vectors/ from the TS engines
 npx tsc --noEmit         # typecheck (part of the web CI gate)
