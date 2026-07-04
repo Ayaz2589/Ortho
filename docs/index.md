@@ -83,9 +83,12 @@ shared TS functions but is deliberately **outside** the golden-vector harness.
    macOS/Xcode (`cd iOS && xcodebuild test -scheme Ortho-iOS`). The sandbox feedback loop is CI:
    `.github/workflows/ios-ci.yml` compiles, runs the parity suites, and uploads simulator
    screenshots on every push touching `iOS/**` or `shared/test-vectors/**` (see `docs/ios.md` §6).
+   Web has a parallel `.github/workflows/web-ci.yml` (Linux) that runs `tsc`, the Vitest suite, and
+   a golden-vector-drift check on any `web/**` or `shared/test-vectors/**` change.
 6. **Set up web**: `cd web && npm install && npm test` (Node 22 per root `.nvmrc`; on Linux ARM
    you may need `@rolldown/binding-linux-arm64-gnu` since macOS-installed `node_modules` lacks
-   Linux bindings). Expect the full suite green (720 tests as of 2026-07-02).
+   Linux bindings). Expect the full suite green (723 tests as of 2026-07-04). Run `npx tsc --noEmit`
+   too — it is part of the web CI gate.
 7. **Check env/credentials**: `web/.env.local` (gitignored) needs `NEXT_PUBLIC_SUPABASE_URL` +
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`; iOS needs the gitignored
    `iOS/Ortho-iOS/App/SupabaseConfig.swift` (create from the committed `.template`). This backend

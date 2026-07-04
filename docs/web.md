@@ -88,7 +88,7 @@ web/
 │   ├── gen-vectors.ts          # regenerates shared/test-vectors/*.json from the TS engines
 │   ├── import/                 # bank-statement import + tx CRUD CLI (engine/, profiles/, db/, cli.ts, tx.ts)
 │   └── maintenance/repair-legacy-dates.ts  # one-shot date repair (make repair-dates, dry-run by default)
-├── test/                       # 67 Vitest files, 720 tests (unit, jsdom component, *.parity.test.ts,
+├── test/                       # 67 Vitest files, 723 tests (unit, jsdom component, *.parity.test.ts,
 │   │                           #   i18n/ catalog + render-locale locks, import/ golden suites + fixtures/,
 │   │                           #   helpers/supabase-mock.ts)
 │   └── setup.ts                # jest-dom matchers + conditional RTL cleanup
@@ -170,11 +170,15 @@ npm install
 npm run dev              # http://localhost:3000
 npm run build            # next build
 npm start                # next start (after build)
-npm test                 # vitest run — 67 files / 720 tests (verified green, 2026-07-02 / spec 015)
+npm test                 # vitest run — 67 files / 723 tests (verified green, 2026-07-04)
 npm run test:coverage    # v8 coverage, thresholds enforced (see vitest.config.ts)
 npm run gen:vectors      # regenerate shared/test-vectors/ from the TS engines
-npx tsc --noEmit         # typecheck
+npx tsc --noEmit         # typecheck (part of the web CI gate)
 ```
+
+CI: `.github/workflows/web-ci.yml` runs `tsc`, `npm test`, and a vector-drift check on every
+`web/**` or `shared/test-vectors/**` change (Linux). Keep `npx tsc --noEmit` clean — under Next's
+defaults a type error fails `next build`, and the web app has no other build gate.
 
 **Environment** (`web/.env.local`, not committed): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (required by app + proxy + CLI); `SUPABASE_SERVICE_ROLE_KEY` (only for the CLI's `ADMIN=1` mode); `IMPORT_EMAIL` (optional, CLI OTP sign-in). The live Supabase project is `brujhxmtzfgowimprueo.supabase.co` (also whitelisted in `next.config.ts` image remotePatterns).
 
