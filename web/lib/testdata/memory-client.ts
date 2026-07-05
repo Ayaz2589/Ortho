@@ -22,6 +22,8 @@ interface QueryBuilder extends PromiseLike<ReadResult> {
   eq: (col: string, val: unknown) => QueryBuilder
   /** PostgREST null-safe match — chainable no-op like `eq` (spec 017 claim path). */
   is: (col: string, val: unknown) => QueryBuilder
+  /** PostgREST disjunction — chainable no-op (spec 017 household-scoped reads). */
+  or: (expr: string) => QueryBuilder
   in: (col: string, vals: unknown[]) => QueryBuilder
   order: (col: string, opts?: unknown) => QueryBuilder
   limit: (n: number) => QueryBuilder
@@ -65,6 +67,7 @@ export function createMemoryClient(): MemoryClient {
       select: () => b,
       eq: () => b,
       is: () => b,
+      or: () => b,
       in: () => b,
       order: () => b,
       limit: () => b,

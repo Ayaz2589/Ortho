@@ -51,8 +51,12 @@ export interface SupabaseMock {
   /** Every `rpc()` invocation with its params (e.g. spec 017 asserts the
    *  canonical `p_token` handed to `accept_invite`). */
   rpcCalls: RecordedRpcCall[]
+  /** Every filter applied to any chain (reads and writes) — see RecordedFilter. */
+  filters: RecordedFilter[]
   /** Convenience: writes recorded for a given table. */
   callsFor(table: string): RecordedCall[]
+  /** Convenience: filters recorded for a given table. */
+  filtersFor(table: string): RecordedFilter[]
   /** Fire the auth-state listener registered by the store (e.g. 'SIGNED_OUT'). */
   emitAuthChange(event: string, session?: unknown): void
 }
@@ -77,6 +81,8 @@ interface QueryBuilder extends PromiseLike<{ data: unknown[] | null; error: { me
   eq: (col: string, val: unknown) => QueryBuilder
   /** PostgREST null-safe match (`.is('col', null)`) — chainable no-op like `eq`. */
   is: (col: string, val: unknown) => QueryBuilder
+  /** PostgREST disjunction (`.or('a.eq.x,b.is.null')`) — chainable no-op. */
+  or: (expr: string) => QueryBuilder
   in: (col: string, vals: unknown[]) => QueryBuilder
   order: (col: string, opts?: unknown) => QueryBuilder
   limit: (n: number) => QueryBuilder
@@ -87,9 +93,20 @@ interface QueryBuilder extends PromiseLike<{ data: unknown[] | null; error: { me
   upsert: (payload?: unknown, opts?: unknown) => Promise<MutationResult>
 }
 
+/** A recorded filter invocation on a read chain — the mock stays permissive
+ *  (rows are returned regardless), but tests can assert the CONTRACT that a
+ *  read was household-scoped (spec 017: multi-household users must never see
+ *  another household's rows merged in). */
+export interface RecordedFilter {
+  table: string
+  kind: 'eq' | 'is' | 'or' | 'in'
+  args: unknown[]
+}
+
 export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMock {
   const tables = dataset.tables ?? {}
   const calls: RecordedCall[] = []
+  const filters: RecordedFilter[] = []
   const authUser = dataset.authUser === undefined ? { id: 'u-me', email: 'me@example.com' } : dataset.authUser
 
   function builder(table: string): QueryBuilder {
@@ -111,11 +128,16 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
         msg ? { data: null, error: { message: msg } } : { data: null, error: null as null }
       )
     }
+    const track = (kind: RecordedFilter['kind'], ...args: unknown[]) => {
+      filters.push({ table, kind, args })
+      return b
+    }
     const b: QueryBuilder = {
       select: () => b,
-      eq: () => b,
-      is: () => b,
-      in: () => b,
+      eq: (col, val) => track('eq', col, val),
+      is: (col, val) => track('is', col, val),
+      or: (expr) => track('or', expr),
+      in: (col, vals) => track('in', col, vals),
       order: () => b,
       limit: () => b,
       single: () => Promise.resolve({ data: rows[0] ?? null, error: null }),
@@ -177,7 +199,9 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
     client,
     calls,
     rpcCalls,
+    filters,
     callsFor: (t) => calls.filter((c) => c.table === t),
+    filtersFor: (t) => filters.filter((f) => f.table === t),
     emitAuthChange: (event, session = null) => {
       for (const cb of authCallbacks) cb(event, session)
     },

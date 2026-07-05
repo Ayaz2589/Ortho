@@ -25,7 +25,9 @@ import { makeT, type Translate } from './i18n'
 import {
   generateInviteCode,
   formatInviteCode,
+  canonicalizeInviteCode,
   hashInviteCode,
+  INVITE_CODE_LENGTH,
   INVITE_TTL_MS,
 } from './invites'
 import type {
@@ -47,6 +49,22 @@ import type {
 } from './types'
 
 const PLACEHOLDER_ID = '00000000-0000-0000-0000-000000000000'
+
+/** Per-browser record of which household opens on launch (spec 017 FR-018/019). */
+const PREFERRED_HOUSEHOLD_KEY = 'preferredHouseholdId'
+
+type MembershipStatus = 'unknown' | 'none' | 'member'
+
+interface MembershipRow {
+  household_id: string
+  role?: string
+  user_id?: string
+  created_at?: string
+}
+
+export type RedeemResult =
+  | { ok: true; householdId: string }
+  | { ok: false; reason: 'invalid' | 'already-member' | 'load-failed' }
 
 export interface OwnerDisplay {
   avatarUser: User
@@ -72,6 +90,9 @@ interface AppStateValue {
   /** The household's pending/redeemed/expired invites, newest first — owners
    *  only (RLS yields zero rows for members). Never carries token material. */
   invites: PendingInvite[]
+  /** 'none' ⇒ the signed-in user belongs to no household and the shell shows
+   *  the join/start-fresh gate instead of tab content (spec 017 FR-008). */
+  membershipStatus: MembershipStatus
   users: User[]
   /** Active (non-removed) household people, in display order. Owners are People. */
   people: Person[]
@@ -128,6 +149,12 @@ interface AppStateValue {
   createInvite: () => Promise<{ ok: true; code: string } | { ok: false }>
   /** Revoke (delete) a pending invite — optimistic with rollback (FR-007). */
   revokeInvite: (id: string) => void
+  /** The gate's "Start fresh": runs the pre-017 create path on the user's
+   *  explicit choice — identical inserts, identical outcome (FR-008/024). */
+  startFresh: () => Promise<void>
+  /** Redeem an invite code (any typed form). Never throws; never leaves a
+   *  half-joined UI state (FR-011/012/013). */
+  redeemInvite: (code: string) => Promise<RedeemResult>
   addPerson: (name: string, colorKey?: string) => void
   renamePerson: (id: string, name: string) => void
   setPersonColor: (id: string, colorKey: string) => void
@@ -212,6 +239,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [household, setHousehold] = useState<Household | null>(null)
   const [currentRole, setCurrentRole] = useState<MembershipRole | null>(null)
   const [invites, setInvites] = useState<PendingInvite[]>([])
+  const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>('unknown')
+  /** The signed-in account's profile row — needed by the gate actions
+   *  (startFresh/redeemInvite) that run after bootstrap paused at 'none'. */
+  const meRef = useRef<User | null>(null)
+  /** Household ids the user is known to belong to (already-member detection). */
+  const membershipIdsRef = useRef<string[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [cards, setCards] = useState<Card[]>([])
   const [properties, setProperties] = useState<Property[]>([])
@@ -301,51 +334,42 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         orThrow(await supabase.from('users').insert(me))
       }
 
-      // find or create household. The membership read MUST fail loudly: if
-      // a transient error were treated as "no membership", we would create a
-      // duplicate household and silently detach the user from their data.
-      const { data: membership } = orThrow(
+      meRef.current = me
+
+      // Read EVERY membership (spec 017): a user may belong to more than one
+      // household (their own + a joined one). The read MUST fail loudly: if a
+      // transient error were treated as "no membership", we would show the
+      // join/start-fresh gate to an established user.
+      const { data: membershipRows } = orThrow(
         await supabase
           .from('household_members')
-          .select('household_id, role')
+          .select('household_id, role, user_id, created_at')
           .eq('user_id', authUser.id)
-          .limit(1)
+          .order('created_at', { ascending: true })
       )
-      let householdId: string
-      let householdName = 'Home'
-      let role: MembershipRole = 'owner'
-      if (membership && membership.length > 0) {
-        householdId = membership[0].household_id
-        // Legacy test fixtures may omit `role` (NOT NULL in the real schema);
-        // every pre-017 user is the owner of their own household.
-        role = (membership[0].role as MembershipRole | undefined) ?? 'owner'
-        // Name read is display-only — a failure here must not block boot.
-        const { data: h } = await supabase
-          .from('households')
-          .select('*')
-          .eq('id', householdId)
-          .single()
-        if (h) householdName = h.name
-      } else {
-        householdId = uuid()
-        orThrow(
-          await supabase
-            .from('households')
-            .insert({ id: householdId, owner_id: authUser.id, name: householdName })
-        )
-        orThrow(
-          await supabase
-            .from('household_members')
-            .insert({ household_id: householdId, user_id: authUser.id, role: 'owner' })
-        )
+      // Client-side filter/sort mirror the query — they also keep the
+      // permissive test mock honest (its eq/order are recorded no-ops).
+      const memberships = ((membershipRows ?? []) as MembershipRow[])
+        .filter((r) => r.user_id === undefined || r.user_id === authUser.id)
+        .sort((a, b) => ((a.created_at ?? '') < (b.created_at ?? '') ? -1 : 1))
+      membershipIdsRef.current = memberships.map((m) => m.household_id)
+
+      if (memberships.length === 0) {
+        // No household yet: never create one silently (spec 017 FR-008). The
+        // shell renders the join/start-fresh gate; the create path now runs
+        // only on the user's explicit choice (startFresh).
+        setMembershipStatus('none')
+        return
       }
-      setCurrentRole(role)
 
-      // ensure the account holder has a Person row, then fold any legacy
-      // device-only local users into household_people (one-time).
-      await ensureAccountPersonAndFoldLegacy(householdId, me)
-
-      await loadAll(householdId, householdName, authUser.id)
+      // Deterministic selection (FR-018): the persisted preference when it is
+      // still a membership, else the oldest membership — never `.limit(1)`
+      // roulette.
+      const preferred = localStorage.getItem(PREFERRED_HOUSEHOLD_KEY)
+      const picked = memberships.find((m) => m.household_id === preferred) ?? memberships[0]
+      // Legacy test fixtures may omit `role` (NOT NULL in the real schema);
+      // every pre-017 user is the owner of their own household.
+      await enterHousehold(picked.household_id, (picked.role as MembershipRole | undefined) ?? 'owner', me)
     } catch (e) {
       setBootstrapFailed(true)
       setError(`Failed to load: ${(e as Error).message}`)
@@ -356,6 +380,96 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const retryBootstrap = () => {
     void runBootstrap()
+  }
+
+  /** Open a household: role capture, owner-only Person ensure, full load,
+   *  preference persist. Shared by bootstrap, startFresh, and redeemInvite
+   *  (spec 017). Throws on load failure — callers decide how to surface it. */
+  async function enterHousehold(householdId: string, role: MembershipRole, me: User) {
+    // Name read is display-only — a failure here must not block entry.
+    let householdName = 'Home'
+    let ownerId = me.id
+    const { data: h } = await supabase
+      .from('households')
+      .select('*')
+      .eq('id', householdId)
+      .single()
+    if (h) {
+      householdName = (h as Household).name
+      ownerId = (h as Household).owner_id ?? me.id
+    }
+    setCurrentRole(role)
+    // The account-holder Person auto-create belongs ONLY to owners (the
+    // pre-017 behavior, preserved byte-for-byte). A member-role joiner claims
+    // their existing Person instead — auto-creating here would fork a
+    // duplicate identity and orphan their history (spec 017 FR-014/016).
+    if (role === 'owner') {
+      await ensureAccountPersonAndFoldLegacy(householdId, me)
+    }
+    await loadAll(householdId, householdName, ownerId)
+    localStorage.setItem(PREFERRED_HOUSEHOLD_KEY, householdId)
+    if (!membershipIdsRef.current.includes(householdId)) {
+      membershipIdsRef.current = [...membershipIdsRef.current, householdId]
+    }
+    setMembershipStatus('member')
+  }
+
+  /** The gate's "Start fresh" — exactly the pre-017 first-run outcome
+   *  (FR-008/024): a new household owned by the user, ready to use. */
+  const startFresh = async () => {
+    const me = meRef.current
+    if (!me || membershipStatus !== 'none') return
+    setLoading(true)
+    setError(null)
+    try {
+      const householdId = uuid()
+      orThrow(
+        await supabase
+          .from('households')
+          .insert({ id: householdId, owner_id: me.id, name: 'Home' })
+      )
+      orThrow(
+        await supabase
+          .from('household_members')
+          .insert({ household_id: householdId, user_id: me.id, role: 'owner' })
+      )
+      await enterHousehold(householdId, 'owner', me)
+    } catch (e) {
+      setError(`Failed to load: ${(e as Error).message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /** Redeem an invite code. The single calm failure ('invalid') never reveals
+   *  whether a code existed (FR-012); 'already-member' means the RPC returned
+   *  a household the user already belongs to (FR-013 — the code is consumed,
+   *  nothing else changes). */
+  const redeemInvite = async (input: string): Promise<RedeemResult> => {
+    const me = meRef.current
+    if (!me) return { ok: false, reason: 'invalid' }
+    const canonical = canonicalizeInviteCode(input)
+    // A malformed code can never match a hash — fail locally, no RPC probe.
+    if (canonical.length !== INVITE_CODE_LENGTH) return { ok: false, reason: 'invalid' }
+    const { data, error: e } = await supabase.rpc('accept_invite', { p_token: canonical })
+    if (e || typeof data !== 'string' || data.length === 0) {
+      return { ok: false, reason: 'invalid' }
+    }
+    const householdId = data
+    if (membershipIdsRef.current.includes(householdId)) {
+      return { ok: false, reason: 'already-member' }
+    }
+    try {
+      // Invites always confer the standard member role (data-model.md).
+      await enterHousehold(householdId, 'member', me)
+      return { ok: true, householdId }
+    } catch (err) {
+      // The membership exists server-side (the RPC succeeded) but the load
+      // failed — surface the error; the next launch resumes into the
+      // household via the normal bootstrap (no partial UI state tonight).
+      setError(`Failed to load: ${(err as Error).message}`)
+      return { ok: false, reason: 'load-failed' }
+    }
   }
 
   useEffect(() => {
@@ -377,6 +491,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setUsers([])
       setPeople([])
       setHousehold(null)
+      setCurrentRole(null)
+      setInvites([])
+      setMembershipStatus('unknown')
+      meRef.current = null
+      membershipIdsRef.current = []
       setTransactions([])
       setCards([])
       setProperties([])
@@ -447,15 +566,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     ] = await Promise.all([
       supabase.from('users').select('*'),
       supabase.from('household_people').select('*').eq('household_id', householdId).order('sort_order', { ascending: true }),
-      supabase.from('transactions').select('*').order('date', { ascending: false }),
+      // Household-scoped (spec 017): a user can now belong to multiple
+      // households, and another household's rows must never merge into this
+      // one. Legacy personal transactions (household_id NULL — the old iOS
+      // importers wrote them) stay visible via the disjunction; RLS already
+      // limits NULL rows to their creator.
+      supabase.from('transactions').select('*').or(`household_id.eq.${householdId},household_id.is.null`).order('date', { ascending: false }),
       supabase.from('transaction_shares').select('*'),
-      supabase.from('cards').select('*').order('created_at', { ascending: true }),
-      supabase.from('properties').select('*').order('address', { ascending: true }),
+      supabase.from('cards').select('*').eq('household_id', householdId).order('created_at', { ascending: true }),
+      supabase.from('properties').select('*').eq('household_id', householdId).order('address', { ascending: true }),
       supabase.from('mortgage_info').select('*'),
       supabase.from('lease_info').select('*'),
       supabase.from('units').select('*').order('sort_order', { ascending: true }),
       supabase.from('rental_payments').select('*').order('date', { ascending: false }),
-      supabase.from('budgets').select('*'),
+      supabase.from('budgets').select('*').eq('household_id', householdId),
       // Owners get the household's invites; members get zero rows via RLS —
       // an empty list, never an error (spec 017).
       supabase.from('pending_invites').select('*').eq('household_id', householdId).order('created_at', { ascending: false }),
@@ -1092,6 +1216,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     currentHousehold: household,
     currentRole,
     invites,
+    membershipStatus,
     users,
     people: activePeople,
     householdMembers,
@@ -1132,6 +1257,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     updateHouseholdName,
     createInvite,
     revokeInvite,
+    startFresh,
+    redeemInvite,
     addPerson,
     renamePerson,
     setPersonColor,

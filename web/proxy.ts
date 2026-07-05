@@ -42,7 +42,12 @@ export async function proxy(request: NextRequest) {
 
   if (!user && !isAuthRoute && !isApiRoute && !bypassAuth) {
     const url = request.nextUrl.clone()
+    // spec 017 FR-009: preserve the interrupted destination (e.g. a
+    // /join?code= invite link) so sign-in can resume there afterwards.
+    const target = url.pathname + url.search
     url.pathname = '/sign-in'
+    url.search = ''
+    if (target && target !== '/') url.searchParams.set('next', target)
     return NextResponse.redirect(url)
   }
 

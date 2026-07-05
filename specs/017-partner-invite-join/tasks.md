@@ -66,7 +66,7 @@ works signed-in; solo behavior byte-preserved via `startFresh()`.
 **Independent test**: mocked bootstrap with zero memberships renders the gate; redeem paths
 ok/invalid/already-member; start-fresh insert sequence identical to pre-017.
 
-- [ ] T008 ⊗ [US2] Write failing `web/test/join-flows.test.tsx`: (a) zero-membership bootstrap
+- [X] T008 ⊗ [US2] Write failing `web/test/join-flows.test.tsx`: (a) zero-membership bootstrap
       sets `membershipStatus='none'`, renders gate, performs NO household/membership insert;
       (b) `startFresh()` reproduces today's exact insert sequence (households →
       household_members(owner) → household_people(linked)) then loads; (c) `redeemInvite`
@@ -75,18 +75,18 @@ ok/invalid/already-member; start-fresh insert sequence identical to pre-017.
       (e) already-member (uuid already in memberships) ⇒ `{ok:false,reason:'already-member'}`;
       (f) persisted pick: two memberships + valid `preferredHouseholdId` ⇒ preferred wins;
       stale preference ⇒ first-by-created_at wins.
-- [ ] T009 ⊗ [US6] Amend existing bootstrap suites (`web/test/store*.test.tsx` and any suite
+- [X] T009 ⊗ [US6] Amend existing bootstrap suites (`web/test/store*.test.tsx` and any suite
       asserting fresh-user auto-create) to the new contract: choice screen instead of silent
       create; existing-membership users completely unchanged. Mark each amendment with a
       `// spec 017 FR-024` comment. These must FAIL against the current store.
-- [ ] T010 [US2] Store restructure in `web/lib/store.tsx` per research.md R5: full membership
+- [X] T010 [US2] Store restructure in `web/lib/store.tsx` per research.md R5: full membership
       read (`household_id, role, created_at`, ordered), `membershipStatus`, persisted-pick,
       `startFresh()`, `redeemInvite()`, role-gated `ensureAccountPersonAndFoldLegacy`; T008
       (a–f) + T009 green.
-- [ ] T011 [US2] Gate UI: `web/components/HouseholdGate.tsx` (Join with a code / Start fresh +
+- [X] T011 [US2] Gate UI: `web/components/HouseholdGate.tsx` (Join with a code / Start fresh +
       quiet sign-out; consumes a pending `?code=` prefill) rendered from
       `web/app/(app)/layout.tsx` when `membershipStatus==='none'`.
-- [ ] T012 [P] [US2] `/join` route: `web/app/(app)/join/page.tsx` (reads `?code=`, confirm →
+- [X] T012 [P] [US2] `/join` route: `web/app/(app)/join/page.tsx` (reads `?code=`, confirm →
       `redeemInvite`, three calm outcomes, success → `/dashboard`); `web/proxy.ts` gains
       `?next=<path+query>` on the sign-in bounce; `web/app/sign-in/page.tsx` honors safe
       relative `next` after verify. Component/unit tests included in T008 file (route render +

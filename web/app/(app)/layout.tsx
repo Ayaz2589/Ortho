@@ -4,9 +4,15 @@ import { type ReactNode } from 'react'
 import { AppStateProvider, useApp } from '@/lib/store'
 import { TabBar } from '@/components/TabBar'
 import { Sidebar } from '@/components/Sidebar'
+import { HouseholdGate } from '@/components/HouseholdGate'
 
 function Shell({ children }: { children: ReactNode }) {
-  const { loading, error, bootstrapFailed, dismissError, retryBootstrap, t } = useApp()
+  const { loading, error, bootstrapFailed, dismissError, retryBootstrap, membershipStatus, t } = useApp()
+  // Spec 017: a signed-in user with no household chooses their path (join /
+  // start fresh) before any tab content — nothing is created silently.
+  if (!loading && membershipStatus === 'none') {
+    return <HouseholdGate />
+  }
   return (
     <div className="sm:flex sm:h-screen sm:overflow-hidden">
       <Sidebar />

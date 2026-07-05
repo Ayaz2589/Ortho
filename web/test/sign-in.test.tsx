@@ -48,4 +48,36 @@ describe('web sign-in', () => {
     // Single-active-platform lock removed (feature 010): verify must not hit the DB.
     expect(h.from).not.toHaveBeenCalled()
   })
+
+  // spec 017 FR-009: the /join link survives the auth gate — the proxy bounces
+  // to /sign-in?next=<original>, and verify resumes there.
+  it('honors a safe relative ?next= after verify (the /join link path)', async () => {
+    window.history.pushState({}, '', '/sign-in?next=%2Fjoin%3Fcode%3DABCDE-23456')
+    const user = userEvent.setup()
+    render(<SignInPage />)
+
+    await user.type(screen.getByPlaceholderText('you@example.com'), 'me@example.com')
+    await user.click(screen.getByRole('button', { name: /send code/i }))
+    const codeInput = await screen.findByPlaceholderText('12345678')
+    await user.type(codeInput, '12345678')
+    await user.click(screen.getByRole('button', { name: /^verify$/i }))
+
+    await waitFor(() => expect(h.replace).toHaveBeenCalledWith('/join?code=ABCDE-23456'))
+    window.history.pushState({}, '', '/')
+  })
+
+  it('rejects a non-relative ?next= (open-redirect guard) and goes to /dashboard', async () => {
+    window.history.pushState({}, '', '/sign-in?next=//evil.example')
+    const user = userEvent.setup()
+    render(<SignInPage />)
+
+    await user.type(screen.getByPlaceholderText('you@example.com'), 'me@example.com')
+    await user.click(screen.getByRole('button', { name: /send code/i }))
+    const codeInput = await screen.findByPlaceholderText('12345678')
+    await user.type(codeInput, '12345678')
+    await user.click(screen.getByRole('button', { name: /^verify$/i }))
+
+    await waitFor(() => expect(h.replace).toHaveBeenCalledWith('/dashboard'))
+    window.history.pushState({}, '', '/')
+  })
 })

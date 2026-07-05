@@ -49,7 +49,12 @@ function SignIn() {
       setError(e.message)
       return
     }
-    router.replace('/dashboard')
+    // spec 017 FR-009: resume where the auth gate interrupted (e.g. a
+    // /join?code= invite link). Same-origin relative paths only — '/x…' but
+    // never '//host' — so ?next= can't become an open redirect.
+    const next = new URLSearchParams(window.location.search).get('next')
+    const safe = next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard'
+    router.replace(safe)
     router.refresh()
   }
 
