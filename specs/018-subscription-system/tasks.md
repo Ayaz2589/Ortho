@@ -42,7 +42,7 @@ files, no incomplete dependency).
 **Client mirrors + harness**
 
 - [x] T011 [P] Write failing web tests `web/test/entitlements.test.ts` (same 19 vectors + digest) then implement mirror `web/lib/entitlements.ts` (copy of derive.ts + constants; no import from services/ — plan D7).
-- [ ] T012 [P] Implement iOS mirror `iOS/Ortho-iOS/Shared/EntitlementLogic.swift` + `iOS/Ortho-iOS/Ortho-iOSTests/EntitlementLogicTests.swift` (same 19 vectors + digest over the canonical serialization; ISO-8601 parsing via fixed formatter; injected `now`).
+- [x] T012 [P] Implement iOS mirror `iOS/Ortho-iOS/Shared/EntitlementLogic.swift` + `iOS/Ortho-iOS/Ortho-iOSTests/EntitlementLogicTests.swift` (same 19 vectors + digest over the canonical serialization; ISO-8601 parsing via fixed formatter; injected `now`).
 - [x] T013 [P] Extend the web mock harness (`web/test/helpers/`): `entitlements` table with PostgREST-faithful behavior (select-own only; INSERT/UPDATE/DELETE from client role rejected like RLS), `rpc('ensure_entitlement')` fake (insert-if-absent semantics, returns row), `functions.invoke` fake (`billing-checkout`/`billing-portal`/`billing-plans` with configurable responses/failures). Contract test: client-role writes to entitlements are refused.
 
 **Checkpoint**: core green + migration written + mirrors locked — every story below is unblocked.
@@ -54,8 +54,8 @@ files, no incomplete dependency).
 
 - [x] T014 [US1] Write failing tests in `web/test/entitlement-bootstrap.test.tsx`: bootstrap invokes `rpc('ensure_entitlement')` and stores the returned row; gate derived `trialing` for fresh user; re-boot idempotent (no second insert, expiry unchanged); RPC/network failure ⇒ `bootstrapFailed` recovery path and NOT the paywall (FR-008); `refreshEntitlement()` refetches and re-derives.
 - [x] T015 [US1] Implement in `web/lib/store.tsx`: `entitlement` + derived `gateState` in AppState; `ensure_entitlement` RPC issued in parallel with `loadAll()` during `runBootstrap`; `refreshEntitlement()`; failure wiring per FR-008. T014 green.
-- [ ] T016 [P] [US1] Implement `iOS/Ortho-iOS/Services/EntitlementsAPI.swift` (`ensureEntitlement()` RPC call returning the row DTO, `fetchOwn()`, DTO with CodingKeys matching data-model columns) — struct style mirrors existing `Services/` APIs.
-- [ ] T017 [US1] Implement iOS `App/AppState.swift` wiring: `entitlement` published state + `gateState` (via EntitlementLogic), `ensureEntitlement` awaited inside `bootstrapUserSession` alongside `loadAllFromServer()`; failure ⇒ existing `bootstrapDidFail` recovery (never paywall); `refreshEntitlement()`; sign-out resets entitlement state (017 lesson).
+- [x] T016 [P] [US1] Implement `iOS/Ortho-iOS/Services/EntitlementsAPI.swift` (`ensureEntitlement()` RPC call returning the row DTO, `fetchOwn()`, DTO with CodingKeys matching data-model columns) — struct style mirrors existing `Services/` APIs.
+- [x] T017 [US1] Implement iOS `App/AppState.swift` wiring: `entitlement` published state + `gateState` (via EntitlementLogic), `ensureEntitlement` awaited inside `bootstrapUserSession` alongside `loadAllFromServer()`; failure ⇒ existing `bootstrapDidFail` recovery (never paywall); `refreshEntitlement()`; sign-out resets entitlement state (017 lesson).
 
 **Checkpoint**: US1 fully testable — trial lifecycle works end-to-end against mocks.
 
@@ -90,22 +90,22 @@ files, no incomplete dependency).
 
 *(All iOS tasks compile-verified only by CI — complete T028–T030 + T016/T017/T012 as ONE batch before the push task T045.)*
 
-- [ ] T028 [US6] Implement `iOS/Ortho-iOS/Features/Paywall/PaywallView.swift`: full-screen gate (BootstrapRecoveryView shape, AppTheme tokens): headline, two plan rows (amounts from `billing-plans` via EntitlementsAPI; loading + calm unavailable states), "Check again" (`refreshEntitlement`), quiet Sign out (escape hatch — 017 lesson: no trapped blocking screens); plan buttons open the checkout URL via `UIApplication.shared.open` (external browser); dynamic status text uses `accessibilityValue`; targets ≥44pt.
-- [ ] T029 [US6] Wire the gate in `iOS/Ortho-iOS/App/Ortho_iOSApp.swift` root switch: `.signedIn` && !bootstrapDidFail && `gateState == .lapsed` ⇒ `PaywallView()`; entitled/grace/admin ⇒ `RootTabView()`; `-uiDemo` seeded mode never gates (guard). Extend `EntitlementsAPI` with `createCheckout(plan:)`/`createPortal()`/`fetchPlans()` functions-invoke calls.
-- [ ] T030 [US6] Add scenario coverage where testable sans simulator: `Ortho-iOSTests` unit tests for AppState gate selection logic (lapsed⇒paywall flag, grace⇒no gate, admin⇒no gate, bootstrap-failure⇒recovery not paywall) using injected fixtures.
+- [x] T028 [US6] Implement `iOS/Ortho-iOS/Features/Paywall/PaywallView.swift`: full-screen gate (BootstrapRecoveryView shape, AppTheme tokens): headline, two plan rows (amounts from `billing-plans` via EntitlementsAPI; loading + calm unavailable states), "Check again" (`refreshEntitlement`), quiet Sign out (escape hatch — 017 lesson: no trapped blocking screens); plan buttons open the checkout URL via `UIApplication.shared.open` (external browser); dynamic status text uses `accessibilityValue`; targets ≥44pt.
+- [x] T029 [US6] Wire the gate in `iOS/Ortho-iOS/App/Ortho_iOSApp.swift` root switch: `.signedIn` && !bootstrapDidFail && `gateState == .lapsed` ⇒ `PaywallView()`; entitled/grace/admin ⇒ `RootTabView()`; `-uiDemo` seeded mode never gates (guard). Extend `EntitlementsAPI` with `createCheckout(plan:)`/`createPortal()`/`fetchPlans()` functions-invoke calls.
+- [x] T030 [US6] Add scenario coverage where testable sans simulator: `Ortho-iOSTests` unit tests for AppState gate selection logic (lapsed⇒paywall flag, grace⇒no gate, admin⇒no gate, bootstrap-failure⇒recovery not paywall) using injected fixtures.
 
 ## Phase 9: User Story 7 — Settings status row + full i18n (P3)
 
 - [x] T031 [US7] Write failing tests `web/test/subscription-settings.test.tsx` (state copy per: trialing d-remaining, active-monthly renews, active-yearly renews, grace notice, canceled ends-on, lapsed subscribe, admin no-sub-needed) then implement `web/components/settings/SubscriptionSection.tsx` mounted after Cards in `web/app/(app)/settings/page.tsx` (row + action per state; owner of the T024 manage action and T027 grace notice).
-- [ ] T032 [P] [US7] Implement `iOS/Ortho-iOS/Features/Settings/SubscriptionSectionView.swift` + mount after Cards in `SettingsView.swift`: same states/copy/actions (subscribe ⇒ paywall-style plan sheet or direct checkout link-out; manage ⇒ portal URL external).
-- [ ] T033 [US7] Add every new English key to the five web catalogs `web/lib/i18n/{bn,es,ja,zh,ko}.ts` (translated, not English placeholders) and matching keys ×6 locales to `iOS/Ortho-iOS/Localizable.xcstrings`; catalog-parity suite green; audit zero hardcoded user-facing strings in new components.
+- [x] T032 [P] [US7] Implement `iOS/Ortho-iOS/Features/Settings/SubscriptionSectionView.swift` + mount after Cards in `SettingsView.swift`: same states/copy/actions (subscribe ⇒ paywall-style plan sheet or direct checkout link-out; manage ⇒ portal URL external).
+- [x] T033 [US7] Add every new English key to the five web catalogs `web/lib/i18n/{bn,es,ja,zh,ko}.ts` (translated, not English placeholders) and matching keys ×6 locales to `iOS/Ortho-iOS/Localizable.xcstrings`; catalog-parity suite green; audit zero hardcoded user-facing strings in new components.
 
 ## Phase 10: Polish & Cross-Cutting
 
 - [x] T034 [P] Write `web/scripts/ops/billing-probe.ts` `[OPERATOR-PENDING]`: read-only checks per quickstart §2.6 (RPC present, tables reachable service-role, four functions respond, prices resolve) with red/green report; refuses to run without explicit env.
 - [x] T035 [P] Write `web/scripts/ops/billing-smoke.ts` `[OPERATOR-PENDING]`: guided interactive walk of quickstart §3 incl. admin grant/revoke snippets (T026) and replay check.
-- [ ] T036 [P] Docs: update `docs/index.md` (big-picture: first server-side code, `services/`, functions), `docs/supabase.md` (entitlements/billing_events/RPC/functions/secrets), `docs/web.md` (billing lib, paywall gate, ops scripts), `docs/ios.md` (EntitlementsAPI, paywall gate, link-out).
-- [ ] T037 [P] `PARITY.md`: add spec-018 capability rows (derivation TS↔Swift↔core with literal-lock digest; paywall/Settings surfaces) + divergence entries (web same-tab redirect vs iOS external link-out; iOS plan sheet form factor).
+- [x] T036 [P] Docs: update `docs/index.md` (big-picture: first server-side code, `services/`, functions), `docs/supabase.md` (entitlements/billing_events/RPC/functions/secrets), `docs/web.md` (billing lib, paywall gate, ops scripts), `docs/ios.md` (EntitlementsAPI, paywall gate, link-out).
+- [x] T037 [P] `PARITY.md`: add spec-018 capability rows (derivation TS↔Swift↔core with literal-lock digest; paywall/Settings surfaces) + divergence entries (web same-tab redirect vs iOS external link-out; iOS plan sheet form factor).
 - [ ] T038 Re-run FULL local gates (quickstart §1): services/billing tests+tsc, sync drift, web `npm test` (731+new, zero failures) + `npx tsc --noEmit`, `npm run gen:vectors` zero-drift, `npm run build` (only if no shared dev server), catalog parity.
 - [ ] T039 Adversarial multi-agent review (6 dimensions: web correctness, Swift compile/logic, security — webhook/entitlement forgery/redirects, parity/i18n, constitution/a11y, test quality) → triage → apply confirmed fixes TDD-style → re-run T038.
 - [ ] T040 Update this ledger + spec `Status:` + write `.claude/context-summaries` note if session ends; commit series follows house style (spec → core/backend → web → iOS → docs).
