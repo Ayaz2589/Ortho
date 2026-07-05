@@ -169,11 +169,14 @@ the new Settings rows.
       `List` in `iOS/Ortho-iOS/Features/Transactions/TransactionsView.swift`.
 - [X] T026 [US1] All new iOS strings into `iOS/Ortho-iOS/Localizable.xcstrings` (6 languages,
       keys byte-identical to web's shared block from T017).
-- [ ] T027 Push the branch (web + iOS together), watch
+- [X] T027 Push the branch (web + iOS together), watch
       `GH_TOKEN=placeholder gh run watch --exit-status` for BOTH workflows; fix-up budget: 2
       iOS rounds. On budget exhaustion apply the plan.md fallback ladder (defer claim picker
-      → `[DEFERRED]` here + PARITY.md note). Download `simulator-screenshots` and visually
-      check the new Settings rows.
+      → `[DEFERRED]` here + PARITY.md note). RESULT: both CIs GREEN on the FIRST push —
+      zero fix-up rounds used; the full fallback ladder stayed unexercised. Screenshot
+      artifact visual check: [OPERATOR-PENDING] — the artifact lives on Azure blob storage,
+      unreachable from the sandbox (GitHub-only network path); view it on the run page
+      (iOS CI run 38).
 
 ## Phase 9: Operator scripts (FR-026)
 
