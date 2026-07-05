@@ -82,6 +82,32 @@ final class AppState {
     /// suppressed, so no test activity ever reaches the live backend.
     @ObservationIgnored let testDataEnabled: Bool
 
+    // MARK: - Entitlement (spec 018)
+
+    /// The signed-in user's entitlement row — read-only on clients (FR-017).
+    /// `nil` until the bootstrap's `ensure_entitlement` succeeds (and always
+    /// in seeded/test-data mode, where no server traffic happens); a `nil`
+    /// row derives a `nil` gate, which NEVER gates (FR-008/009).
+    var entitlement: EntitlementDTO?
+
+    /// The single gate fact the app shell reads (spec 018). Derived, never
+    /// stored: recomputed from the row whenever it changes (bootstrap,
+    /// `refreshEntitlement`). Mirrors web `store.tsx`'s `gateState`.
+    var gateState: GateState? {
+        guard let entitlement else { return nil }
+        let expires = EntitlementLogic.parseTimestamp(entitlement.accessExpiresAt)
+        // Defensive: a PRESENT but unparseable timestamp is a client decode
+        // problem, not a lapse — an open gate beats a false paywall
+        // (FR-008/009 spirit). Never occurs for real timestamptz values
+        // (same formatters as SupabaseCoding, proven against this backend).
+        if entitlement.accessExpiresAt != nil && expires == nil { return nil }
+        return EntitlementLogic.deriveGateState(
+            status: entitlement.status,
+            accessExpiresAt: expires,
+            now: Date()
+        )
+    }
+
     // MARK: - Identity + active household
 
     /// Which user is "me" on this device. Persisted so the choice survives
@@ -1145,6 +1171,10 @@ final class AppState {
             rentalPayments = []
             budgets = []
             currentHouseholdID = nil
+            // Spec 018: entitlement is per-account state — it must not
+            // linger into the next sign-in (017 lesson: signOut resets ALL
+            // new state).
+            entitlement = nil
         }
     }
 
@@ -1228,6 +1258,26 @@ final class AppState {
         HouseholdsAPI(client: supabase)
     }
 
+    private var entitlementsAPI: EntitlementsAPI {
+        EntitlementsAPI(client: supabase)
+    }
+
+    /// Refetch the entitlement row on demand (paywall "Check again"; Settings
+    /// after a checkout round-trip). Spec 018, FR-017: clients never mutate
+    /// entitlement state — refresh is refetch + re-derive. Failure keeps the
+    /// current row (a flaky refresh must never cause a false lapse or unlock)
+    /// and surfaces through the existing non-blocking `dataError` banner.
+    func refreshEntitlement() async {
+        guard !testDataEnabled else { return }
+        do {
+            if let fetched = try await entitlementsAPI.fetchOwn() {
+                await MainActor.run { entitlement = fetched }
+            }
+        } catch {
+            await MainActor.run { dataError = error.localizedDescription }
+        }
+    }
+
     private func bootstrapUserSession(authID: UUID, email: String?) async {
         let displayName = email?
             .components(separatedBy: "@").first?
@@ -1282,6 +1332,15 @@ final class AppState {
 
             // 4. Load live data from the server.
             await loadAllFromServer()
+
+            // 5. Spec 018: ensure the 31-day free-month row exists
+            // (server-side, insert-if-absent — reinstalls/re-sign-ins can
+            // never reset it) and read it back; the RPC's return value
+            // doubles as the entitlement fetch. A throw lands in the catch
+            // below → the existing bootstrap-recovery path, NEVER the
+            // paywall (FR-008).
+            let entitlementRow = try await entitlementsAPI.ensureEntitlement()
+            await MainActor.run { entitlement = entitlementRow }
 
             // No single-active-platform lock (feature 010): iOS and web may be
             // signed in at once. The 30-day session cap is enforced server-side

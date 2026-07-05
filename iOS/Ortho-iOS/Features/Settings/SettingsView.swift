@@ -130,6 +130,12 @@ struct SettingsView: View {
                         .padding(.horizontal, 24)
                         .padding(.bottom, 24)
 
+                    // Spec 018: subscription status + Manage/Subscribe.
+                    // Renders nothing until an entitlement row is loaded
+                    // (never in seeded/-uiDemo/test-data sessions). Web
+                    // mounts SubscriptionSection at the same position.
+                    SubscriptionSectionView()
+
                     sectionLabel("Currency")
 
                     VStack(spacing: 0) {

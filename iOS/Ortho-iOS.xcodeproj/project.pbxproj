@@ -20,6 +20,8 @@
 		AA0012000000000000000004 /* member-balance.json in Resources */ = {isa = PBXBuildFile; fileRef = AA0012000000000000000003 /* member-balance.json */; };
 		AA0014000000000000000002 /* ScanParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0014000000000000000001 /* ScanParserTests.swift */; };
 		AA0015000000000000000002 /* FeatureFlagsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0015000000000000000001 /* FeatureFlagsTests.swift */; };
+		AA0018000000000000000002 /* EntitlementLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0018000000000000000001 /* EntitlementLogicTests.swift */; };
+		AA0019000000000000000002 /* EntitlementGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0019000000000000000001 /* EntitlementGateTests.swift */; };
 		B5F85A62800B52CFBF244E27 /* transaction-filters.json in Resources */ = {isa = PBXBuildFile; fileRef = 7BB4B1B9837EAE1B6C707190 /* transaction-filters.json */; };
 		C193B52B38D45CCD8086AB46 /* insights.json in Resources */ = {isa = PBXBuildFile; fileRef = 2769D0C2D228268FBA560175 /* insights.json */; };
 		CDDC361CED2034F43CA9B013 /* TransactionSplitParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F17A0ACBC22C65C00F424C5 /* TransactionSplitParityTests.swift */; };
@@ -57,6 +59,8 @@
 		AA0012000000000000000003 /* member-balance.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; name = "member-balance.json"; path = "../shared/test-vectors/member-balance.json"; sourceTree = "<group>"; };
 		AA0014000000000000000001 /* ScanParserTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ScanParserTests.swift; path = "Ortho-iOSTests/ScanParserTests.swift"; sourceTree = "<group>"; };
 		AA0015000000000000000001 /* FeatureFlagsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FeatureFlagsTests.swift; path = "Ortho-iOSTests/FeatureFlagsTests.swift"; sourceTree = "<group>"; };
+		AA0018000000000000000001 /* EntitlementLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EntitlementLogicTests.swift; path = "Ortho-iOSTests/EntitlementLogicTests.swift"; sourceTree = "<group>"; };
+		AA0019000000000000000001 /* EntitlementGateTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EntitlementGateTests.swift; path = "Ortho-iOSTests/EntitlementGateTests.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -109,6 +113,8 @@
 				98A34CBADC26530952D14D2B /* currency.json */,
 				A1D7E0000B011000000000A0 /* DashboardScopeParityTests.swift */,
 				A1D7E0020B011000000000A2 /* dashboard-month-scope.json */,
+				AA0018000000000000000001 /* EntitlementLogicTests.swift */,
+				AA0019000000000000000001 /* EntitlementGateTests.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -257,6 +263,8 @@
 				CDDC361CED2034F43CA9B013 /* TransactionSplitParityTests.swift in Sources */,
 				56F9A5351754B3502C7B5BA0 /* CurrencyParityTests.swift in Sources */,
 				A1D7E0010B011000000000A1 /* DashboardScopeParityTests.swift in Sources */,
+				AA0018000000000000000002 /* EntitlementLogicTests.swift in Sources */,
+				AA0019000000000000000002 /* EntitlementGateTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -14,36 +14,36 @@ files, no incomplete dependency).
 
 ## Phase 1: Setup
 
-- [ ] T001 Scaffold `services/billing/` package: `package.json` (name `@ortho/billing-core`, private, zero runtime deps, vitest devDep, scripts `test`/`sync:functions`), strict runtime-agnostic `tsconfig.json` (no DOM/Node/Deno libs), `README.md` stating the extraction contract (may import NOTHING from web/, iOS/, supabase/), empty `src/index.ts`; `npm install` runs clean.
-- [ ] T002 [P] Extend `.github/workflows/web-ci.yml`: add `services/**` and `supabase/functions/**` to `on.push.paths`/`on.pull_request.paths`; add a job step `cd services/billing && npm ci && npm test && npx tsc --noEmit` before the web steps.
+- [x] T001 Scaffold `services/billing/` package: `package.json` (name `@ortho/billing-core`, private, zero runtime deps, vitest devDep, scripts `test`/`sync:functions`), strict runtime-agnostic `tsconfig.json` (no DOM/Node/Deno libs), `README.md` stating the extraction contract (may import NOTHING from web/, iOS/, supabase/), empty `src/index.ts`; `npm install` runs clean.
+- [x] T002 [P] Extend `.github/workflows/web-ci.yml`: add `services/**` and `supabase/functions/**` to `on.push.paths`/`on.pull_request.paths`; add a job step `cd services/billing && npm ci && npm test && npx tsc --noEmit` before the web steps.
 
 ## Phase 2: Foundational (blocks all user stories)
 
 **Core derivation + literal lock (contracts/entitlement-state.md)**
 
-- [ ] T003 Write failing tests `services/billing/test/derive.test.ts`: all 19 literal vectors V01–V19 embedded verbatim, the canonical-serialization digest assertion (`88715c83…a48e2`), plus per-branch boundary cases (strict `<` at both window edges).
-- [ ] T004 Implement `services/billing/src/states.ts` (types + `LEEWAY_HOURS=48`, `DUNNING_GRACE_DAYS=14`, `TRIAL_DAYS=31`) and `src/derive.ts` (`deriveGateState(row, nowIso)`) until T003 passes; export from `src/index.ts`.
+- [x] T003 Write failing tests `services/billing/test/derive.test.ts`: all 19 literal vectors V01–V19 embedded verbatim, the canonical-serialization digest assertion (`88715c83…a48e2`), plus per-branch boundary cases (strict `<` at both window edges).
+- [x] T004 Implement `services/billing/src/states.ts` (types + `LEEWAY_HOURS=48`, `DUNNING_GRACE_DAYS=14`, `TRIAL_DAYS=31`) and `src/derive.ts` (`deriveGateState(row, nowIso)`) until T003 passes; export from `src/index.ts`.
 
 **Core state machine (contracts/stripe-events.md)**
 
-- [ ] T005 [P] Write failing tests `services/billing/test/machine.test.ts`: every transition row of the mapping table; guard order (unmatched → stale → admin-wins); `payment_failed` iff active/past_due else noop; `subscription_deleted` leaves expiry; admin row receives full subscribe-fail-cancel stream untouched except reference ids.
-- [ ] T006 [P] Write failing tests `services/billing/test/replay.test.ts` (SC-007): property-style — shuffled + duplicated fixture streams (incl. the four mandated fixtures in the contract) converge to the clean-stream row.
-- [ ] T007 [P] Write failing tests `services/billing/test/stripe-translate.test.ts`: fixture Stripe payloads (checkout.session.completed, invoice.paid with line periods, invoice.payment_failed, subscription.updated per status incl. incomplete→noop, deleted, paused, trial_will_end, unknown type) → exact `NormalizedBillingEvent`s; price-id→plan mapping; user resolution order (metadata → client_reference_id → customer lookup input).
-- [ ] T008 Implement `services/billing/src/normalize.ts` (NormalizedBillingEvent + guard pipeline), `src/machine.ts` (`applyBillingEvent`), `src/stripe.ts` (pure payload translator, price-id map passed in) until T005–T007 pass.
+- [x] T005 [P] Write failing tests `services/billing/test/machine.test.ts`: every transition row of the mapping table; guard order (unmatched → stale → admin-wins); `payment_failed` iff active/past_due else noop; `subscription_deleted` leaves expiry; admin row receives full subscribe-fail-cancel stream untouched except reference ids.
+- [x] T006 [P] Write failing tests `services/billing/test/replay.test.ts` (SC-007): property-style — shuffled + duplicated fixture streams (incl. the four mandated fixtures in the contract) converge to the clean-stream row.
+- [x] T007 [P] Write failing tests `services/billing/test/stripe-translate.test.ts`: fixture Stripe payloads (checkout.session.completed, invoice.paid with line periods, invoice.payment_failed, subscription.updated per status incl. incomplete→noop, deleted, paused, trial_will_end, unknown type) → exact `NormalizedBillingEvent`s; price-id→plan mapping; user resolution order (metadata → client_reference_id → customer lookup input).
+- [x] T008 Implement `services/billing/src/normalize.ts` (NormalizedBillingEvent + guard pipeline), `src/machine.ts` (`applyBillingEvent`), `src/stripe.ts` (pure payload translator, price-id map passed in) until T005–T007 pass.
 
 **Deployment copy + drift lock (plan D7)**
 
-- [ ] T009 Implement `services/billing/scripts/sync-to-functions.mjs` (`npm run sync:functions`: byte-copy `src/*.ts` → `supabase/functions/_shared/billing/`) + failing-then-green `test/shared-sync.test.ts` asserting byte-identity of every file; run the sync, commit the copy.
+- [x] T009 Implement `services/billing/scripts/sync-to-functions.mjs` (`npm run sync:functions`: byte-copy `src/*.ts` → `supabase/functions/_shared/billing/`) + failing-then-green `test/shared-sync.test.ts` asserting byte-identity of every file; run the sync, commit the copy.
 
 **Database (data-model.md §1–4)**
 
-- [ ] T010 Write `supabase/migrations/20260705130000_subscription_entitlements.sql`: enums `entitlement_status`+`billing_plan`; `entitlements` + `billing_events` exactly per data-model; RLS enable both; single `entitlements_select_own` policy; zero policies on `billing_events`; `ensure_entitlement()` SECURITY DEFINER RPC (insert-if-absent, `now()+interval '31 days'`, returns row) granted to `authenticated` only; house section ordering + comments.
+- [x] T010 Write `supabase/migrations/20260705130000_subscription_entitlements.sql`: enums `entitlement_status`+`billing_plan`; `entitlements` + `billing_events` exactly per data-model; RLS enable both; single `entitlements_select_own` policy; zero policies on `billing_events`; `ensure_entitlement()` SECURITY DEFINER RPC (insert-if-absent, `now()+interval '31 days'`, returns row) granted to `authenticated` only; house section ordering + comments.
 
 **Client mirrors + harness**
 
-- [ ] T011 [P] Write failing web tests `web/test/entitlements.test.ts` (same 19 vectors + digest) then implement mirror `web/lib/entitlements.ts` (copy of derive.ts + constants; no import from services/ — plan D7).
+- [x] T011 [P] Write failing web tests `web/test/entitlements.test.ts` (same 19 vectors + digest) then implement mirror `web/lib/entitlements.ts` (copy of derive.ts + constants; no import from services/ — plan D7).
 - [ ] T012 [P] Implement iOS mirror `iOS/Ortho-iOS/Shared/EntitlementLogic.swift` + `iOS/Ortho-iOS/Ortho-iOSTests/EntitlementLogicTests.swift` (same 19 vectors + digest over the canonical serialization; ISO-8601 parsing via fixed formatter; injected `now`).
-- [ ] T013 [P] Extend the web mock harness (`web/test/helpers/`): `entitlements` table with PostgREST-faithful behavior (select-own only; INSERT/UPDATE/DELETE from client role rejected like RLS), `rpc('ensure_entitlement')` fake (insert-if-absent semantics, returns row), `functions.invoke` fake (`billing-checkout`/`billing-portal`/`billing-plans` with configurable responses/failures). Contract test: client-role writes to entitlements are refused.
+- [x] T013 [P] Extend the web mock harness (`web/test/helpers/`): `entitlements` table with PostgREST-faithful behavior (select-own only; INSERT/UPDATE/DELETE from client role rejected like RLS), `rpc('ensure_entitlement')` fake (insert-if-absent semantics, returns row), `functions.invoke` fake (`billing-checkout`/`billing-portal`/`billing-plans` with configurable responses/failures). Contract test: client-role writes to entitlements are refused.
 
 **Checkpoint**: core green + migration written + mirrors locked — every story below is unblocked.
 
@@ -52,8 +52,8 @@ files, no incomplete dependency).
 **Goal**: entitlement row exists from first bootstrap; app unchanged during trial; state exposed.
 **Independent test**: fresh mock user boots → `ensure_entitlement` called once → gate `trialing`; second boot doesn't reset; load-failure routes to recovery, never paywall.
 
-- [ ] T014 [US1] Write failing tests in `web/test/entitlement-bootstrap.test.tsx`: bootstrap invokes `rpc('ensure_entitlement')` and stores the returned row; gate derived `trialing` for fresh user; re-boot idempotent (no second insert, expiry unchanged); RPC/network failure ⇒ `bootstrapFailed` recovery path and NOT the paywall (FR-008); `refreshEntitlement()` refetches and re-derives.
-- [ ] T015 [US1] Implement in `web/lib/store.tsx`: `entitlement` + derived `gateState` in AppState; `ensure_entitlement` RPC issued in parallel with `loadAll()` during `runBootstrap`; `refreshEntitlement()`; failure wiring per FR-008. T014 green.
+- [x] T014 [US1] Write failing tests in `web/test/entitlement-bootstrap.test.tsx`: bootstrap invokes `rpc('ensure_entitlement')` and stores the returned row; gate derived `trialing` for fresh user; re-boot idempotent (no second insert, expiry unchanged); RPC/network failure ⇒ `bootstrapFailed` recovery path and NOT the paywall (FR-008); `refreshEntitlement()` refetches and re-derives.
+- [x] T015 [US1] Implement in `web/lib/store.tsx`: `entitlement` + derived `gateState` in AppState; `ensure_entitlement` RPC issued in parallel with `loadAll()` during `runBootstrap`; `refreshEntitlement()`; failure wiring per FR-008. T014 green.
 - [ ] T016 [P] [US1] Implement `iOS/Ortho-iOS/Services/EntitlementsAPI.swift` (`ensureEntitlement()` RPC call returning the row DTO, `fetchOwn()`, DTO with CodingKeys matching data-model columns) — struct style mirrors existing `Services/` APIs.
 - [ ] T017 [US1] Implement iOS `App/AppState.swift` wiring: `entitlement` published state + `gateState` (via EntitlementLogic), `ensureEntitlement` awaited inside `bootstrapUserSession` alongside `loadAllFromServer()`; failure ⇒ existing `bootstrapDidFail` recovery (never paywall); `refreshEntitlement()`; sign-out resets entitlement state (017 lesson).
 
@@ -64,27 +64,27 @@ files, no incomplete dependency).
 **Goal**: lapsed users fully blocked; Stripe checkout round-trip restores access.
 **Independent test**: mock row with expired trial → paywall blocks everything; mock `billing-checkout` → url; flip mock row to active + "Check again" → unblocked.
 
-- [ ] T018 [P] [US2] Implement `supabase/functions/stripe-webhook/index.ts` per contracts/billing-functions §1: raw-body `constructEventAsync` + `createSubtleCryptoProvider`, dedup insert into `billing_events`, user resolution, `_shared/billing` machine, service-role upsert, outcome codes; 200/400/500 semantics exactly as contracted.
-- [ ] T019 [P] [US2] Implement `supabase/functions/billing-checkout/index.ts` and `supabase/functions/billing-plans/index.ts` per contract §2/§4 (auth resolve via `getUser`, get-or-create customer with `metadata.user_id`, session params incl. `subscription_data.metadata.user_id`, `allow_promotion_codes`; plans: price lookup + 60s cache; `not_configured` 503 path) + `supabase/config.toml` `[functions.stripe-webhook] verify_jwt = false`.
-- [ ] T020 [P] [US2] Write failing tests `web/test/paywall.test.tsx`: gate `lapsed` renders Paywall INSTEAD of children for every route (Shell-level); paywall shows plan rows with amounts from mocked `billing-plans` (`$X.XX`, no hardcoded price anywhere — assert none in source copy), "Check again" refetches + unblocks when row flips, quiet sign-out works, plans-unavailable calm state on invoke failure with retry, failure copy in `role="status"` aria-live region, all controls real buttons ≥44px, no paywall flash for entitled users during loading.
-- [ ] T021 [US2] Implement `web/lib/billing.ts` (`startCheckout(plan)` → invoke + same-tab navigate, no auto-retry; `openPortal()`; `fetchPlans()`) and `web/components/Paywall.tsx` (constitution-compliant: headline "Your free month has ended", two plan rows, check again, quiet sign out; tokens only) ; mount in `web/app/(app)/layout.tsx` Shell after load/error branches (`gateState === 'lapsed'`). T020 green.
-- [ ] T022 [US2] Add return-from-checkout handling in `web/app/(app)/settings/page.tsx` reading `?checkout=success|cancelled` (calm status line + immediate `refreshEntitlement()`; no celebratory takeover), with test in `web/test/paywall.test.tsx`.
+- [x] T018 [P] [US2] Implement `supabase/functions/stripe-webhook/index.ts` per contracts/billing-functions §1: raw-body `constructEventAsync` + `createSubtleCryptoProvider`, dedup insert into `billing_events`, user resolution, `_shared/billing` machine, service-role upsert, outcome codes; 200/400/500 semantics exactly as contracted.
+- [x] T019 [P] [US2] Implement `supabase/functions/billing-checkout/index.ts` and `supabase/functions/billing-plans/index.ts` per contract §2/§4 (auth resolve via `getUser`, get-or-create customer with `metadata.user_id`, session params incl. `subscription_data.metadata.user_id`, `allow_promotion_codes`; plans: price lookup + 60s cache; `not_configured` 503 path) + `supabase/config.toml` `[functions.stripe-webhook] verify_jwt = false`.
+- [x] T020 [P] [US2] Write failing tests `web/test/paywall.test.tsx`: gate `lapsed` renders Paywall INSTEAD of children for every route (Shell-level); paywall shows plan rows with amounts from mocked `billing-plans` (`$X.XX`, no hardcoded price anywhere — assert none in source copy), "Check again" refetches + unblocks when row flips, quiet sign-out works, plans-unavailable calm state on invoke failure with retry, failure copy in `role="status"` aria-live region, all controls real buttons ≥44px, no paywall flash for entitled users during loading.
+- [x] T021 [US2] Implement `web/lib/billing.ts` (`startCheckout(plan)` → invoke + same-tab navigate, no auto-retry; `openPortal()`; `fetchPlans()`) and `web/components/Paywall.tsx` (constitution-compliant: headline "Your free month has ended", two plan rows, check again, quiet sign out; tokens only) ; mount in `web/app/(app)/layout.tsx` Shell after load/error branches (`gateState === 'lapsed'`). T020 green.
+- [x] T022 [US2] Add return-from-checkout handling in `web/app/(app)/settings/page.tsx` reading `?checkout=success|cancelled` (calm status line + immediate `refreshEntitlement()`; no celebratory takeover), with test in `web/test/paywall.test.tsx`.
 
 **Checkpoint**: MVP complete — a real user could trial, lapse, pay, and return (pending operator deploy).
 
 ## Phase 5: User Story 3 — Subscribers manage their own billing (P2)
 
-- [ ] T023 [P] [US3] Implement `supabase/functions/billing-portal/index.ts` per contract §3 (`no_billing_account` 409; return_url to settings).
-- [ ] T024 [US3] Write failing tests (in `web/test/subscription-settings.test.tsx`): active subscriber sees Manage → `openPortal()` invoked and navigates to returned url; canceled-but-paid-through renders gate `active` with "ends on <date>" copy (stored-status-driven); portal failure shows calm inline copy (aria-live). Then implement the manage action inside `web/components/settings/SubscriptionSection.tsx` (component created fully in T031; this task lands the billing actions + these tests — coordinate, don't duplicate).
+- [x] T023 [P] [US3] Implement `supabase/functions/billing-portal/index.ts` per contract §3 (`no_billing_account` 409; return_url to settings).
+- [x] T024 [US3] Write failing tests (in `web/test/subscription-settings.test.tsx`): active subscriber sees Manage → `openPortal()` invoked and navigates to returned url; canceled-but-paid-through renders gate `active` with "ends on <date>" copy (stored-status-driven); portal failure shows calm inline copy (aria-live). Then implement the manage action inside `web/components/settings/SubscriptionSection.tsx` (component created fully in T031; this task lands the billing actions + these tests — coordinate, don't duplicate).
 
 ## Phase 6: User Story 4 — Admins never see a paywall (P2)
 
-- [ ] T025 [P] [US4] Write tests: web (`web/test/entitlement-bootstrap.test.tsx` extension) — admin row ⇒ gate `admin`, never Paywall even with ancient expiry, no subscribe affordances outside Settings; core already locks V01/V02 + admin-wins (T003/T005 — verify referenced fixtures exist, add if gap). Implement any missing branches in `web/lib/store.tsx` gate wiring (expected: none — derivation covers it; this task is the proof).
-- [ ] T026 [P] [US4] Verify quickstart §3.8 admin-grant SQL against the migration (column names/enum literal), and add the grant/revoke snippet pair to `web/scripts/ops/billing-smoke.ts` output text (script itself lands in T035).
+- [x] T025 [P] [US4] Write tests: web (`web/test/entitlement-bootstrap.test.tsx` extension) — admin row ⇒ gate `admin`, never Paywall even with ancient expiry, no subscribe affordances outside Settings; core already locks V01/V02 + admin-wins (T003/T005 — verify referenced fixtures exist, add if gap). Implement any missing branches in `web/lib/store.tsx` gate wiring (expected: none — derivation covers it; this task is the proof).
+- [x] T026 [P] [US4] Verify quickstart §3.8 admin-grant SQL against the migration (column names/enum literal), and add the grant/revoke snippet pair to `web/scripts/ops/billing-smoke.ts` output text (script itself lands in T035).
 
 ## Phase 7: User Story 5 — A failed renewal never cuts access abruptly (P2)
 
-- [ ] T027 [US5] Write failing tests: gate `grace` gives FULL app access (Shell renders children) + calm Settings dunning notice with portal link, `aria-live="polite"`, never red, never blocking (extends `web/test/subscription-settings.test.tsx`); stored `past_due` beyond grace ⇒ paywall (already vector-locked V14 — assert Shell behavior too). Implement the grace notice in `web/components/settings/SubscriptionSection.tsx` + any store wiring. (Core transitions were locked in T005/T006.)
+- [x] T027 [US5] Write failing tests: gate `grace` gives FULL app access (Shell renders children) + calm Settings dunning notice with portal link, `aria-live="polite"`, never red, never blocking (extends `web/test/subscription-settings.test.tsx`); stored `past_due` beyond grace ⇒ paywall (already vector-locked V14 — assert Shell behavior too). Implement the grace notice in `web/components/settings/SubscriptionSection.tsx` + any store wiring. (Core transitions were locked in T005/T006.)
 
 ## Phase 8: User Story 6 — iOS paywall + link-out, one source of truth (P2)
 
@@ -96,14 +96,14 @@ files, no incomplete dependency).
 
 ## Phase 9: User Story 7 — Settings status row + full i18n (P3)
 
-- [ ] T031 [US7] Write failing tests `web/test/subscription-settings.test.tsx` (state copy per: trialing d-remaining, active-monthly renews, active-yearly renews, grace notice, canceled ends-on, lapsed subscribe, admin no-sub-needed) then implement `web/components/settings/SubscriptionSection.tsx` mounted after Cards in `web/app/(app)/settings/page.tsx` (row + action per state; owner of the T024 manage action and T027 grace notice).
+- [x] T031 [US7] Write failing tests `web/test/subscription-settings.test.tsx` (state copy per: trialing d-remaining, active-monthly renews, active-yearly renews, grace notice, canceled ends-on, lapsed subscribe, admin no-sub-needed) then implement `web/components/settings/SubscriptionSection.tsx` mounted after Cards in `web/app/(app)/settings/page.tsx` (row + action per state; owner of the T024 manage action and T027 grace notice).
 - [ ] T032 [P] [US7] Implement `iOS/Ortho-iOS/Features/Settings/SubscriptionSectionView.swift` + mount after Cards in `SettingsView.swift`: same states/copy/actions (subscribe ⇒ paywall-style plan sheet or direct checkout link-out; manage ⇒ portal URL external).
 - [ ] T033 [US7] Add every new English key to the five web catalogs `web/lib/i18n/{bn,es,ja,zh,ko}.ts` (translated, not English placeholders) and matching keys ×6 locales to `iOS/Ortho-iOS/Localizable.xcstrings`; catalog-parity suite green; audit zero hardcoded user-facing strings in new components.
 
 ## Phase 10: Polish & Cross-Cutting
 
-- [ ] T034 [P] Write `web/scripts/ops/billing-probe.ts` `[OPERATOR-PENDING]`: read-only checks per quickstart §2.6 (RPC present, tables reachable service-role, four functions respond, prices resolve) with red/green report; refuses to run without explicit env.
-- [ ] T035 [P] Write `web/scripts/ops/billing-smoke.ts` `[OPERATOR-PENDING]`: guided interactive walk of quickstart §3 incl. admin grant/revoke snippets (T026) and replay check.
+- [x] T034 [P] Write `web/scripts/ops/billing-probe.ts` `[OPERATOR-PENDING]`: read-only checks per quickstart §2.6 (RPC present, tables reachable service-role, four functions respond, prices resolve) with red/green report; refuses to run without explicit env.
+- [x] T035 [P] Write `web/scripts/ops/billing-smoke.ts` `[OPERATOR-PENDING]`: guided interactive walk of quickstart §3 incl. admin grant/revoke snippets (T026) and replay check.
 - [ ] T036 [P] Docs: update `docs/index.md` (big-picture: first server-side code, `services/`, functions), `docs/supabase.md` (entitlements/billing_events/RPC/functions/secrets), `docs/web.md` (billing lib, paywall gate, ops scripts), `docs/ios.md` (EntitlementsAPI, paywall gate, link-out).
 - [ ] T037 [P] `PARITY.md`: add spec-018 capability rows (derivation TS↔Swift↔core with literal-lock digest; paywall/Settings surfaces) + divergence entries (web same-tab redirect vs iOS external link-out; iOS plan sheet form factor).
 - [ ] T038 Re-run FULL local gates (quickstart §1): services/billing tests+tsc, sync drift, web `npm test` (731+new, zero failures) + `npx tsc --noEmit`, `npm run gen:vectors` zero-drift, `npm run build` (only if no shared dev server), catalog parity.
