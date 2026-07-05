@@ -1,0 +1,17 @@
+{
+  "name": "@ortho/billing-core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Extraction-ready subscription billing core: entitlement derivation + provider-event state machine. Pure runtime-agnostic TypeScript — zero runtime dependencies, zero imports from the host app.",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "sync:functions": "node scripts/sync-to-functions.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5",
+    "vitest": "^4.1.8"
+  }
+}

@@ -168,6 +168,8 @@ plans: NOT a table — two Stripe Price IDs in function secrets (D10); `billing_
 - `ensure_entitlement` twice for same user ⇒ one row, unchanged expiry (FR-002).
 - No client role can insert/update/delete `entitlements` or touch `billing_events` (RLS tests in
   the migration's companion checks + asserted in the web mock-harness contract).
-- Every §6 transition + every §5 branch has a dedicated core test; replay property: any
-  shuffle+duplication of an event stream converges to the clean-stream row (SC-007).
+- Every §6 transition + every §5 branch has a dedicated core test; replay properties per
+  contracts/stripe-events.md: duplicates always converge; status-carrying streams converge under
+  reordering; `payment_failed` early-arrival degrades fail-safe and is corrected by the redundant
+  `subscription_updated` (SC-007).
 - Literal vectors (contracts/entitlement-state.md) pass byte-identically in core, web, iOS suites.

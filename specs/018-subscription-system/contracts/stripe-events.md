@@ -36,8 +36,8 @@ outcome `skipped_unmatched` (event still logged; webhook still 200s).
 | `invoice.paid` | `payment_succeeded` | `periodEndsAt` = max line `period.end`; customer id from invoice |
 | `invoice.payment_failed` | `payment_failed` | customer id; no period change |
 | `customer.subscription.updated` | `subscription_updated` | `status` per table below; `current_period_end`; price→plan |
-| `customer.subscription.deleted` | `subscription_deleted` | ids only |
-| `customer.subscription.paused` | `subscription_paused` | ids only |
+| `customer.subscription.deleted` | `subscription_deleted` | full subscription object: ids + `current_period_end` + price→plan (the payload carries them; extracting them is what makes reordered streams converge on every field, not just status) |
+| `customer.subscription.paused` | `subscription_paused` | full subscription object, as above |
 | `customer.subscription.trial_will_end` | `trial_will_end` | log-only (v1 runs no Stripe trials) |
 | anything else | `unrecognized` | logged `noop`; webhook 200s (never 500 on unknown types) |
 
@@ -69,18 +69,34 @@ outcome `skipped_unmatched` (event still logged; webhook still 200s).
 | `payment_succeeded` | `status='active'` (heals `past_due`/`canceled`-resubscribe), `access_expires_at=periodEndsAt` |
 | `payment_failed` | `status='past_due'` **iff** current ∈ {`active`,`past_due`} — else `noop` (FR-020: a failure event alone NEVER lapses; a `trialing` user's stray failure event is a `noop`) |
 | `subscription_updated` | `status=mapped`, `access_expires_at=periodEndsAt`, `plan` (portal monthly↔yearly lands here) |
-| `subscription_deleted` | `status='canceled'`; expiry **unchanged** (paid-through governs; FR-014/019) |
-| `subscription_paused` | `status='paused'`; expiry unchanged |
+| `subscription_deleted` | `status='canceled'`; expiry = event's `periodEndsAt` when present, else unchanged (Stripe's period end IS the paid-through instant — FR-014/019 semantics preserved); `plan`/ids filled when present |
+| `subscription_paused` | `status='paused'`; same field-fill rules |
 | `trial_will_end` / `unrecognized` | `noop` (logged) |
 
 ## Idempotency & convergence properties (test obligations, SC-007)
 
-For any event stream S with duplicates and arbitrary reordering, processing under the guards
-must yield the same final `entitlements` row as processing sorted-unique S. Test fixtures MUST
-include at minimum: duplicate `invoice.paid`; `payment_failed` arriving after the healing
-`invoice.paid` (stale guard); `subscription_deleted` before a late `subscription_updated`
-(stale guard); a replayed `checkout.session.completed`; an admin row receiving the full
-subscribe-fail-cancel stream (admin-wins).
+Precise binding property (single-pass incremental processing cannot converge under *arbitrary*
+reordering of *conditional* transitions — the guarantees below are the honest, load-bearing set):
+
+1. **Duplicates always converge**: re-delivery of any already-processed `event_id` is a `noop`
+   (dedup) and the row is byte-identical.
+2. **Status-carrying events converge under reordering**: for streams composed of unconditional
+   transitions (`checkout_completed`, `payment_succeeded`, `subscription_updated`,
+   `subscription_deleted`, `subscription_paused`), any processing order yields the same final
+   row as created-order (the stale guard makes newest-created win).
+3. **`payment_failed` is order-sensitive but fail-safe**: its only effect is
+   `active/past_due → past_due`. Arriving early (before its causal predecessors) it degrades to
+   `noop` — the user *keeps* access (never wrongly lapses), and the authoritative state is
+   restored by the redundant `customer.subscription.updated` (Stripe fires one carrying
+   `past_due` alongside every renewal failure). Tests assert the degradation AND the correction.
+
+Test fixtures MUST include at minimum: duplicate `invoice.paid`; `payment_failed` arriving after
+the healing `invoice.paid` (stale guard); `subscription_deleted` before a late
+`subscription_updated` (stale guard); a replayed `checkout.session.completed`; an admin row
+receiving the full subscribe-fail-cancel stream (admin-wins); the property-2 shuffles; and the
+property-3 early-arrival + correction pair. Fixture `created` timestamps are strictly distinct
+(Stripe's second-granularity `created` can theoretically collide; the stale guard's `<=` makes
+same-second later arrivals no-ops — an accepted, documented edge).
 
 ## Failure-mode obligations (webhook function)
 
