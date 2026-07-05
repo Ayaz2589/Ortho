@@ -144,7 +144,7 @@ describe('bootstrap choice for a fresh user (US2/US6)', () => {
     await renderStore()
     expect(api.membershipStatus).toBe('none')
 
-    let result: Awaited<ReturnType<typeof api.redeemInvite>>
+    let result!: Awaited<ReturnType<typeof api.redeemInvite>>
     await act(async () => {
       result = await api.redeemInvite('abcde-23456')
     })
@@ -170,7 +170,7 @@ describe('bootstrap choice for a fresh user (US2/US6)', () => {
     })
     await renderStore()
 
-    let result: Awaited<ReturnType<typeof api.redeemInvite>>
+    let result!: Awaited<ReturnType<typeof api.redeemInvite>>
     await act(async () => {
       result = await api.redeemInvite('ZZZZZ-ZZZZZ')
     })
@@ -184,7 +184,7 @@ describe('bootstrap choice for a fresh user (US2/US6)', () => {
     h.mock = makeSupabaseMock(freshUserDataset())
     await renderStore()
 
-    let result: Awaited<ReturnType<typeof api.redeemInvite>>
+    let result!: Awaited<ReturnType<typeof api.redeemInvite>>
     await act(async () => {
       result = await api.redeemInvite('nope')
     })
@@ -197,7 +197,7 @@ describe('bootstrap choice for a fresh user (US2/US6)', () => {
     await renderStore()
     expect(api.membershipStatus).toBe('member')
 
-    let result: Awaited<ReturnType<typeof api.redeemInvite>>
+    let result!: Awaited<ReturnType<typeof api.redeemInvite>>
     await act(async () => {
       result = await api.redeemInvite('abcde-23456')
     })
@@ -356,7 +356,7 @@ describe('identity claim (US3, FR-014/015/016/017)', () => {
     })
     await renderStore()
 
-    let result: Awaited<ReturnType<typeof api.claimPerson>>
+    let result!: Awaited<ReturnType<typeof api.claimPerson>>
     await act(async () => {
       result = await api.claimPerson({ personId: 'p-partner' })
     })
@@ -380,7 +380,7 @@ describe('identity claim (US3, FR-014/015/016/017)', () => {
     })
     await renderStore()
 
-    let result: Awaited<ReturnType<typeof api.claimPerson>>
+    let result!: Awaited<ReturnType<typeof api.claimPerson>>
     await act(async () => {
       result = await api.claimPerson({ personId: 'p-partner' })
     })
@@ -392,7 +392,7 @@ describe('identity claim (US3, FR-014/015/016/017)', () => {
     h.mock = makeSupabaseMock(joinerDataset())
     await renderStore()
 
-    let result: Awaited<ReturnType<typeof api.claimPerson>>
+    let result!: Awaited<ReturnType<typeof api.claimPerson>>
     await act(async () => {
       result = await api.claimPerson({ name: 'Ben', colorKey: 'slate' })
     })

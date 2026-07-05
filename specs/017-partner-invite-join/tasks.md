@@ -129,12 +129,12 @@ selectErrors on refresh → data intact + banner; open form value survives refre
 
 ## Phase 7: i18n (web catalogs) — blocks the iOS batch strings
 
-- [ ] T017 [P] Add ALL new user-facing keys (~35: gate, invite card, join page, claim step,
+- [X] T017 [P] Add ALL new user-facing keys (~35: gate, invite card, join page, claim step,
       refresh, statuses, errors — final list from the rendered components) to
       `web/lib/i18n/{bn,es,ja,zh,ko}.ts` (shared-key block for strings that will also exist on
       iOS; web-only block otherwise); extend the render-locale checks in `web/test/i18n/` to
       the gate + invite card; `web/test/i18n/catalog-parity.test.ts` green.
-- [ ] T018 Full web gate: `npx tsc --noEmit`, `npm test` (all suites incl. new), vector-drift
+- [X] T018 Full web gate: `npx tsc --noEmit`, `npm test` (all suites incl. new), vector-drift
       zero. Fix anything. This is the "web core green" checkpoint that unblocks the iOS push.
 
 ## Phase 8: iOS batch (US1–US5 on iOS) — ONE contiguous group, ONE early CI push
@@ -143,31 +143,31 @@ selectErrors on refresh → data intact + banner; open form value survives refre
 **Independent test**: `InviteCodecTests` green in CI; compile green; `-uiDemo` screenshots show
 the new Settings rows.
 
-- [ ] T019 ⊗ [US1] Write `iOS/Ortho-iOSTests/InviteCodecTests.swift` with the IDENTICAL
+- [X] T019 ⊗ [US1] Write `iOS/Ortho-iOSTests/InviteCodecTests.swift` with the IDENTICAL
       literal cases as `web/test/invites.test.ts` (contract §6, incl. the T004 digest), status
       precedence with injected dates, generate/format round-trip. (Runs only in CI — authored
       before the implementation it tests.)
-- [ ] T020 [US1] Implement `iOS/Ortho-iOS/Shared/InviteCodec.swift` (CryptoKit SHA256,
+- [X] T020 [US1] Implement `iOS/Ortho-iOS/Shared/InviteCodec.swift` (CryptoKit SHA256,
       SystemRandomNumberGenerator, per contracts/invite-code.md).
-- [ ] T021 [US1] Implement `iOS/Ortho-iOS/Services/InvitesAPI.swift` (fetch/create/revoke/
+- [X] T021 [US1] Implement `iOS/Ortho-iOS/Services/InvitesAPI.swift` (fetch/create/revoke/
       redeem-via-`.rpc("accept_invite")`/role — CardsAPI struct pattern, snake_case CodingKeys
       DTOs per data-model.md).
-- [ ] T022 [US2] `iOS/Ortho-iOS/Services/HouseholdsAPI.swift`: `findOrCreate(for:preferredID:)`
+- [X] T022 [US2] `iOS/Ortho-iOS/Services/HouseholdsAPI.swift`: `findOrCreate(for:preferredID:)`
       reads all memberships (+role, ordered), prefers preferred, returns `(id, name, role)`;
       `iOS/Ortho-iOS/App/AppState.swift`: pass the persisted `currentHouseholdID`, store
       `currentRole`, gate `ensureAccountPerson` to owner-role, add `invites` collection +
       `createInvite/revokeInvite/joinHousehold/claimPerson` (optimistic + `dataError`, all
       `testDataEnabled`-guarded).
-- [ ] T023 [US1] [US5] `iOS/Ortho-iOS/Features/Settings/InviteSheet.swift` (create → one-time
+- [X] T023 [US1] [US5] `iOS/Ortho-iOS/Features/Settings/InviteSheet.swift` (create → one-time
       reveal + ShareLink + copy; pending list with status text; revoke w/ confirm) + owner-only
       "Invite your partner" row in `Features/Settings/HouseholdView.swift`.
-- [ ] T024 [US2] [US3] `iOS/Ortho-iOS/Features/Settings/JoinHouseholdSheet.swift` (code entry →
+- [X] T024 [US2] [US3] `iOS/Ortho-iOS/Features/Settings/JoinHouseholdSheet.swift` (code entry →
       redeem → outcomes; claim-person picker step: unlinked active people or create-new) +
       universal "Join a household" row in `HouseholdView.swift`; join success sets
       `currentHouseholdID`, reloads, claim check per contracts/store-api.md.
-- [ ] T025 [US4] `.refreshable { await appState.loadAllFromServer() }` on the Transactions
+- [X] T025 [US4] `.refreshable { await appState.loadAllFromServer() }` on the Transactions
       `List` in `iOS/Ortho-iOS/Features/Transactions/TransactionsView.swift`.
-- [ ] T026 [US1] All new iOS strings into `iOS/Ortho-iOS/Localizable.xcstrings` (6 languages,
+- [X] T026 [US1] All new iOS strings into `iOS/Ortho-iOS/Localizable.xcstrings` (6 languages,
       keys byte-identical to web's shared block from T017).
 - [ ] T027 Push the branch (web + iOS together), watch
       `GH_TOKEN=placeholder gh run watch --exit-status` for BOTH workflows; fix-up budget: 2
@@ -177,11 +177,11 @@ the new Settings rows.
 
 ## Phase 9: Operator scripts (FR-026)
 
-- [ ] T028 [P] `web/scripts/ops/invite-probe.ts` — read-only hosted-rails probe (swagger root
+- [X] T028 [P] `web/scripts/ops/invite-probe.ts` — read-only hosted-rails probe (swagger root
       lists `pending_invites` + `rpc/accept_invite`; `household_people.linked_user_id` column
       probe; plain-table report; exit 0/1). Unit-test the report formatting only (no network)
       in `web/test/invites.test.ts` or a small `web/test/ops.test.ts`.
-- [ ] T029 [P] `web/scripts/ops/invite-smoke.ts` — live E2E per research.md R10 (GoTrue admin
+- [X] T029 [P] `web/scripts/ops/invite-smoke.ts` — live E2E per research.md R10 (GoTrue admin
       mint → invite → redeem → claim → verify → cleanup; `DRY_RUN=1` plan mode). Document
       both in `web/scripts/import/README.md` or a new `web/scripts/ops/README.md`.
 - [ ] T030 [OPERATOR-PENDING] Run `invite-probe.ts` then `invite-smoke.ts` from a networked
@@ -189,10 +189,10 @@ the new Settings rows.
 
 ## Phase 10: Polish & docs
 
-- [ ] T031 PARITY.md: add "Partner invite & join" + "Manual data refresh" capability rows,
+- [X] T031 PARITY.md: add "Partner invite & join" + "Manual data refresh" capability rows,
       the invite-code convention note (hand-mirrored contract), and the deliberate per-canvas
       divergences (web pre-bootstrap gate vs iOS Settings redeem; refresh batch semantics).
-- [ ] T032 [P] Docs: `docs/web.md`, `docs/ios.md`, `docs/index.md` — new flows, new files,
+- [X] T032 [P] Docs: `docs/web.md`, `docs/ios.md`, `docs/index.md` — new flows, new files,
       bumped test counts; note the stale `.specify/feature.json`→017 fix already landed.
 - [ ] T033 Final full gate: `npx tsc --noEmit`, `npm test`, vector-drift zero, `npm run build`
       (no shared dev server running); commit ledger updated (this file's checkboxes).

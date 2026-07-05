@@ -69,7 +69,7 @@ describe('store invite flows (US1/US5)', () => {
     expect(api.currentRole).toBe('owner')
 
     const before = Date.now()
-    let result: Awaited<ReturnType<typeof api.createInvite>>
+    let result!: Awaited<ReturnType<typeof api.createInvite>>
     await act(async () => {
       result = await api.createInvite()
     })
@@ -103,7 +103,7 @@ describe('store invite flows (US1/US5)', () => {
     h.mock = makeSupabaseMock({ ...dataset(), insertErrors: { pending_invites: 'insert denied' } })
     await renderStore()
 
-    let result: Awaited<ReturnType<typeof api.createInvite>>
+    let result!: Awaited<ReturnType<typeof api.createInvite>>
     await act(async () => {
       result = await api.createInvite()
     })
