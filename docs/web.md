@@ -43,7 +43,7 @@ web/
 │   ├── sign-in/page.tsx        # email-OTP sign-in (8-digit code, no password)
 │   ├── fonts/                  # Lato-{Light,Regular,Bold,Black}.ttf — same files iOS bundles
 │   └── (app)/                  # authed route group
-│       ├── layout.tsx          # 'use client' shell: AppStateProvider + Sidebar + TabBar
+│       ├── layout.tsx          # 'use client' shell: AppStateProvider + Sidebar + TabBar + paywall gate (spec 018)
 │       ├── dashboard/page.tsx  # branches mobile stack vs DashboardDesktop at ≥1024px
 │       ├── transactions/page.tsx
 │       ├── housing/page.tsx
@@ -62,12 +62,16 @@ web/
 │   ├── transactions/           # TransactionRow, TransactionDetailModal/Body, BalanceSummary
 │   ├── housing/                # PropertyCard/Content, Mortgage/Rental/Multifamily cards, Add modals
 │   ├── budgets/BudgetDrawer.tsx
-│   ├── settings/               # rows, ChoiceRows, HouseholdDrawer, AddCardModal, appearance.ts (THEME_VARS)
+│   ├── Paywall.tsx             # spec 018: blocking gate content (plans, check again, quiet sign-out)
+│   ├── settings/               # rows, ChoiceRows, HouseholdDrawer, AddCardModal, appearance.ts (THEME_VARS),
+│   │                           #   SubscriptionSection.tsx (spec 018)
 │   └── web/                    # ≥1024px desktop chrome: DashboardDesktop, TransactionsDesktop,
 │                               #   HousingDesktop, Drawer (shared slide-out), WebModal, TxForm,
 │                               #   TxModalWeb, FilterPanel, ActiveFilterChips, kit.tsx (WebPageHeader, Seg…)
 ├── lib/
 │   ├── store.tsx               # AppStateProvider — the entire client data layer (React context)
+│   ├── entitlements.ts         # spec 018: hand-mirrored gate derivation (literal-vector-locked)
+│   ├── billing.ts              # spec 018: functions.invoke wrappers for the billing edge functions
 │   ├── supabase/client.ts      # createBrowserClient
 │   ├── supabase/server.ts      # createServerClient (cookies)
 │   ├── api/aggregates.ts       # wrappers over Postgres aggregate RPCs (ADDITIVE — not yet wired)
@@ -87,8 +91,9 @@ web/
 ├── scripts/
 │   ├── gen-vectors.ts          # regenerates shared/test-vectors/*.json from the TS engines
 │   ├── import/                 # bank-statement import + tx CRUD CLI (engine/, profiles/, db/, cli.ts, tx.ts)
+│   ├── ops/                    # [OPERATOR-PENDING] live-deploy tools: billing-probe.ts, billing-smoke.ts (spec 018)
 │   └── maintenance/repair-legacy-dates.ts  # one-shot date repair (make repair-dates, dry-run by default)
-├── test/                       # 67 Vitest files, 731 tests (unit, jsdom component, *.parity.test.ts,
+├── test/                       # 72 Vitest files, 790 tests (unit, jsdom component, *.parity.test.ts,
 │   │                           #   i18n/ catalog + render-locale locks, import/ golden suites + fixtures/,
 │   │                           #   helpers/supabase-mock.ts)
 │   └── setup.ts                # jest-dom matchers + conditional RTL cleanup
@@ -111,6 +116,15 @@ A **Developer** section on the Settings page (`components/settings/flags-section
 - **Gating:** `lib/test-build.ts` `isTestBuild()` (`NEXT_PUBLIC_VERCEL_ENV`/`NODE_ENV !== 'production'`) gates both the section and every flag-honoring branch, so they **dead-code-eliminate from the production bundle**. Flags persist via `lib/flags.ts` (`localStorage['ortho.flags']`, mirroring `appearance.ts`) and read all-off off a test build (FR-003). Bypass also sets an `ortho_bypass_auth` **cookie** because the `proxy.ts` middleware runs server-side and can't read localStorage.
 - **Isolation (the single seam):** when `isTestBuild() && effectiveUseTestData(readFlags())`, `lib/supabase/client.ts` returns an **in-memory seeded client** (`lib/testdata/memory-client.ts`, a productionized copy of `test/helpers/supabase-mock.ts`, seeded from `lib/testdata/seed.ts`) instead of `createBrowserClient`. Because the store funnels every read/write/auth call through that one handle, no live call is constructed — the store needs no changes; toggling a flag reloads to re-bootstrap from a clean seed.
 - **Auth bypass has two halves:** `proxy.ts` skips the `/sign-in` redirect when `isTestBuild()` + the cookie; the store boots from the seed client (its `getUser` returns a seed user; `onAuthStateChange` never fires `SIGNED_OUT`). The seed is Person-centric (owner_ids + shares + paid_by, budgets, rental, transfers). Tests: `test/{flags,settings,store,proxy}/*`. Outside the golden-vector harness (PARITY.md).
+
+### Subscription gate & billing (spec 018)
+- **`lib/entitlements.ts`** is the hand-mirrored client copy of the canonical `services/billing/src/derive.ts` (Swift twin: `iOS/Ortho-iOS/Shared/EntitlementLogic.swift`): `deriveGateState(row, nowIso)` → `admin | trialing | active | grace | lapsed`, plus `daysRemaining`. All three are locked by the **identical literal vectors V01–V19 + sha256 digest** in `specs/018-subscription-system/contracts/entitlement-state.md` (asserted here by `test/entitlements.test.ts`) — amend the contract before touching semantics. Deliberately *not* a golden vector (no money/date engine).
+- **Bootstrap** issues the `ensure_entitlement()` RPC in parallel with `loadAll()` — it creates the 31-day trial row exactly once and doubles as the entitlement fetch. A failed entitlement read is a **load failure** (existing recovery path), never the paywall (FR-008). The store exposes `entitlement`, the memoized derived `gateState`, and `refreshEntitlement()` ("Check again" + the `?checkout=success` return path re-read).
+- **Shell gate** (`app/(app)/layout.tsx`): `gateState === 'lapsed'` renders `<Paywall/>` *instead of* children — every route, tab, and deep link lands there; a `null` gate (row not loaded) **never blocks** (FR-009, no paywall flash). `grace` keeps full access with a calm Settings notice. `Paywall.tsx` prices plans exclusively from `billing-plans` (calm "plans unavailable" state on failure), offers check-again and a quiet sign-out, and announces async status via `role="status"`/`aria-live`.
+- **Settings › Subscription** (`components/settings/SubscriptionSection.tsx`, mounted after Cards): per-state copy (trial days left, renews, ends-on, billing-issue notice, admin "no subscription needed"), Manage → Stripe Customer Portal, inline subscribe.
+- **`lib/billing.ts`** wraps `functions.invoke` for `billing-plans`/`billing-checkout`/`billing-portal` and maps failures to the contract's `{ error: { code } }` envelope — callers localize by `code`; checkout is never auto-retried (duplicate sessions). Plan prices render as USD `$X.XX` and deliberately skip the display-currency converter (the paywall shows exactly what Stripe will charge).
+- **Test infrastructure**: `test/helpers/supabase-mock.ts` gained a `functions.invoke` fake and RLS-faithful guards (client writes to `entitlements` rejected; `billing_events` invisible even to reads); `lib/testdata/memory-client.ts` serves an in-memory trial so test-data mode never gates.
+- **i18n**: +27 keys in all five catalogs. **Ops**: `scripts/ops/billing-probe.ts` (read-only deploy probe) and `scripts/ops/billing-smoke.ts` (guided test-mode checkout→webhook→flip) are `[OPERATOR-PENDING]` tools — runbook in `specs/018-subscription-system/quickstart.md`.
 
 ### Data layer — one React context, optimistic writes
 `lib/store.tsx` (`AppStateProvider` / `useApp()`) is the whole client data layer, mirroring iOS `AppState`:
@@ -170,15 +184,17 @@ npm install
 npm run dev              # http://localhost:3000
 npm run build            # next build
 npm start                # next start (after build)
-npm test                 # vitest run — 67 files / 731 tests (verified green, 2026-07-04)
+npm test                 # vitest run — 72 files / 790 tests (verified green, 2026-07-05)
 npm run test:coverage    # v8 coverage, thresholds enforced (see vitest.config.ts)
 npm run gen:vectors      # regenerate shared/test-vectors/ from the TS engines
 npx tsc --noEmit         # typecheck (part of the web CI gate)
 ```
 
 CI: `.github/workflows/web-ci.yml` runs `tsc`, `npm test`, and a vector-drift check on every
-`web/**` or `shared/test-vectors/**` change (Linux). Keep `npx tsc --noEmit` clean — under Next's
-defaults a type error fails `next build`, and the web app has no other build gate.
+`web/**`, `services/**`, `supabase/functions/**`, or `shared/test-vectors/**` change (Linux); since
+spec 018 it also typechecks and tests `services/billing` (whose suite includes the `_shared/`
+drift lock). Keep `npx tsc --noEmit` clean — under Next's defaults a type error fails
+`next build`, and the web app has no other build gate.
 
 **Environment** (`web/.env.local`, not committed): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (required by app + proxy + CLI); `SUPABASE_SERVICE_ROLE_KEY` (only for the CLI's `ADMIN=1` mode); `IMPORT_EMAIL` (optional, CLI OTP sign-in). The live Supabase project is `brujhxmtzfgowimprueo.supabase.co` (also whitelisted in `next.config.ts` image remotePatterns).
 
@@ -224,7 +240,7 @@ shared `validateSplit`.
 
 ## 9. Cross-links
 
-- [./supabase.md](./supabase.md) — the shared schema this client reads/writes (`transactions` + `transaction_shares`, `household_people`, properties/mortgage/lease/units, budgets, aggregate RPCs).
+- [./supabase.md](./supabase.md) — the shared schema this client reads/writes (`transactions` + `transaction_shares`, `household_people`, properties/mortgage/lease/units, budgets, aggregate RPCs), plus the spec-018 `entitlements` table and billing edge functions that `lib/billing.ts` invokes.
 - [./ios.md](./ios.md) — the canonical client; Swift mirrors of `lib/splits.ts`, `lib/balances.ts`, `lib/finance/*`, `components/dashboard/range.ts`.
 - [./shared.md](./shared.md) — golden test vectors; generated *from* this package by `web/scripts/gen-vectors.ts`.
 - [./makefile.md](./makefile.md) — `make ingest` / `tx-*` targets that drive `web/scripts/import/` via `npx tsx`.

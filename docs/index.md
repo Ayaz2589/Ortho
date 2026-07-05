@@ -57,13 +57,21 @@ the enforcement procedure. Any change touching money, splits, balances, filters,
 status colors must be reconciled against it. The CLI writes to the same tables and reuses some
 shared TS functions but is deliberately **outside** the golden-vector harness.
 
+**Spec 018 added Ortho's first server-side code.** `supabase/functions/` holds four billing edge
+functions (`stripe-webhook`, `billing-checkout`, `billing-portal`, `billing-plans` — Deno, thin
+adapters), and the root `services/billing/` package is the extraction-ready billing core behind
+them: pure runtime-agnostic TypeScript with its own Vitest suite, byte-copied into
+`supabase/functions/_shared/billing/` by `npm run sync:functions` and locked byte-identical by a
+drift test that runs in web CI. Never edit the copy — edit `services/billing` and re-sync. See
+`docs/supabase.md` §4.5.
+
 ## 3. Directory of docs
 
 | Doc | Read this when… |
 |---|---|
 | [./ios.md](./ios.md) | …working on the SwiftUI app: AppState, tab shell, Services/ API structs, design tokens, XCTest parity suites, `SupabaseConfig.swift` setup. |
 | [./web.md](./web.md) | …working on the Next.js app: `lib/store.tsx`, responsive/desktop compositions, `globals.css` tokens, Vitest suite, `proxy.ts` auth gate, the import CLI internals. |
-| [./supabase.md](./supabase.md) | …changing the schema, enums, RLS policies, or RPCs; understanding migrations, `config.toml`, or the local stack. |
+| [./supabase.md](./supabase.md) | …changing the schema, enums, RLS policies, RPCs, or the billing edge functions (`supabase/functions/`); understanding migrations, `config.toml`, or the local stack. |
 | [./shared.md](./shared.md) | …touching any mirrored finance logic: how golden vectors are generated, asserted on both platforms, and their determinism conventions. |
 | [./makefile.md](./makefile.md) | …importing bank statements or doing terminal transaction CRUD (`make ingest`, `tx-*`), or navigating the spec-kit / `.claude` tooling at the root. |
 | [./deploy.md](./deploy.md) | …shipping the iOS app to TestFlight: the manual-trigger deploy workflow, the Apple/Supabase secrets it preflights, and the owner setup steps. |
@@ -74,7 +82,7 @@ shared TS functions but is deliberately **outside** the golden-vector harness.
 2. **Read `PARITY.md`** — the parity matrix and divergences; you will need it before touching any
    shared logic.
 3. **Read the root `CLAUDE.md`** — it points at the active feature plan (currently
-   `specs/014-receipt-statement-scan/plan.md`) and session-continuity notes
+   `specs/018-subscription-system/plan.md`) and session-continuity notes
    (`.claude/context-summaries/latest.md` if it exists).
 4. **Skim `.specify/memory/constitution.md`** — the design/testing constitution every plan gates
    on (tokens-only design, calm-over-dense, loss never red, test-first with golden vectors).
@@ -84,10 +92,12 @@ shared TS functions but is deliberately **outside** the golden-vector harness.
    `.github/workflows/ios-ci.yml` compiles, runs the parity suites, and uploads simulator
    screenshots on every push touching `iOS/**` or `shared/test-vectors/**` (see `docs/ios.md` §6).
    Web has a parallel `.github/workflows/web-ci.yml` (Linux) that runs `tsc`, the Vitest suite, and
-   a golden-vector-drift check on any `web/**` or `shared/test-vectors/**` change.
+   a golden-vector-drift check on any `web/**`, `services/**`, `supabase/functions/**`, or
+   `shared/test-vectors/**` change — since spec 018 it also typechecks and tests `services/billing`
+   (including the `_shared/` drift lock).
 6. **Set up web**: `cd web && npm install && npm test` (Node 22 per root `.nvmrc`; on Linux ARM
    you may need `@rolldown/binding-linux-arm64-gnu` since macOS-installed `node_modules` lacks
-   Linux bindings). Expect the full suite green (731 tests as of 2026-07-04). Run `npx tsc --noEmit`
+   Linux bindings). Expect the full suite green (790 tests as of 2026-07-05). Run `npx tsc --noEmit`
    too — it is part of the web CI gate.
 7. **Check env/credentials**: `web/.env.local` (gitignored) needs `NEXT_PUBLIC_SUPABASE_URL` +
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`; iOS needs the gitignored
@@ -120,6 +130,14 @@ shared TS functions but is deliberately **outside** the golden-vector harness.
   iOS + web sessions allowed (the platform lock was removed in feature 010); 30-day session cap
   via the Supabase session timebox (`720h` in `supabase/config.toml`, mirrored manually on the
   hosted project).
+- **Subscriptions / entitlements (spec 018).** The per-user `entitlements` table is the single
+  source of truth — service-role-write-only (clients may only `select` their own row; the
+  `ensure_entitlement()` RPC creates the 31-day trial exactly once). Both clients derive one gate
+  fact (`admin | trialing | active | grace | lapsed`) via a hand-mirrored TS/Swift derivation pair
+  locked by identical literal vectors — deliberately **not** a golden vector (no money/date
+  engine). Subscribing = Stripe Checkout; managing = Stripe Customer Portal; iOS links out to the
+  same web checkout. Admin bypass = `status = 'admin'`, operator-granted by runbook SQL. All live
+  deploy/Stripe steps are the operator runbook in `specs/018-subscription-system/quickstart.md`.
 - **Env vars / keys.** Web + CLI: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
   `IMPORT_EMAIL` (CLI OTP sign-in), `SUPABASE_SERVICE_ROLE_KEY` (CLI `ADMIN=1` only, bypasses
   RLS) — all in gitignored `web/.env.local`. iOS: gitignored `App/SupabaseConfig.swift`.

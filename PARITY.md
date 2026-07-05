@@ -23,6 +23,10 @@ test suites assert. The **CLI** writes to the same tables and reuses the shared 
 functions where it can, but it is **not** part of the golden-vector harness and has a few intentional and
 a few unintended divergences (below).
 
+> Spec-018 addendum (**2026-07-05**): the entitlement-gate derivation row + subscription divergences
+> added. The lock is a three-way **identical-literal-vector** table (core/web/iOS, V01–V19 + digest)
+> rather than a golden vector — entitlement policy is not finance math. Web suite 790 green.
+>
 > Last reconciled: **2026-07-02, spec 013 (post-audit closeout)** — every residual gap from the same-day
 > 65-divergence audit was closed or reclassified: `availableRanges` vectored, recurring-preview
 > ordering/casing unified + vectored (`preview_merchants`), web outlier date localized, CLI filtering /
@@ -61,6 +65,7 @@ a few unintended divergences (below).
 | Auth (email-OTP, 8-digit) | ✅ | ✅ | ⚠️ | — (each calls Supabase SDK) |
 | Concurrent iOS + web sessions | ✅ | ✅ | — | single-active-platform lock **removed** (feature 010) |
 | Max session length (30-day cap) | ✅ | ✅ | ✅ | Supabase session timebox (720h) — clients sign out → sign-in on expiry |
+| Entitlement gate derivation (spec 018) | ✅ | ✅ | — | `services/billing/src/derive.ts` (canonical) ↔ `web/lib/entitlements.ts` ↔ `iOS/Ortho-iOS/Shared/EntitlementLogic.swift` — identical literal vectors V01–V19 + sha256 `88715c83…a48e2` (`specs/018-subscription-system/contracts/entitlement-state.md`); deliberately **not** a golden vector (no money/date engine) |
 | Golden-vector enforcement | ✅ (generator) | ✅ (asserts) | — | `shared/test-vectors/` + `gen-vectors.ts` |
 
 ## The parity core (genuinely shared & locked)
@@ -270,3 +275,15 @@ These shape which rows exist and what the apps display, but have no cross-surfac
   seeded client (`lib/testdata/`). The feature is **outside** the golden-vector harness (no money/date
   math), so it carries no shared vector; the refreshed sample dataset (`Person.sample` etc. on iOS,
   `lib/testdata/seed.ts` on web) is per-surface, not vectored.
+- **Subscriptions (spec 018) — intentional form-factor divergences + a trust-model note.** Both apps
+  gate on the same server-side `entitlements` row and the same derived fact (matrix row above); two
+  deltas are deliberate, not drift: **(a) checkout reach** — web redirects same-tab to Stripe
+  Checkout, iOS links out to the **external browser** (US-storefront rules; no StoreKit purchase
+  flow in v1) — same hosted checkout, same entitlement row either way; **(b) paywall form factor** —
+  web renders the gate inside the `(app)` Shell (the loading/error slot, `components/Paywall.tsx`),
+  iOS is a full-screen root-switch view (`Features/Paywall/PaywallView.swift`, the
+  `BootstrapRecoveryView` shape). **Trust model (shared, documented limitation):** the paywall is
+  enforced by service-role-only entitlement state plus client shell gating; data-table RLS is
+  deliberately **not** subscription-aware in v1, so a hostile custom API client with valid
+  credentials but no subscription could still read/write its own household's rows
+  (`specs/018-subscription-system/research.md` D9 records the rationale and the upgrade path).
