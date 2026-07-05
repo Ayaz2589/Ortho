@@ -107,6 +107,7 @@ export function useTxForm({
     currentUserId,
     currentPersonId,
     householdMembers,
+    resolveUser,
     addTransaction,
     updateTransaction,
   } = useApp()
@@ -129,6 +130,23 @@ export function useTxForm({
     const kept = src.owner_ids.filter((id) => memberIds.has(id))
     return kept.length ? kept : [defaultOwner]
   })()
+
+  // Selectable member list. Edit mode keeps stored people verbatim, so a
+  // transaction owned/paid by a since-REMOVED member must still render that
+  // person — otherwise the owner chip is missing, the split row shows "—", and
+  // the Paid-by/Transfer selects display a value with no matching option (the
+  // browser silently shows the first active member). Augment the active list
+  // with any referenced-but-inactive people, resolved by id.
+  const members = useMemo(() => {
+    if (!editing || !src) return householdMembers
+    const referenced = [...src.owner_ids, src.paid_by].filter(
+      (id): id is string => !!id && !memberIds.has(id)
+    )
+    if (referenced.length === 0) return householdMembers
+    const extras = [...new Set(referenced)].map((id) => resolveUser(id))
+    return [...householdMembers, ...extras]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, src, householdMembers, memberIds])
 
   const [direction, setDirection] = useState<TransactionKind>(initialKind)
   const [amount, setAmount] = useState(
@@ -396,7 +414,7 @@ export function useTxForm({
     setDate,
     isIncome,
     isTransfer,
-    members: householdMembers,
+    members,
     sources,
     fd,
     rate: r,
