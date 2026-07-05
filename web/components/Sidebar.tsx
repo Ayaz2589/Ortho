@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { BarChart3, ArrowUpDown, House, Settings } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { Avatar } from '@/components/ui'
+import { RefreshControl } from '@/components/RefreshControl'
 import { cn } from '@/lib/utils'
 
 // Outlined, monochrome icons matching the iOS tab bar's SF Symbols
@@ -80,6 +81,10 @@ export function Sidebar() {
               {householdMembers.length === 1 ? t('1 member') : t('{0} members', householdMembers.length)}
             </div>
           </div>
+          {/* Quiet manual refresh — the desktop mirror of iOS pull-to-refresh (spec 017). */}
+          <span className="hidden lg:ml-auto lg:block">
+            <RefreshControl size={15} />
+          </span>
         </div>
         <button
           className="ow-quiet-link hidden text-left lg:block"

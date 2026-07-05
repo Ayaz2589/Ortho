@@ -112,9 +112,14 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
   function builder(table: string): QueryBuilder {
     const rows = (tables[table] ?? []) as unknown[]
     const selectMsg = dataset.selectErrors?.[table]
-    const resolved = selectMsg
-      ? { data: null, error: { message: selectMsg } }
-      : { data: rows, error: null }
+    // Resolve with a FRESH copy per await (like PostgREST, which never hands
+    // back the same array twice): tests may mutate `tables` between loads to
+    // simulate another session's writes, and the store must receive a new
+    // reference or React state bail-outs would mask the change.
+    const resolved = () =>
+      selectMsg
+        ? { data: null, error: { message: selectMsg } }
+        : { data: rows.slice(), error: null }
     const writeErrors: Record<RecordedCall['op'], Record<string, string> | undefined> = {
       insert: dataset.insertErrors,
       delete: dataset.deleteErrors,
@@ -149,7 +154,7 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
       update: (payload?: unknown) => mutationChain(record('update', payload), 'update'),
       delete: () => mutationChain(record('delete'), 'delete'),
       upsert: (payload?: unknown) => record('upsert', payload),
-      then: (onfulfilled, onrejected) => Promise.resolve(resolved).then(onfulfilled, onrejected),
+      then: (onfulfilled, onrejected) => Promise.resolve(resolved()).then(onfulfilled, onrejected),
     }
     const mutationChain = (p: Promise<MutationResult>, op: RecordedCall['op']) => {
       const chained = builder(table)

@@ -99,14 +99,14 @@ attributes instantly; interrupted claim re-presents; races fail calmly.
 **Independent test**: mocked member-role bootstrap with unlinked people renders picker; claim
 flips `needsPersonClaim`; 0-row update ⇒ 'taken' and refreshed picker.
 
-- [ ] T013 ⊗ [US3] Extend `web/test/join-flows.test.tsx` (claim describe block): picker offers
+- [X] T013 ⊗ [US3] Extend `web/test/join-flows.test.tsx` (claim describe block): picker offers
       ONLY `removed_at IS NULL && linked_user_id IS NULL` people; owner's linked row never
       offered; claim update payload is `{linked_user_id: me}` guarded `.is('linked_user_id',
       null)`; 0-rows-updated ⇒ `{ok:false,reason:'taken'}`; create-new path inserts a linked
       person; `needsPersonClaim` true on member-role-no-link bootstrap (re-presentation,
       FR-016) and false after claim; owner-role users NEVER see the claim gate (auto-create
       unchanged).
-- [ ] T014 [US3] Store: `claimPerson(sel)` + `needsPersonClaim` derivation in
+- [X] T014 [US3] Store: `claimPerson(sel)` + `needsPersonClaim` derivation in
       `web/lib/store.tsx`; claim step UI added to `web/components/HouseholdGate.tsx` (picker
       + "Continue as a new person" reusing the add-person form idiom); T013 green.
 
@@ -116,13 +116,13 @@ flips `needsPersonClaim`; 0-row update ⇒ 'taken' and refreshed picker.
 **Independent test**: mutate mock tables after initial load → refresh → new data everywhere;
 selectErrors on refresh → data intact + banner; open form value survives refresh.
 
-- [ ] T015 ⊗ [US4] Write failing `web/test/refresh.test.tsx`: success replaces collections
+- [X] T015 ⊗ [US4] Write failing `web/test/refresh.test.tsx`: success replaces collections
       consistently (transactions + people + budgets all from the updated mock in one pass);
       `refreshing` never sets boot `loading`; failure (selectErrors on `transactions`) leaves
       ALL prior collections intact + error banner; an open controlled input (render a form
       alongside) keeps its value across refresh; control disabled while in flight;
       `aria-label="Refresh"` reachable.
-- [ ] T016 [US4] Store `refresh()` (R8) in `web/lib/store.tsx` +
+- [X] T016 [US4] Store `refresh()` (R8) in `web/lib/store.tsx` +
       `web/components/RefreshControl.tsx` wired into `web/components/Sidebar.tsx` (household
       footer) and the compact Transactions header in `web/app/(app)/transactions/page.tsx`
       (or its header component); T015 green.

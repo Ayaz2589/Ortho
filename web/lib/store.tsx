@@ -93,6 +93,11 @@ interface AppStateValue {
   /** 'none' ⇒ the signed-in user belongs to no household and the shell shows
    *  the join/start-fresh gate instead of tab content (spec 017 FR-008). */
   membershipStatus: MembershipStatus
+  /** True while a member-role user has no linked Person in the household —
+   *  the claim step is (re-)presented before they participate (FR-016). */
+  needsPersonClaim: boolean
+  /** True while a manual refresh is in flight (never re-enters boot `loading`). */
+  refreshing: boolean
   users: User[]
   /** Active (non-removed) household people, in display order. Owners are People. */
   people: Person[]
@@ -155,6 +160,17 @@ interface AppStateValue {
   /** Redeem an invite code (any typed form). Never throws; never leaves a
    *  half-joined UI state (FR-011/012/013). */
   redeemInvite: (code: string) => Promise<RedeemResult>
+  /** Complete the identity step: claim an unlinked roster person (guarded —
+   *  a lost race reports 'taken') or continue as a new linked person
+   *  (FR-014/015/017). */
+  claimPerson: (
+    sel: { personId: string } | { name: string; colorKey?: string }
+  ) => Promise<{ ok: true } | { ok: false; reason: 'taken' | 'error' }>
+  /** Manual refresh (FR-020..023): re-runs the one-shot household load.
+   *  Resolves true on success; on failure resolves false, leaves every
+   *  collection untouched, and surfaces the error banner. Explicitly manual —
+   *  never a subscription, never a poll. */
+  refresh: () => Promise<boolean>
   addPerson: (name: string, colorKey?: string) => void
   renamePerson: (id: string, name: string) => void
   setPersonColor: (id: string, colorKey: string) => void
@@ -240,6 +256,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [currentRole, setCurrentRole] = useState<MembershipRole | null>(null)
   const [invites, setInvites] = useState<PendingInvite[]>([])
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>('unknown')
+  const [refreshing, setRefreshing] = useState(false)
   /** The signed-in account's profile row — needed by the gate actions
    *  (startFresh/redeemInvite) that run after bootstrap paused at 'none'. */
   const meRef = useRef<User | null>(null)
@@ -470,6 +487,107 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setError(`Failed to load: ${(err as Error).message}`)
       return { ok: false, reason: 'load-failed' }
     }
+  }
+
+  /** Manual refresh (spec 017 US4): the same one-shot loadAll, atomically —
+   *  every read is verified before the first setState, so a failure leaves
+   *  ALL prior data untouched (FR-021). Runs under `refreshing`, never the
+   *  boot spinner, so the app stays usable throughout. */
+  const refresh = async (): Promise<boolean> => {
+    if (!household || refreshing) return false
+    setRefreshing(true)
+    try {
+      // The household name/owner may have changed too — display-only, so a
+      // failure here must not abort the refresh.
+      let name = household.name
+      let ownerId = household.owner_id
+      const { data: hRow } = await supabase
+        .from('households')
+        .select('*')
+        .eq('id', household.id)
+        .single()
+      if (hRow) {
+        name = (hRow as Household).name
+        ownerId = (hRow as Household).owner_id ?? ownerId
+      }
+      await loadAll(household.id, name, ownerId)
+      return true
+    } catch (e) {
+      setError((e as Error).message)
+      return false
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  /** Re-read the current household's roster (after a lost claim race the
+   *  picker must reflect who is actually still unclaimed). */
+  async function refetchPeople(householdId: string) {
+    const { data } = await supabase
+      .from('household_people')
+      .select('*')
+      .eq('household_id', householdId)
+      .order('sort_order', { ascending: true })
+    if (data) setPeople(data as Person[])
+  }
+
+  /** The identity step (spec 017 US3). Claiming is a guarded update — the row
+   *  must still be unlinked when the write lands; `unique(household_id,
+   *  linked_user_id)` backstops the guard server-side. */
+  const claimPerson = async (
+    sel: { personId: string } | { name: string; colorKey?: string }
+  ): Promise<{ ok: true } | { ok: false; reason: 'taken' | 'error' }> => {
+    if (!household) return { ok: false, reason: 'error' }
+    if ('personId' in sel) {
+      const { data, error: e } = await supabase
+        .from('household_people')
+        .update({ linked_user_id: currentUserId })
+        .eq('id', sel.personId)
+        .is('linked_user_id', null)
+        .select('id')
+      if (e) {
+        setError(e.message)
+        return { ok: false, reason: 'error' }
+      }
+      if (!data || (data as unknown[]).length === 0) {
+        // Someone else claimed this person first — refresh the roster so the
+        // picker offers what is actually left.
+        await refetchPeople(household.id)
+        return { ok: false, reason: 'taken' }
+      }
+      setPeople((prev) =>
+        prev.map((p) => (p.id === sel.personId ? { ...p, linked_user_id: currentUserId } : p))
+      )
+      return { ok: true }
+    }
+    // Continue as a new person: an insert linked to the account from birth.
+    const trimmed = sel.name.trim()
+    const person: Person = {
+      id: uuid(),
+      household_id: household.id,
+      name: trimmed,
+      initial: (trimmed[0] ?? '·').toUpperCase(),
+      color_key: sel.colorKey ?? 'sage',
+      linked_user_id: currentUserId,
+      sort_order: people.length,
+      removed_at: null,
+      created_at: new Date().toISOString(),
+    }
+    const { error: e } = await supabase.from('household_people').insert({
+      id: person.id,
+      household_id: person.household_id,
+      name: person.name,
+      initial: person.initial,
+      color_key: person.color_key,
+      linked_user_id: person.linked_user_id,
+      sort_order: person.sort_order,
+    })
+    if (e) {
+      setError(e.message)
+      return { ok: false, reason: 'error' }
+    }
+    setPeople((prev) => [...prev, person])
+    return { ok: true }
   }
 
   useEffect(() => {
@@ -730,6 +848,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const currentPersonId = useMemo(
     () => people.find((p) => p.linked_user_id === currentUserId)?.id ?? '',
     [people, currentUserId]
+  )
+  // spec 017 FR-016: a member-role user with no linked Person is mid-claim —
+  // the shell re-presents the identity step until exactly one row links them.
+  // (Raw `people` — a linked-but-removed row still counts as claimed.)
+  const needsPersonClaim = useMemo(
+    () =>
+      membershipStatus === 'member' &&
+      currentRole === 'member' &&
+      currentUserId !== '' &&
+      !people.some((p) => p.linked_user_id === currentUserId),
+    [membershipStatus, currentRole, people, currentUserId]
   )
 
   // ---- aggregation ----
@@ -1217,6 +1346,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     currentRole,
     invites,
     membershipStatus,
+    needsPersonClaim,
+    refreshing,
     users,
     people: activePeople,
     householdMembers,
@@ -1259,6 +1390,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     revokeInvite,
     startFresh,
     redeemInvite,
+    claimPerson,
+    refresh,
     addPerson,
     renamePerson,
     setPersonColor,

@@ -7,10 +7,11 @@ import { Sidebar } from '@/components/Sidebar'
 import { HouseholdGate } from '@/components/HouseholdGate'
 
 function Shell({ children }: { children: ReactNode }) {
-  const { loading, error, bootstrapFailed, dismissError, retryBootstrap, membershipStatus, t } = useApp()
+  const { loading, error, bootstrapFailed, dismissError, retryBootstrap, membershipStatus, needsPersonClaim, t } = useApp()
   // Spec 017: a signed-in user with no household chooses their path (join /
-  // start fresh) before any tab content — nothing is created silently.
-  if (!loading && membershipStatus === 'none') {
+  // start fresh) before any tab content — nothing is created silently. A
+  // member mid-identity-claim completes that step first (FR-016).
+  if (!loading && (membershipStatus === 'none' || needsPersonClaim)) {
     return <HouseholdGate />
   }
   return (

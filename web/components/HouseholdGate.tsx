@@ -12,16 +12,32 @@
  */
 import { useEffect, useState } from 'react'
 import { useApp } from '@/lib/store'
-import { PrimaryButton } from '@/components/ui'
+import { PrimaryButton, Avatar } from '@/components/ui'
 
 type JoinFailure = 'invalid' | 'already-member' | 'load-failed'
 
 export function HouseholdGate() {
-  const { currentUserEmail, error, startFresh, redeemInvite, signOut, t } = useApp()
+  const {
+    currentUserEmail,
+    currentHousehold,
+    error,
+    membershipStatus,
+    needsPersonClaim,
+    people,
+    startFresh,
+    redeemInvite,
+    claimPerson,
+    resolveUser,
+    signOut,
+    t,
+  } = useApp()
   const [mode, setMode] = useState<'choice' | 'join'>('choice')
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<JoinFailure | null>(null)
+  const [claimTaken, setClaimTaken] = useState(false)
+  const [newPersonMode, setNewPersonMode] = useState(false)
+  const [newName, setNewName] = useState('')
 
   // One-shot /join?code= pre-fill (FR-009). Read imperatively — the gate can
   // mount on any route, and the code is consumed once.
@@ -59,6 +75,95 @@ export function HouseholdGate() {
         : failure === 'load-failed'
           ? t("You've joined, but loading failed. Try signing in again.")
           : null
+
+  // ---- identity claim (US3): shown INSTEAD of the join/start-fresh choice
+  // once the user is a member but not yet linked to a roster person.
+  if (membershipStatus === 'member' && needsPersonClaim) {
+    const claimable = people.filter((p) => p.linked_user_id === null)
+    const claim = async (personId: string) => {
+      if (busy) return
+      setBusy(true)
+      setClaimTaken(false)
+      const result = await claimPerson({ personId })
+      setBusy(false)
+      if (!result.ok && result.reason === 'taken') setClaimTaken(true)
+    }
+    const claimNew = async () => {
+      if (busy || newName.trim() === '') return
+      setBusy(true)
+      await claimPerson({ name: newName })
+      setBusy(false)
+    }
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-bg px-6">
+        <div className="w-full max-w-sm">
+          <div className="mb-8 text-center">
+            <h2 className="text-lg font-normal text-text">{t('Who are you in this household?')}</h2>
+            <p className="mt-1 text-sm text-text-2">
+              {t('Pick your name and everything already recorded for it — splits, balances, history — becomes yours.')}
+            </p>
+            {currentHousehold?.name && (
+              <p className="mt-1 text-xs text-text-3">{currentHousehold.name}</p>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            {claimable.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                aria-label={p.name}
+                onClick={() => void claim(p.id)}
+                disabled={busy}
+                className="flex items-center gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 text-left text-[15px] text-text disabled:opacity-40"
+              >
+                <Avatar user={resolveUser(p.id)} size={28} />
+                {p.name}
+              </button>
+            ))}
+            {claimTaken && (
+              <p className="text-sm text-text-2">{t('Someone else just claimed that name. Pick another.')}</p>
+            )}
+            {newPersonMode ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  void claimNew()
+                }}
+                className="flex flex-col gap-2"
+              >
+                <input
+                  aria-label={t('Your name')}
+                  autoFocus
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder={t('Your name')}
+                  className="rounded-xl border border-hairline bg-surface px-4 py-3 text-text outline-none focus:border-accent"
+                />
+                <PrimaryButton type="submit" disabled={newName.trim() === '' || busy}>
+                  {t('Continue')}
+                </PrimaryButton>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setNewPersonMode(true)}
+                disabled={busy}
+                className="rounded-xl px-4 py-3 text-center text-[14px] text-accent"
+              >
+                {t('Continue as a new person')}
+              </button>
+            )}
+          </div>
+          <div className="mt-10 flex flex-col items-center gap-1 text-center">
+            {currentUserEmail && <span className="text-xs text-text-3">{currentUserEmail}</span>}
+            <button type="button" onClick={() => void signOut()} className="text-xs text-text-2">
+              {t('Sign out')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-bg px-6">

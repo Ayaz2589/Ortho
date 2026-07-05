@@ -311,6 +311,128 @@ describe('HouseholdGate UI (US2)', () => {
   })
 })
 
+/** A member-role joiner mid-claim: hh-9's roster has the owner (linked), the
+ *  unclaimed partner row with history, and a removed unclaimed row. */
+function joinerDataset(extra: Partial<Record<string, unknown>> = {}) {
+  return {
+    authUser: { id: 'u-partner', email: 'partner@example.com' },
+    tables: {
+      users: [
+        { id: 'u-owner', name: 'Ava', initial: 'A', color_key: 'sage', created_at: ISO1 },
+        { id: 'u-partner', name: 'Ben', initial: 'B', color_key: 'slate', created_at: ISO2 },
+      ],
+      household_members: [
+        { household_id: 'hh-9', user_id: 'u-partner', role: 'member', created_at: ISO2 },
+      ],
+      household_people: [
+        { id: 'p-owner', household_id: 'hh-9', name: 'Ava', initial: 'A', color_key: 'sage', linked_user_id: 'u-owner', sort_order: 0, removed_at: null, created_at: ISO1 },
+        { id: 'p-partner', household_id: 'hh-9', name: 'Partner', initial: 'P', color_key: 'slate', linked_user_id: null, sort_order: 1, removed_at: null, created_at: ISO1 },
+        { id: 'p-old', household_id: 'hh-9', name: 'Old Roommate', initial: 'O', color_key: 'sand', linked_user_id: null, sort_order: 2, removed_at: ISO2, created_at: ISO1 },
+      ],
+      households: [{ id: 'hh-9', owner_id: 'u-owner', name: 'Ours', created_at: ISO1 }],
+      transactions: [], transaction_shares: [], cards: [], properties: [],
+      mortgage_info: [], lease_info: [], units: [], rental_payments: [], budgets: [],
+      pending_invites: [],
+    },
+    ...extra,
+  }
+}
+
+describe('identity claim (US3, FR-014/015/016/017)', () => {
+  it('a member with no linked person needs the claim; an owner never does', async () => {
+    h.mock = makeSupabaseMock(joinerDataset())
+    await renderStore()
+    expect(api.currentRole).toBe('member')
+    expect(api.needsPersonClaim).toBe(true)
+    // Crucially: NO person row was auto-created for the member (that is the
+    // owner-only pre-017 behavior).
+    expect(h.mock!.callsFor('household_people')).toHaveLength(0)
+  })
+
+  it('claiming an unlinked person links it, flips the gate, and attributes history', async () => {
+    h.mock = makeSupabaseMock({
+      ...joinerDataset(),
+      updateResults: { household_people: [{ id: 'p-partner' }] },
+    })
+    await renderStore()
+
+    let result: Awaited<ReturnType<typeof api.claimPerson>>
+    await act(async () => {
+      result = await api.claimPerson({ personId: 'p-partner' })
+    })
+    expect(result!).toEqual({ ok: true })
+
+    // The guarded update: linked_user_id set, scoped to the row, only-if-null.
+    const upd = h.mock!.callsFor('household_people').find((c) => c.op === 'update')!
+    expect(upd.payload).toEqual({ linked_user_id: 'u-partner' })
+    expect(h.mock!.filtersFor('household_people')).toContainEqual({ table: 'household_people', kind: 'eq', args: ['id', 'p-partner'] })
+    expect(h.mock!.filtersFor('household_people')).toContainEqual({ table: 'household_people', kind: 'is', args: ['linked_user_id', null] })
+
+    expect(api.needsPersonClaim).toBe(false)
+    // History attribution is immediate: the claimed person IS the current person.
+    expect(api.currentPersonId).toBe('p-partner')
+  })
+
+  it('a lost claim race reports taken and refreshes the roster', async () => {
+    h.mock = makeSupabaseMock({
+      ...joinerDataset(),
+      updateResults: { household_people: [] }, // 0 rows matched — someone else won
+    })
+    await renderStore()
+
+    let result: Awaited<ReturnType<typeof api.claimPerson>>
+    await act(async () => {
+      result = await api.claimPerson({ personId: 'p-partner' })
+    })
+    expect(result!).toEqual({ ok: false, reason: 'taken' })
+    expect(api.needsPersonClaim).toBe(true)
+  })
+
+  it('continue-as-new inserts a linked person and completes the claim', async () => {
+    h.mock = makeSupabaseMock(joinerDataset())
+    await renderStore()
+
+    let result: Awaited<ReturnType<typeof api.claimPerson>>
+    await act(async () => {
+      result = await api.claimPerson({ name: 'Ben', colorKey: 'slate' })
+    })
+    expect(result!).toEqual({ ok: true })
+
+    const ins = h.mock!.callsFor('household_people').find((c) => c.op === 'insert')!
+    const payload = ins.payload as Record<string, unknown>
+    expect(payload.linked_user_id).toBe('u-partner')
+    expect(payload.name).toBe('Ben')
+    expect(payload.household_id).toBe('hh-9')
+    expect(api.needsPersonClaim).toBe(false)
+  })
+
+  it('the claim gate offers ONLY unlinked, active people', async () => {
+    h.mock = makeSupabaseMock({
+      ...joinerDataset(),
+      updateResults: { household_people: [{ id: 'p-partner' }] },
+    })
+    const user = userEvent.setup()
+    render(
+      <AppStateProvider>
+        <Capture />
+        <HouseholdGate />
+      </AppStateProvider>
+    )
+    await waitFor(() => expect(api.loading).toBe(false))
+
+    // The claim step is shown (not the join/start-fresh choice).
+    expect(await screen.findByText('Who are you in this household?')).toBeTruthy()
+    // Offered: the unclaimed active person. Not offered: the linked owner, the removed row.
+    expect(screen.getByRole('button', { name: 'Partner' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Ava' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Old Roommate' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Continue as a new person' })).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'Partner' }))
+    await waitFor(() => expect(api.needsPersonClaim).toBe(false))
+  })
+})
+
 describe('/join page for an already-signed-in member (US2, FR-009)', () => {
   async function renderJoin() {
     render(

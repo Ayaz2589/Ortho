@@ -11,6 +11,7 @@ import { TransactionRow } from '@/components/transactions/TransactionRow'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 import { BalanceSummary } from '@/components/transactions/BalanceSummary'
 import { TransactionsDesktop } from '@/components/web/TransactionsDesktop'
+import { RefreshControl } from '@/components/RefreshControl'
 import { TxModalWeb } from '@/components/web/TxModalWeb'
 import type { TransferPrefill } from '@/components/web/TxForm'
 import { useTransactionFilters } from '@/lib/useTransactionFilters'
@@ -81,6 +82,9 @@ export default function TransactionsPage() {
         title={t('Transactions')}
         right={
           <>
+            {/* Manual refresh on the ledger — the compact-web mirror of iOS
+                pull-to-refresh (spec 017 US4). */}
+            <RefreshControl />
             {hasAny && (
               <IconButton
                 ariaLabel={searchActive ? t('Close search') : t('Search transactions')}
