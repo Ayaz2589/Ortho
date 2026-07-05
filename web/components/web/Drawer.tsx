@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useApp } from '@/lib/store'
+import { useFocusTrap } from '@/lib/useFocusTrap'
 
 /**
  * The shared right-side slide-out panel — the same affordance the Transactions
@@ -22,6 +23,7 @@ export function Drawer({
   label: string
   children: ReactNode
 }) {
+  const trapRef = useFocusTrap<HTMLElement>(open)
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -47,7 +49,7 @@ export function Drawer({
   return createPortal(
     <>
       <div className="ow-drawer-scrim" onClick={onClose} aria-hidden="true" />
-      <aside className="ow-drawer" role="dialog" aria-modal="true" aria-label={label}>
+      <aside ref={trapRef} tabIndex={-1} className="ow-drawer" role="dialog" aria-modal="true" aria-label={label}>
         {children}
       </aside>
     </>,
