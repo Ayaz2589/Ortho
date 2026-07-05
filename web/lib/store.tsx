@@ -22,6 +22,12 @@ import {
   type Language,
 } from './language'
 import { makeT, type Translate } from './i18n'
+import {
+  generateInviteCode,
+  formatInviteCode,
+  hashInviteCode,
+  INVITE_TTL_MS,
+} from './invites'
 import type {
   User,
   Person,
@@ -36,6 +42,8 @@ import type {
   RentalPayment,
   Budget,
   TransactionCategory,
+  PendingInvite,
+  MembershipRole,
 } from './types'
 
 const PLACEHOLDER_ID = '00000000-0000-0000-0000-000000000000'
@@ -58,6 +66,12 @@ interface AppStateValue {
   /** The current account holder's Person (owner default), if resolved. */
   currentPersonId: string
   currentHousehold: Household | null
+  /** The signed-in user's role in the current household (spec 017). Gates the
+   *  invite card (owners only) and the identity-claim step (members only). */
+  currentRole: MembershipRole | null
+  /** The household's pending/redeemed/expired invites, newest first — owners
+   *  only (RLS yields zero rows for members). Never carries token material. */
+  invites: PendingInvite[]
   users: User[]
   /** Active (non-removed) household people, in display order. Owners are People. */
   people: Person[]
@@ -109,6 +123,11 @@ interface AppStateValue {
   addOrUpdateBudget: (b: Budget) => void
   deleteBudget: (id: string) => void
   updateHouseholdName: (name: string) => void
+  /** Create a one-time partner invite (owners). Resolves the DISPLAY-format
+   *  code exactly once — it is never retrievable again (spec 017 FR-001/005). */
+  createInvite: () => Promise<{ ok: true; code: string } | { ok: false }>
+  /** Revoke (delete) a pending invite — optimistic with rollback (FR-007). */
+  revokeInvite: (id: string) => void
   addPerson: (name: string, colorKey?: string) => void
   renamePerson: (id: string, name: string) => void
   setPersonColor: (id: string, colorKey: string) => void
@@ -191,6 +210,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<User[]>([])
   const [people, setPeople] = useState<Person[]>([]) // all people, incl. removed
   const [household, setHousehold] = useState<Household | null>(null)
+  const [currentRole, setCurrentRole] = useState<MembershipRole | null>(null)
+  const [invites, setInvites] = useState<PendingInvite[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [cards, setCards] = useState<Card[]>([])
   const [properties, setProperties] = useState<Property[]>([])
@@ -286,14 +307,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const { data: membership } = orThrow(
         await supabase
           .from('household_members')
-          .select('household_id')
+          .select('household_id, role')
           .eq('user_id', authUser.id)
           .limit(1)
       )
       let householdId: string
       let householdName = 'Home'
+      let role: MembershipRole = 'owner'
       if (membership && membership.length > 0) {
         householdId = membership[0].household_id
+        // Legacy test fixtures may omit `role` (NOT NULL in the real schema);
+        // every pre-017 user is the owner of their own household.
+        role = (membership[0].role as MembershipRole | undefined) ?? 'owner'
         // Name read is display-only — a failure here must not block boot.
         const { data: h } = await supabase
           .from('households')
@@ -314,6 +339,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             .insert({ household_id: householdId, user_id: authUser.id, role: 'owner' })
         )
       }
+      setCurrentRole(role)
 
       // ensure the account holder has a Person row, then fold any legacy
       // device-only local users into household_people (one-time).
@@ -417,6 +443,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       unitsRes,
       rpRes,
       budgetsRes,
+      invitesRes,
     ] = await Promise.all([
       supabase.from('users').select('*'),
       supabase.from('household_people').select('*').eq('household_id', householdId).order('sort_order', { ascending: true }),
@@ -429,11 +456,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       supabase.from('units').select('*').order('sort_order', { ascending: true }),
       supabase.from('rental_payments').select('*').order('date', { ascending: false }),
       supabase.from('budgets').select('*'),
+      // Owners get the household's invites; members get zero rows via RLS —
+      // an empty list, never an error (spec 017).
+      supabase.from('pending_invites').select('*').eq('household_id', householdId).order('created_at', { ascending: false }),
     ])
 
     // A failed read must surface as an error, not render as a real-looking
     // empty state (matches iOS, which fails its bootstrap on any load error).
-    for (const res of [usersRes, peopleRes, txRes, sharesRes, cardsRes, propsRes, mortRes, leaseRes, unitsRes, rpRes, budgetsRes]) {
+    for (const res of [usersRes, peopleRes, txRes, sharesRes, cardsRes, propsRes, mortRes, leaseRes, unitsRes, rpRes, budgetsRes, invitesRes]) {
       orThrow(res)
     }
 
@@ -477,6 +507,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setProperties(props)
     setRentalPayments((rpRes.data as RentalPayment[]) ?? [])
     setBudgets((budgetsRes.data as Budget[]) ?? [])
+    // Strip to the UI shape explicitly — token_hash must never enter state
+    // (spec 017 FR-005).
+    setInvites(
+      (((invitesRes.data as Record<string, unknown>[]) ?? []).map((r) => ({
+        id: r.id,
+        household_id: r.household_id,
+        role: r.role,
+        expires_at: r.expires_at,
+        created_at: r.created_at,
+        redeemed_at: r.redeemed_at ?? null,
+      })) as PendingInvite[]).sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+    )
   }
 
   // ---- FX ----
@@ -890,6 +932,64 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     })()
   }
 
+  // ---- partner invites (spec 017) ----
+  /** Mint a one-time invite. Awaited (not fire-and-forget) because the raw
+   *  code may be REVEALED only after the row is durably persisted — a failed
+   *  insert must never leave the user holding a dead code. Only the SHA-256 of
+   *  the canonical code is written; the raw code lives solely in the resolved
+   *  value (FR-005). */
+  const createInvite = async (): Promise<{ ok: true; code: string } | { ok: false }> => {
+    if (!household) return { ok: false }
+    const code = generateInviteCode()
+    const tokenHash = await hashInviteCode(code)
+    const now = Date.now()
+    const invite: PendingInvite = {
+      id: uuid(),
+      household_id: household.id,
+      role: 'member',
+      expires_at: new Date(now + INVITE_TTL_MS).toISOString(),
+      created_at: new Date(now).toISOString(),
+      redeemed_at: null,
+    }
+    setInvites((prev) => [invite, ...prev])
+    const { error: e } = await supabase.from('pending_invites').insert({
+      id: invite.id,
+      household_id: invite.household_id,
+      role: invite.role,
+      token_hash: tokenHash,
+      expires_at: invite.expires_at,
+      created_by: currentUserId,
+    })
+    if (e) {
+      setInvites((prev) => prev.filter((i) => i.id !== invite.id))
+      setError(e.message)
+      return { ok: false }
+    }
+    return { ok: true, code: formatInviteCode(code) }
+  }
+
+  const revokeInvite = (id: string) => {
+    let removed: PendingInvite | undefined
+    let removedAt = -1
+    setInvites((prev) => {
+      removedAt = prev.findIndex((i) => i.id === id)
+      removed = prev[removedAt]
+      return prev.filter((i) => i.id !== id)
+    })
+    ;(async () => {
+      const { error: e } = await supabase.from('pending_invites').delete().eq('id', id)
+      if (e && removed) {
+        // Restore at the original position so the list order stays stable.
+        setInvites((prev) => {
+          const next = [...prev]
+          next.splice(Math.max(removedAt, 0), 0, removed!)
+          return next
+        })
+        setError(e.message)
+      }
+    })()
+  }
+
   // ---- people CRUD ----
   const addPerson = (name: string, colorKey = 'sage') => {
     if (!household) return
@@ -990,6 +1090,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     currentUser,
     currentPersonId,
     currentHousehold: household,
+    currentRole,
+    invites,
     users,
     people: activePeople,
     householdMembers,
@@ -1028,6 +1130,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     addOrUpdateBudget,
     deleteBudget,
     updateHouseholdName,
+    createInvite,
+    revokeInvite,
     addPerson,
     renamePerson,
     setPersonColor,

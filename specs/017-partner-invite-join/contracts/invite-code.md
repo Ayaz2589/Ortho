@@ -57,7 +57,7 @@ the consumer canonicalizes (rule 3). iOS does not register a URL scheme for this
 |---|---|---|---|
 | T1 | canonicalize strips + upcases | `"abcde-23456"` | `"ABCDE23456"` |
 | T2 | confusable mapping | `"oil0-o1ilo"` | `"011001110"` (worked below) |
-| T3 | hash of known canonical | `"ABCDE23456"` | `sha256hex = "f2b6d33ab9deae9d4d8ee1417a5b1a09fd63ffcecc4b0714414571f0b7d5c700"` |
+| T3 | hash of known canonical | `"ABCDE23456"` | `sha256hex = "82a15347a056ccbf451fbd1c865eed21ec190069eedd32b0c9dc6452887811cc"` |
 | T4 | format | `"ABCDE23456"` | `"ABCDE-23456"` |
 | T5 | round-trip | `canonicalize(format(g)) == g` for generated `g` | property |
 
@@ -66,10 +66,10 @@ the consumer canonicalizes (rule 3). iOS does not register a URL scheme for this
 `"0","1","1","0","0","1","1","1","0"` = `"011001110"` (9 chars — hyphen stripped).
 Suites assert the exact string `"011001110"`.
 
-**T3 verification**: both suites must assert the same 64-char literal; compute once during
-implementation (web `hashInviteCode('ABCDE23456')`), paste into BOTH files with a comment
-naming this contract. (The value above is a placeholder until computed — the implementing
-task MUST replace it in this file AND both tests with the real digest and they MUST match.)
+**T3 verification**: both suites assert the same 64-char literal above — computed
+2026-07-05 (T004) as `sha256("ABCDE23456")` and verified equal to the web
+`hashInviteCode` output; also equals Python `hashlib.sha256(b'ABCDE23456').hexdigest()`
+(independent implementation cross-check).
 
 ## 7. Expiry & status (client-derived, no storage)
 

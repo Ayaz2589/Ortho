@@ -27,6 +27,11 @@ export interface SupabaseMockDataset {
   deleteErrors?: Record<string, string>
   updateErrors?: Record<string, string>
   upsertErrors?: Record<string, string>
+  /** Table name -> rows an `.update(...).select()` chain resolves with — lets
+   *  tests drive row-count-sensitive updates (e.g. the spec-017 guarded person
+   *  claim, where 0 updated rows means "someone else claimed first"). Defaults
+   *  to `[]` (no rows matched) when unset. */
+  updateResults?: Record<string, unknown[]>
 }
 
 export interface RecordedCall {
@@ -35,9 +40,17 @@ export interface RecordedCall {
   payload?: unknown
 }
 
+export interface RecordedRpcCall {
+  name: string
+  params?: unknown
+}
+
 export interface SupabaseMock {
   client: SupabaseClientLike
   calls: RecordedCall[]
+  /** Every `rpc()` invocation with its params (e.g. spec 017 asserts the
+   *  canonical `p_token` handed to `accept_invite`). */
+  rpcCalls: RecordedRpcCall[]
   /** Convenience: writes recorded for a given table. */
   callsFor(table: string): RecordedCall[]
   /** Fire the auth-state listener registered by the store (e.g. 'SIGNED_OUT'). */
@@ -62,6 +75,8 @@ type MutationResult = { data: null; error: { message: string } | null }
 interface QueryBuilder extends PromiseLike<{ data: unknown[] | null; error: { message: string } | null }> {
   select: (cols?: string) => QueryBuilder
   eq: (col: string, val: unknown) => QueryBuilder
+  /** PostgREST null-safe match (`.is('col', null)`) — chainable no-op like `eq`. */
+  is: (col: string, val: unknown) => QueryBuilder
   in: (col: string, vals: unknown[]) => QueryBuilder
   order: (col: string, opts?: unknown) => QueryBuilder
   limit: (n: number) => QueryBuilder
@@ -99,6 +114,7 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
     const b: QueryBuilder = {
       select: () => b,
       eq: () => b,
+      is: () => b,
       in: () => b,
       order: () => b,
       limit: () => b,
@@ -108,14 +124,29 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
       // awaitable. The await must resolve with the MUTATION result (so injected
       // update/delete errors surface) — a plain Object.assign would keep the
       // builder's select-resolving `then`.
-      update: (payload?: unknown) => mutationChain(record('update', payload)),
-      delete: () => mutationChain(record('delete')),
+      update: (payload?: unknown) => mutationChain(record('update', payload), 'update'),
+      delete: () => mutationChain(record('delete'), 'delete'),
       upsert: (payload?: unknown) => record('upsert', payload),
       then: (onfulfilled, onrejected) => Promise.resolve(resolved).then(onfulfilled, onrejected),
     }
-    const mutationChain = (p: Promise<MutationResult>) => {
+    const mutationChain = (p: Promise<MutationResult>, op: RecordedCall['op']) => {
       const chained = builder(table)
       chained.then = (onfulfilled, onrejected) => p.then(onfulfilled as never, onrejected) as never
+      if (op === 'update') {
+        // `.update(x).…​.select()` resolves with the "updated rows" the dataset
+        // configures (updateResults), so row-count-guarded updates are testable.
+        chained.select = () => {
+          const sel = builder(table)
+          sel.then = (onfulfilled, onrejected) =>
+            p
+              .then((res) => ({
+                data: res.error ? null : dataset.updateResults?.[table] ?? [],
+                error: res.error,
+              }))
+              .then(onfulfilled as never, onrejected) as never
+          return sel
+        }
+      }
       return chained as never
     }
     return b
@@ -124,6 +155,7 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
   // The store subscribes for live sign-out; tests can fire events via
   // `emitAuthChange`.
   const authCallbacks: ((event: string, session: unknown) => void)[] = []
+  const rpcCalls: RecordedRpcCall[] = []
 
   const client: SupabaseClientLike = {
     auth: {
@@ -134,7 +166,8 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
       },
     },
     from: (table: string) => builder(table),
-    rpc: (name: string) => {
+    rpc: (name: string, params?: unknown) => {
+      rpcCalls.push({ name, params })
       const err = dataset.rpcErrors?.[name] ?? null
       return Promise.resolve({ data: err ? null : dataset.rpc?.[name] ?? null, error: err })
     },
@@ -143,6 +176,7 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
   return {
     client,
     calls,
+    rpcCalls,
     callsFor: (t) => calls.filter((c) => c.table === t),
     emitAuthChange: (event, session = null) => {
       for (const cb of authCallbacks) cb(event, session)

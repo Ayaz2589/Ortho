@@ -23,19 +23,19 @@ US3 claim, US4 refresh, US5 manage invites, US6 solo-unchanged).
 
 ## Phase 1: Setup
 
-- [ ] T001 Confirm baseline: `cd web && npx tsc --noEmit && npm test` green (731) and
+- [X] T001 Confirm baseline: `cd web && npx tsc --noEmit && npm test` green (731) and
       `npm run gen:vectors && git diff --exit-code ../shared/test-vectors/` shows zero drift.
       Record both in the PR notes.
 
 ## Phase 2: Foundational — cross-surface invite-code codec (blocks US1/US2/US3)
 
-- [ ] T002 ⊗ Write failing codec unit tests in `web/test/invites.test.ts`: alphabet/length of
+- [X] T002 ⊗ Write failing codec unit tests in `web/test/invites.test.ts`: alphabet/length of
       `generateInviteCode()`, `formatInviteCode`, `canonicalizeInviteCode` (incl. contract §6
       literals T1/T2/T4/T5), `inviteStatus` precedence with injected `now`, `joinLink`.
       Include a placeholder-failing T3 hash assertion.
-- [ ] T003 Implement `web/lib/invites.ts` (pure codec per contracts/invite-code.md §1–§5, §7)
+- [X] T003 Implement `web/lib/invites.ts` (pure codec per contracts/invite-code.md §1–§5, §7)
       + `PendingInvite`/`InviteStatus`/`MembershipRole` types in `web/lib/types.ts`; T002 green.
-- [ ] T004 Compute the real T3 digest via the implemented `hashInviteCode('ABCDE23456')`;
+- [X] T004 Compute the real T3 digest via the implemented `hashInviteCode('ABCDE23456')`;
       replace the placeholder literal in `specs/017-partner-invite-join/contracts/invite-code.md`
       AND `web/test/invites.test.ts` (iOS mirror comes in T020); suite green.
 
@@ -45,16 +45,16 @@ US3 claim, US4 refresh, US5 manage invites, US6 solo-unchanged).
 **Independent test**: mocked-store render → create → reveal → list shows Pending w/ expiry →
 revoke removes; member sees no card.
 
-- [ ] T005 ⊗ [US1] Write failing `web/test/invite-flows.test.tsx`: `createInvite()` resolves a
+- [X] T005 ⊗ [US1] Write failing `web/test/invite-flows.test.tsx`: `createInvite()` resolves a
       display-format code exactly once and inserts `{role:'member', expires_at:+7d, token_hash
       = sha256(canonical)}` (assert against the mock's recorded insert payload); invite list
       renders Pending/Redeemed/Expired states (injected clock); `revokeInvite` optimistic +
       rollback on `deleteErrors`; non-owner (`role:'member'` membership row) sees no invite
       card and `invites === []`.
-- [ ] T006 [US1] Store: add `invites` state + `pending_invites` to `loadAll` (12th parallel
+- [X] T006 [US1] Store: add `invites` state + `pending_invites` to `loadAll` (12th parallel
       read), `currentRole` from the picked membership row, `createInvite()`/`revokeInvite()`
       per contracts/store-api.md, in `web/lib/store.tsx`.
-- [ ] T007 [US1] UI: `web/components/settings/InviteCard.tsx` (owner-only card in the Settings
+- [X] T007 [US1] UI: `web/components/settings/InviteCard.tsx` (owner-only card in the Settings
       household area: create → one-time reveal with Copy code / Copy link buttons +
       `aria-live` confirmation, status list, revoke with inline confirm) wired into
       `web/app/(app)/settings/page.tsx`; T005 green.

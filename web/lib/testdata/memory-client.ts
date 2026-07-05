@@ -20,6 +20,8 @@ type ReadResult = { data: unknown[] | null; error: { message: string } | null }
 interface QueryBuilder extends PromiseLike<ReadResult> {
   select: (cols?: string) => QueryBuilder
   eq: (col: string, val: unknown) => QueryBuilder
+  /** PostgREST null-safe match — chainable no-op like `eq` (spec 017 claim path). */
+  is: (col: string, val: unknown) => QueryBuilder
   in: (col: string, vals: unknown[]) => QueryBuilder
   order: (col: string, opts?: unknown) => QueryBuilder
   limit: (n: number) => QueryBuilder
@@ -62,6 +64,7 @@ export function createMemoryClient(): MemoryClient {
     const b: QueryBuilder = {
       select: () => b,
       eq: () => b,
+      is: () => b,
       in: () => b,
       order: () => b,
       limit: () => b,

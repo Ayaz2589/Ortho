@@ -164,3 +164,23 @@ export interface Insight {
   preview_merchants?: string[]
 }
 
+
+// ---- spec 017: partner invite & join -----------------------------------------
+
+export type MembershipRole = 'owner' | 'member'
+
+/** A `pending_invites` row as loaded by clients. `token_hash` is deliberately
+ *  never surfaced into UI state (spec 017 FR-005): the raw code exists only in
+ *  the one-time reveal, and the hash never leaves the create call. */
+export interface PendingInvite {
+  id: string
+  household_id: string
+  role: MembershipRole
+  expires_at: string
+  created_at: string
+  redeemed_at: string | null
+}
+
+/** Client-derived invite status — precedence redeemed → expired → pending
+ *  (contracts/invite-code.md §7); never stored. */
+export type InviteStatus = 'pending' | 'redeemed' | 'expired'

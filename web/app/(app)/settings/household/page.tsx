@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/ui'
 import { ReadingColumn } from '@/components/layout'
 import { SectionCard, UserRow, AddRow } from '@/components/settings/rows'
 import { HouseholdDrawer, type HouseholdDrawerMode } from '@/components/settings/HouseholdDrawer'
+import { InviteCard } from '@/components/settings/InviteCard'
 
 export default function HouseholdPage() {
   const {
@@ -62,6 +63,10 @@ export default function HouseholdPage() {
       <p className="px-1 pt-3 text-[13px] leading-relaxed text-text-3">
         {t('Everyone in your household can be an owner of a transaction. People you add need no Ortho account; you can split any transaction between them.')}
       </p>
+
+      <div className="pt-6">
+        <InviteCard />
+      </div>
 
       <HouseholdDrawer mode={drawer} onClose={() => setDrawer(null)} />
     </ReadingColumn>
