@@ -87,7 +87,7 @@ shared TS functions but is deliberately **outside** the golden-vector harness.
    a golden-vector-drift check on any `web/**` or `shared/test-vectors/**` change.
 6. **Set up web**: `cd web && npm install && npm test` (Node 22 per root `.nvmrc`; on Linux ARM
    you may need `@rolldown/binding-linux-arm64-gnu` since macOS-installed `node_modules` lacks
-   Linux bindings). Expect the full suite green (727 tests as of 2026-07-04). Run `npx tsc --noEmit`
+   Linux bindings). Expect the full suite green (731 tests as of 2026-07-04). Run `npx tsc --noEmit`
    too — it is part of the web CI gate.
 7. **Check env/credentials**: `web/.env.local` (gitignored) needs `NEXT_PUBLIC_SUPABASE_URL` +
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`; iOS needs the gitignored
