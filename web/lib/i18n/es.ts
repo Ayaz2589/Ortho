@@ -398,6 +398,8 @@ const catalog: Record<string, string> = {
   "Manage": "Gestionar",
   "Subscribe": "Suscribirse",
   "Could not open billing. Try again.": "No se pudo abrir la facturación. Inténtalo de nuevo.",
+  "Free month — 1 day left": "Mes gratis — queda 1 día",
+  "Could not check just now. Try again.": "No se pudo comprobar ahora. Inténtalo de nuevo.",
 }
 
 export default catalog

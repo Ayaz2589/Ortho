@@ -41,12 +41,15 @@ function metadataUserId(obj: Rec | null): string | null {
   return asStr(asRec(obj?.['metadata'])?.['user_id'])
 }
 
-/** Subscription-object field extraction shared by updated/deleted/paused + the checkout supplement. */
+/** Subscription-object field extraction shared by updated/deleted/paused + the checkout
+ *  supplement. Version-tolerant (review 018): API versions ≥ 2025 (basil/dahlia — what
+ *  npm:stripe@22 pins) moved `current_period_end` from the subscription to its ITEMS;
+ *  read both generations. */
 function subscriptionFields(sub: Rec | null, config: StripePriceConfig) {
   const items = asRec(sub?.['items'])
   const firstItem = asRec((items?.['data'] as unknown[] | undefined)?.[0])
   const priceId = asStr(asRec(firstItem?.['price'])?.['id'])
-  const periodEnd = asNum(sub?.['current_period_end'])
+  const periodEnd = asNum(sub?.['current_period_end']) ?? asNum(firstItem?.['current_period_end'])
   return {
     userId: metadataUserId(sub),
     periodEndsAt: periodEnd === null ? null : unixToIso(periodEnd),
@@ -90,8 +93,10 @@ export function translateStripeEvent(
       if (asStr(obj['mode']) !== 'subscription') return unrecognized()
       const sub = asRec(supplements.subscription)
       const fields = subscriptionFields(sub, config)
-      const userId =
-        metadataUserId(obj) ?? fields.userId ?? asStr(obj['client_reference_id'])
+      // Deliberately NO client_reference_id fallback (review 018 security):
+      // it is client-suppliable on some checkout surfaces; only server-set
+      // metadata resolves a user here, else the host's customer-id lookup.
+      const userId = metadataUserId(obj) ?? fields.userId
       return {
         ...base,
         type: 'checkout_completed',
@@ -113,11 +118,21 @@ export function translateStripeEvent(
         const end = asNum(asRec(rec?.['period'])?.['end'])
         if (end !== null && (maxEnd === null || end > maxEnd)) {
           maxEnd = end
-          priceId = asStr(asRec(rec?.['price'])?.['id']) ?? priceId
+          // Line price: pre-2025 `line.price.id`; dahlia `line.pricing.price_details.price`.
+          priceId =
+            asStr(asRec(rec?.['price'])?.['id']) ??
+            asStr(asRec(asRec(rec?.['pricing'])?.['price_details'])?.['price']) ??
+            priceId
         }
       }
       const plan = planForPrice(priceId, config)
-      const userId = metadataUserId(asRec(obj['subscription_details']))
+      // Pre-2025 invoices: top-level subscription_details/subscription; dahlia moved
+      // both under parent.subscription_details (review 018 — read both generations).
+      const subDetails =
+        asRec(obj['subscription_details']) ??
+        asRec(asRec(obj['parent'])?.['subscription_details'])
+      const userId = metadataUserId(subDetails)
+      const subscriptionId = asStr(obj['subscription']) ?? asStr(subDetails?.['subscription'])
       return {
         ...base,
         type: event.type === 'invoice.paid' ? 'payment_succeeded' : 'payment_failed',
@@ -125,7 +140,7 @@ export function translateStripeEvent(
         periodEndsAt: event.type === 'invoice.paid' && maxEnd !== null ? unixToIso(maxEnd) : null,
         ...(event.type === 'invoice.paid' && plan ? { plan } : {}),
         ...(asStr(obj['customer']) ? { stripeCustomerId: asStr(obj['customer'])! } : {}),
-        ...(asStr(obj['subscription']) ? { stripeSubscriptionId: asStr(obj['subscription'])! } : {}),
+        ...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
       }
     }
 

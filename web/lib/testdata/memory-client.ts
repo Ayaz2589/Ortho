@@ -83,28 +83,10 @@ export function createMemoryClient(): MemoryClient {
       signOut: () => Promise.resolve({ error: null }),
     },
     from: (table: string) => builder(table),
-    rpc: (name: string) => {
-      // Spec 018: test-data mode must never gate — serve a fresh in-memory
-      // trial so the paywall logic sees a normal trialing user (and the
-      // sample app stays fully usable, contract C-TD-1: nothing live).
-      if (name === 'ensure_entitlement') {
-        return Promise.resolve({
-          data: {
-            user_id: (authUser as { id: string }).id,
-            status: 'trialing',
-            access_expires_at: new Date(Date.now() + 31 * 86_400_000).toISOString(),
-            plan: null,
-            source: 'trial',
-            stripe_customer_id: null,
-            stripe_subscription_id: null,
-            last_event_at: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          error: null,
-        })
-      }
-      return Promise.resolve({ data: null, error: null })
-    },
+    // Spec 018: `ensure_entitlement` resolves null here, deliberately — a null
+    // row derives a null gate (never the paywall) and hides the Subscription
+    // settings section, matching iOS's seeded mode exactly (review 018 [21]).
+    // Test-data mode stays fully usable with zero live traffic (C-TD-1).
+    rpc: () => Promise.resolve({ data: null, error: null }),
   }
 }

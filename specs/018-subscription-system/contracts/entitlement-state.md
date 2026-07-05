@@ -83,6 +83,14 @@ leeway window edge to the second; V13 is past_due 4.5 days past expiry — insid
 grace envelope (48h + 14d); V14 is past it → lapsed even though no terminal Stripe event ever
 arrived (FR-019); V15–V17 pin canceled paid-through with **no** leeway (FR-014).
 
+## Unparseable timestamps (BINDING; added by the 018 review fix pass)
+
+A present-but-unparseable `accessExpiresAt` is a data anomaly, not a lapse. Both clients
+treat it as an entitlement-load anomaly and FAIL OPEN (null gate — app usable, no paywall),
+consistent with FR-008's "a false paywall is the worst failure mode". This check lives in the
+HOST layer (web `store.tsx` gate memo; iOS `AppState.gateState`), not in `deriveGateState`
+itself — the derivation contract and its vectors assume well-formed inputs.
+
 ## Client behavior bound to the derived state (restated from data-model §5; BINDING)
 
 - Derivation runs only on a **successfully loaded** row; load failure routes to the existing

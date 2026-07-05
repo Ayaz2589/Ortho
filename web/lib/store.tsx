@@ -83,8 +83,9 @@ interface AppStateValue {
   /** The single gate fact (admin|trialing|active|grace|lapsed); null until the
    *  row is loaded — and a null gate NEVER shows the paywall (FR-008). */
   gateState: GateState | null
-  /** Refetch the entitlement row and re-derive the gate ("Check again"). */
-  refreshEntitlement: () => Promise<void>
+  /** Refetch the entitlement row and re-derive the gate ("Check again").
+   *  Resolves true iff the refetch succeeded (false = keep state, couldn't check). */
+  refreshEntitlement: () => Promise<boolean>
 
   setCurrency: (c: CurrencyKey) => void
   chooseLanguage: (language: Language) => void
@@ -265,12 +266,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setCurrentUserId(authUser.id)
       setCurrentUserEmail(authUser.email ?? null)
 
-      // Spec 018: ensure the 31-day free-month row exists (server-side,
-      // insert-if-absent — reinstalls/re-sign-ins can never reset it) and read
-      // it back, in parallel with the data loads below. Clients cannot write
-      // entitlement state; this SECURITY DEFINER RPC is the only trusted path.
-      const entitlementPromise = supabase.rpc('ensure_entitlement')
-
       // Ensure a profile row exists — insert only when absent. Upserting a
       // derived name + fresh created_at on every sign-in flip-flopped the
       // profile between platforms (see PARITY.md); an existing row is now
@@ -334,6 +329,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       // device-only local users into household_people (one-time).
       await ensureAccountPersonAndFoldLegacy(householdId, me)
 
+      // Spec 018: ensure the 31-day free-month row exists (server-side,
+      // insert-if-absent — reinstalls/re-sign-ins can never reset it) and read
+      // it back. Started HERE — after the profile insert above, because the
+      // RPC's row references public.users(id) — and kicked off eagerly (the
+      // lazy supabase builder starts on assimilation) so it genuinely overlaps
+      // the loadAll fan-out below. Clients cannot write entitlement state;
+      // this SECURITY DEFINER RPC is the only trusted path.
+      const entitlementPromise = Promise.resolve(supabase.rpc('ensure_entitlement'))
+
       await loadAll(householdId, householdName, authUser.id)
 
       // A failed entitlement read is a LOAD failure (recovery path), never a
@@ -351,18 +355,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   /** Refetch the entitlement row on demand (paywall "Check again", checkout
    *  return). Failure keeps the current gate — a flaky refresh must never
-   *  cause a false lapse or unlock; the error banner reports it. */
-  async function refreshEntitlement() {
+   *  cause a false lapse or unlock. Returns whether the refetch SUCCEEDED so
+   *  callers can distinguish "checked: still nothing" from "couldn't check"
+   *  (review 018). */
+  async function refreshEntitlement(): Promise<boolean> {
     const { data, error: e } = await supabase
       .from('entitlements')
       .select('*')
       .limit(1)
     if (e) {
       setError(e.message)
-      return
+      return false
     }
     const rows = (data ?? []) as DbEntitlement[]
     if (rows.length > 0) setEntitlement(rows[0])
+    return true
   }
 
   const retryBootstrap = () => {
@@ -608,16 +615,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // the row changes (bootstrap, refreshEntitlement). A null row derives a null
   // gate, which the Shell treats as open — the paywall only ever renders from
   // a successfully loaded, genuinely lapsed row (FR-008/009).
-  const gateState = useMemo<GateState | null>(
-    () =>
-      entitlement
-        ? deriveGateState(
-            { status: entitlement.status, accessExpiresAt: entitlement.access_expires_at },
-            new Date().toISOString()
-          )
-        : null,
-    [entitlement]
-  )
+  const gateState = useMemo<GateState | null>(() => {
+    if (!entitlement) return null
+    // A present-but-unparseable expiry is a data anomaly, not a lapse: fail
+    // OPEN (null gate) exactly like a load failure (FR-008 spirit) — a false
+    // paywall is the worst failure mode. Aligned with iOS (review 018 [18]).
+    const raw = entitlement.access_expires_at
+    if (raw !== null && Number.isNaN(Date.parse(raw))) return null
+    return deriveGateState(
+      { status: entitlement.status, accessExpiresAt: raw },
+      new Date().toISOString()
+    )
+  }, [entitlement])
 
   // ---- aggregation ----
   const inRange = (date: string, start: Date, end: Date) => {

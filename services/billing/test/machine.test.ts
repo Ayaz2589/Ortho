@@ -154,6 +154,18 @@ describe('transitions', () => {
     if (out.kind !== 'applied') return
     expect(out.row.plan).toBe('yearly')
     expect(out.row.accessExpiresAt).toBe('2027-07-10T00:00:00Z')
+    // Pinned (mutation-test finding): updated events also mark the row stripe-sourced.
+    expect(out.row.source).toBe('stripe')
+  })
+
+  it('subscription_updated on a trial row flips source to stripe (mutation pin)', () => {
+    const out = applyBillingEvent(
+      mkRow(), // source: 'trial'
+      mkEvent({ type: 'subscription_updated', status: 'active', periodEndsAt: '2026-08-10T00:00:00Z' })
+    )
+    expect(out.kind).toBe('applied')
+    if (out.kind !== 'applied') return
+    expect(out.row.source).toBe('stripe')
   })
 
   it('subscription_updated without a mapped status → noop (incomplete* filtered upstream)', () => {

@@ -158,14 +158,31 @@ describe('lapsed derivation from a successfully loaded row', () => {
   })
 })
 
-describe('harness RLS contract (spec 018)', () => {
-  it('client-role writes to entitlements/billing_events are refused by the mock', async () => {
+describe('harness RLS contract (spec 018, live-PostgREST-faithful per review [29])', () => {
+  it('mirrors real RLS: inserts error, updates/deletes silently no-op, policy-less reads are empty', async () => {
     const mock = makeSupabaseMock(dataset())
+    // INSERT/UPSERT without a policy → 42501-style error.
     const ins = await mock.client.from('entitlements').insert({ user_id: 'u-me' })
     expect(ins.error?.message).toMatch(/permission denied/)
+    const ups = await mock.client.from('billing_events').upsert({ event_id: 'evt_x' })
+    expect(ups.error?.message).toMatch(/permission denied/)
+    // UPDATE/DELETE without a policy → SUCCESS with zero rows affected (no error).
     const upd = await mock.client.from('entitlements').update({ status: 'active' })
-    expect(upd.error?.message).toMatch(/permission denied/)
+    expect(upd.error).toBeNull()
+    // Policy-less SELECT → empty result set, not an error.
     const evRead = await mock.client.from('billing_events').select()
-    expect(evRead.error?.message).toMatch(/permission denied/)
+    expect(evRead.error).toBeNull()
+    expect(evRead.data).toEqual([])
+    // Either way, the calls are recorded so behavior tests can assert none occur.
+    expect(mock.callsFor('entitlements').length + mock.callsFor('billing_events').length).toBe(3)
+  })
+})
+
+describe('unparseable expiry fails OPEN, matching iOS (review [18])', () => {
+  it('a garbage access_expires_at derives a null gate — never the paywall', async () => {
+    const junk = makeEntitlement({ access_expires_at: 'not-a-timestamp' })
+    await boot(dataset({ rpc: { ensure_entitlement: junk } }))
+    expect(probe!.gateState).toBeNull()
+    expect(probe!.bootstrapFailed).toBe(false)
   })
 })

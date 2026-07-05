@@ -70,21 +70,27 @@ struct SubscriptionSectionView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .padding(.horizontal, 16)
                 .padding(.bottom, notice == nil ? 24 : 8)
+                // Refresh on appear so Settings reflects a checkout finished
+                // moments ago (review 018 [17]); refetch-only, never a
+                // mutation (FR-017). Attached to the card — a SINGLE view —
+                // as is `.onChange` below: a modifier on the enclosing
+                // `Group` replays once per group member (review 018 [16]).
+                .task { await appState.refreshEntitlement() }
+                .onChange(of: notice) { _, newValue in
+                    // Async outcomes are content, not decoration — shown AND
+                    // announced exactly once (017 VoiceOver lesson).
+                    if let newValue {
+                        UIAccessibility.post(notification: .announcement, argument: newValue)
+                    }
+                }
 
                 if let notice {
-                    // Async outcomes are content, not decoration — shown AND
-                    // announced (017 VoiceOver lesson; see onChange below).
                     Text(notice)
                         .font(.lato(size: 13))
                         .foregroundStyle(AppTheme.text.opacity(0.58))
                         .lineSpacing(2)
                         .padding(.horizontal, 24)
                         .padding(.bottom, 24)
-                }
-            }
-            .onChange(of: notice) { _, newValue in
-                if let newValue {
-                    UIAccessibility.post(notification: .announcement, argument: newValue)
                 }
             }
         }
@@ -102,7 +108,12 @@ struct SubscriptionSectionView: View {
                 accessExpiresAt: EntitlementLogic.parseTimestamp(entitlement.accessExpiresAt),
                 now: Date()
             )
-            return (Localizer.tr("Free month — \(days) days left"), .subscribe)
+            // Explicit singular key — mirrors web's `days === 1` branch
+            // (review 018 [19]/[20]); both catalogs carry both keys.
+            let line = days == 1
+                ? Localizer.tr("Free month — 1 day left")
+                : Localizer.tr("Free month — \(days) days left")
+            return (line, .subscribe)
         case .grace:
             return (Localizer.tr("There’s a billing issue. Your access continues while it gets sorted out."), .manage)
         case .active:

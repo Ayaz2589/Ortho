@@ -161,4 +161,24 @@ final class EntitlementLogicTests: XCTestCase {
         XCTAssertEqual(try date("2026-07-05T12:00:00+00:00"), plain)
         XCTAssertNil(EntitlementLogic.parseTimestamp(nil))
     }
+
+    func test_parseTimestampHandlesMicrosecondFractions() throws {
+        // PostgREST timestamptz JSON can carry MICROSECOND fractions;
+        // `ISO8601DateFormatter` only parses millisecond fractions reliably,
+        // so the parser truncates the fraction to 3 digits first. Reference
+        // instant: 2026-07-05T12:00:00Z = 1_783_252_800 epoch seconds.
+        let base: TimeInterval = 1_783_252_800
+
+        let noFraction = try date("2026-07-05T12:00:00Z")
+        let millisecond = try date("2026-07-05T12:00:00.123Z")
+        let microZ = try date("2026-07-05T12:00:00.123456Z")
+        let microOffset = try date("2026-07-05T12:00:00.123456+00:00")
+
+        XCTAssertEqual(noFraction.timeIntervalSince1970, base)
+        XCTAssertEqual(millisecond.timeIntervalSince1970, base + 0.123, accuracy: 0.0005)
+        // Microseconds truncate to the same millisecond instant, whatever
+        // the timezone suffix shape.
+        XCTAssertEqual(microZ, millisecond)
+        XCTAssertEqual(microOffset, millisecond)
+    }
 }

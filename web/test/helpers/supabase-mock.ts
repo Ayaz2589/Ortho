@@ -94,14 +94,14 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
 
   function builder(table: string): QueryBuilder {
     const rows = (tables[table] ?? []) as unknown[]
-    const selectMsg =
-      dataset.selectErrors?.[table] ??
-      // billing_events has zero client policies — even reads come back empty-
-      // handed in real RLS; surface loudly here so no client code grows one.
-      (table === 'billing_events' ? 'permission denied for table billing_events' : undefined)
+    const selectMsg = dataset.selectErrors?.[table]
     const resolved = selectMsg
       ? { data: null, error: { message: selectMsg } }
-      : { data: rows, error: null }
+      : // billing_events has zero client policies: live PostgREST returns an
+        // EMPTY result set (not an error) for policy-less selects (review [29]).
+        table === 'billing_events'
+        ? { data: [] as unknown[], error: null }
+        : { data: rows, error: null }
     const writeErrors: Record<RecordedCall['op'], Record<string, string> | undefined> = {
       insert: dataset.insertErrors,
       delete: dataset.deleteErrors,
@@ -110,14 +110,21 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
     }
     const record = (op: RecordedCall['op'], payload?: unknown) => {
       calls.push({ table, op, payload })
-      // RLS-faithful guard (spec 018): the live schema has NO client write policy
-      // on entitlements and NO client policies at all on billing_events. Any
-      // client write here is a bug — fail it exactly like PostgREST would.
+      // RLS-faithful guard (spec 018, corrected per review [29]): the live
+      // schema has NO client write policy on entitlements and NO client
+      // policies at all on billing_events. PostgREST's actual behavior:
+      //   INSERT/UPSERT → 42501 "permission denied" error;
+      //   UPDATE/DELETE → SUCCESS with zero rows affected (RLS filters rows
+      //   silently — no error!). The mock mirrors that, and the recorded call
+      //   lets tests assert such writes never happen at all.
       if (table === 'entitlements' || table === 'billing_events') {
-        return Promise.resolve({
-          data: null,
-          error: { message: `permission denied for table ${table}` },
-        })
+        if (op === 'insert' || op === 'upsert') {
+          return Promise.resolve({
+            data: null,
+            error: { message: `permission denied for table ${table}` },
+          })
+        }
+        return Promise.resolve({ data: null, error: null as null }) // 0-row no-op
       }
       const msg = writeErrors[op]?.[table]
       return Promise.resolve(

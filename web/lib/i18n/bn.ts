@@ -401,6 +401,8 @@ const catalog: Record<string, string> = {
   "Manage": "পরিচালনা",
   "Subscribe": "সাবস্ক্রাইব",
   "Could not open billing. Try again.": "বিলিং খোলা যায়নি। আবার চেষ্টা করুন।",
+  "Free month — 1 day left": "ফ্রি মাস — 1 দিন বাকি",
+  "Could not check just now. Try again.": "এখন যাচাই করা যায়নি। আবার চেষ্টা করুন।",
 }
 
 export default catalog

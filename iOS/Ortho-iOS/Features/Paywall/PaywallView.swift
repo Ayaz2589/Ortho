@@ -203,11 +203,14 @@ struct PaywallView: View {
     private func checkAgain() async {
         busy = .check
         notice = nil
-        await appState.refreshEntitlement()
+        let checked = await appState.refreshEntitlement()
         busy = nil
         // If the row flipped, the app root swaps us out; if we're still
-        // lapsed, say so calmly.
-        if EntitlementLogic.shouldShowPaywall(gate: appState.gateState) {
+        // lapsed, say so calmly — and never claim "no subscription" when we
+        // couldn't even check (mirrors web review 018 [6]).
+        if !checked {
+            notice = Localizer.tr("Could not check just now. Try again.")
+        } else if EntitlementLogic.shouldShowPaywall(gate: appState.gateState) {
             notice = Localizer.tr("No subscription found yet. It can take a minute after paying.")
         }
     }

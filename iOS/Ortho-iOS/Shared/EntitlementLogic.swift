@@ -90,11 +90,41 @@ enum EntitlementLogic {
     // MARK: - Timestamp parsing
 
     /// Server timestamps are Postgres `timestamptz` — ISO-8601 UTC, with or
-    /// without fractional seconds. Fixed formatters (same idiom as
+    /// without fractional seconds. PostgREST can emit MICROSECOND fractions
+    /// (e.g. "2026-07-05T12:00:00.123456+00:00"), but
+    /// `ISO8601DateFormatter`'s `.withFractionalSeconds` reliably parses only
+    /// millisecond (3-digit) fractions — so the fraction is truncated to at
+    /// most 3 digits before formatting. Fixed formatters (same idiom as
     /// `SupabaseCoding.dateDecodingStrategy`), never locale-dependent.
     static func parseTimestamp(_ iso: String?) -> Date? {
         guard let iso else { return nil }
-        return iso8601Plain.date(from: iso) ?? iso8601Fractional.date(from: iso)
+        return iso8601Plain.date(from: iso)
+            ?? iso8601Fractional.date(from: truncateFraction(iso))
+    }
+
+    /// Normalize a fractional-seconds part to at most 3 digits: string
+    /// surgery on the digits between '.' and the timezone suffix ('Z' or
+    /// '±HH:MM'). Strings without a fraction — or with anything unexpected
+    /// where the fraction should be — pass through untouched.
+    private static func truncateFraction(_ iso: String) -> String {
+        guard let dot = iso.firstIndex(of: ".") else { return iso }
+        let fractionStart = iso.index(after: dot)
+        // The fraction ends at the timezone suffix: 'Z' or a '+'/'-' offset.
+        // (The date's own '-' separators sit BEFORE the dot, so scanning
+        // forward from the fraction cannot hit them.)
+        var suffixStart = iso.endIndex
+        var i = fractionStart
+        while i < iso.endIndex {
+            let c = iso[i]
+            if c == "Z" || c == "z" || c == "+" || c == "-" {
+                suffixStart = i
+                break
+            }
+            i = iso.index(after: i)
+        }
+        let fraction = iso[fractionStart..<suffixStart]
+        guard fraction.count > 3, fraction.allSatisfy({ $0.isASCII && $0.isNumber }) else { return iso }
+        return String(iso[..<fractionStart]) + fraction.prefix(3) + String(iso[suffixStart...])
     }
 
     private static let iso8601Fractional: ISO8601DateFormatter = {

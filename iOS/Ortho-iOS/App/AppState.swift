@@ -96,10 +96,10 @@ final class AppState {
     var gateState: GateState? {
         guard let entitlement else { return nil }
         let expires = EntitlementLogic.parseTimestamp(entitlement.accessExpiresAt)
-        // Defensive: a PRESENT but unparseable timestamp is a client decode
-        // problem, not a lapse — an open gate beats a false paywall
-        // (FR-008/009 spirit). Never occurs for real timestamptz values
-        // (same formatters as SupabaseCoding, proven against this backend).
+        // A PRESENT but unparseable timestamp is a data anomaly, not a
+        // lapse — fail OPEN (nil gate: app usable, no paywall). BINDING:
+        // contracts/entitlement-state.md § "Unparseable timestamps"; web's
+        // store.tsx gate memo applies the identical rule.
         if entitlement.accessExpiresAt != nil && expires == nil { return nil }
         return EntitlementLogic.deriveGateState(
             status: entitlement.status,
@@ -494,6 +494,10 @@ final class AppState {
             group.addTask { await self.loadPropertiesFromServer() }
             group.addTask { await self.loadRentalPaymentsFromServer() }
             group.addTask { await self.loadBudgetsFromServer() }
+            // Spec 018: entitlement rides the same manual full refresh, so a
+            // checkout completed moments ago is reflected without waiting
+            // for the paywall's "Check again" (review 018 [17]).
+            group.addTask { await self.refreshEntitlement() }
         }
     }
 
@@ -1262,19 +1266,31 @@ final class AppState {
         EntitlementsAPI(client: supabase)
     }
 
-    /// Refetch the entitlement row on demand (paywall "Check again"; Settings
-    /// after a checkout round-trip). Spec 018, FR-017: clients never mutate
-    /// entitlement state — refresh is refetch + re-derive. Failure keeps the
-    /// current row (a flaky refresh must never cause a false lapse or unlock)
-    /// and surfaces through the existing non-blocking `dataError` banner.
-    func refreshEntitlement() async {
-        guard !testDataEnabled else { return }
+    /// Refetch the entitlement row on demand. Call sites: the paywall's
+    /// "Check again", the Settings Subscription section's on-appear refresh,
+    /// and `loadAllFromServer` (Developer "Sync all from server" / manual
+    /// refresh). Spec 018, FR-017: clients never mutate entitlement state —
+    /// refresh is refetch + re-derive. Failure keeps the current row (a
+    /// flaky refresh must never cause a false lapse or unlock) and surfaces
+    /// through the existing non-blocking `dataError` banner.
+    ///
+    /// Returns whether the refetch itself SUCCEEDED — a successful check
+    /// that still shows a lapsed row is `true`; only a failed round trip is
+    /// `false` — so the paywall can distinguish "checked, no subscription
+    /// yet" from "could not check" (mirrors web `store.tsx`'s
+    /// `refreshEntitlement`).
+    @discardableResult
+    func refreshEntitlement() async -> Bool {
+        // Test-data mode never talks to the server; a no-op, not a failure.
+        guard !testDataEnabled else { return true }
         do {
             if let fetched = try await entitlementsAPI.fetchOwn() {
                 await MainActor.run { entitlement = fetched }
             }
+            return true
         } catch {
             await MainActor.run { dataError = error.localizedDescription }
+            return false
         }
     }
 

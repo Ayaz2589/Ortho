@@ -40,11 +40,15 @@ Deno.serve(async (req) => {
   if (plan !== 'monthly' && plan !== 'yearly') return errorResponse('invalid_request')
   const price = plan === 'monthly' ? env.STRIPE_PRICE_MONTHLY : env.STRIPE_PRICE_YEARLY
 
-  // Defensive: make sure the entitlement row exists (also covers first-ever boot races).
-  await authed.rpc('ensure_entitlement')
+  // Make sure the entitlement row exists BEFORE creating any Stripe objects —
+  // and fail loudly if it can't (review 018): a checkout whose webhook events
+  // later find no row would depend entirely on the webhook's seed path.
+  const { error: ensureError } = await authed.rpc('ensure_entitlement')
+  if (ensureError) return errorResponse('provider_error')
 
   const service = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
-  const stripe = new Stripe(env.STRIPE_SECRET_KEY)
+  // Pinned in lockstep with the webhook + translator fixtures (review 018).
+  const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-06-24.dahlia' })
 
   try {
     // Get-or-create the Stripe customer; store the mapping only if still unset
@@ -81,6 +85,10 @@ Deno.serve(async (req) => {
       customer: customerId,
       line_items: [{ price, quantity: 1 }],
       client_reference_id: user.id,
+      // user_id metadata on BOTH the session and the subscription: these are the
+      // only user-resolution paths the translator trusts (client_reference_id is
+      // deliberately untrusted — review 018 security).
+      metadata: { user_id: user.id },
       subscription_data: { metadata: { user_id: user.id } },
       success_url: `${env.APP_BASE_URL}/settings?checkout=success`,
       cancel_url: `${env.APP_BASE_URL}/settings?checkout=cancelled`,

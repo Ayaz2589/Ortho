@@ -282,7 +282,11 @@ These shape which rows exist and what the apps display, but have no cross-surfac
   flow in v1) — same hosted checkout, same entitlement row either way; **(b) paywall form factor** —
   web renders the gate inside the `(app)` Shell (the loading/error slot, `components/Paywall.tsx`),
   iOS is a full-screen root-switch view (`Features/Paywall/PaywallView.swift`, the
-  `BootstrapRecoveryView` shape). **Trust model (shared, documented limitation):** the paywall is
+  `BootstrapRecoveryView` shape); **(c) checkout return** — web has a `?checkout=success|cancelled`
+  return path (Settings + paywall both consume it, one-shot), iOS has none by design (external-
+  browser checkout can't deep-link back in v1) — iOS relies on "Check again"/on-appear refresh, and
+  the two return-path strings ship in `Localizable.xcstrings` for catalog parity but render only on
+  web. **Trust model (shared, documented limitation):** the paywall is
   enforced by service-role-only entitlement state plus client shell gating; data-table RLS is
   deliberately **not** subscription-aware in v1, so a hostile custom API client with valid
   credentials but no subscription could still read/write its own household's rows

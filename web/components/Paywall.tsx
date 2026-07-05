@@ -31,6 +31,19 @@ export function Paywall() {
   }
 
   useEffect(() => {
+    // A lapsed payer returning from Stripe lands HERE, not on Settings (the
+    // Shell still gates) — so the paywall itself must consume the checkout
+    // return param, refresh, and say something calm (review 018 [5]). The
+    // param is cleared so the announcement is one-shot ([7]).
+    const param = new URLSearchParams(window.location.search).get('checkout')
+    if (param === 'success') {
+      window.history.replaceState({}, '', window.location.pathname)
+      setNotice(t('Payment received — your subscription updates in a moment.'))
+      void refreshEntitlement()
+    } else if (param === 'cancelled') {
+      window.history.replaceState({}, '', window.location.pathname)
+      setNotice(t('Checkout cancelled.'))
+    }
     void loadPlans()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -50,10 +63,16 @@ export function Paywall() {
   async function checkAgain() {
     setBusy('check')
     setNotice(null)
-    await refreshEntitlement()
+    const checked = await refreshEntitlement()
     setBusy(null)
-    // If the row flipped, the Shell unmounts us; if we are still here, say so calmly.
-    setNotice(t('No subscription found yet. It can take a minute after paying.'))
+    // If the row flipped, the Shell unmounts us; if we are still here, say so
+    // calmly — and never claim "no subscription" when we couldn't even check
+    // (review 018 [6]).
+    setNotice(
+      checked
+        ? t('No subscription found yet. It can take a minute after paying.')
+        : t('Could not check just now. Try again.')
+    )
   }
 
   const planRow = (key: PlanKey, label: string) => {
@@ -94,7 +113,9 @@ export function Paywall() {
           <p className="text-sm text-text-3">{t('Loading plans…')}</p>
         )}
         {plansFailed && (
-          <div className="flex items-center gap-3">
+          // role="status": the failure must be announced, not just visible
+          // (review 018 [22]).
+          <div role="status" aria-live="polite" className="flex items-center gap-3">
             <span className="text-sm text-text-2">{t('Plans are unavailable right now.')}</span>
             <button
               type="button"

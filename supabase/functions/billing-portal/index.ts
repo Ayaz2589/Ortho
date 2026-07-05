@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
   if (!row?.stripe_customer_id) return errorResponse('no_billing_account')
 
   try {
-    const stripe = new Stripe(env.STRIPE_SECRET_KEY)
+    const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-06-24.dahlia' })
     const session = await stripe.billingPortal.sessions.create({
       customer: row.stripe_customer_id,
       return_url: `${env.APP_BASE_URL}/settings`,

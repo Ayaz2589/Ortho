@@ -401,6 +401,8 @@ const catalog: Record<string, string> = {
   "Manage": "관리",
   "Subscribe": "구독하기",
   "Could not open billing. Try again.": "결제 관리 페이지를 열 수 없었어요. 다시 시도해 주세요.",
+  "Free month — 1 day left": "무료 이용 — 1일 남음",
+  "Could not check just now. Try again.": "지금은 확인할 수 없었어요. 다시 시도해 주세요.",
 }
 
 export default catalog

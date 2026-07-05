@@ -111,13 +111,40 @@ describe('US7 — one line per state', () => {
   })
 })
 
-describe('US5 — grace is calm, non-blocking, announced', () => {
-  it('billing-issue copy in a polite live region + Manage, never red/blocking', () => {
+describe('US5 — grace is calm, non-blocking', () => {
+  it('billing-issue copy renders in normal order (no attribute-only aria-live theater — review [23]) + Manage, never red/blocking', () => {
     mount(row({ status: 'past_due', plan: 'monthly', source: 'stripe', access_expires_at: '2026-07-01T00:00:00Z' }), 'grace')
     const line = screen.getByText('There’s a billing issue. Your access continues while it gets sorted out.')
-    expect(line).toHaveAttribute('aria-live', 'polite')
+    expect(line).not.toHaveAttribute('aria-live')
     expect(screen.getByRole('button', { name: 'Manage' })).toBeInTheDocument()
     expect(document.querySelector('.text-destructive')).toBeNull()
+  })
+})
+
+describe('singular trial day (review [20])', () => {
+  it('the last day reads "1 day left", not "1 days left"', () => {
+    const expires = new Date(Date.now() + 0.5 * 86_400_000).toISOString()
+    mount(row({ access_expires_at: expires }), 'trialing')
+    expect(screen.getByText('Free month — 1 day left')).toBeInTheDocument()
+    expect(screen.queryByText(/1 days left/)).not.toBeInTheDocument()
+  })
+})
+
+describe('focus management (review [25])', () => {
+  it('activating Subscribe moves focus to the first plan row', async () => {
+    billing.fetchPlans.mockResolvedValue({
+      ok: true,
+      value: {
+        monthly: { amountCents: 999, currency: 'usd', interval: 'month' },
+        yearly: { amountCents: 9900, currency: 'usd', interval: 'year' },
+      },
+    })
+    mount(row(), 'trialing')
+    fireEvent.click(screen.getByRole('button', { name: 'Subscribe' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /Monthly/ })).toBeInTheDocument())
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: /Monthly/ }))
+    )
   })
 })
 

@@ -52,8 +52,11 @@ Order matters. Everything here is idempotent / re-runnable.
    ```
 5. **Stripe webhook endpoint**: Dashboard → Webhooks → add
    `https://brujhxmtzfgowimprueo.supabase.co/functions/v1/stripe-webhook`, subscribing EXACTLY
-   the seven events in [contracts/billing-functions.md](./contracts/billing-functions.md) §1;
-   copy the signing secret into step 3's `STRIPE_WEBHOOK_SECRET` and re-set.
+   the seven events in [contracts/billing-functions.md](./contracts/billing-functions.md) §1,
+   and **pin the endpoint's API version to `2026-06-24.dahlia`** (the version every function
+   client pins and the translator's fixtures model — an unpinned endpoint would emit whatever
+   payload shape is newest at creation time); copy the signing secret into step 3's
+   `STRIPE_WEBHOOK_SECRET` and re-set.
 6. **Probe**: `cd web && npx tsx scripts/ops/billing-probe.ts` — read-only; verifies migration
    applied (RPC exists, tables selectable as service role), all four functions respond, prices
    resolve. Fix anything red before proceeding.

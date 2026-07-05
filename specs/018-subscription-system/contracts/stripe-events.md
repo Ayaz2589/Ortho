@@ -24,9 +24,20 @@ type NormalizedBillingEvent = {
 }
 ```
 
-**User resolution order** (adapter): `subscription_data`/session `metadata.user_id` →
-`client_reference_id` → lookup `entitlements.stripe_customer_id`. Unresolvable ⇒ machine
-outcome `skipped_unmatched` (event still logged; webhook still 200s).
+**User resolution order** (adapter): session `metadata.user_id` → subscription
+`metadata.user_id` → host lookup via `entitlements.stripe_customer_id`.
+`client_reference_id` is deliberately NEVER trusted (client-suppliable on some checkout
+surfaces — review 018 security); `billing-checkout` sets `metadata.user_id` on both the
+session and the subscription from the caller's JWT. Unresolvable ⇒ machine outcome
+`skipped_unmatched` (event still logged; webhook still 200s).
+
+**API version (BINDING)**: payload shapes are version-dependent. All Stripe clients pin
+`apiVersion: '2026-06-24.dahlia'` (what `npm:stripe@22` ships), the webhook ENDPOINT is
+pinned to the same version (quickstart §2.5), and the translator is dual-shape tolerant
+anyway: subscription `current_period_end` read from the subscription OR its first item;
+invoice metadata/subscription id from `subscription_details` OR `parent.subscription_details`;
+line price from `price.id` OR `pricing.price_details.price` (review 018 — the original
+single-shape extraction noop'd every live checkout).
 
 ## Stripe → normalized mapping
 
@@ -102,5 +113,13 @@ same-second later arrivals no-ops — an accepted, documented edge).
 
 - Signature invalid/missing ⇒ 400, nothing logged to `billing_events` (unverifiable payloads
   are not audit data).
-- DB write failure after verification ⇒ 500 (Stripe retries; dedup makes the retry safe).
+- **Failure-aware idempotency (review 018)**: the event-log claim must not turn retries into
+  no-ops. Dedup-on-conflict treats only COMPLETED outcomes as duplicates; rows still at
+  `received` (crashed mid-flight) or `failed` (500'd) are atomically re-claimed and processed.
+  Every 500 path marks the row `failed` before returning, so Stripe's retry genuinely retries.
+- DB **read** failures are infrastructure failures ⇒ 500 + re-claimable — never
+  `skipped_unmatched` (a masked read error would stop Stripe's retries on a money event).
+- A resolved user with NO entitlements row must not drop a money event: the webhook seeds the
+  standard trial row (idempotent upsert, same values as `ensure_entitlement`) and applies the
+  event to it (paid-before-row heal).
 - Machine `noop`/`skipped_*` ⇒ 200 (Stripe must not retry semantic skips).

@@ -28,6 +28,17 @@ function statusCarryingStream(): NormalizedBillingEvent[] {
 }
 
 describe('P1 — duplicates always converge', () => {
+  it('the machine itself is a second dedup layer: re-applying an applied event is stale-skipped', () => {
+    // The host loop dedups by eventId (tested below); this pins the machine's own
+    // guard so a dedup bypass (e.g. a re-claimed event row) still cannot double-apply.
+    const paid = mkEvent({ eventId: 'evt_direct', type: 'payment_succeeded', eventCreatedAt: t(1), periodEndsAt: '2026-08-10T00:00:00Z' })
+    const first = applyBillingEvent(mkRow(), paid)
+    expect(first.kind).toBe('applied')
+    if (first.kind !== 'applied') return
+    const second = applyBillingEvent(first.row, { ...paid })
+    expect(second.kind).toBe('skipped_stale')
+  })
+
   it('duplicate invoice.paid is a dedup no-op (same eventId)', () => {
     const paid = mkEvent({ eventId: 'evt_dup', type: 'payment_succeeded', eventCreatedAt: t(1), periodEndsAt: '2026-08-10T00:00:00Z' })
     const clean = processStream(mkRow(), [paid], applyBillingEvent)

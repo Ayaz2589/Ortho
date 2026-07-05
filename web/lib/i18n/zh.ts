@@ -401,6 +401,8 @@ const catalog: Record<string, string> = {
   "Manage": "管理",
   "Subscribe": "订阅",
   "Could not open billing. Try again.": "无法打开账单页面。请重试。",
+  "Free month — 1 day left": "免费月 — 还剩 1 天",
+  "Could not check just now. Try again.": "暂时无法检查。请重试。",
 }
 
 export default catalog

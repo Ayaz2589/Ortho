@@ -50,7 +50,11 @@ Deno.serve(async (req) => {
   const priceYearly = Deno.env.get('STRIPE_PRICE_YEARLY') ?? ''
   if (!webhookSecret || !stripeKey) return json(500, { error: 'not_configured' })
 
-  const stripe = new Stripe(stripeKey)
+  // Pin the API version the translator's fixtures model (review 018): payload
+  // shapes are version-dependent, and an unpinned client would drift under a
+  // future npm:stripe bump. Keep in lockstep with the webhook ENDPOINT's pinned
+  // version (quickstart.md §2.5) and the fixtures in services/billing/test.
+  const stripe = new Stripe(stripeKey, { apiVersion: '2026-06-24.dahlia' })
   const cryptoProvider = Stripe.createSubtleCryptoProvider()
 
   // Signature verification on the RAW body — never parse first.
@@ -77,7 +81,11 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   )
 
-  // Idempotency guard: unique event_id insert-first; conflict ⇒ already processed.
+  // Idempotency guard, FAILURE-AWARE (review 018): claim the event by unique
+  // event_id. A conflict is only a genuine duplicate if the prior attempt
+  // COMPLETED — rows still at 'received' (crashed mid-flight) or 'failed'
+  // (500'd) are re-claimable, so Stripe's retry actually retries instead of
+  // being dedup-swallowed forever. Terminal outcomes never re-claim.
   const { data: inserted, error: insertError } = await supabase
     .from('billing_events')
     .upsert(
@@ -93,10 +101,21 @@ Deno.serve(async (req) => {
     )
     .select('id')
   if (insertError) return json(500, { error: 'event_log_write_failed' })
-  if (!inserted || inserted.length === 0) {
-    return json(200, { received: true, outcome: 'noop' }) // duplicate delivery
+
+  let eventRowId: unknown = inserted?.[0]?.id
+  if (eventRowId === undefined) {
+    const { data: reclaimed, error: reclaimError } = await supabase
+      .from('billing_events')
+      .update({ outcome: 'received' })
+      .eq('event_id', event.id)
+      .in('outcome', ['received', 'failed'])
+      .select('id')
+    if (reclaimError) return json(500, { error: 'event_log_write_failed' })
+    if (!reclaimed || reclaimed.length === 0) {
+      return json(200, { received: true, outcome: 'noop' }) // genuinely processed before
+    }
+    eventRowId = reclaimed[0].id
   }
-  const eventRowId = inserted[0].id
 
   const finish = async (outcome: string, userId: string | null) => {
     await supabase
@@ -104,6 +123,12 @@ Deno.serve(async (req) => {
       .update({ outcome, user_id: userId })
       .eq('id', eventRowId)
     return json(200, { received: true, outcome })
+  }
+
+  // Every 500 must leave the event row re-claimable so the retry can succeed.
+  const fail = async (reason: string) => {
+    await supabase.from('billing_events').update({ outcome: 'failed' }).eq('id', eventRowId)
+    return json(500, { error: reason })
   }
 
   try {
@@ -125,23 +150,50 @@ Deno.serve(async (req) => {
     )
 
     // Resolve the target user: adapter metadata first, then customer-id lookup.
+    // Read errors are INFRASTRUCTURE failures → 500 + re-claimable (review 018:
+    // supabase-js doesn't throw; an unchecked error here would masquerade as
+    // skipped_unmatched and stop Stripe's retries on a real money event).
     let userId = normalized.userId
     if (userId === null && normalized.stripeCustomerId) {
-      const { data } = await supabase
+      const { data, error: lookupError } = await supabase
         .from('entitlements')
         .select('user_id')
         .eq('stripe_customer_id', normalized.stripeCustomerId)
         .maybeSingle()
+      if (lookupError) return await fail('entitlement_read_failed')
       userId = data?.user_id ?? null
     }
     if (userId === null) return await finish('skipped_unmatched', null)
 
-    const { data: dbRow } = await supabase
+    let { data: dbRow, error: rowError } = await supabase
       .from('entitlements')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle()
-    if (!dbRow) return await finish('skipped_unmatched', userId)
+    if (rowError) return await fail('entitlement_read_failed')
+
+    // Paid-before-row heal (review 018): a resolved user with no entitlements
+    // row (ensure_entitlement never ran, or raced) must NOT drop a money event.
+    // Seed the row exactly like the RPC would, then apply the event to it.
+    if (!dbRow) {
+      const { error: seedError } = await supabase.from('entitlements').upsert(
+        {
+          user_id: userId,
+          status: 'trialing',
+          access_expires_at: new Date(Date.now() + 31 * 86_400_000).toISOString(),
+          source: 'trial',
+        },
+        { onConflict: 'user_id', ignoreDuplicates: true }
+      )
+      if (seedError) return await fail('entitlement_seed_failed')
+      const refetched = await supabase
+        .from('entitlements')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (refetched.error || !refetched.data) return await fail('entitlement_read_failed')
+      dbRow = refetched.data
+    }
 
     const outcome = applyBillingEvent(toRow(dbRow as DbEntitlement), {
       ...normalized,
@@ -153,13 +205,14 @@ Deno.serve(async (req) => {
         .from('entitlements')
         .update(toDb(outcome.row))
         .eq('user_id', userId)
-      if (updateError) return json(500, { error: 'entitlement_write_failed' })
+      if (updateError) return await fail('entitlement_write_failed')
       return await finish('applied', userId)
     }
     const detail = outcome.kind === 'noop' ? `noop:${outcome.reason}` : outcome.kind
     return await finish(detail, userId)
   } catch {
-    // Genuine processing failure — 500 so Stripe retries (dedup makes that safe).
-    return json(500, { error: 'processing_failed' })
+    // Genuine processing failure — mark re-claimable + 500 so Stripe's retry
+    // is a real retry (review 018), not a dedup-swallowed no-op.
+    return await fail('processing_failed')
   }
 })

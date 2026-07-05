@@ -160,6 +160,12 @@ describe('plans display (FR-011 — operator prices only)', () => {
     await waitFor(() =>
       expect(screen.getByText('Plans are unavailable right now.')).toBeInTheDocument()
     )
+    // Actually IN a live region (review [22]) — the failure must be announced.
+    expect(
+      screen
+        .getAllByRole('status')
+        .some((el) => /Plans are unavailable right now/.test(el.textContent ?? ''))
+    ).toBe(true)
     // Retry re-invokes billing-plans.
     ds.functions!['billing-plans'] = { data: PLANS }
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
@@ -208,9 +214,36 @@ describe('subscribing (FR-010/012)', () => {
     await waitFor(() => expect(screen.getByText('Monthly')).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: 'I subscribed — check again' }))
     await waitFor(() =>
-      expect(screen.getByRole('status')).toHaveTextContent(/No subscription found yet/)
+      expect(screen.getAllByRole('status').some((el) => /No subscription found yet/.test(el.textContent ?? ''))).toBe(true)
     )
     expect(screen.queryByTestId('app-content')).not.toBeInTheDocument()
+  })
+
+  it('"check again" whose REFETCH fails says could-not-check, not no-subscription (review [6])', async () => {
+    const ds = dataset()
+    await bootLayout(ds)
+    await waitFor(() => expect(screen.getByText('Monthly')).toBeInTheDocument())
+    ds.selectErrors = { entitlements: 'flaky network' }
+    fireEvent.click(screen.getByRole('button', { name: 'I subscribed — check again' }))
+    await waitFor(() =>
+      expect(screen.getAllByRole('status').some((el) => /Could not check just now/.test(el.textContent ?? ''))).toBe(true)
+    )
+    expect(screen.queryByText(/No subscription found yet/)).not.toBeInTheDocument()
+  })
+
+  it('a lapsed payer returning with ?checkout=success gets announced + auto-refreshed on the PAYWALL (review [5])', async () => {
+    Object.defineProperty(window, 'location', {
+      value: { ...originalLocation, assign: assignSpy, search: '?checkout=success', pathname: '/' },
+      writable: true,
+      configurable: true,
+    })
+    const ds = dataset()
+    // The webhook already flipped the row; the paywall's auto-refresh should unblock.
+    ds.tables!.entitlements = [
+      makeEntitlement({ status: 'active', plan: 'monthly', source: 'stripe' }),
+    ]
+    await bootLayout(ds)
+    await waitFor(() => expect(screen.getByTestId('app-content')).toBeInTheDocument())
   })
 })
 

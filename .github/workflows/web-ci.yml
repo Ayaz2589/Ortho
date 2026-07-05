@@ -54,6 +54,7 @@ jobs:
         run: |
           npm ci
           npx tsc --noEmit
+          npx tsc -p tsconfig.tests.json --noEmit
           npm test
 
       - name: Typecheck

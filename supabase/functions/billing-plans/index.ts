@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
   if (cached && Date.now() - cached.at < CACHE_MS) return json(200, cached.body)
 
   try {
-    const stripe = new Stripe(env.STRIPE_SECRET_KEY)
+    const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-06-24.dahlia' })
     const [monthlyPrice, yearlyPrice] = await Promise.all([
       stripe.prices.retrieve(env.STRIPE_PRICE_MONTHLY),
       stripe.prices.retrieve(env.STRIPE_PRICE_YEARLY),

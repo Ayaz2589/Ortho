@@ -43,11 +43,27 @@ async function invokeBilling<T>(name: string, body?: unknown): Promise<BillingRe
   }
 }
 
-/** Operator-configured plan prices for the paywall (never hardcoded — FR-011). */
-export function fetchPlans(): Promise<BillingResult<PlansInfo>> {
-  return invokeBilling<{ plans: PlansInfo }>('billing-plans').then((r) =>
-    r.ok ? { ok: true, value: r.value.plans } : r
+function isPlanInfo(v: unknown): v is PlanInfo {
+  const r = v as PlanInfo | null
+  return (
+    typeof r === 'object' && r !== null &&
+    typeof r.amountCents === 'number' && Number.isFinite(r.amountCents) &&
+    typeof r.currency === 'string' && typeof r.interval === 'string'
   )
+}
+
+/** Operator-configured plan prices for the paywall (never hardcoded — FR-011).
+ *  The payload shape is validated: a malformed 200 must surface as a calm
+ *  retryable failure, never a crash or a stuck loading state (review 018 [8]). */
+export function fetchPlans(): Promise<BillingResult<PlansInfo>> {
+  return invokeBilling<{ plans: PlansInfo }>('billing-plans').then((r) => {
+    if (!r.ok) return r
+    const plans = r.value?.plans
+    if (!plans || !isPlanInfo(plans.monthly) || !isPlanInfo(plans.yearly)) {
+      return { ok: false, code: 'provider_error' }
+    }
+    return { ok: true, value: plans }
+  })
 }
 
 /** Mint a Stripe Checkout URL for the chosen plan. Never auto-retried

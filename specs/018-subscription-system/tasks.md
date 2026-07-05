@@ -106,9 +106,9 @@ files, no incomplete dependency).
 - [x] T035 [P] Write `web/scripts/ops/billing-smoke.ts` `[OPERATOR-PENDING]`: guided interactive walk of quickstart §3 incl. admin grant/revoke snippets (T026) and replay check.
 - [x] T036 [P] Docs: update `docs/index.md` (big-picture: first server-side code, `services/`, functions), `docs/supabase.md` (entitlements/billing_events/RPC/functions/secrets), `docs/web.md` (billing lib, paywall gate, ops scripts), `docs/ios.md` (EntitlementsAPI, paywall gate, link-out).
 - [x] T037 [P] `PARITY.md`: add spec-018 capability rows (derivation TS↔Swift↔core with literal-lock digest; paywall/Settings surfaces) + divergence entries (web same-tab redirect vs iOS external link-out; iOS plan sheet form factor).
-- [ ] T038 Re-run FULL local gates (quickstart §1): services/billing tests+tsc, sync drift, web `npm test` (731+new, zero failures) + `npx tsc --noEmit`, `npm run gen:vectors` zero-drift, `npm run build` (only if no shared dev server), catalog parity.
-- [ ] T039 Adversarial multi-agent review (6 dimensions: web correctness, Swift compile/logic, security — webhook/entitlement forgery/redirects, parity/i18n, constitution/a11y, test quality) → triage → apply confirmed fixes TDD-style → re-run T038.
-- [ ] T040 Update this ledger + spec `Status:` + write `.claude/context-summaries` note if session ends; commit series follows house style (spec → core/backend → web → iOS → docs).
+- [x] T038 Re-run FULL local gates (quickstart §1): services/billing tests+tsc, sync drift, web `npm test` (731+new, zero failures) + `npx tsc --noEmit`, `npm run gen:vectors` zero-drift, `npm run build` (only if no shared dev server), catalog parity.
+- [x] T039 Adversarial multi-agent review (6 dimensions: web correctness, Swift compile/logic, security — webhook/entitlement forgery/redirects, parity/i18n, constitution/a11y, test quality) → triage → apply confirmed fixes TDD-style → re-run T038.
+- [x] T040 Update this ledger + spec `Status:` + write `.claude/context-summaries` note if session ends; commit series follows house style (spec → core/backend → web → iOS → docs).
 - [ ] T045 Push branch (bypass-proxy per CI-SETUP.local.md), open PR (base `full-holistic-audit-parity`, status-banner body incl. `[OPERATOR-PENDING]` list), watch `web-ci` + `ios-ci` to green (budget: ≤2 iOS fix-up rounds, each a full batch).
 
 ## Dependencies & execution order
@@ -136,4 +136,8 @@ MVP = Phases 1–4 (US1+US2): trial, block, pay, restore — a shippable monetiz
 US3–US7 layer management, admin, dunning, iOS, and polish onto the same entitlement fact
 without reopening earlier work. Stop-anywhere checkpoints after each phase; the branch stays
 merge-safe throughout because live-system steps are operator-pending by design (FR-029).
-Numbering note: T041–T044 intentionally unassigned (reserved for review-pass findings from T039).
+Numbering note: T041–T044 were reserved for the review pass; used as follows.
+- [x] T041 Review fix pass (backend): dahlia dual-shape translator + apiVersion pins, failure-aware webhook dedup/re-claim, read-error 500s, paid-before-row heal, checkout ensure/metadata fixes, normalize.ts .ts-import, tests-tsconfig CI gate.
+- [x] T042 Review fix pass (web): paywall checkout-return + honest check-again, plans live region + payload validation, focus management, singular day, one-shot params, unparseable-expiry fail-open, harness live-RLS shapes, memory-client parity, +2 i18n keys ×5.
+- [x] T043 Review fix pass (iOS): microsecond timestamp parsing + tests, single-fire announcements, in-session entitlement refresh, honest check-again, singular day, comment/contract citations, +2 xcstrings keys.
+- [x] T044 Contracts/PARITY sync: stripe-events failure modes + API version binding + resolution order, entitlement-state unparseable rule, quickstart endpoint version pin, PARITY checkout-return divergence.

@@ -1,4 +1,4 @@
-import type { BillingPlan, EntitlementStatus } from './states'
+import type { BillingPlan, EntitlementStatus } from './states.ts'
 
 /**
  * The provider-adapter seam (contracts/stripe-events.md): everything provider-specific

@@ -52,18 +52,22 @@ describe('checkout.session.completed', () => {
     })
   })
 
-  it('userId falls back to client_reference_id when metadata is absent', () => {
+  it('userId falls back to the SUBSCRIPTION metadata when session metadata is absent', () => {
     const out = translateStripeEvent(
       stripeEvent('checkout.session.completed', { ...session, metadata: {} }),
       config,
-      { subscription: subscriptionObject({ metadata: {} }) }
+      { subscription: subscriptionObject() }
     )
-    expect(out.userId).toBe('user-ref')
+    expect(out.userId).toBe('user-1')
   })
 
-  it('userId is null when neither metadata nor client_reference_id exist (host resolves via customer)', () => {
+  it('client_reference_id is NEVER trusted for user resolution (review 018 security finding)', () => {
+    // Both metadata sources absent: even with a client_reference_id present the
+    // translator must return null and let the host resolve via the customer-id
+    // mapping it wrote itself — c_r_i is a client-suppliable field on payment
+    // links and must not become an entitlement-write path.
     const out = translateStripeEvent(
-      stripeEvent('checkout.session.completed', { ...session, metadata: {}, client_reference_id: null }),
+      stripeEvent('checkout.session.completed', { ...session, metadata: {} }),
       config,
       { subscription: subscriptionObject({ metadata: {} }) }
     )
@@ -204,6 +208,112 @@ describe('customer.subscription.deleted / paused carry the full subscription obj
     )
     expect(out.type).toBe('subscription_paused')
     expect(out.periodEndsAt).toBe(PERIOD_END_ISO)
+  })
+})
+
+// stripe@22 pins API version 2026-06-24.dahlia: current_period_end lives on the
+// SUBSCRIPTION ITEM (not the subscription), invoices carry parent.subscription_details
+// (no top-level subscription_details/subscription), and lines price via
+// pricing.price_details.price (no line.price). The translator must parse BOTH
+// generations (review 018 finding, verified against the published package types).
+describe('dahlia (2025+) payload shapes', () => {
+  const dahliaSubscription = (overrides: Record<string, unknown> = {}) => ({
+    id: 'sub_1',
+    object: 'subscription',
+    customer: 'cus_1',
+    status: 'active',
+    // NO top-level current_period_end
+    metadata: { user_id: 'user-1' },
+    items: { data: [{ price: { id: 'price_y' }, current_period_end: PERIOD_END }] },
+    ...overrides,
+  })
+
+  it('subscription events read period end from the item level', () => {
+    const out = translateStripeEvent(
+      stripeEvent('customer.subscription.updated', dahliaSubscription()),
+      config
+    )
+    expect(out.periodEndsAt).toBe(PERIOD_END_ISO)
+    expect(out.plan).toBe('yearly')
+  })
+
+  it('checkout supplement in dahlia shape still yields the period end', () => {
+    const out = translateStripeEvent(
+      stripeEvent('checkout.session.completed', {
+        id: 'cs_1', object: 'checkout.session', mode: 'subscription',
+        customer: 'cus_1', subscription: 'sub_1', metadata: { user_id: 'user-1' },
+      }),
+      config,
+      { subscription: dahliaSubscription() }
+    )
+    expect(out.type).toBe('checkout_completed')
+    expect(out.periodEndsAt).toBe(PERIOD_END_ISO)
+  })
+
+  it('deleted events in dahlia shape carry period/plan/ids', () => {
+    const out = translateStripeEvent(
+      stripeEvent('customer.subscription.deleted', dahliaSubscription({ status: 'canceled' })),
+      config
+    )
+    expect(out).toMatchObject({
+      type: 'subscription_deleted',
+      periodEndsAt: PERIOD_END_ISO,
+      plan: 'yearly',
+      stripeSubscriptionId: 'sub_1',
+    })
+  })
+
+  it('dahlia invoices: metadata + subscription id via parent.subscription_details, price via pricing.price_details', () => {
+    const out = translateStripeEvent(
+      stripeEvent('invoice.paid', {
+        id: 'in_9',
+        object: 'invoice',
+        customer: 'cus_1',
+        // NO top-level subscription / subscription_details
+        parent: { subscription_details: { subscription: 'sub_1', metadata: { user_id: 'user-1' } } },
+        lines: {
+          data: [
+            { period: { start: 1, end: PERIOD_END }, pricing: { price_details: { price: 'price_m' } } },
+          ],
+        },
+      }),
+      config
+    )
+    expect(out).toMatchObject({
+      type: 'payment_succeeded',
+      userId: 'user-1',
+      periodEndsAt: PERIOD_END_ISO,
+      plan: 'monthly',
+      stripeCustomerId: 'cus_1',
+      stripeSubscriptionId: 'sub_1',
+    })
+  })
+})
+
+describe('invoice max-period line pairing is pinned (mutation-test finding)', () => {
+  it('the plan comes from the MAX-period line, not the first line', () => {
+    const out = translateStripeEvent(
+      stripeEvent('invoice.paid', {
+        id: 'in_pair',
+        object: 'invoice',
+        customer: 'cus_1',
+        subscription: 'sub_1',
+        subscription_details: { metadata: { user_id: 'user-1' } },
+        lines: {
+          data: [
+            // First line: monthly price, EARLIER period end.
+            { period: { start: 1, end: PERIOD_END - 500 }, price: { id: 'price_m' } },
+            // Max-period line: yearly price — this one must win the pairing.
+            { period: { start: 1, end: PERIOD_END }, price: { id: 'price_y' } },
+            // Later-listed but earlier-period line must not steal it back.
+            { period: { start: 1, end: PERIOD_END - 900 }, price: { id: 'price_m' } },
+          ],
+        },
+      }),
+      config
+    )
+    expect(out.periodEndsAt).toBe(PERIOD_END_ISO)
+    expect(out.plan).toBe('yearly')
   })
 })
 
