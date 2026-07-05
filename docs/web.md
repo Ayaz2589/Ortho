@@ -88,7 +88,7 @@ web/
 │   ├── gen-vectors.ts          # regenerates shared/test-vectors/*.json from the TS engines
 │   ├── import/                 # bank-statement import + tx CRUD CLI (engine/, profiles/, db/, cli.ts, tx.ts)
 │   └── maintenance/repair-legacy-dates.ts  # one-shot date repair (make repair-dates, dry-run by default)
-├── test/                       # 67 Vitest files, 731 tests (unit, jsdom component, *.parity.test.ts,
+├── test/                       # 73 Vitest files, 784 tests (unit, jsdom component, *.parity.test.ts,
 │   │                           #   i18n/ catalog + render-locale locks, import/ golden suites + fixtures/,
 │   │                           #   helpers/supabase-mock.ts)
 │   └── setup.ts                # jest-dom matchers + conditional RTL cleanup
@@ -103,8 +103,18 @@ web/
 
 ### Routing & auth
 - `app/page.tsx` redirects `/` → `/dashboard`. All product pages live in the `(app)` route group; each page is a `'use client'` component.
-- **Auth gate** is `web/proxy.ts` (Next 16's `middleware.ts` replacement): it creates an `@supabase/ssr` server client over request cookies, calls `auth.getUser()`, redirects signed-out users to `/sign-in` and signed-in users away from `/sign-in`. There is deliberately **no single-active-platform lock** — iOS and web may be signed in simultaneously (feature 010); the 30-day cap is Supabase's session timebox.
-- Sign-in (`app/sign-in/page.tsx`) is passwordless email OTP: `signInWithOtp` → `verifyOtp(type: 'email')` → `router.replace('/dashboard')`.
+- **Auth gate** is `web/proxy.ts` (Next 16's `middleware.ts` replacement): it creates an `@supabase/ssr` server client over request cookies, calls `auth.getUser()`, redirects signed-out users to `/sign-in` and signed-in users away from `/sign-in`. The bounce carries `?next=<original path+query>` (spec 017) so an interrupted destination — e.g. a `/join?code=` invite link — resumes after OTP; sign-in honors only same-origin relative paths (`/…`, never `//…`). There is deliberately **no single-active-platform lock** — iOS and web may be signed in simultaneously (feature 010); the 30-day cap is Supabase's session timebox.
+- Sign-in (`app/sign-in/page.tsx`) is passwordless email OTP: `signInWithOtp` → `verifyOtp(type: 'email')` → `router.replace(next ?? '/dashboard')`.
+
+### Partner invite & join (spec 017)
+The second person of the household signs in with their own email and joins via a one-time code.
+- **Owner side**: `components/settings/InviteCard.tsx` on Settings → Household — create (code revealed exactly ONCE from `createInvite()`'s resolved value; only its SHA-256 persists), copy code / copy `/join?code=` link, status list (Pending/Redeemed/Expired, client-derived), revoke (= DELETE; owner-only RLS).
+- **Joiner side**: a zero-membership user is stopped at the shell's `components/HouseholdGate.tsx` — "Join with a code / Start fresh" — instead of the old silent household auto-create; `startFresh()` reproduces the pre-017 create path exactly. Signed-in members join via `app/(app)/join/page.tsx`. Redemption = `rpc('accept_invite', {p_token: canonical})`.
+- **Identity claim**: member-role joiners (never owners) claim an unlinked active `household_people` row — a guarded `UPDATE … WHERE linked_user_id IS NULL` (0 rows ⇒ lost race ⇒ picker refreshes) — or continue as a new linked person; the gate re-presents until exactly one row links them. The account-person auto-create is now **owner-role-only**.
+- **Codec**: `lib/invites.ts` (Crockford-32, canonicalize, SHA-256 hex) — hand-mirrored with iOS `Shared/InviteCodec.swift` per `specs/017-partner-invite-join/contracts/invite-code.md`; NOT a golden vector.
+- **Deterministic household pick**: the bootstrap reads ALL memberships (role-aware) and opens `localStorage['preferredHouseholdId']` when valid, else the oldest membership; joining sets the preference. `loadAll` reads are household-scoped (`cards`/`budgets`/`properties` `.eq`; `transactions` keep NULL-household legacy personal rows via `.or`).
+- **Manual refresh** (grafted US4): store `refresh()` re-runs the all-or-nothing `loadAll` under a separate `refreshing` flag (failure keeps every collection); `components/RefreshControl.tsx` sits in the Sidebar footer + compact Transactions header. Explicitly manual — no realtime.
+- **Live verification is `[OPERATOR-PENDING]`**: `scripts/ops/invite-probe.ts` (read-only rails check) + `scripts/ops/invite-smoke.ts` (scratch E2E) — see `scripts/ops/README.md`.
 
 ### Test-build feature flags (spec 015)
 A **Developer** section on the Settings page (`components/settings/flags-section.tsx`) exposes **Use test data** and **Bypass auth**, letting a tester run the app on a disposable in-memory dataset without touching the live shared backend.
@@ -170,7 +180,7 @@ npm install
 npm run dev              # http://localhost:3000
 npm run build            # next build
 npm start                # next start (after build)
-npm test                 # vitest run — 67 files / 731 tests (verified green, 2026-07-04)
+npm test                 # vitest run — 73 files / 784 tests (verified green, 2026-07-05)
 npm run test:coverage    # v8 coverage, thresholds enforced (see vitest.config.ts)
 npm run gen:vectors      # regenerate shared/test-vectors/ from the TS engines
 npx tsc --noEmit         # typecheck (part of the web CI gate)

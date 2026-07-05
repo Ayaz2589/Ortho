@@ -19,10 +19,15 @@ struct PropertiesAPI {
 
     // MARK: - Read
 
-    func fetch() async throws -> [Property] {
-        async let propsResult: [PropertyRecord] = client
-            .from("properties")
-            .select()
+    func fetch(householdID: Household.ID? = nil) async throws -> [Property] {
+        // spec 017: scope to the active household (multi-household users).
+        // Sub-tables stay unfiltered — their rows are inert without a parent
+        // property in the returned list.
+        var propsQuery = client.from("properties").select()
+        if let householdID {
+            propsQuery = propsQuery.eq("household_id", value: householdID)
+        }
+        async let propsResult: [PropertyRecord] = propsQuery
             .order("address", ascending: true)
             .execute()
             .value

@@ -7,11 +7,10 @@ import Supabase
 /// `AppState.bootstrapUserSession`, plus the two membership-management
 /// calls Settings needs (rename household, remove member).
 ///
-/// Adding members is intentionally not surfaced — that flow belongs to the
-/// Invitations work item (creates a `pending_invites` row + emails OTP +
-/// redeems via the `accept_invite` RPC). Building it as "in-memory user"
-/// would FK-violate `public.users.id → auth.users.id` the moment one
-/// touched a shared transaction.
+/// Partner invites (spec 017) live in `InvitesAPI`: invite creation writes a
+/// `pending_invites` row and redemption calls the `accept_invite` RPC — the
+/// out-of-band-code flow this comment historically reserved. Members joined
+/// that way are real `auth.users`, so the FK chain holds.
 struct HouseholdsAPI {
     private let client: SupabaseClient
 
@@ -19,29 +18,35 @@ struct HouseholdsAPI {
         self.client = client
     }
 
-    /// Returns the user's primary household, creating it (and the
-    /// corresponding `household_members` row) when none exists. Used by
-    /// the auth bootstrap to guarantee shared-scope inserts have a valid
-    /// `household_id` target.
+    /// Returns the user's active household, creating one (and the
+    /// corresponding `household_members` row) only when the user belongs to
+    /// none. A user can belong to several households (spec 017): the pick is
+    /// deterministic — the persisted `preferredID` when it is still a
+    /// membership, else the OLDEST membership — never first-row roulette
+    /// (FR-018). Also reports the user's role in the picked household, which
+    /// gates the invite controls (owner) and the identity claim (member).
     func findOrCreate(
         for userID: User.ID,
+        preferredID: Household.ID? = nil,
         defaultName: String = "Home"
-    ) async throws -> (id: UUID, name: String) {
+    ) async throws -> (id: UUID, name: String, role: Role) {
         let memberships: [HouseholdMembershipRow] = try await client
             .from("household_members")
-            .select("household_id")
+            .select("household_id, role, created_at")
             .eq("user_id", value: userID)
+            .order("created_at", ascending: true)
             .execute()
             .value
 
-        if let first = memberships.first {
+        if let picked = memberships.first(where: { $0.householdID == preferredID })
+            ?? memberships.first {
             let rows: [HouseholdNameRow] = try await client
                 .from("households")
                 .select("name")
-                .eq("id", value: first.householdID)
+                .eq("id", value: picked.householdID)
                 .execute()
                 .value
-            return (id: first.householdID, name: rows.first?.name ?? defaultName)
+            return (id: picked.householdID, name: rows.first?.name ?? defaultName, role: picked.role)
         }
 
         let newID = UUID()
@@ -61,7 +66,7 @@ struct HouseholdsAPI {
                 role: .owner
             ))
             .execute()
-        return (id: newID, name: defaultName)
+        return (id: newID, name: defaultName, role: .owner)
     }
 
     func updateName(_ name: String, householdID: Household.ID) async throws {
@@ -118,6 +123,22 @@ struct HouseholdsAPI {
         try await client.from("household_people").insert(person).execute()
     }
 
+    /// spec 017 US3 — the guarded identity claim: link the signed-in account
+    /// to a roster person ONLY if the row is still unlinked (a lost race
+    /// updates 0 rows and returns false; `unique(household_id,
+    /// linked_user_id)` backstops server-side). Mirrors web `claimPerson`.
+    func claimPerson(personID: Person.ID, userID: User.ID) async throws -> Bool {
+        let updated: [PersonIDRow] = try await client
+            .from("household_people")
+            .update(LinkedUserUpdate(linkedUserID: userID))
+            .eq("id", value: personID)
+            .is("linked_user_id", value: nil)
+            .select("id")
+            .execute()
+            .value
+        return !updated.isEmpty
+    }
+
     func updatePerson(_ person: Person) async throws {
         try await client
             .from("household_people")
@@ -129,12 +150,23 @@ struct HouseholdsAPI {
 
 // MARK: - DTOs
 
-/// One column of `household_members` — enough to find which household(s)
-/// the signed-in user belongs to.
+/// A `household_members` row projection — which household(s) the signed-in
+/// user belongs to and with what role (spec 017: role gates invite controls
+/// and the identity claim).
 private struct HouseholdMembershipRow: Decodable {
     let householdID: UUID
+    let role: Role
     enum CodingKeys: String, CodingKey {
         case householdID = "household_id"
+        case role
+    }
+}
+
+/// The claim update payload (spec 017) — sets only `linked_user_id`.
+private struct LinkedUserUpdate: Encodable {
+    let linkedUserID: UUID
+    enum CodingKeys: String, CodingKey {
+        case linkedUserID = "linked_user_id"
     }
 }
 

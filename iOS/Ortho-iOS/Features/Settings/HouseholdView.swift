@@ -12,6 +12,9 @@ struct HouseholdView: View {
     @State private var pendingHouseholdName: String = ""
     @State private var showingAddPerson = false
     @State private var editingUser: User?
+    // spec 017: partner invite (owners) + join-with-code (everyone).
+    @State private var showingInvites = false
+    @State private var showingJoin = false
 
     private var householdMembers: [User] { appState.householdMembers }
 
@@ -55,7 +58,39 @@ struct HouseholdView: View {
                     .lineSpacing(2)
                     .padding(.horizontal, 24)
                     .padding(.bottom, 24)
+
+                // spec 017: the partner invite/join entry points. Inviting is
+                // owner-only (RLS backstops the UI gate); joining is open to
+                // any signed-in user and switches this device's household.
+                VStack(spacing: 0) {
+                    if appState.currentRole == .owner {
+                        navRow("Invite your partner") { showingInvites = true }
+                        RowSeparator(density: .comfortable)
+                    }
+                    navRow("Join a household") { showingJoin = true }
+                }
+                .background(AppTheme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+
+                Text("Your partner signs in with their own email, then enters this code to join your household.")
+                    .font(.lato(size: 13))
+                    .foregroundStyle(AppTheme.text.opacity(0.36))
+                    .lineSpacing(2)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 24)
             }
+        }
+        .sheet(isPresented: $showingInvites) {
+            InviteSheet()
+                .presentationDetents([.large])
+                .presentationBackground(AppTheme.bg)
+        }
+        .sheet(isPresented: $showingJoin) {
+            JoinHouseholdSheet()
+                .presentationDetents([.large])
+                .presentationBackground(AppTheme.bg)
         }
         .sheet(isPresented: $showingAddPerson) {
             AddUserSheet { name, colorKey in
@@ -129,6 +164,27 @@ struct HouseholdView: View {
 
     private func detail(for u: User) -> String {
         "\(appState.formatMoney(appState.monthlySpent(by: u.id))) this month"
+    }
+
+    /// A plain disclosure row matching the household-name row's typography.
+    private func navRow(_ title: LocalizedStringKey, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Text(title)
+                    .font(.lato(size: 17, weight: .medium))
+                    .tracking(-0.2)
+                    .foregroundStyle(AppTheme.text)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.lato(size: 13, weight: .semibold))
+                    .foregroundStyle(AppTheme.text.opacity(0.36))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(minHeight: 56)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Rows

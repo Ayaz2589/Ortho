@@ -12,10 +12,13 @@ struct BudgetsAPI {
         self.client = client
     }
 
-    func fetch() async throws -> [Budget] {
-        try await client
-            .from("budgets")
-            .select()
+    func fetch(householdID: Household.ID? = nil) async throws -> [Budget] {
+        // spec 017: scope to the active household (multi-household users).
+        var query = client.from("budgets").select()
+        if let householdID {
+            query = query.eq("household_id", value: householdID)
+        }
+        return try await query
             .execute()
             .value
     }

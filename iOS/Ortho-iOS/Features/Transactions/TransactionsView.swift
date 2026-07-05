@@ -349,6 +349,13 @@ struct TransactionsView: View {
             }
         }
         .listStyle(.plain)
+        // spec 017 US4: manual pull-to-refresh — the iOS mirror of web's
+        // discreet refresh control. Re-invokes the existing one-shot loader;
+        // explicitly manual, never a subscription (FR-020/022). In test-data
+        // mode `loadAllFromServer()` is already a guarded no-op.
+        .refreshable {
+            await appState.loadAllFromServer()
+        }
         .scrollContentBackground(.hidden)
         .background(AppTheme.bg)
         .listSectionSpacing(8)

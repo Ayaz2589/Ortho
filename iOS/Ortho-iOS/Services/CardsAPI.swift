@@ -15,10 +15,14 @@ struct CardsAPI {
         self.client = client
     }
 
-    func fetch() async throws -> [Card] {
-        let rows: [CardRecord] = try await client
-            .from("cards")
-            .select()
+    func fetch(householdID: Household.ID? = nil) async throws -> [Card] {
+        // spec 017: scope to the active household — a multi-household user's
+        // other cards must not merge into this household's pickers.
+        var query = client.from("cards").select()
+        if let householdID {
+            query = query.eq("household_id", value: householdID)
+        }
+        let rows: [CardRecord] = try await query
             .order("created_at", ascending: true)
             .execute()
             .value

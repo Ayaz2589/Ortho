@@ -58,6 +58,10 @@ a few unintended divergences (below).
 | Dashboard month selection | ✅ | ✅ | — | `components/dashboard/range.ts` ↔ `DashboardRange.swift` (+ `monthBounds` → `dashboard-month-scope.json` / `transaction-filters.json`; `availableRanges` vectored in spec 013) |
 | Insights engine | ✅ | ✅ | — | `insights.json` (8/8 rules + `preview_merchants` ordering/casing, spec 013) |
 | Mortgage / housing math | ✅ | ✅ | — | `lib/finance/mortgage.ts` → `mortgage.json` |
+| Partner invite & join (spec 017) | ✅ | ✅ | — | `pending_invites` + `accept_invite` RPC (v1 schema, zero new DDL); invite-code convention hand-mirrored: `lib/invites.ts` ↔ `Shared/InviteCodec.swift` (contract + identical literal tests, NOT a vector) |
+| Identity claim (`linked_user_id`) | ✅ | ✅ | — | guarded only-if-null update on `household_people`; owner-only auto-create preserved on both |
+| Deterministic household selection | ✅ | ✅ | — | persisted preference (localStorage ↔ UserDefaults `currentHouseholdID`) → oldest membership fallback |
+| Manual data refresh | ✅ | ✅ | — | web `refresh()` (all-or-nothing loadAll) + RefreshControl; iOS `.refreshable` → `loadAllFromServer()` |
 | Auth (email-OTP, 8-digit) | ✅ | ✅ | ⚠️ | — (each calls Supabase SDK) |
 | Concurrent iOS + web sessions | ✅ | ✅ | — | single-active-platform lock **removed** (feature 010) |
 | Max session length (30-day cap) | ✅ | ✅ | ✅ | Supabase session timebox (720h) — clients sign out → sign-in on expiry |
@@ -259,6 +263,25 @@ These shape which rows exist and what the apps display, but have no cross-surfac
   a scanned receipt has no reliable source card, unlike an import run — and an unmatched merchant keeps
   the form's default category instead of the CLI's `entertainment` fallback. Reimbursement remains
   unpickable: card-payment/transfer statement rows are flagged and default-skipped, never expenses.
+- **Partner invite & join (spec 017) — deliberate per-canvas divergences.** The capability is on
+  both apps (see the matrix) but three deltas are by design, not drift: (1) **entry point** — a
+  brand-new web user with no household gets a pre-bootstrap "Join with a code / Start fresh"
+  gate (silent household auto-create removed on web), while iOS keeps its existing first-run
+  sequence and joins post-hoc from Settings → "Join a household" (bootstrap interception on the
+  CI-only surface was explicitly cut — fast-follow once operator device testing exists); the web
+  `/join?code=` link has no iOS deep-link equivalent (codes are typed/pasted). (2) **refresh
+  semantics** — web's `refresh()` re-runs the all-or-nothing batched `loadAll` (atomic swap),
+  iOS's pull-to-refresh awaits the existing `loadAllFromServer()` seam which replaces
+  per-collection at completion. (3) **invite-code convention** is a hand-mirrored contract
+  (`specs/017-partner-invite-join/contracts/invite-code.md`): Crockford-32 10-char codes,
+  canonicalization (uppercase, O→0, I/L→1, strip separators), lowercase-hex SHA-256 — locked by
+  IDENTICAL literal test cases in `web/test/invites.test.ts` and `InviteCodecTests.swift`
+  (deliberately not a golden vector: no money/date math; changing it follows the contract's
+  change-control rules). Both apps also now scope their household reads (`cards`, `budgets`,
+  `properties`, `transactions` + NULL-household legacy personal rows) to the ACTIVE household,
+  since spec 017 makes multi-household membership reachable. Live verification is
+  `[OPERATOR-PENDING]`: `web/scripts/ops/invite-probe.ts` + `invite-smoke.ts` (the dev sandbox
+  has no network route to the hosted project).
 - **Test-build feature flags (spec 015) — intentional per-surface gating divergence.** A Settings →
   Developer section (Use test data + Bypass auth) exists on both apps but is gated by *different*
   mechanisms because the platforms differ, and this is deliberate, not drift: iOS gates at

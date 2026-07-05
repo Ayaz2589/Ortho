@@ -55,18 +55,27 @@ struct TransactionsAPI {
 
     // MARK: - Read
 
-    /// All transactions visible to the current user. RLS enforces visibility
-    /// — no explicit filter here. Ordered by date desc to match the activity
-    /// list's natural read order.
+    /// Transactions for the active household, ordered by date desc to match
+    /// the activity list's natural read order. RLS enforces visibility; the
+    /// explicit household scope exists because a user can belong to MULTIPLE
+    /// households (spec 017) and another household's rows must not merge into
+    /// this one. Legacy personal (NULL-household) rows stay visible via the
+    /// disjunction — RLS already limits them to their creator. Mirrors the
+    /// web loadAll filters.
     ///
     /// `linkedPersonByUser` maps an auth user id (`created_by`) to that
     /// user's linked household Person id. It's only consulted for the rare
     /// share-less row fallback so both surfaces attribute such rows to the
     /// same identity (mirrors web's `personForUser`).
-    func fetch(linkedPersonByUser: [UUID: Person.ID] = [:]) async throws -> [Transaction] {
-        let rows: [TransactionRecord] = try await client
-            .from("transactions")
-            .select()
+    func fetch(
+        linkedPersonByUser: [UUID: Person.ID] = [:],
+        householdID: Household.ID? = nil
+    ) async throws -> [Transaction] {
+        var query = client.from("transactions").select()
+        if let householdID {
+            query = query.or("household_id.eq.\(householdID.uuidString),household_id.is.null")
+        }
+        let rows: [TransactionRecord] = try await query
             .order("date", ascending: false)
             .execute()
             .value

@@ -100,6 +100,33 @@ iOS/
 - `App/RootTabView.swift` is a **custom tab shell**, not SwiftUI `TabView`: a `ZStack` switches between the four tab bodies; `OrthoTabBar` is rendered via `.safeAreaInset(edge: .bottom)`. Pushed detail screens (property detail, household editor) hide the bar with `.hidesTabBar()`, a Bool `PreferenceKey` (`HideTabBarPreferenceKey`) that OR-folds up the tree. `RootTabView` also owns the single global error alert ("Something didn't save") bound to `appState.dataError`.
 - There is no NavigationStack-based deep routing; sheets (`.sheet`) drive add/edit flows, and Housing/Settings push detail views inside their own stacks.
 
+### Partner invite & join (spec 017)
+
+Settings → Household gains two rows: **Invite your partner** (owner-role only →
+`Features/Settings/InviteSheet.swift`: create with one-time reveal + ShareLink/copy, status
+list, revoke-with-confirm) and **Join a household** (everyone →
+`Features/Settings/JoinHouseholdSheet.swift`: code entry → the app's first `.rpc()` call,
+`accept_invite` via `Services/InvitesAPI.swift` → switch household → identity-claim picker).
+iOS deliberately keeps its first-run sequence (no bootstrap interception — the pre-bootstrap
+choice gate is web-only; PARITY.md records the divergence). Key seams:
+
+- `Services/HouseholdsAPI.findOrCreate(for:preferredID:)` now reads ALL memberships
+  (role-aware, `created_at`-ordered), prefers the persisted `currentHouseholdID`, and returns
+  the role — the only bootstrap-adjacent change. `AppState.currentRole` gates invite UI
+  (owner) vs the claim step (member); the `ensureAccountPerson` auto-create is **owner-only**.
+- **Identity claim** (`HouseholdsAPI.claimPerson`): guarded
+  `UPDATE household_people … WHERE linked_user_id IS NULL` (0 rows ⇒ lost race);
+  `RootTabView` re-presents the claim sheet (`JoinHouseholdSheet(phase: .claim)`,
+  `interactiveDismissDisabled`) until a row links the member.
+- **Codec**: `Shared/InviteCodec.swift` hand-mirrors `web/lib/invites.ts` (Crockford-32,
+  canonicalize, CryptoKit SHA-256) per the spec-017 contract, locked by identical literal
+  cases in `InviteCodecTests` — NOT a golden vector.
+- **Manual refresh** (US4): the Transactions `List` gains `.refreshable` →
+  `loadAllFromServer()` (existing seam; per-collection replace at completion).
+- Household reads are now scoped to the active household (`cards`/`budgets`/`properties`
+  `.eq`; `transactions` keeps NULL-household legacy personal rows via `.or`) — spec 017 makes
+  multi-household membership reachable and another household's rows must not merge in.
+
 ### State: one `@Observable` store
 
 `App/AppState.swift` (~1,260 lines) is the single source of truth. Views read it via `@Environment(AppState.self)`; per-screen UI state stays as local `@State`. It owns:

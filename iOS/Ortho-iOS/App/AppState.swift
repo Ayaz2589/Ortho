@@ -105,6 +105,17 @@ final class AppState {
         }
     }
 
+    /// The signed-in user's role in the active household (spec 017): gates
+    /// the owner-only invite controls and the member-only identity claim.
+    /// Seeded `.owner` for the sample/test-data context; the server bootstrap
+    /// overwrites it with the real membership role.
+    var currentRole: Role?
+
+    /// The active household's partner invites, newest first — owners only
+    /// (RLS hands members zero rows). Never carries token material (spec 017
+    /// FR-005).
+    var invites: [PendingInvite] = []
+
     private static let currentUserIDKey = "currentUserID"
     private static let currentHouseholdIDKey = "currentHouseholdID"
 
@@ -212,6 +223,10 @@ final class AppState {
         self.currentHouseholdID = testDataEnabled
             ? households.first?.id
             : (savedHouseholdID ?? households.first?.id)
+
+        // The sample/test-data account holder owns the seeded household; a
+        // real session's role arrives with the server bootstrap (spec 017).
+        self.currentRole = .owner
 
         // Restore persisted currency.
         let saved = UserDefaults.standard.string(forKey: Self.currencyKey)
@@ -443,7 +458,10 @@ final class AppState {
             }
         }
         do {
-            let fetched = try await transactionsAPI.fetch(linkedPersonByUser: linkedPersonByUser)
+            let fetched = try await transactionsAPI.fetch(
+                linkedPersonByUser: linkedPersonByUser,
+                householdID: currentHouseholdID
+            )
             await MainActor.run { transactions = fetched }
         } catch {
             await MainActor.run { dataError = error.localizedDescription }
@@ -468,6 +486,7 @@ final class AppState {
             group.addTask { await self.loadPropertiesFromServer() }
             group.addTask { await self.loadRentalPaymentsFromServer() }
             group.addTask { await self.loadBudgetsFromServer() }
+            group.addTask { await self.loadInvitesFromServer() }
         }
     }
 
@@ -478,12 +497,19 @@ final class AppState {
         // here must NOT block loading the (often already-present) people list —
         // otherwise one bad call leaves `people` empty and every owner renders
         // as the "Removed" placeholder.
-        let me = users.first { $0.id == currentUserID }
-        try? await householdsAPI.ensureAccountPerson(householdID: householdID,
-                                                     userID: currentUserID,
-                                                     name: me?.name ?? "Me",
-                                                     initial: me?.initial ?? "M",
-                                                     colorKey: me?.colorKey ?? "sage")
+        //
+        // The auto-create belongs ONLY to owners (the pre-017 behavior). A
+        // member-role joiner claims their existing roster Person instead
+        // (spec 017 FR-014/016) — auto-creating here would fork a duplicate
+        // identity and orphan their history.
+        if currentRole != .member {
+            let me = users.first { $0.id == currentUserID }
+            try? await householdsAPI.ensureAccountPerson(householdID: householdID,
+                                                         userID: currentUserID,
+                                                         name: me?.name ?? "Me",
+                                                         initial: me?.initial ?? "M",
+                                                         colorKey: me?.colorKey ?? "sage")
+        }
         do {
             let fetched = try await householdsAPI.fetchPeople(householdID: householdID)
             await MainActor.run { people = fetched }
@@ -816,7 +842,7 @@ final class AppState {
 
     func loadCardsFromServer() async {
         do {
-            let fetched = try await cardsAPI.fetch()
+            let fetched = try await cardsAPI.fetch(householdID: currentHouseholdID)
             await MainActor.run { cards = fetched }
         } catch {
             await MainActor.run { dataError = error.localizedDescription }
@@ -851,6 +877,192 @@ final class AppState {
                     dataError = error.localizedDescription
                 }
             }
+        }
+    }
+
+    // MARK: - Partner invites & join (spec 017)
+
+    private var invitesAPI: InvitesAPI {
+        InvitesAPI(client: supabase)
+    }
+
+    func loadInvitesFromServer() async {
+        guard !testDataEnabled, let householdID = currentHouseholdID else { return }
+        do {
+            let fetched = try await invitesAPI.fetch(householdID: householdID)
+            await MainActor.run { invites = fetched }
+        } catch {
+            await MainActor.run { dataError = error.localizedDescription }
+        }
+    }
+
+    /// Mint a one-time partner invite (owners). Awaited — the raw code may be
+    /// revealed only after the row is durably persisted, so a failed insert
+    /// never leaves the user holding a dead code (mirrors web `createInvite`).
+    /// Only the SHA-256 of the canonical code is written (FR-005). Returns the
+    /// DISPLAY-format code exactly once, or nil on failure.
+    func createInvite() async -> String? {
+        guard let householdID = currentHouseholdID else { return nil }
+        let code = InviteCodec.generate()
+        let invite = PendingInvite(
+            id: UUID(),
+            householdID: householdID,
+            role: .member,
+            expiresAt: Date.now.addingTimeInterval(InviteCodec.ttl),
+            createdAt: .now,
+            redeemedAt: nil
+        )
+        await MainActor.run { invites.insert(invite, at: 0) }
+        guard !testDataEnabled else { return InviteCodec.format(code) }
+        do {
+            try await invitesAPI.create(
+                id: invite.id,
+                householdID: householdID,
+                tokenHash: InviteCodec.hashHex(code),
+                expiresAt: invite.expiresAt,
+                createdBy: currentUserID
+            )
+            return InviteCodec.format(code)
+        } catch {
+            await MainActor.run {
+                invites.removeAll { $0.id == invite.id }
+                dataError = error.localizedDescription
+            }
+            return nil
+        }
+    }
+
+    /// Revoke (delete) a pending invite — optimistic with positional rollback
+    /// (FR-007). Owner-only in the UI; RLS backstops.
+    func revokeInvite(_ id: PendingInvite.ID) {
+        guard let idx = invites.firstIndex(where: { $0.id == id }) else { return }
+        let removed = invites.remove(at: idx)
+        guard !testDataEnabled else { return }
+        Task {
+            do {
+                try await invitesAPI.revoke(id: id)
+            } catch {
+                await MainActor.run {
+                    invites.insert(removed, at: min(idx, invites.count))
+                    dataError = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    enum JoinOutcome {
+        case joined, alreadyMember, invalid, loadFailed
+    }
+
+    /// Redeem an invite code and switch to the joined household (spec 017
+    /// US2). Any typed form is accepted (canonicalized per the contract); the
+    /// RPC's single failure maps to `.invalid`, so nothing reveals whether a
+    /// code exists (FR-012). On success the joined household becomes the
+    /// persisted selection (FR-019) and the standard load path runs.
+    func joinHousehold(code: String) async -> JoinOutcome {
+        let canonical = InviteCodec.canonicalize(code)
+        guard canonical.count == InviteCodec.codeLength, !testDataEnabled else {
+            return .invalid
+        }
+        let joinedID: UUID
+        do {
+            joinedID = try await invitesAPI.redeem(canonicalToken: canonical)
+        } catch {
+            return .invalid
+        }
+        if joinedID == currentHouseholdID { return .alreadyMember }
+        do {
+            // Re-enter through the same seam bootstrap uses, preferring the
+            // joined household — name + role come back authoritative.
+            let (id, name, role) = try await householdsAPI
+                .findOrCreate(for: currentUserID, preferredID: joinedID)
+            await MainActor.run {
+                households = [Household(id: id, name: name, memberIDs: [currentUserID])]
+                currentHouseholdID = id // persists via didSet (FR-019)
+                currentRole = role
+                transactions = []
+                cards = []
+                properties = []
+                rentalPayments = []
+                budgets = []
+                invites = []
+            }
+            await loadAllFromServer()
+            return .joined
+        } catch {
+            // The membership exists server-side (the RPC succeeded) but the
+            // switch failed — the next launch resumes into the household via
+            // the normal bootstrap.
+            await MainActor.run { dataError = error.localizedDescription }
+            return .loadFailed
+        }
+    }
+
+    /// Whether the signed-in member still needs to claim their roster Person
+    /// (spec 017 FR-016) — presented until exactly one row links them. A
+    /// linked-but-removed row still counts as claimed.
+    var needsPersonClaim: Bool {
+        currentRole == .member && !people.contains { $0.linkedUserID == currentUserID }
+    }
+
+    /// Roster people the claim step may offer: active and never linked
+    /// (FR-014) — the owner's linked row is excluded by construction.
+    var claimablePeople: [Person] {
+        people.filter { $0.linkedUserID == nil && $0.removedAt == nil }
+    }
+
+    enum ClaimOutcome {
+        case claimed, taken, failed
+    }
+
+    /// Claim an unlinked roster person (FR-015/017): on success everything
+    /// historically attributed to that person presents as "you" immediately —
+    /// no data rewrite. A lost race reports `.taken` and refreshes the roster.
+    func claimPerson(_ personID: Person.ID) async -> ClaimOutcome {
+        guard !testDataEnabled else { return .failed }
+        do {
+            let won = try await householdsAPI.claimPerson(personID: personID, userID: currentUserID)
+            if won {
+                await MainActor.run {
+                    if let i = people.firstIndex(where: { $0.id == personID }) {
+                        people[i].linkedUserID = currentUserID
+                    }
+                }
+                return .claimed
+            }
+            await loadPeopleFromServer()
+            return .taken
+        } catch {
+            await MainActor.run { dataError = error.localizedDescription }
+            return .failed
+        }
+    }
+
+    /// "Continue as a new person" (FR-014): an insert linked to the account
+    /// from birth. Optimistic append with rollback.
+    func claimNewPerson(name: String, colorKey: String = "sage") async -> Bool {
+        guard let householdID = currentHouseholdID else { return false }
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return false }
+        let person = Person(
+            householdID: householdID,
+            name: trimmed,
+            initial: String(trimmed.prefix(1)).uppercased(),
+            colorKey: colorKey,
+            linkedUserID: currentUserID,
+            sortOrder: people.count
+        )
+        await MainActor.run { people.append(person) }
+        guard !testDataEnabled else { return true }
+        do {
+            try await householdsAPI.createPerson(person)
+            return true
+        } catch {
+            await MainActor.run {
+                people.removeAll { $0.id == person.id }
+                dataError = error.localizedDescription
+            }
+            return false
         }
     }
 
@@ -924,7 +1136,7 @@ final class AppState {
 
     func loadPropertiesFromServer() async {
         do {
-            let fetched = try await propertiesAPI.fetch()
+            let fetched = try await propertiesAPI.fetch(householdID: currentHouseholdID)
             await MainActor.run { properties = fetched }
         } catch {
             await MainActor.run { dataError = error.localizedDescription }
@@ -1030,7 +1242,7 @@ final class AppState {
 
     func loadBudgetsFromServer() async {
         do {
-            let fetched = try await budgetsAPI.fetch()
+            let fetched = try await budgetsAPI.fetch(householdID: currentHouseholdID)
             await MainActor.run { budgets = fetched }
         } catch {
             await MainActor.run { dataError = error.localizedDescription }
@@ -1256,9 +1468,12 @@ final class AppState {
                 .upsert(me, onConflict: "id", ignoreDuplicates: true)
                 .execute()
 
-            // 2. Find or create the user's default household via HouseholdsAPI.
-            let (householdID, householdName) = try await householdsAPI
-                .findOrCreate(for: authID)
+            // 2. Find or create the user's household via HouseholdsAPI —
+            // preferring the persisted selection so relaunches deterministically
+            // reopen the joined/last household (spec 017 FR-018), and carrying
+            // back the membership role that gates invites vs the identity claim.
+            let (householdID, householdName, role) = try await householdsAPI
+                .findOrCreate(for: authID, preferredID: currentHouseholdID)
 
             // 3. Replace in-memory sample data with the server's view. The
             // sample UUIDs (`User.mayaSample.id`, `Household.homeSample.id`)
@@ -1273,11 +1488,13 @@ final class AppState {
                 users = [me]
                 households = [household]
                 currentHouseholdID = householdID
+                currentRole = role
                 transactions = []
                 cards = []
                 properties = []
                 rentalPayments = []
                 budgets = []
+                invites = []
             }
 
             // 4. Load live data from the server.

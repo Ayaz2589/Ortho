@@ -132,6 +132,22 @@ struct RootTabView: View {
             } message: { message in
                 Text(message)
             }
+            // spec 017 FR-016: a member who joined but hasn't claimed their
+            // roster Person yet completes that step before participating —
+            // re-presented on every launch until exactly one row links them.
+            // Sample/test-data sessions seed `.owner`, so this never fires
+            // in -uiDemo or with the test-data flag on.
+            .sheet(
+                isPresented: Binding(
+                    get: { appState.needsPersonClaim && !appState.testDataEnabled },
+                    set: { _ in } // completion (a successful claim) dismisses it
+                )
+            ) {
+                JoinHouseholdSheet(phase: .claim)
+                    .presentationDetents([.large])
+                    .presentationBackground(AppTheme.bg)
+                    .interactiveDismissDisabled()
+            }
     }
 
     private var content: some View {
