@@ -372,6 +372,35 @@ const catalog: Record<string, string> = {
   "You owe {0}": "আপনি {0}-কে দেবেন",
   // — plural-variation seeds (other form) —
   "Detected {0} recurring charges": "{0} টি রিকারিং চার্জ শনাক্ত",
+
+  // Spec 018 — subscription (paywall + Settings)
+  "Your free month has ended": "আপনার ফ্রি মাস শেষ হয়েছে",
+  "Keep using Ortho with a subscription. Everything you added is safe and waiting.": "সাবস্ক্রিপশন নিয়ে Ortho ব্যবহার চালিয়ে যান। আপনার যোগ করা সবকিছু নিরাপদে অপেক্ষা করছে।",
+  "Monthly": "মাসিক",
+  "Yearly": "বাৎসরিক",
+  "a month": "প্রতি মাসে",
+  "a year": "প্রতি বছরে",
+  "Loading plans…": "প্ল্যান লোড হচ্ছে…",
+  "Plans are unavailable right now.": "প্ল্যান এখন পাওয়া যাচ্ছে না।",
+  "Try again": "আবার চেষ্টা করুন",
+  "Could not open checkout. Try again.": "চেকআউট খোলা যায়নি। আবার চেষ্টা করুন।",
+  "No subscription found yet. It can take a minute after paying.": "এখনও কোনো সাবস্ক্রিপশন পাওয়া যায়নি। পেমেন্টের পরে এক মিনিট লাগতে পারে।",
+  "Checking…": "যাচাই হচ্ছে…",
+  "I subscribed — check again": "আমি সাবস্ক্রাইব করেছি — আবার দেখুন",
+  "Payment received — your subscription updates in a moment.": "পেমেন্ট পাওয়া গেছে — আপনার সাবস্ক্রিপশন একটু পরে আপডেট হবে।",
+  "Checkout cancelled.": "চেকআউট বাতিল হয়েছে।",
+  "This account doesn’t need a subscription.": "এই অ্যাকাউন্টের সাবস্ক্রিপশন লাগে না।",
+  "Free month — {0} days left": "ফ্রি মাস — {0} দিন বাকি",
+  "There’s a billing issue. Your access continues while it gets sorted out.": "বিলিংয়ে একটি সমস্যা আছে। সমাধান হওয়া পর্যন্ত আপনার অ্যাক্সেস চালু থাকবে।",
+  "Subscription ends {0}": "সাবস্ক্রিপশন শেষ হবে {0}",
+  "Monthly plan": "মাসিক প্ল্যান",
+  "Yearly plan": "বাৎসরিক প্ল্যান",
+  "renews {0}": "নবায়ন হবে {0}",
+  "No active subscription.": "কোনো সক্রিয় সাবস্ক্রিপশন নেই।",
+  "Subscription": "সাবস্ক্রিপশন",
+  "Manage": "পরিচালনা",
+  "Subscribe": "সাবস্ক্রাইব",
+  "Could not open billing. Try again.": "বিলিং খোলা যায়নি। আবার চেষ্টা করুন।",
 }
 
 export default catalog

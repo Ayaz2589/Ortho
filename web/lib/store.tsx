@@ -22,6 +22,7 @@ import {
   type Language,
 } from './language'
 import { makeT, type Translate } from './i18n'
+import { deriveGateState, type DbEntitlement, type GateState } from './entitlements'
 import type {
   User,
   Person,
@@ -77,6 +78,13 @@ interface AppStateValue {
   language: Language
   /** BCP-47 locale derived from `language`, driving all Intl formatters. */
   locale: string
+  /** The signed-in user's entitlement row (spec 018) — read-only on clients. */
+  entitlement: DbEntitlement | null
+  /** The single gate fact (admin|trialing|active|grace|lapsed); null until the
+   *  row is loaded — and a null gate NEVER shows the paywall (FR-008). */
+  gateState: GateState | null
+  /** Refetch the entitlement row and re-derive the gate ("Check again"). */
+  refreshEntitlement: () => Promise<void>
 
   setCurrency: (c: CurrencyKey) => void
   chooseLanguage: (language: Language) => void
@@ -206,6 +214,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // navigator.language) after mount.
   const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE)
   const [locale, setLocale] = useState(DEFAULT_LOCALE)
+  const [entitlement, setEntitlement] = useState<DbEntitlement | null>(null)
   const booted = useRef(false)
 
   // ---- preferences (localStorage) ----
@@ -255,6 +264,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
       setCurrentUserId(authUser.id)
       setCurrentUserEmail(authUser.email ?? null)
+
+      // Spec 018: ensure the 31-day free-month row exists (server-side,
+      // insert-if-absent — reinstalls/re-sign-ins can never reset it) and read
+      // it back, in parallel with the data loads below. Clients cannot write
+      // entitlement state; this SECURITY DEFINER RPC is the only trusted path.
+      const entitlementPromise = supabase.rpc('ensure_entitlement')
 
       // Ensure a profile row exists — insert only when absent. Upserting a
       // derived name + fresh created_at on every sign-in flip-flopped the
@@ -320,12 +335,34 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       await ensureAccountPersonAndFoldLegacy(householdId, me)
 
       await loadAll(householdId, householdName, authUser.id)
+
+      // A failed entitlement read is a LOAD failure (recovery path), never a
+      // paywall (FR-008) — orThrow routes it to bootstrapFailed like any other
+      // bootstrap read. A null row (test-data mode) leaves the gate open.
+      const entRes = orThrow(await entitlementPromise)
+      setEntitlement((entRes.data as DbEntitlement | null) ?? null)
     } catch (e) {
       setBootstrapFailed(true)
       setError(`Failed to load: ${(e as Error).message}`)
     } finally {
       setLoading(false)
     }
+  }
+
+  /** Refetch the entitlement row on demand (paywall "Check again", checkout
+   *  return). Failure keeps the current gate — a flaky refresh must never
+   *  cause a false lapse or unlock; the error banner reports it. */
+  async function refreshEntitlement() {
+    const { data, error: e } = await supabase
+      .from('entitlements')
+      .select('*')
+      .limit(1)
+    if (e) {
+      setError(e.message)
+      return
+    }
+    const rows = (data ?? []) as DbEntitlement[]
+    if (rows.length > 0) setEntitlement(rows[0])
   }
 
   const retryBootstrap = () => {
@@ -356,6 +393,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setProperties([])
       setRentalPayments([])
       setBudgets([])
+      setEntitlement(null)
       window.location.assign('/sign-in')
     })
     return () => data.subscription.unsubscribe()
@@ -564,6 +602,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const currentPersonId = useMemo(
     () => people.find((p) => p.linked_user_id === currentUserId)?.id ?? '',
     [people, currentUserId]
+  )
+
+  // The single gate fact (spec 018). Derived, not stored: recomputed whenever
+  // the row changes (bootstrap, refreshEntitlement). A null row derives a null
+  // gate, which the Shell treats as open — the paywall only ever renders from
+  // a successfully loaded, genuinely lapsed row (FR-008/009).
+  const gateState = useMemo<GateState | null>(
+    () =>
+      entitlement
+        ? deriveGateState(
+            { status: entitlement.status, accessExpiresAt: entitlement.access_expires_at },
+            new Date().toISOString()
+          )
+        : null,
+    [entitlement]
   )
 
   // ---- aggregation ----
@@ -1005,6 +1058,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     ratesError,
     language,
     locale,
+    entitlement,
+    gateState,
+    refreshEntitlement,
     setCurrency,
     chooseLanguage,
     rate,

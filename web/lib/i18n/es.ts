@@ -369,6 +369,35 @@ const catalog: Record<string, string> = {
   "You owe {0}": "Le debes a {0}",
   // — plural-variation seeds (other form) —
   "Detected {0} recurring charges": "Detectados {0} cargos recurrentes",
+
+  // Spec 018 — subscription (paywall + Settings)
+  "Your free month has ended": "Tu mes gratis ha terminado",
+  "Keep using Ortho with a subscription. Everything you added is safe and waiting.": "Sigue usando Ortho con una suscripción. Todo lo que agregaste está a salvo, esperándote.",
+  "Monthly": "Mensual",
+  "Yearly": "Anual",
+  "a month": "al mes",
+  "a year": "al año",
+  "Loading plans…": "Cargando planes…",
+  "Plans are unavailable right now.": "Los planes no están disponibles ahora.",
+  "Try again": "Inténtalo de nuevo",
+  "Could not open checkout. Try again.": "No se pudo abrir el pago. Inténtalo de nuevo.",
+  "No subscription found yet. It can take a minute after paying.": "Aún no aparece la suscripción. Puede tardar un minuto después de pagar.",
+  "Checking…": "Comprobando…",
+  "I subscribed — check again": "Ya me suscribí — comprobar de nuevo",
+  "Payment received — your subscription updates in a moment.": "Pago recibido — tu suscripción se actualiza en un momento.",
+  "Checkout cancelled.": "Compra cancelada.",
+  "This account doesn’t need a subscription.": "Esta cuenta no necesita suscripción.",
+  "Free month — {0} days left": "Mes gratis — quedan {0} días",
+  "There’s a billing issue. Your access continues while it gets sorted out.": "Hay un problema de cobro. Tu acceso continúa mientras se resuelve.",
+  "Subscription ends {0}": "La suscripción termina el {0}",
+  "Monthly plan": "Plan mensual",
+  "Yearly plan": "Plan anual",
+  "renews {0}": "se renueva el {0}",
+  "No active subscription.": "Sin suscripción activa.",
+  "Subscription": "Suscripción",
+  "Manage": "Gestionar",
+  "Subscribe": "Suscribirse",
+  "Could not open billing. Try again.": "No se pudo abrir la facturación. Inténtalo de nuevo.",
 }
 
 export default catalog

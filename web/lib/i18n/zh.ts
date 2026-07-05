@@ -372,6 +372,35 @@ const catalog: Record<string, string> = {
   "You owe {0}": "您欠{0}",
   // — plural-variation seeds (other form) —
   "Detected {0} recurring charges": "检测到{0}个定期消费",
+
+  // Spec 018 — subscription (paywall + Settings)
+  "Your free month has ended": "你的免费月已结束",
+  "Keep using Ortho with a subscription. Everything you added is safe and waiting.": "订阅后继续使用 Ortho。你添加的一切都安全保存着。",
+  "Monthly": "按月",
+  "Yearly": "按年",
+  "a month": "／月",
+  "a year": "／年",
+  "Loading plans…": "正在加载方案…",
+  "Plans are unavailable right now.": "方案暂时不可用。",
+  "Try again": "重试",
+  "Could not open checkout. Try again.": "无法打开结账页面。请重试。",
+  "No subscription found yet. It can take a minute after paying.": "还没有找到订阅。付款后可能需要一分钟。",
+  "Checking…": "正在检查…",
+  "I subscribed — check again": "我已订阅 — 再检查一次",
+  "Payment received — your subscription updates in a moment.": "已收到付款 — 你的订阅稍后更新。",
+  "Checkout cancelled.": "已取消结账。",
+  "This account doesn’t need a subscription.": "此账户无需订阅。",
+  "Free month — {0} days left": "免费月 — 还剩 {0} 天",
+  "There’s a billing issue. Your access continues while it gets sorted out.": "账单出现问题。在解决期间你仍可继续使用。",
+  "Subscription ends {0}": "订阅将于 {0} 结束",
+  "Monthly plan": "月度方案",
+  "Yearly plan": "年度方案",
+  "renews {0}": "{0} 续订",
+  "No active subscription.": "没有生效的订阅。",
+  "Subscription": "订阅",
+  "Manage": "管理",
+  "Subscribe": "订阅",
+  "Could not open billing. Try again.": "无法打开账单页面。请重试。",
 }
 
 export default catalog

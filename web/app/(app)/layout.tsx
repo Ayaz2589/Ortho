@@ -4,9 +4,10 @@ import { type ReactNode } from 'react'
 import { AppStateProvider, useApp } from '@/lib/store'
 import { TabBar } from '@/components/TabBar'
 import { Sidebar } from '@/components/Sidebar'
+import { Paywall } from '@/components/Paywall'
 
 function Shell({ children }: { children: ReactNode }) {
-  const { loading, error, bootstrapFailed, dismissError, retryBootstrap, t } = useApp()
+  const { loading, error, bootstrapFailed, dismissError, retryBootstrap, t, gateState } = useApp()
   return (
     <div className="sm:flex sm:h-screen sm:overflow-hidden">
       <Sidebar />
@@ -40,6 +41,11 @@ function Shell({ children }: { children: ReactNode }) {
             <div className="flex flex-1 items-center justify-center py-32 text-sm text-text-3">
               {t('Loading…')}
             </div>
+          ) : gateState === 'lapsed' ? (
+            // Spec 018: a successfully loaded, lapsed entitlement blocks the whole
+            // shell — every route, tab, and deep link lands here (FR-006). A null
+            // gate (row unavailable) deliberately does NOT block (FR-008).
+            <Paywall />
           ) : (
             children
           )}

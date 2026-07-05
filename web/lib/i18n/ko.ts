@@ -372,6 +372,35 @@ const catalog: Record<string, string> = {
   "You owe {0}": "{0}에게 갚을 돈",
   // — plural-variation seeds (other form) —
   "Detected {0} recurring charges": "{0}개의 정기 결제 감지",
+
+  // Spec 018 — subscription (paywall + Settings)
+  "Your free month has ended": "무료 이용 기간이 끝났어요",
+  "Keep using Ortho with a subscription. Everything you added is safe and waiting.": "구독으로 Ortho를 계속 사용하세요. 추가한 모든 내용은 안전하게 보관돼 있어요.",
+  "Monthly": "월간",
+  "Yearly": "연간",
+  "a month": "／월",
+  "a year": "／년",
+  "Loading plans…": "요금제를 불러오는 중…",
+  "Plans are unavailable right now.": "지금은 요금제를 이용할 수 없어요.",
+  "Try again": "다시 시도",
+  "Could not open checkout. Try again.": "결제 페이지를 열 수 없었어요. 다시 시도해 주세요.",
+  "No subscription found yet. It can take a minute after paying.": "아직 구독이 확인되지 않았어요. 결제 후 1분 정도 걸릴 수 있어요.",
+  "Checking…": "확인 중…",
+  "I subscribed — check again": "구독했어요 — 다시 확인",
+  "Payment received — your subscription updates in a moment.": "결제가 확인됐어요 — 곧 구독이 업데이트돼요.",
+  "Checkout cancelled.": "결제가 취소됐어요.",
+  "This account doesn’t need a subscription.": "이 계정은 구독이 필요 없어요.",
+  "Free month — {0} days left": "무료 이용 — {0}일 남음",
+  "There’s a billing issue. Your access continues while it gets sorted out.": "결제에 문제가 있어요. 해결되는 동안 계속 이용할 수 있어요.",
+  "Subscription ends {0}": "구독이 {0}에 끝나요",
+  "Monthly plan": "월간 요금제",
+  "Yearly plan": "연간 요금제",
+  "renews {0}": "{0}에 갱신",
+  "No active subscription.": "사용 중인 구독이 없어요.",
+  "Subscription": "구독",
+  "Manage": "관리",
+  "Subscribe": "구독하기",
+  "Could not open billing. Try again.": "결제 관리 페이지를 열 수 없었어요. 다시 시도해 주세요.",
 }
 
 export default catalog
