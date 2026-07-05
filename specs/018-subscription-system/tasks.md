@@ -109,7 +109,7 @@ files, no incomplete dependency).
 - [x] T038 Re-run FULL local gates (quickstart §1): services/billing tests+tsc, sync drift, web `npm test` (731+new, zero failures) + `npx tsc --noEmit`, `npm run gen:vectors` zero-drift, `npm run build` (only if no shared dev server), catalog parity.
 - [x] T039 Adversarial multi-agent review (6 dimensions: web correctness, Swift compile/logic, security — webhook/entitlement forgery/redirects, parity/i18n, constitution/a11y, test quality) → triage → apply confirmed fixes TDD-style → re-run T038.
 - [x] T040 Update this ledger + spec `Status:` + write `.claude/context-summaries` note if session ends; commit series follows house style (spec → core/backend → web → iOS → docs).
-- [ ] T045 Push branch (bypass-proxy per CI-SETUP.local.md), open PR (base `full-holistic-audit-parity`, status-banner body incl. `[OPERATOR-PENDING]` list), watch `web-ci` + `ios-ci` to green (budget: ≤2 iOS fix-up rounds, each a full batch).
+- [x] T045 Push branch (bypass-proxy per CI-SETUP.local.md), open PR (base `full-holistic-audit-parity`, status-banner body incl. `[OPERATOR-PENDING]` list), watch `web-ci` + `ios-ci` to green (budget: ≤2 iOS fix-up rounds, each a full batch). DONE: PR #9; Web CI runs 4+5 ✅; iOS CI run 40 ❌ (3× missing `await` on iOS-26-async `UIApplication.open`) → one batch fix (2e241e2) → run 41 ✅. One of two budgeted rounds used. T030 remains [OPERATOR-PENDING].
 
 ## Dependencies & execution order
 
