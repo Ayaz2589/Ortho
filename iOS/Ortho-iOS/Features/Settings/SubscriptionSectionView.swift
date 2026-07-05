@@ -217,7 +217,7 @@ struct SubscriptionSectionView: View {
         notice = nil
         do {
             let url = try await api.createPortal()
-            UIApplication.shared.open(url)
+            _ = await UIApplication.shared.open(url)
         } catch {
             notice = Localizer.tr("Could not open billing. Try again.")
         }
@@ -240,7 +240,7 @@ struct SubscriptionSectionView: View {
         do {
             let url = try await api.createCheckout(plan: plan)
             // External browser — payment happens on Stripe's hosted page.
-            UIApplication.shared.open(url)
+            _ = await UIApplication.shared.open(url)
         } catch {
             notice = Localizer.tr("Could not open checkout. Try again.")
         }

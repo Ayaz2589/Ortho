@@ -192,7 +192,7 @@ struct PaywallView: View {
         do {
             let url = try await api.createCheckout(plan: plan)
             // External browser — the app NEVER collects payment (FR-012).
-            UIApplication.shared.open(url)
+            _ = await UIApplication.shared.open(url)
             busy = nil
         } catch {
             busy = nil
