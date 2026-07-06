@@ -202,6 +202,20 @@ property detail; the shared vector asserts identical values on web and iOS.
   are unrelated to this feature and predate it; the project gate is `npm test` (Vitest), which is green.
   All files this feature touched are typeclean.
 
+## Review (/code-review high, 8 angles + verify)
+
+- **Correctness:** no defects in the changed code — `dueDateInMonth` (incl. December normalization),
+  `upcomingAmortization` successive months, `parseLocalDate` promotion (no circular import), `rate.ts`
+  round-trip (provably lossless), and net-rental edges all verified sound.
+- **Caught a real miss (fixed):** `web/components/web/HousingDesktop.tsx` — the desktop `/housing` detail
+  view — was never touched, so US1 (dates) and US2 (net rental) were unfixed on the expanded canvas
+  (lease/closing/payment dates via raw `new Date`, an inline all-vs-occupied net path). Now routed
+  through `parseLocalDate` and the shared `occupiedRentCents`/`netRentalCents`/`rentUnitsFrom`.
+- **Cleanups applied:** RentalCards payment-sort raw parse → `parseLocalDate`; `AddPropertyModal` local
+  `num()` removed in favor of the shared `parseRate` (so the round-trip test exercises the real save
+  path); `mortgage.ts` import moved to top-of-file; iOS `Unit.isVacant` uses `.whitespacesAndNewlines`
+  to match web `.trim()` (closes a newline-only-tenant parity gap the vector can't see).
+
 ## Harness / results
 
 - Web: US1 `housing-lease` (TZ-pinned) ✓, US2 `housing-net-rental.parity` + `store.integrity` ✓, US3

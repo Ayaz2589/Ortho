@@ -84,7 +84,7 @@ export function RentalPaymentsCard({ property }: { property: Property }) {
     () =>
       rentalPayments
         .filter((p) => p.property_id === property.id)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+        .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime()),
     [rentalPayments, property.id]
   )
 

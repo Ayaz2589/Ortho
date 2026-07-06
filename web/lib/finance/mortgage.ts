@@ -7,6 +7,9 @@
  *   r = monthly interest rate (annual / 12)
  *   n = total number of payments (years * 12)
  */
+// `parseLocalDate` lives in `web/lib/format.ts` (the shared date-helper module) so
+// lease, payment, and closing-date rendering reuse the same timezone-stable parse.
+import { parseLocalDate } from '../format'
 
 /**
  * Calculate the fixed monthly payment in cents.
@@ -43,10 +46,6 @@ export function monthlyPaymentCents(
  * @param closingDate - ISO date string of the loan closing date
  * @param asOf - Date to calculate balance as of (defaults to today)
  */
-// `parseLocalDate` lives in `web/lib/format.ts` (the shared date-helper module) so
-// lease, payment, and closing-date rendering can reuse the same timezone-stable parse.
-import { parseLocalDate } from '../format'
-
 /**
  * Whole months elapsed between `closingDate` and `asOf`, clamped to
  * `0..totalMonths`. Matches Swift `Calendar.dateComponents([.month], ...)`:
