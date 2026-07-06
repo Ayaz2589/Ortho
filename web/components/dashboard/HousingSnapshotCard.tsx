@@ -4,6 +4,7 @@ import { House, Building2, KeyRound, type LucideIcon } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { Card, SectionLabel } from '@/components/ui'
 import { monthlyPaymentCents, currentEquityCents } from '@/lib/finance/mortgage'
+import { netRentalCents, rentUnitsFrom } from '@/lib/finance/housing'
 import { daysUntilEnd } from '@/components/housing/lease'
 import type { Translate } from '@/lib/i18n'
 import type { Property } from '@/lib/types'
@@ -56,16 +57,15 @@ export function HousingSnapshotCard() {
   const totalEquity = properties.reduce((s, p) => s + equity(p), 0)
 
   const multifamilies = properties.filter((p) => p.kind === 'multifamily')
+  // Occupied-only net (money actually collected), matching the property-detail
+  // Net balance card and iOS — the two screens must show the same figure.
   const netRentalIncome =
     multifamilies.length === 0
       ? null
-      : multifamilies.reduce((acc, p) => {
-          const income = (p.units ?? []).reduce(
-            (s, u) => s + u.monthly_rent_cents,
-            0
-          )
-          return acc + (income - mortgagePayment(p))
-        }, 0)
+      : multifamilies.reduce(
+          (acc, p) => acc + netRentalCents(rentUnitsFrom(p.units ?? []), mortgagePayment(p)),
+          0
+        )
 
   const count = properties.length
   const countLabel =

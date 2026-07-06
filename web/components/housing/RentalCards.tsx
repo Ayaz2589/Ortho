@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { KeyRound, CalendarClock, Plus, MinusCircle } from 'lucide-react'
 import { useApp } from '@/lib/store'
-import { mediumDate } from '@/lib/format'
+import { mediumDate, parseLocalDate } from '@/lib/format'
 import type { LeaseInfo, Property } from '@/lib/types'
 import { daysUntilNextRent, daysUntilEnd } from './lease'
 import { HousingSection, HousingLabel } from './MortgageCards'
@@ -62,8 +62,8 @@ export function LeaseInfoCard({ lease }: { lease: LeaseInfo }) {
   return (
     <HousingSection>
       <div className="divide-y divide-hairline">
-        <LeaseRow label={t('Lease start')} value={mediumDate(new Date(lease.lease_start), locale)} />
-        <LeaseRow label={t('Lease end')} value={mediumDate(new Date(lease.lease_end), locale)} />
+        <LeaseRow label={t('Lease start')} value={mediumDate(parseLocalDate(lease.lease_start), locale)} />
+        <LeaseRow label={t('Lease end')} value={mediumDate(parseLocalDate(lease.lease_end), locale)} />
         {lease.security_deposit_cents != null ? (
           <LeaseRow label={t('Security deposit')} value={formatMoney(lease.security_deposit_cents)} />
         ) : null}
@@ -84,7 +84,7 @@ export function RentalPaymentsCard({ property }: { property: Property }) {
     () =>
       rentalPayments
         .filter((p) => p.property_id === property.id)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+        .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime()),
     [rentalPayments, property.id]
   )
 
@@ -112,7 +112,7 @@ export function RentalPaymentsCard({ property }: { property: Property }) {
               <div key={payment.id} className="flex min-h-[56px] items-center gap-3 px-4 py-3">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[15px] font-normal text-text">
-                    {mediumDate(new Date(payment.date), locale)}
+                    {mediumDate(parseLocalDate(payment.date), locale)}
                   </span>
                   {payment.note ? (
                     <span className="text-[12px] text-text-3">{payment.note}</span>

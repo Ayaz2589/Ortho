@@ -19,6 +19,8 @@ vi.mock('@/lib/supabase/client', () => ({ createClient: () => h.mock!.client }))
 // Import AFTER the mock is registered.
 import { AppStateProvider, useApp } from '@/lib/store'
 import { housingSummary } from '@/components/web/DashboardDesktop'
+import { monthlyPaymentCents } from '@/lib/finance/mortgage'
+import { netRentalCents, rentUnitsFrom } from '@/lib/finance/housing'
 import type { Property } from '@/lib/types'
 
 const MORTGAGE = {
@@ -298,15 +300,15 @@ describe('budget rollback', () => {
 describe('desktop housing summary', () => {
   const base = { household_id: 'hh-1', nickname: null, created_at: '', updated_at: '' }
 
-  it('includes a mortgage-free multifamily in net rental income', () => {
+  it('includes a mortgage-free multifamily in net rental income (occupied units)', () => {
     const paidOff: Property = {
       ...base,
       id: 'p-multi',
       kind: 'multifamily',
       address: '9 Elm St',
       units: [
-        { id: 'u1', property_id: 'p-multi', name: 'Unit 1', monthly_rent_cents: 120_000, tenant_name: null, tenant_email: null, sort_order: 0 },
-        { id: 'u2', property_id: 'p-multi', name: 'Unit 2', monthly_rent_cents: 80_000, tenant_name: null, tenant_email: null, sort_order: 1 },
+        { id: 'u1', property_id: 'p-multi', name: 'Unit 1', monthly_rent_cents: 120_000, tenant_name: 'Alice', tenant_email: null, sort_order: 0 },
+        { id: 'u2', property_id: 'p-multi', name: 'Unit 2', monthly_rent_cents: 80_000, tenant_name: 'Bob', tenant_email: null, sort_order: 1 },
       ],
     }
     const s = housingSummary([paidOff])
@@ -323,7 +325,7 @@ describe('desktop housing summary', () => {
       address: '9 Elm St',
       mortgage: { ...MORTGAGE, property_id: 'p-multi' },
       units: [
-        { id: 'u1', property_id: 'p-multi', name: 'Unit 1', monthly_rent_cents: 400_000, tenant_name: null, tenant_email: null, sort_order: 0 },
+        { id: 'u1', property_id: 'p-multi', name: 'Unit 1', monthly_rent_cents: 400_000, tenant_name: 'Carol', tenant_email: null, sort_order: 0 },
       ],
     }
     const s = housingSummary([mortgaged])
@@ -332,5 +334,27 @@ describe('desktop housing summary', () => {
     // golden vectors; here we only assert it was subtracted.
     expect(s.netRental).toBeLessThan(400_000)
     expect(s.netRental).toBe(400_000 - s.cost)
+  })
+
+  it('net rental excludes vacant units — Dashboard summary matches the property detail (US2)', () => {
+    // One occupied ($2,000) + one vacant ($2,600), mortgage present. The Dashboard
+    // housingSummary and the property-detail Net balance must agree, and the vacant
+    // unit's asking rent must NOT inflate the figure.
+    const mixed: Property = {
+      ...base,
+      id: 'p-multi',
+      kind: 'multifamily',
+      address: '9 Elm St',
+      mortgage: { ...MORTGAGE, property_id: 'p-multi' },
+      units: [
+        { id: 'u1', property_id: 'p-multi', name: 'Unit 1', monthly_rent_cents: 200_000, tenant_name: 'Dana', tenant_email: null, sort_order: 0 },
+        { id: 'u2', property_id: 'p-multi', name: 'Unit 2', monthly_rent_cents: 260_000, tenant_name: null, tenant_email: null, sort_order: 1 },
+      ],
+    }
+    const pay = monthlyPaymentCents(MORTGAGE.original_loan_cents, MORTGAGE.annual_interest_rate_percent, MORTGAGE.loan_term_years)
+    const detailNet = netRentalCents(rentUnitsFrom(mixed.units ?? []), pay) // property-detail computation
+    const s = housingSummary([mixed])
+    expect(s.netRental).toBe(detailNet) // Dashboard == detail
+    expect(s.netRental).toBe(200_000 - pay) // vacant $2,600 excluded
   })
 })

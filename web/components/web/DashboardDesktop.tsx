@@ -9,6 +9,7 @@ import {
   monthlyPaymentCents,
   currentEquityCents,
 } from '@/lib/finance/mortgage'
+import { netRentalCents, rentUnitsFrom } from '@/lib/finance/housing'
 import { InsightsCardStack } from '@/components/dashboard/InsightsCardStack'
 import { BudgetProgressCard } from '@/components/dashboard/BudgetProgressCard'
 import { SpendByCategoryCard } from '@/components/dashboard/SpendByCategoryCard'
@@ -41,8 +42,9 @@ export function housingSummary(properties: Property[]) {
     }
     if (p.kind === 'multifamily') {
       multi = true
-      const rent = (p.units ?? []).reduce((s, u) => s + u.monthly_rent_cents, 0)
-      netRental += rent - pay
+      // Occupied-only net (money collected), identical to the mobile snapshot,
+      // the property-detail Net balance card, and iOS.
+      netRental += netRentalCents(rentUnitsFrom(p.units ?? []), pay)
     }
     if (p.lease) cost += p.lease.monthly_rent_cents
   }

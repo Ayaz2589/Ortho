@@ -20,6 +20,7 @@ import type {
   Unit,
 } from '@/lib/types'
 import { kindMeta } from './kinds'
+import { rateToInput, parseRate } from './rate'
 
 const TERMS = [15, 20, 30]
 
@@ -99,7 +100,7 @@ export function AddPropertyModal({
       const m = editing.mortgage
       setPurchase(centsToDisplay(m?.purchase_price_cents ?? 0, currency, r))
       setLoan(centsToDisplay(m?.original_loan_cents ?? 0, currency, r))
-      setInterest(m ? m.annual_interest_rate_percent.toFixed(2) : '')
+      setInterest(m ? rateToInput(m.annual_interest_rate_percent) : '')
       setTerm(m?.loan_term_years ?? 30)
       setClosing(m?.closing_date ?? todayISO())
       setAutoPay(m?.auto_pay_source ?? '')
@@ -139,20 +140,15 @@ export function AddPropertyModal({
   }, [open, editing?.id])
 
   const r = rate(currency)
-  const num = (s: string) => {
-    const v = parseFloat(s.replace(/[,\s]/g, ''))
-    return isNaN(v) ? 0 : v
-  }
-
   const canSubmit = (() => {
     // No resolved household → creating would silently no-op server-side;
     // block it here like iOS's canSubmit does.
     if (!currentHousehold) return false
     if (address.trim() === '') return false
     if (meta.hasMortgage) {
-      return num(purchase) > 0 && num(loan) > 0 && num(interest) > 0
+      return parseRate(purchase) > 0 && parseRate(loan) > 0 && parseRate(interest) > 0
     }
-    return num(rent) > 0
+    return parseRate(rent) > 0
   })()
 
   const handleSubmit = () => {
@@ -166,7 +162,7 @@ export function AddPropertyModal({
         property_id: id,
         purchase_price_cents: parseMoney(purchase, currency, r) ?? 0,
         original_loan_cents: parseMoney(loan, currency, r) ?? 0,
-        annual_interest_rate_percent: num(interest),
+        annual_interest_rate_percent: parseRate(interest),
         loan_term_years: term,
         closing_date: closing,
         // Empty → null, otherwise stored exactly as typed (iOS parity: only

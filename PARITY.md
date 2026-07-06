@@ -57,7 +57,7 @@ a few unintended divergences (below).
 | Transaction filtering / listing | ✅ | ✅ | ✅ | `lib/transactionFilters.ts` → `transaction-filters.json` (CLI runs the same function in-process, spec 013) |
 | Dashboard month selection | ✅ | ✅ | — | `components/dashboard/range.ts` ↔ `DashboardRange.swift` (+ `monthBounds` → `dashboard-month-scope.json` / `transaction-filters.json`; `availableRanges` vectored in spec 013) |
 | Insights engine | ✅ | ✅ | — | `insights.json` (8/8 rules + `preview_merchants` ordering/casing, spec 013) |
-| Mortgage / housing math | ✅ | ✅ | — | `lib/finance/mortgage.ts` → `mortgage.json` |
+| Mortgage / housing math | ✅ | ✅ | — | `lib/finance/mortgage.ts` → `mortgage.json`; net rental (occupied-only) `lib/finance/housing.ts` ↔ `Property.swift` `HousingMath` → `housing-net-rental.json` (spec 019). Housing date-only values (lease/payment/closing) parse **local** on both surfaces. |
 | Auth (email-OTP, 8-digit) | ✅ | ✅ | ⚠️ | — (each calls Supabase SDK) |
 | Concurrent iOS + web sessions | ✅ | ✅ | — | single-active-platform lock **removed** (feature 010) |
 | Max session length (30-day cap) | ✅ | ✅ | ✅ | Supabase session timebox (720h) — clients sign out → sign-in on expiry |
@@ -87,7 +87,13 @@ neither language can silently drift:
 - **Transaction filters** (apps) — `filterTransactions` (`lib/transactionFilters.ts` ↔ iOS
   `TransactionFilters.swift`), vectored.
 - **Insights** (apps) — `generateInsights` ↔ `InsightEngine`, 8/8 rules vectored.
-- **Mortgage** (apps) — `lib/finance/mortgage.ts` ↔ iOS `MortgageInfo.swift`, vectored.
+- **Mortgage** (apps) — `lib/finance/mortgage.ts` ↔ iOS `MortgageInfo.swift`, vectored. The upcoming
+  amortization schedule advances labels by whole calendar months (day-clamped) on both surfaces (spec
+  019 fixed a web `setMonth` overflow that mislabeled month-end schedules).
+- **Housing net rental** (apps) — occupied-only unit rent − mortgage payment (`lib/finance/housing.ts`
+  ↔ iOS `Property.swift` `HousingMath`), vectored by `housing-net-rental.json` (spec 019). The Dashboard
+  housing summary and the property-detail Net balance render this **one** figure, so they can no longer
+  disagree; vacant units contribute zero (the asking rent is not money collected).
 - **Dashboard month scope** (apps) — `availableMonths` / `monthReferenceDate` / `stepMonth`
   (`components/dashboard/range.ts` ↔ `DashboardRange.swift`), vectored by `dashboard-month-scope.json`;
   the selected-month window reuses the already-vectored `monthBounds`. (Feature `011`.)

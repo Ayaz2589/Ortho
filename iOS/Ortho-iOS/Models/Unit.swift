@@ -22,6 +22,8 @@ struct Unit: Identifiable, Hashable, Codable {
     }
 
     var isVacant: Bool {
-        (tenantName ?? "").trimmingCharacters(in: .whitespaces).isEmpty
+        // `.whitespacesAndNewlines` matches web's JS `.trim()` (which strips
+        // newlines too) so occupancy resolves identically across surfaces.
+        (tenantName ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }
