@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useApp } from '@/lib/store'
+import { useFocusTrap } from '@/lib/useFocusTrap'
 
 /**
  * Centered desktop dialog — ported from the handoff (Shell.jsx WebModal).
@@ -27,6 +28,7 @@ export function WebModal({
   children: ReactNode
 }) {
   const { t } = useApp()
+  const trapRef = useFocusTrap<HTMLDivElement>(true)
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -48,7 +50,7 @@ export function WebModal({
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="ow-modal" role="dialog" aria-modal="true" aria-label={title}>
+      <div ref={trapRef} tabIndex={-1} className="ow-modal" role="dialog" aria-modal="true" aria-label={title}>
         {!hideHeader && (
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', padding: '18px 20px 14px', flexShrink: 0 }}>
           <button

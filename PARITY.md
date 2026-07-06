@@ -73,6 +73,12 @@ neither language can silently drift:
 - **Split math** — `computeShares` / `validateSplit` / `seedSplit` (`lib/splits.ts`, mirrored in iOS
   `TransactionSplits.swift`). The CLI imports and reuses `computeShares`, and (since this pass)
   canonicalizes owner order through `orderedOwnerIds` first, so the leftover cent matches the apps.
+  `computeShares` guarantees the per-owner cents sum **exactly** to `amountCents` for even/percent —
+  including when entered percents total up to `100 + PERCENT_TOLERANCE` (0.5): the floored bases then
+  over-allocate, and both clients reclaim the excess one cent per owner in list order, skipping owners
+  already at zero so no share goes negative. Locked by the `percent-over-tolerance-reclaim` vector in
+  `transaction-splits.json`. (Bug fixed 2026-07-04; previously the negative leftover was dropped, so an
+  over-100% split silently over-counted per-owner spend.)
 - **Currency** — `toUSDCents` / `toDisplayAmount` / `formatMoney` with round-half-away-from-zero
   (`lib/finance/money.ts` ↔ iOS `Money.swift`), vectored across all 7 currencies. The CLI reuses
   `formatMoney` for display.

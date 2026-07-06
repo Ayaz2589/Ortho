@@ -249,10 +249,14 @@ async function reviewLoop(
       }
       coOwners.forEach((u, idx) => console.log(`      ${idx + 1}. ${u.name}`))
       const sel = await rl.question('    owners (comma-separated numbers): ')
-      const ids = sel
-        .split(',')
-        .map((s) => coOwners[Number(s.trim()) - 1]?.id)
-        .filter((x): x is string => Boolean(x))
+      const ids = [
+        ...new Set(
+          sel
+            .split(',')
+            .map((s) => coOwners[Number(s.trim()) - 1]?.id)
+            .filter((x): x is string => Boolean(x))
+        ),
+      ]
       if (ids.length) {
         r.ownerIds = ids
         r.splits = null // reset to even when owners change

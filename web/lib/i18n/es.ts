@@ -261,7 +261,6 @@ const catalog: Record<string, string> = {
   "You're {0} over this month: {1} out vs {2} in.": "Estás {0} por encima este mes: {1} de salida vs {2} de entrada.",
   "You're {0} over your {1} limit with {2} days left.": "Estás {0} por encima de tu límite de {1} con {2} días restantes.",
   // — web-only keys (translated 2026-07-02) —
-  "Developer": "Desarrollador",
   "Use test data": "Usar datos de prueba",
   "Bypass auth": "Omitir autenticación",
   "Only visible on test builds. Test data runs the app on a disposable in-memory dataset — nothing is saved to your real account.": "Solo visible en compilaciones de prueba. Los datos de prueba ejecutan la app con un conjunto de datos temporal en memoria; no se guarda nada en tu cuenta real.",

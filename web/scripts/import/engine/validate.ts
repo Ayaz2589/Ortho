@@ -23,8 +23,6 @@ export function validateCategory(input: string): TransactionCategory {
   return input as TransactionCategory
 }
 
-const pad = (n: number) => String(n).padStart(2, '0')
-
 /** "YYYY-MM-DD" → noon-UTC ISO (timezone-stable day, matching 004). */
 export function parseDay(input: string): string {
   const m = input.match(/^(\d{4})-(\d{2})-(\d{2})$/)
@@ -32,7 +30,18 @@ export function parseDay(input: string): string {
   return `${m[1]}-${m[2]}-${m[3]}T12:00:00.000Z`
 }
 
-/** Today at noon UTC. `now` injected for deterministic tests. */
+/** Noon-UTC ISO for *today's* America/New_York calendar day. `now` injected for
+ *  deterministic tests. Uses the NY wall-clock day (not the UTC day) so an
+ *  evening ET entry — e.g. 21:00 ET = 01:00Z the next day — lands on the correct
+ *  date, matching the noon-UTC-of-the-NY-day convention the apps and
+ *  repair-legacy-dates.ts enforce. Otherwise the CLI reintroduces the exact
+ *  off-by-one that script exists to clean up. */
+const NY_DAY = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/New_York',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
 export function todayISO(now: Date): string {
-  return `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())}T12:00:00.000Z`
+  return `${NY_DAY.format(now)}T12:00:00.000Z`
 }

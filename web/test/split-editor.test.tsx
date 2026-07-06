@@ -4,9 +4,12 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Transaction, User } from '@/lib/types'
 
-// Two household people; the current person (Alice) is the default owner.
+// Two ACTIVE household people; the current person (Alice) is the default owner.
 const ALICE: User = { id: 'p1', name: 'Alice', initial: 'A', color_key: 'sage', created_at: '' }
 const BOB: User = { id: 'p2', name: 'Bob', initial: 'B', color_key: 'sky', created_at: '' }
+// Carol was REMOVED from the household (not in householdMembers) but is still
+// referenced by older transactions — resolveUser must still resolve her.
+const CAROL: User = { id: 'p3', name: 'Carol', initial: 'C', color_key: 'peach', created_at: '' }
 
 const addTransaction = vi.fn()
 
@@ -19,6 +22,8 @@ vi.mock('@/lib/store', () => ({
     currentUserId: 'p1',
     currentPersonId: 'p1',
     householdMembers: [ALICE, BOB],
+    resolveUser: (id: string) =>
+      [ALICE, BOB, CAROL].find((u) => u.id === id) ?? { id, name: '—', initial: '·', color_key: 'sage', created_at: '' },
     addTransaction,
     updateTransaction: vi.fn(),
     formatMoney: (c: number) => `$${(c / 100).toFixed(2)}`,
@@ -28,8 +33,8 @@ vi.mock('@/lib/store', () => ({
 
 import { useTxForm, TxFormFields, type TxFormApi } from '@/components/web/TxForm'
 
-function Harness({ onApi }: { onApi?: (api: TxFormApi) => void }) {
-  const form = useTxForm({ editing: null, copying: null })
+function Harness({ onApi, editing = null }: { onApi?: (api: TxFormApi) => void; editing?: Transaction | null }) {
+  const form = useTxForm({ editing, copying: null })
   onApi?.(form)
   return (
     <div>
@@ -140,5 +145,23 @@ describe('split editor', () => {
     await h.user.click(screen.getByRole('button', { name: /Bob/ })) // remove
     expect(h.getApi().owners).toEqual(['p1'])
     expect(screen.queryByRole('tab', { name: 'Even' })).toBeNull()
+  })
+
+  it('edit mode still renders an owner who was since removed from the household', () => {
+    // A 50/50 expense owned by Alice (active) + Carol (removed). The removed
+    // owner must still show as a chip and a named split row — not "—".
+    const editing: Transaction = {
+      id: 'tx1', household_id: 'h1', merchant: 'Dinner', category: 'dining', kind: 'expense',
+      amount_cents: 10000, source: 'Visa', date: '2026-01-01T12:00:00.000Z', created_by: 'p1',
+      created_at: '', updated_at: '', paid_by: 'p1', owner_ids: ['p1', 'p3'],
+      shares: { p1: 5000, p3: 5000 },
+    }
+    render(<Harness editing={editing} />)
+    // Both owners render (chip + split-editor row); Carol is not dropped or "—".
+    expect(screen.getAllByText('Carol').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Alice').length).toBeGreaterThan(0)
+    const owners = screen.getByText('Owners').closest('.ow-card') as HTMLElement
+    expect(owners).not.toBeNull()
+    expect(owners.textContent).not.toContain('—')
   })
 })

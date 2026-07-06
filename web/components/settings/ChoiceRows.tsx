@@ -9,17 +9,21 @@ export function ChoiceRow({
   label,
   active,
   onClick,
+  disabled = false,
 }: {
   icon: ReactNode
   label: string
   active: boolean
   onClick: () => void
+  /** Render non-interactive (e.g. a choice forced on by another setting). */
+  disabled?: boolean
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-[60px] w-full items-center gap-3.5 px-4 py-3 text-left"
+      disabled={disabled}
+      className="flex min-h-[60px] w-full items-center gap-3.5 px-4 py-3 text-left disabled:cursor-default disabled:opacity-60"
     >
       <span
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-text-2"

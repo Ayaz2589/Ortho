@@ -5,7 +5,7 @@ import { Check, MinusCircle } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { FormGroup, FieldRow, SectionLabel } from '@/components/ui'
 import { TextInput } from '@/components/inputs'
-import { PALETTE, deriveInitial, paletteFor } from '@/lib/categories'
+import { PALETTE, paletteFor } from '@/lib/categories'
 import { Drawer, DrawerHeader } from '@/components/web/Drawer'
 
 export type HouseholdDrawerMode =
@@ -69,7 +69,10 @@ export function HouseholdDrawer({
     onClose()
   }
 
-  const addInitial = deriveInitial(addName)
+  // Preview the initial exactly as `addPerson` will STORE it (first character,
+  // matching iOS `AppState.addPerson`) — using deriveInitial here made the
+  // preview show "A+B" for a joint-style name while the saved avatar was "A".
+  const addInitial = (addName.trim()[0] ?? '·').toUpperCase()
   const canAdd = addName.trim() !== ''
   const swatch = paletteFor(addColor)
   const handleAdd = () => {

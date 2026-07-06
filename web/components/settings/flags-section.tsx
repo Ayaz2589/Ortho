@@ -43,7 +43,11 @@ export function FlagsSection() {
         <ChoiceRow
           icon={<FlaskConical size={16} />}
           label={t('Use test data')}
+          // Bypassing auth forces the in-memory seed, so test data is implied and
+          // shown active-but-locked — otherwise the row read as active while a tap
+          // silently flipped a hidden bit and reloaded with no visible change.
           active={effectiveUseTestData(flags)}
+          disabled={flags.bypassAuth}
           onClick={() => apply({ ...flags, useTestData: !flags.useTestData })}
         />
         <ChoiceRow

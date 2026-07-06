@@ -44,9 +44,12 @@ export function writeFlags(next: FlagState): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
   }
   if (typeof document !== 'undefined') {
-    // The proxy gate reads this cookie; keep it in lockstep with bypassAuth.
+    // The proxy gate reads this cookie; keep it in lockstep with the (indefinite)
+    // localStorage flag. Use the practical browser cap (400 days) rather than 24h,
+    // so the cookie doesn't silently expire first and start redirecting a still-
+    // bypassed session to /sign-in.
     document.cookie = next.bypassAuth
-      ? `${BYPASS_AUTH_COOKIE}=1; path=/; max-age=86400; samesite=lax`
+      ? `${BYPASS_AUTH_COOKIE}=1; path=/; max-age=34560000; samesite=lax`
       : `${BYPASS_AUTH_COOKIE}=; path=/; max-age=0; samesite=lax`
   }
 }

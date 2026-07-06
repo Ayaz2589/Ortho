@@ -266,7 +266,6 @@ const catalog: Record<string, string> = {
   "You're {0} over this month: {1} out vs {2} in.": "এই মাসে {0} বেশি: {2} আয়, {1} খরচ।",
   "You're {0} over your {1} limit with {2} days left.": "{2} দিন বাকি — {1} সীমার {0} বেশি।",
   // — web-only keys (translated 2026-07-02) —
-  "Developer": "ডেভেলপার",
   "Use test data": "পরীক্ষার ডেটা ব্যবহার করুন",
   "Bypass auth": "অথেন্টিকেশন বাইপাস করুন",
   "Only visible on test builds. Test data runs the app on a disposable in-memory dataset — nothing is saved to your real account.": "শুধুমাত্র পরীক্ষামূলক বিল্ডে দৃশ্যমান। পরীক্ষার ডেটা অ্যাপটিকে একটি অস্থায়ী ইন-মেমরি ডেটাসেটে চালায় — আপনার আসল অ্যাকাউন্টে কিছুই সংরক্ষণ করা হয় না।",
