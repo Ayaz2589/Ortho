@@ -43,13 +43,9 @@ export function monthlyPaymentCents(
  * @param closingDate - ISO date string of the loan closing date
  * @param asOf - Date to calculate balance as of (defaults to today)
  */
-/** Parse a `YYYY-MM-DD` (or ISO) date as a local calendar date, so month/day
- *  arithmetic is timezone-stable and matches Swift's `Calendar.current`. */
-function parseLocalDate(s: string): Date {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s)
-  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
-  return new Date(s)
-}
+// `parseLocalDate` lives in `web/lib/format.ts` (the shared date-helper module) so
+// lease, payment, and closing-date rendering can reuse the same timezone-stable parse.
+import { parseLocalDate } from '../format'
 
 /**
  * Whole months elapsed between `closingDate` and `asOf`, clamped to
@@ -207,13 +203,21 @@ export function upcomingAmortization(
     currentPrincipalBalanceCents(originalLoanCents, annualRatePercent, termYears, closingDate, asOf) / 100
   const m = monthlyPaymentCents(originalLoanCents, annualRatePercent, termYears) / 100
   const result: AmortizationEntry[] = []
-  const month0 = new Date(asOf)
+  // Advance the label by whole calendar months from `asOf`, clamping the day to
+  // each target month's length — mirroring Swift `Calendar.date(byAdding:.month)`.
+  // (The old `setMonth(base + i)` on a fixed base date overflowed short months:
+  // Jan 31 + 1mo → Mar 3, skipping February and duplicating March.) The
+  // principal/interest values below are unaffected — they depend only on the
+  // amortization recurrence, not the label date, so the golden vector stays green.
+  const baseYear = asOf.getFullYear()
+  const baseMonth = asOf.getMonth()
+  const baseDay = asOf.getDate()
 
   for (let i = 0; i < months; i++) {
     const interest = balance * r
     const principal = Math.max(0, m - interest)
-    const month = new Date(month0)
-    month.setMonth(month0.getMonth() + i)
+    const daysInTargetMonth = new Date(baseYear, baseMonth + i + 1, 0).getDate()
+    const month = new Date(baseYear, baseMonth + i, Math.min(baseDay, daysInTargetMonth))
     result.push({
       month,
       principalCents: Math.round(principal * 100),

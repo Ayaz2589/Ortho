@@ -20,6 +20,7 @@ import type {
   Unit,
 } from '@/lib/types'
 import { kindMeta } from './kinds'
+import { rateToInput } from './rate'
 
 const TERMS = [15, 20, 30]
 
@@ -99,7 +100,7 @@ export function AddPropertyModal({
       const m = editing.mortgage
       setPurchase(centsToDisplay(m?.purchase_price_cents ?? 0, currency, r))
       setLoan(centsToDisplay(m?.original_loan_cents ?? 0, currency, r))
-      setInterest(m ? m.annual_interest_rate_percent.toFixed(2) : '')
+      setInterest(m ? rateToInput(m.annual_interest_rate_percent) : '')
       setTerm(m?.loan_term_years ?? 30)
       setClosing(m?.closing_date ?? todayISO())
       setAutoPay(m?.auto_pay_source ?? '')

@@ -24,6 +24,7 @@ import { toDisplayAmount, toUSDCents } from '../lib/finance/money'
 import { CURRENCIES, FALLBACK_RATE_FROM_USD } from '../lib/finance/currency'
 import { availableMonths, availableRanges, monthReferenceDate, stepMonth } from '../components/dashboard/range'
 import { balanceBetween } from '../lib/balances'
+import { occupiedRentCents, netRentalCents, type RentUnit } from '../lib/finance/housing'
 import type { Transaction, Budget, Property } from '../lib/types'
 
 // The vectors must be identical no matter where they are generated: pin the
@@ -543,10 +544,37 @@ const memberBalance = {
   })),
 }
 
+// ── Housing net-rental vectors ───────────────────────────────────────────────
+// Shared source of truth for the net rental figure on both the Dashboard summary
+// and the property-detail net-balance card (lib/finance/housing.ts ↔ iOS
+// Property.swift). Occupancy is a resolved boolean here so the vector is
+// platform-neutral; each surface maps its Unit → { rentCents, occupied }.
+interface HousingNetRentalInput {
+  name: string
+  units: RentUnit[]
+  mortgagePaymentCents: number
+}
+const HOUSING_NET_RENTAL_INPUTS: HousingNetRentalInput[] = [
+  { name: 'two occupied units, no mortgage (paid-off still earns rent)', units: [{ rentCents: 250000, occupied: true }, { rentCents: 240000, occupied: true }], mortgagePaymentCents: 0 },
+  { name: 'one vacant unit drags net negative (review opposite-sign case)', units: [{ rentCents: 250000, occupied: true }, { rentCents: 240000, occupied: true }, { rentCents: 260000, occupied: false }], mortgagePaymentCents: 505654 },
+  { name: 'all units vacant → net is minus the mortgage', units: [{ rentCents: 250000, occupied: false }, { rentCents: 240000, occupied: false }], mortgagePaymentCents: 300000 },
+  { name: 'no units at all → occupied rent 0', units: [], mortgagePaymentCents: 300000 },
+  { name: 'single occupied unit covering the mortgage exactly', units: [{ rentCents: 300000, occupied: true }], mortgagePaymentCents: 300000 },
+  { name: 'occupied units net positive against a mortgage', units: [{ rentCents: 200000, occupied: true }, { rentCents: 200000, occupied: true }], mortgagePaymentCents: 300000 },
+]
+const housingNetRental = HOUSING_NET_RENTAL_INPUTS.map((i) => ({
+  input: i,
+  expected: {
+    occupiedRentCents: occupiedRentCents(i.units),
+    netRentalCents: netRentalCents(i.units, i.mortgagePaymentCents),
+  },
+}))
+
 // ── Write ───────────────────────────────────────────────────────────────────
 
 mkdirSync(OUT, { recursive: true })
 writeFileSync(resolve(OUT, 'mortgage.json'), JSON.stringify(mortgage, null, 2) + '\n')
+writeFileSync(resolve(OUT, 'housing-net-rental.json'), JSON.stringify(housingNetRental, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'insights.json'), JSON.stringify(insights, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'transaction-filters.json'), JSON.stringify(filters, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'transaction-splits.json'), JSON.stringify(splits, null, 2) + '\n')

@@ -37,11 +37,14 @@ shared/
     │                                #   lib/finance/currency.ts) across all 7 currencies at fallback rates
     ├── dashboard-month-scope.json   # (267 ln) availableMonths/availableRanges/monthReferenceDate/stepMonth
     │                                #   (components/dashboard/range.ts) — dashboard range + month picker logic
-    └── member-balance.json          # (352 ln) balanceBetween (lib/balances.ts): reimbursement/settle-up
-                                     #   net cents between two members, incl. transfer-kind reimbursements
+    ├── member-balance.json          # (352 ln) balanceBetween (lib/balances.ts): reimbursement/settle-up
+    │                                #   net cents between two members, incl. transfer-kind reimbursements
+    └── housing-net-rental.json      # occupiedRentCents/netRentalCents (lib/finance/housing.ts):
+                                     #   occupied-only unit rent − mortgage payment; the single figure the
+                                     #   Dashboard summary and property-detail Net balance both show (spec 019)
 ```
 
-Note: `shared/test-vectors/README.md` documents only 4 of the 7 files (mortgage, insights, filters, splits); `currency.json`, `dashboard-month-scope.json`, and `member-balance.json` were added later (features 008–012 era) and are documented in the generator source and `PARITY.md` instead.
+Note: `shared/test-vectors/README.md` documents only 4 of the 8 files (mortgage, insights, filters, splits); `currency.json`, `dashboard-month-scope.json`, `member-balance.json`, and `housing-net-rental.json` were added later (features 008–019 era) and are documented in the generator source and `PARITY.md` instead.
 
 ## 4. Architecture — how the parity loop works
 
@@ -68,7 +71,7 @@ Key properties:
 - **Determinism/portability decisions baked into the vectors** (so TS `number` and Swift `Double`/`Int64` agree bit-for-bit):
   - All money is integer USD cents.
   - Transaction/filter ids are lowercase UUID strings (`00000000-0000-0000-0000-…`) so the iOS `Transaction` decoder (UUID ids) accepts them; web compares strings and is agnostic.
-  - Dates are timezone-stable by construction: mortgage dates parse as **local** calendar dates on both sides; insight dates mirror JS `new Date('YYYY-MM-DD')` (UTC midnight) and sit mid-month so timezone can't flip a month bucket; filter windows are **UTC half-open `[from, to)`** via `monthBounds('YYYY-MM')`.
+  - Dates are timezone-stable by construction: **all housing date-only values** — mortgage `closing_date`, lease `lease_start`/`lease_end`, and rental-payment `date` — parse as **local** calendar dates on both sides. On web this is the shared `parseLocalDate` helper in `web/lib/format.ts` (used by `mortgage.ts`, `lease.ts`, and the housing cards); on iOS it is the `.current`-timezone `dateOnly` decoder. (Spec 019 fixed the lease/payment/closing display sites, which previously used raw `new Date('YYYY-MM-DD')` = UTC midnight and shifted a day west of UTC.) Insight dates mirror JS `new Date('YYYY-MM-DD')` (UTC midnight) and sit mid-month so timezone can't flip a month bucket; filter windows are **UTC half-open `[from, to)`** via `monthBounds('YYYY-MM')`. The `housing-net-rental` vectors are pure integer-cent math and carry no dates.
   - Display *strings* for currency are locale-dependent and deliberately **not** vectored — only numeric amounts are.
 - **The insight `id` scheme is part of the contract** (e.g. `top-category-dining-2026-06`, `budget-over-dining-2026-06`, `outlier-<lowercase-uuid>`). Differing ids across suites is a real divergence, not a test bug.
 - **What's covered**: mortgage math (incl. zero-interest and month-end-closing day-boundary cases), all 8 insight rules, transaction filtering (every dimension in isolation, OR-within/AND-across, empty edges, UTC month boundary), split math (leftover-cent placement in canonical owner order, percent/value validation gates, lossless edit-seed round-trips), currency conversion in both directions for 7 currencies, dashboard month-picker derivation/stepping plus range availability (`availableRanges`, 11 cases: TS `availableRanges` in `web/components/dashboard/range.ts` ↔ Swift `DashboardRange.available`), and member reimbursement balances (expenses with `paid_by` + `transfer`-kind reimbursements netting to signed cents).
@@ -80,12 +83,12 @@ Key properties:
 Read in this order:
 
 1. `shared/test-vectors/README.md` — the contract, per-file schemas (for the original 4), timezone rules, regen and run instructions.
-2. `web/scripts/gen-vectors.ts` — the single generator; defines every case for all 7 files and is the de-facto schema documentation for the 3 files the README omits. Heavily commented with the parity rationale (R1–R8 references).
+2. `web/scripts/gen-vectors.ts` — the single generator; defines every case for all 8 files and is the de-facto schema documentation for the files the README omits. Heavily commented with the parity rationale (R1–R8 references).
 3. `PARITY.md` (repo root) — the parity matrix mapping each capability → TS file → Swift file → vector file; §"How parity is enforced" is the operational summary.
 4. `web/package.json` — `"gen:vectors": "tsx scripts/gen-vectors.ts"` and the Node engines constraint.
-5. Web consumers (each mirrors one JSON): `web/test/mortgage.parity.test.ts`, `web/test/insights.parity.test.ts`, `web/test/transaction-filters.parity.test.ts`, `web/test/splits.parity.test.ts`, `web/test/currency.parity.test.ts`, `web/test/dashboard-month-scope.parity.test.ts`, `web/test/member-balance.parity.test.ts`.
-6. iOS consumers: `iOS/Ortho-iOSTests/MortgageParityTests.swift`, `InsightParityTests.swift`, `TransactionFilterParityTests.swift`, `TransactionSplitParityTests.swift`, `CurrencyParityTests.swift`, `DashboardScopeParityTests.swift`, `MemberBalanceParityTests.swift`.
-7. Vectored implementations — TS: `web/lib/finance/mortgage.ts`, `web/lib/finance/insights.ts`, `web/lib/finance/money.ts`, `web/lib/finance/currency.ts`, `web/lib/transactionFilters.ts`, `web/lib/splits.ts`, `web/lib/balances.ts`, `web/components/dashboard/range.ts`. Swift mirrors: `iOS/Ortho-iOS/Models/MortgageInfo.swift`, `Services/InsightEngine.swift`, `DesignSystem/Money.swift`, `Models/Currency.swift`, `Features/Transactions/TransactionFilters.swift`, `Features/Transactions/TransactionSplits.swift`, `Services/Balances.swift`, `Features/Dashboard/DashboardRange.swift`.
+5. Web consumers (each mirrors one JSON): `web/test/mortgage.parity.test.ts`, `web/test/insights.parity.test.ts`, `web/test/transaction-filters.parity.test.ts`, `web/test/splits.parity.test.ts`, `web/test/currency.parity.test.ts`, `web/test/dashboard-month-scope.parity.test.ts`, `web/test/member-balance.parity.test.ts`, `web/test/housing-net-rental.parity.test.ts`.
+6. iOS consumers: `iOS/Ortho-iOSTests/MortgageParityTests.swift`, `InsightParityTests.swift`, `TransactionFilterParityTests.swift`, `TransactionSplitParityTests.swift`, `CurrencyParityTests.swift`, `DashboardScopeParityTests.swift`, `MemberBalanceParityTests.swift`, `HousingNetRentalParityTests.swift`.
+7. Vectored implementations — TS: `web/lib/finance/mortgage.ts`, `web/lib/finance/insights.ts`, `web/lib/finance/money.ts`, `web/lib/finance/currency.ts`, `web/lib/transactionFilters.ts`, `web/lib/splits.ts`, `web/lib/balances.ts`, `web/components/dashboard/range.ts`, `web/lib/finance/housing.ts`. Swift mirrors: `iOS/Ortho-iOS/Models/MortgageInfo.swift`, `Services/InsightEngine.swift`, `DesignSystem/Money.swift`, `Models/Currency.swift`, `Features/Transactions/TransactionFilters.swift`, `Features/Transactions/TransactionSplits.swift`, `Services/Balances.swift`, `Features/Dashboard/DashboardRange.swift`, `Models/Property.swift` (`HousingMath`).
 8. `iOS/Ortho-iOS.xcodeproj/project.pbxproj` — where the JSONs are referenced (`../shared/test-vectors/...`) and added to Copy Bundle Resources.
 
 ## 6. How to build / run / test

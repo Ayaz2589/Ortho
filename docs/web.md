@@ -151,7 +151,7 @@ Three tiers, one source of truth (`lib/useMediaQuery.ts`):
 10. `web/components/web/Drawer.tsx` — the shared right-side slide-out master–detail panel.
 11. `web/components/web/TxForm.tsx` — add/edit transaction form incl. splits and transfers (637 lines, the most complex form).
 12. `web/lib/splits.ts` — split math + `orderedOwnerIds` (parity-critical).
-13. `web/lib/finance/insights.ts` and `web/lib/finance/mortgage.ts` — the vectored engines.
+13. `web/lib/finance/insights.ts`, `web/lib/finance/mortgage.ts`, and `web/lib/finance/housing.ts` — the vectored engines. `housing.ts` (`occupiedRentCents`/`netRentalCents`) is the single source for the net rental figure shown by both `HousingSnapshotCard`/`DashboardDesktop` and the property-detail `MultifamilyCards` (occupied-only; vacant units contribute zero), vector-locked by `housing-net-rental.json` ↔ iOS `HousingMath` (spec 019). All housing date-only values (lease/payment/closing) parse **local** via `parseLocalDate` in `web/lib/format.ts` — never raw `new Date('YYYY-MM-DD')`, which shifts a day west of UTC.
 14. `web/lib/useDashboardRange.ts` + `web/components/dashboard/range.ts` — dashboard scope (persisted range + transient month).
 15. `web/components/ui.tsx` and `web/components/web/kit.tsx` — shared primitives (mobile) and desktop chrome components.
 16. `web/scripts/gen-vectors.ts` — how golden vectors are produced.

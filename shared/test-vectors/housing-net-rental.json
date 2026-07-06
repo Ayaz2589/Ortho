@@ -1,0 +1,113 @@
+[
+  {
+    "input": {
+      "name": "two occupied units, no mortgage (paid-off still earns rent)",
+      "units": [
+        {
+          "rentCents": 250000,
+          "occupied": true
+        },
+        {
+          "rentCents": 240000,
+          "occupied": true
+        }
+      ],
+      "mortgagePaymentCents": 0
+    },
+    "expected": {
+      "occupiedRentCents": 490000,
+      "netRentalCents": 490000
+    }
+  },
+  {
+    "input": {
+      "name": "one vacant unit drags net negative (review opposite-sign case)",
+      "units": [
+        {
+          "rentCents": 250000,
+          "occupied": true
+        },
+        {
+          "rentCents": 240000,
+          "occupied": true
+        },
+        {
+          "rentCents": 260000,
+          "occupied": false
+        }
+      ],
+      "mortgagePaymentCents": 505654
+    },
+    "expected": {
+      "occupiedRentCents": 490000,
+      "netRentalCents": -15654
+    }
+  },
+  {
+    "input": {
+      "name": "all units vacant → net is minus the mortgage",
+      "units": [
+        {
+          "rentCents": 250000,
+          "occupied": false
+        },
+        {
+          "rentCents": 240000,
+          "occupied": false
+        }
+      ],
+      "mortgagePaymentCents": 300000
+    },
+    "expected": {
+      "occupiedRentCents": 0,
+      "netRentalCents": -300000
+    }
+  },
+  {
+    "input": {
+      "name": "no units at all → occupied rent 0",
+      "units": [],
+      "mortgagePaymentCents": 300000
+    },
+    "expected": {
+      "occupiedRentCents": 0,
+      "netRentalCents": -300000
+    }
+  },
+  {
+    "input": {
+      "name": "single occupied unit covering the mortgage exactly",
+      "units": [
+        {
+          "rentCents": 300000,
+          "occupied": true
+        }
+      ],
+      "mortgagePaymentCents": 300000
+    },
+    "expected": {
+      "occupiedRentCents": 300000,
+      "netRentalCents": 0
+    }
+  },
+  {
+    "input": {
+      "name": "occupied units net positive against a mortgage",
+      "units": [
+        {
+          "rentCents": 200000,
+          "occupied": true
+        },
+        {
+          "rentCents": 200000,
+          "occupied": true
+        }
+      ],
+      "mortgagePaymentCents": 300000
+    },
+    "expected": {
+      "occupiedRentCents": 400000,
+      "netRentalCents": 100000
+    }
+  }
+]

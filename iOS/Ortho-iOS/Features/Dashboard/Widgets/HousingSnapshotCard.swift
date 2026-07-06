@@ -23,16 +23,14 @@ struct HousingSnapshotCard: View {
         }
     }
 
-    /// Sum across multifamily properties: configured unit rent − the
-    /// property's mortgage payment. nil when no multifamily exists.
+    /// Sum across multifamily properties of each one's net monthly balance —
+    /// **occupied** unit rent minus the mortgage payment. nil when no
+    /// multifamily exists. Uses the same `netMonthlyBalanceCents` the property
+    /// detail card shows, so the Dashboard and the detail agree (spec 019 US2).
     private var netRentalIncomeCents: Int64? {
         let multifamilies = appState.properties.filter { $0.kind == .multifamily }
         guard !multifamilies.isEmpty else { return nil }
-        return multifamilies.reduce(0) { acc, p in
-            let income = p.units.reduce(Int64(0)) { $0 + $1.monthlyRent }
-            let cost = p.mortgage?.monthlyPaymentCents ?? 0
-            return acc + (income - cost)
-        }
+        return multifamilies.reduce(0) { acc, p in acc + p.netMonthlyBalanceCents }
     }
 
     private var propertyCount: Int { appState.properties.count }

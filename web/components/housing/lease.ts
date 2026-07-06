@@ -1,32 +1,43 @@
-import { startOfDay } from '@/lib/format'
+import { startOfDay, parseLocalDate } from '@/lib/format'
 import type { LeaseInfo } from '@/lib/types'
 
 const DAY = 1000 * 60 * 60 * 24
 
-/** Day-of-month rent is "due", derived from the lease start date. */
+/** The rent-due date within `(year, month)`, clamping the due day to the month's
+ *  length so a due day of 31 resolves to month-end instead of overflowing into
+ *  the next month. `month` may be 12 (JS normalizes it to January of year+1). */
+function dueDateInMonth(year: number, month: number, dueDay: number): Date {
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  return new Date(year, month, Math.min(dueDay, daysInMonth))
+}
+
+/** Day-of-month rent is "due", derived from the lease start date. Parsed as a
+ *  local calendar date so it is timezone-stable (matches iOS `Calendar.current`). */
 export function rentDueDay(lease: LeaseInfo): number {
-  return new Date(lease.lease_start).getDate()
+  return parseLocalDate(lease.lease_start).getDate()
 }
 
 /**
  * Days until the next rent-due date in the current/next calendar month.
  * Never negative — rolls to next month once this month's due day has passed.
+ * The due day is clamped to each month's length (a 31 due-day stays in-month).
  */
 export function daysUntilNextRent(lease: LeaseInfo, asOf: Date = new Date()): number {
   const today = startOfDay(asOf)
   const due = rentDueDay(lease)
-  const thisMonthDue = new Date(today.getFullYear(), today.getMonth(), due)
+  const thisMonthDue = dueDateInMonth(today.getFullYear(), today.getMonth(), due)
   const target =
     thisMonthDue.getTime() >= today.getTime()
       ? thisMonthDue
-      : new Date(today.getFullYear(), today.getMonth() + 1, due)
+      : dueDateInMonth(today.getFullYear(), today.getMonth() + 1, due)
   return Math.round((startOfDay(target).getTime() - today.getTime()) / DAY)
 }
 
-/** Days between today and lease end (negative if already ended). */
+/** Days between today and lease end (negative if already ended). Parsed as a
+ *  local calendar date so the countdown is timezone-stable (matches iOS). */
 export function daysUntilEnd(lease: LeaseInfo, asOf: Date = new Date()): number {
   const today = startOfDay(asOf)
-  const end = startOfDay(new Date(lease.lease_end))
+  const end = startOfDay(parseLocalDate(lease.lease_end))
   return Math.round((end.getTime() - today.getTime()) / DAY)
 }
 

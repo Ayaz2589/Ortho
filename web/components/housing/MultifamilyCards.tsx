@@ -2,15 +2,12 @@
 
 import { useApp } from '@/lib/store'
 import { monthlyPaymentCents } from '@/lib/finance/mortgage'
+import { netRentalCents, occupiedRentCents, rentUnitsFrom, isUnitOccupied } from '@/lib/finance/housing'
 import type { Property, Unit } from '@/lib/types'
 import { HousingSection, HousingLabel } from './MortgageCards'
 
 function isVacant(u: Unit): boolean {
-  return (u.tenant_name ?? '').trim() === ''
-}
-
-function occupiedMonthlyRentCents(units: Unit[]): number {
-  return units.filter((u) => !isVacant(u)).reduce((sum, u) => sum + u.monthly_rent_cents, 0)
+  return !isUnitOccupied(u.tenant_name)
 }
 
 export function UnitsCard({ property }: { property: Property }) {
@@ -58,7 +55,8 @@ export function UnitsCard({ property }: { property: Property }) {
 
 export function NetBalanceCard({ property }: { property: Property }) {
   const { formatMoney, t } = useApp()
-  const income = occupiedMonthlyRentCents(property.units ?? [])
+  const rentUnits = rentUnitsFrom(property.units ?? [])
+  const income = occupiedRentCents(rentUnits)
   const mortgageCents = property.mortgage
     ? monthlyPaymentCents(
         property.mortgage.original_loan_cents,
@@ -66,7 +64,7 @@ export function NetBalanceCard({ property }: { property: Property }) {
         property.mortgage.loan_term_years
       )
     : 0
-  const net = income - mortgageCents
+  const net = netRentalCents(rentUnits, mortgageCents)
 
   const signed =
     net > 0
