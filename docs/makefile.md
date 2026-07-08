@@ -39,14 +39,14 @@ Ortho/
 │   └── settings.local.json   # GITIGNORED — machine-local Claude settings
 ├── .specify/                 # TRACKED — Spec Kit config & machinery
 │   ├── memory/constitution.md    # THE project constitution (design + testing principles)
-│   ├── feature.json              # points at the current feature dir (specs/014-…)
+│   ├── feature.json              # points at the current feature dir (specs/020-…)
 │   ├── templates/                # spec / plan / tasks / checklist / constitution templates
 │   ├── scripts/bash/             # create-new-feature.sh, setup-plan.sh, setup-tasks.sh,
 │   │                             # check-prerequisites.sh, common.sh
 │   ├── workflows/speckit/        # bundled "Full SDD Cycle" workflow (specify→plan→tasks→implement)
 │   ├── extensions/agent-context/ # refreshes agent context after specify/plan (hooks in extensions.yml)
 │   └── integrations/             # claude.manifest.json, speckit.manifest.json
-├── specs/                    # one numbered dir per feature, 001 … 015 (sequential)
+├── specs/                    # one numbered dir per feature, 001 … 020 (non-sequential; 016–018 skipped)
 │   └── NNN-short-name/       # spec.md, plan.md, research.md, data-model.md,
 │                             # quickstart.md, tasks.md, contracts/, checklists/
 ├── node_modules/.vite/       # stray Vitest cache from a root-level run — ignorable, gitignored
@@ -75,7 +75,7 @@ Prints the usage/env cheat-sheet for `ingest` (no side effects). Use it to recal
 ### `make tx-list [MONTH=YYYY-MM] [QUERY=text] [CATEGORY=a,b] [SOURCE=a,b] [OWNER=name] [KIND=expense|income|transfer] [LIMIT=N] [ADMIN=1]`
 Read-only, **household-wide** listing via `web/scripts/import/tx.ts list` (design: `specs/005-transaction-crud-cli/`, semantics aligned with the apps in `specs/013-post-audit-closeout/`). Only the MONTH window narrows in SQL; everything else runs through the apps' shared `filterTransactions` — free-text `QUERY`, comma multi-select `CATEGORY`/`SOURCE`, `OWNER` by household-person name. Hitting `LIMIT` (default 200) prints an explicit truncation notice. Same OTP/ADMIN auth as `ingest`.
 
-### `make tx-add MERCHANT='..' AMOUNT='12.34' [DATE=YYYY-MM-DD] [CATEGORY=..] [KIND=..] [SCOPE=..] [SOURCE='..'] [ADMIN=1]`
+### `make tx-add MERCHANT='..' AMOUNT='12.34' [DATE=YYYY-MM-DD] [CATEGORY=..] [KIND=..] [SOURCE='..'] [ADMIN=1]`
 Creates one transaction (`tx.ts add`). The Makefile passes only the variables you set; the CLI prompts/validates the rest.
 
 ### `make tx-edit ID=<uuid> [ADMIN=1]`
@@ -124,11 +124,11 @@ The root `.gitignore` states its policy in its own header: **app subdirectories 
 `​.claude/context-summaries/latest.md` is the most recent session handoff; dated files alongside it are older ones. The root `CLAUDE.md` instructs: **at session start, read `latest.md` if it exists** to recover prior state (work done, decisions, pending items). Summaries record commits made, key decisions (e.g. "demo data removed from iOS — do NOT reintroduce"), and gotchas — treat them as authoritative recent history.
 
 ### Root `CLAUDE.md`
-It points at (1) the **current plan** — `specs/014-receipt-statement-scan/plan.md` for technologies, structure, and shell commands; (2) the deep-dive docs (`docs/index.md` and the per-subsystem guides); (3) the iOS CI workflow that provides compile/test feedback; and (4) the session-continuity rule above. When the active feature changes, this pointer changes with it (and `.specify/feature.json` tracks the same thing: `{"feature_directory": "specs/014-receipt-statement-scan"}`).
+It points at (1) the **current plan** — `specs/020-drift-reconciliation/plan.md` for technologies, structure, and shell commands; (2) the deep-dive docs (`docs/index.md` and the per-subsystem guides); (3) the iOS CI workflow that provides compile/test feedback; and (4) the session-continuity rule above. When the active feature changes, this pointer changes with it (and `.specify/feature.json` tracks the same thing: `{"feature_directory": "specs/020-drift-reconciliation"}`).
 
 ## 7. `specs/` + `.specify/` — the Spec Kit process (overview)
 
-Features move through **Spec-Driven Development**: `specify → plan → tasks → implement`, each step a skill, each artifact committed. Fifteen features exist so far (`specs/001-desktop-layout` … `specs/015-test-feature-flags`), numbered sequentially.
+Features move through **Spec-Driven Development**: `specify → plan → tasks → implement`, each step a skill, each artifact committed. Seventeen features exist so far (`specs/001-desktop-layout` … `specs/020-drift-reconciliation`); numbering is **non-sequential** — 016–018 were skipped, so the latest is `020` (see `.specify/feature.json`).
 
 A mature feature directory contains:
 
@@ -173,8 +173,8 @@ Verification convention (from `README.md`): favor **typecheck + tests + visual r
 8. `.claude/skills/remember/SKILL.md` — how session summaries are produced.
 9. `.claude/context-summaries/latest.md` — the most recent session handoff (local only).
 10. `web/scripts/import/README.md` — full CLI documentation (supported banks, pipeline, exit codes, env).
-11. `specs/014-receipt-statement-scan/plan.md` — the current feature's plan (exemplar of the plan format + Constitution Check).
-12. `specs/014-receipt-statement-scan/tasks.md` — exemplar of the task format and phase ordering.
+11. `specs/020-drift-reconciliation/plan.md` — the current feature's plan (exemplar of the plan format + Constitution Check).
+12. `specs/020-drift-reconciliation/tasks.md` — exemplar of the task format and phase ordering.
 13. `.specify/feature.json` — which feature directory is current.
 14. `.specify/extensions.yml` — the after-specify/after-plan agent-context hooks.
 15. `.nvmrc` — the Node pin.
@@ -194,7 +194,7 @@ make ingest FILE=~/statements/td-may.pdf            # real write, interactive re
 make ingest-help                                    # cheat-sheet
 
 # Transaction CRUD from the terminal
-make tx-list MONTH=2026-06 SCOPE=shared
+make tx-list MONTH=2026-06 CATEGORY=dining,coffee
 make tx-add MERCHANT='Coffee' AMOUNT='4.50' CATEGORY=dining
 make tx-edit ID=<uuid>
 make tx-rm ID=<uuid> DRY_RUN=1

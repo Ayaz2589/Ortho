@@ -104,10 +104,13 @@ export function evenShares(amountCents: number, owners: string[]): Record<string
   return computeShares(amountCents, owners, { method: 'even' })
 }
 
-/** Derived display percentage for an owner's cents share (0 when amount is 0). */
+/** Derived display percentage for an owner's cents share (0 when amount is 0).
+ *  Rounds half AWAY FROM ZERO to match Swift `.rounded()`; plain `Math.round`
+ *  rounds half toward +∞, so the two disagreed on negative exact-half percents. */
 export function sharePercent(shareCents: number, amountCents: number): number {
   if (amountCents === 0) return 0
-  return Math.round((shareCents / amountCents) * 100)
+  const pct = (shareCents / amountCents) * 100
+  return Math.sign(pct) * Math.round(Math.abs(pct))
 }
 
 export type SplitSeed =

@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-`shared/` is the smallest subsystem in the Ortho monorepo, and the only directory consumed by *both* apps. It contains exactly one thing: **`shared/test-vectors/`**, a set of seven JSON files of canonical input→output cases for the pure finance logic that is implemented twice — once in TypeScript (`web/lib/*`, `web/components/dashboard/range.ts`) and once in Swift (`iOS/Ortho-iOS/*`). Both test suites (Vitest on web, XCTest on iOS) assert against these exact files, so neither language can silently drift. This is the deliberate, no-backend mechanism for cross-language parity (originating in `specs/002-logic-dedup`; see `PARITY.md` §"How parity is enforced").
+`shared/` is the smallest subsystem in the Ortho monorepo, and the only directory consumed by *both* apps. It contains exactly one thing: **`shared/test-vectors/`**, a set of eleven JSON files of canonical input→output cases for the pure finance logic that is implemented twice — once in TypeScript (`web/lib/*`, `web/components/dashboard/range.ts`) and once in Swift (`iOS/Ortho-iOS/*`). Both test suites (Vitest on web, XCTest on iOS) assert against these exact files, so neither language can silently drift. This is the deliberate, no-backend mechanism for cross-language parity (originating in `specs/002-logic-dedup`; see `PARITY.md` §"How parity is enforced").
 
 What is **not** in `shared/`:
 
@@ -30,7 +30,7 @@ shared/
     │                                #   magnitude_cents/preview_merchants)
     ├── transaction-filters.json     # (1408 ln) filterTransactions / lib/transactionFilters.ts:
     │                                #   query/categories/kind/sources/owners/date-window cases → expectedIds
-    ├── transaction-splits.json      # (516 ln) computeShares/validateSplit/seedSplit/orderedOwnerIds
+    ├── transaction-splits.json      # (535 ln) computeShares/validateSplit/seedSplit/orderedOwnerIds
     │                                #   (lib/splits.ts): even/percent/value splits, leftover-cent placement,
     │                                #   save-gate validations, edit-seed round-trips, canonical owner ordering
     ├── currency.json                # (692 ln) toDisplayAmount/toUSDCents (lib/finance/money.ts +
@@ -67,7 +67,7 @@ shared/test-vectors/*.json   ← committed to git; regenerated only on INTENDED 
 Key properties:
 
 - **The TypeScript implementation generates the expected values** (after being parity-corrected to match iOS semantics — e.g. recurring-average rounding truncates toward zero like Swift `Int64` division, not `Math.round`). The Swift side never generates; it only asserts.
-- **Vectors are wired into the Xcode project by relative path**: `iOS/Ortho-iOS.xcodeproj/project.pbxproj` contains `PBXFileReference` entries with `path = "../shared/test-vectors/<file>.json"` and all seven JSONs are in the test target's Copy Bundle Resources phase. Regenerating a JSON therefore updates the iOS test inputs automatically on the next test build — no copy step, and **adding cases or sections to an existing file needs no pbxproj change** (feature 013 added `availableRanges` and `preview_merchants` this way). Adding an **eighth** vector file requires pbxproj edits (see §8), but the pbxproj is plain text and hand-editable.
+- **Vectors are wired into the Xcode project by relative path**: `iOS/Ortho-iOS.xcodeproj/project.pbxproj` contains `PBXFileReference` entries with `path = "../shared/test-vectors/<file>.json"` and all eleven JSONs are in the test target's Copy Bundle Resources phase. Regenerating a JSON therefore updates the iOS test inputs automatically on the next test build — no copy step, and **adding cases or sections to an existing file needs no pbxproj change** (feature 013 added `availableRanges` and `preview_merchants` this way; feature 020 added a filter case the same way). Adding a **new** vector file requires pbxproj edits (see §8), but the pbxproj is plain text and hand-editable.
 - **Determinism/portability decisions baked into the vectors** (so TS `number` and Swift `Double`/`Int64` agree bit-for-bit):
   - All money is integer USD cents.
   - Transaction/filter ids are lowercase UUID strings (`00000000-0000-0000-0000-…`) so the iOS `Transaction` decoder (UUID ids) accepts them; web compares strings and is agnostic.
@@ -137,7 +137,7 @@ After any change to a vectored pure-logic function: regenerate, then run **both*
 - **Regeneration launders bugs.** Because expected values come from the TS implementation, regenerating after an *unintended* TS behavior change bakes the bug into the vectors — the web suite will pass and only the iOS suite will catch it (on macOS, which a Linux sandbox can't run). Treat vector diffs in review as behavior-change diffs.
 - **iOS tests can't run in this (Linux) sandbox.** A change that regenerates vectors is only *half*-verified here; flag that the iOS XCTest run is pending on macOS.
 - **The generator asserts nothing** — it just writes whatever the TS functions return. The safety net is running both suites afterward.
-- **`shared/test-vectors/README.md` is stale for the 3 newer files** (currency, dashboard-month-scope, member-balance) and its "Running the suites" section describes the one-time Xcode setup as if pending — the pbxproj already wires all seven files. `gen-vectors.ts` and `PARITY.md` are more current.
+- **`shared/test-vectors/README.md` documents all eleven vectors** (refreshed in feature 020); the pbxproj wires all eleven files and the one-time Xcode setup is done, not pending. `gen-vectors.ts` and `PARITY.md` remain the most current references.
 - **Adding a new vector file** requires three touchpoints: a section + `writeFileSync` in `web/scripts/gen-vectors.ts`, a `web/test/<name>.parity.test.ts`, and an `iOS/Ortho-iOSTests/<Name>ParityTests.swift` **plus** pbxproj entries (a `PBXFileReference` with `path = "../shared/test-vectors/<file>.json"`, a `PBXBuildFile`, a group entry, and a Resources build-phase entry) — the pbxproj is hand-editable text, so this is doable from a Linux sandbox, and CI validates the result. Adding cases to an *existing* file needs none of the pbxproj work.
 - **Node version**: Vitest 4 needs Node ≥ 20.19 / ≥ 22.12 (`require(ESM)`); older Node fails the web suite even though `tsx` itself may run.
 - Vector transaction `date` strings intentionally sit **mid-month at 12:00Z** (except boundary-specific cases) so no local timezone can re-bucket them.

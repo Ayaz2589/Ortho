@@ -60,7 +60,7 @@ web/
 │   │                           #   PerOwnerBreakdown, TopMerchants, HousingSnapshot, DailySpendTrend,
 │   │                           #   MonthPicker, RangePicker) + range.ts (pure range math, iOS-mirrored)
 │   ├── transactions/           # TransactionRow, TransactionDetailModal/Body, BalanceSummary
-│   ├── housing/                # PropertyCard/Content, Mortgage/Rental/Multifamily cards, Add modals
+│   ├── housing/                # PropertyCard/Content, Mortgage/Rental/Multifamily cards, Add modals + lease.ts/rate.ts/kinds.ts (pure helpers)
 │   ├── budgets/BudgetDrawer.tsx
 │   ├── settings/               # rows, ChoiceRows, HouseholdDrawer, AddCardModal, appearance.ts (THEME_VARS)
 │   └── web/                    # ≥1024px desktop chrome: DashboardDesktop, TransactionsDesktop,
@@ -71,7 +71,9 @@ web/
 │   ├── supabase/client.ts      # createBrowserClient
 │   ├── supabase/server.ts      # createServerClient (cookies)
 │   ├── api/aggregates.ts       # wrappers over Postgres aggregate RPCs (ADDITIVE — not yet wired)
-│   ├── finance/                # pure engines: money.ts, currency.ts, mortgage.ts, insights.ts
+│   ├── flags.ts, test-build.ts # spec 015 test-build feature flags (localStorage-gated, dead-code-eliminated in prod)
+│   ├── testdata/               # spec 015 in-memory seeded Supabase client (test-data mode: seed.ts, memory-client.ts)
+│   ├── finance/                # pure engines: money.ts, currency.ts, mortgage.ts, insights.ts, housing.ts
 │   ├── splits.ts               # split math + orderedOwnerIds (canonical leftover-cent order)
 │   ├── balances.ts             # member settle-up balance (mirrors iOS Balances.swift)
 │   ├── transactionFilters.ts   # filter engine + monthBounds
@@ -83,12 +85,13 @@ web/
 │   │                           #   layout invariant: iOS-seeded block, `— web-only keys —` marker, web-only block
 │   ├── useMediaQuery.ts        # useIsExpanded() = (min-width: 1024px)
 │   ├── useDashboardRange.ts    # persisted range + transient month scope hook
-│   └── useTransactionFilters.ts
+│   ├── useTransactionFilters.ts
+│   └── useFocusTrap.ts         # focus trap + restore for Drawer / WebModal (a11y)
 ├── scripts/
 │   ├── gen-vectors.ts          # regenerates shared/test-vectors/*.json from the TS engines
 │   ├── import/                 # bank-statement import + tx CRUD CLI (engine/, profiles/, db/, cli.ts, tx.ts)
 │   └── maintenance/repair-legacy-dates.ts  # one-shot date repair (make repair-dates, dry-run by default)
-├── test/                       # 67 Vitest files, 731 tests (unit, jsdom component, *.parity.test.ts,
+├── test/                       # 77 Vitest files, 809 tests (unit, jsdom component, *.parity.test.ts,
 │   │                           #   i18n/ catalog + render-locale locks, import/ golden suites + fixtures/,
 │   │                           #   helpers/supabase-mock.ts)
 │   └── setup.ts                # jest-dom matchers + conditional RTL cleanup
@@ -149,7 +152,7 @@ Three tiers, one source of truth (`lib/useMediaQuery.ts`):
 8. `web/app/(app)/dashboard/page.tsx` — the canonical mobile-vs-desktop branching pattern.
 9. `web/components/web/TransactionsDesktop.tsx` — the biggest desktop composition (ledger table + drawer).
 10. `web/components/web/Drawer.tsx` — the shared right-side slide-out master–detail panel.
-11. `web/components/web/TxForm.tsx` — add/edit transaction form incl. splits and transfers (637 lines, the most complex form).
+11. `web/components/web/TxForm.tsx` — add/edit transaction form incl. splits and transfers (839 lines, the most complex form).
 12. `web/lib/splits.ts` — split math + `orderedOwnerIds` (parity-critical).
 13. `web/lib/finance/insights.ts`, `web/lib/finance/mortgage.ts`, and `web/lib/finance/housing.ts` — the vectored engines. `housing.ts` (`occupiedRentCents`/`netRentalCents`) is the single source for the net rental figure shown by both `HousingSnapshotCard`/`DashboardDesktop` and the property-detail `MultifamilyCards` (occupied-only; vacant units contribute zero), vector-locked by `housing-net-rental.json` ↔ iOS `HousingMath` (spec 019). All housing date-only values (lease/payment/closing) parse **local** via `parseLocalDate` in `web/lib/format.ts` — never raw `new Date('YYYY-MM-DD')`, which shifts a day west of UTC.
 14. `web/lib/useDashboardRange.ts` + `web/components/dashboard/range.ts` — dashboard scope (persisted range + transient month).
@@ -170,7 +173,7 @@ npm install
 npm run dev              # http://localhost:3000
 npm run build            # next build
 npm start                # next start (after build)
-npm test                 # vitest run — 67 files / 731 tests (verified green, 2026-07-04)
+npm test                 # vitest run — 77 files / 809 tests (verified green, 2026-07-07)
 npm run test:coverage    # v8 coverage, thresholds enforced (see vitest.config.ts)
 npm run gen:vectors      # regenerate shared/test-vectors/ from the TS engines
 npx tsc --noEmit         # typecheck (part of the web CI gate)

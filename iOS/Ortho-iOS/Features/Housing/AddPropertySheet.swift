@@ -243,7 +243,7 @@ struct AddPropertySheet: View {
         case .primaryHome:
             return "Monthly principal + interest is computed from the loan amount, rate, and term. Taxes and insurance aren't tracked yet."
         case .multifamily:
-            return "Add each unit's rent and tenant. Net balance is total unit rent minus the mortgage payment."
+            return "Add each unit's rent and tenant. Net balance is occupied unit rent minus the mortgage payment."
         case .rental:
             return "Rent reminders use the day of the month from your lease start date."
         }
@@ -494,7 +494,53 @@ struct AddPropertySheet: View {
             }
             .padding(.horizontal, 16)
             .frame(minHeight: 52)
+
+            divider
+
+            // Explicit occupancy (spec 020). Vacancy is a deliberate state, not
+            // merely "no tenant name" — only occupied units' rent counts toward
+            // net rental income.
+            HStack(spacing: 8) {
+                occupancySegment(title: "Occupied",
+                                 isSelected: units[index].occupied) {
+                    units[index].occupied = true
+                }
+                occupancySegment(title: "Vacant",
+                                 isSelected: !units[index].occupied) {
+                    units[index].occupied = false
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .frame(minHeight: 52)
         }
+    }
+
+    /// One segment of the Occupied/Vacant control. Tokens-only (AppTheme) with a
+    /// ≥44pt hit target.
+    private func occupancySegment(title: LocalizedStringKey,
+                                  isSelected: Bool,
+                                  action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.lato(size: 15, weight: .medium))
+                .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.text.opacity(0.58))
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(isSelected ? AppTheme.accent.opacity(0.12)
+                                         : AppTheme.text.opacity(0.05))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(isSelected ? AppTheme.accent.opacity(0.5) : .clear,
+                                      lineWidth: 1)
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
     private var addUnitRow: some View {

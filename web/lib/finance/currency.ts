@@ -9,7 +9,7 @@ export const CURRENCIES: CurrencyKey[] = ['usd', 'cad', 'gbp', 'eur', 'jpy', 'cn
 export const CURRENCY_NAMES: Record<CurrencyKey, string> = {
   usd: 'US Dollar',
   cad: 'Canadian Dollar',
-  gbp: 'British Pound',
+  gbp: 'UK Pound',
   eur: 'Euro',
   jpy: 'Japanese Yen',
   cny: 'Chinese Yuan',

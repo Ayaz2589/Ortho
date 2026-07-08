@@ -16,6 +16,10 @@ export function txRecord(tx: Transaction) {
     source: tx.source,
     date: tx.date,
     created_by: tx.created_by,
+    // Who fronted the money — required for settle-up (balanceBetween drops an
+    // expense with no payer). The web store writes this; the CLI must too, or
+    // imported expenses silently fall out of the reimbursement balance.
+    paid_by: tx.paid_by ?? null,
   }
 }
 

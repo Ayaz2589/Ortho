@@ -214,8 +214,8 @@ expenses and income.
 | `households` | `id`, `owner_id`, `name`, `created_at` |
 | `household_members` | `household_id`, `user_id`, `role` (`owner` \| `admin` \| `member`), `created_at` |
 | `pending_invites` | `id`, `household_id`, `email` (nullable), `role`, `token_hash`, `expires_at`, `created_by` |
-| `transactions` | `id`, `household_id`, `amount_cents`, `kind` (`expense` \| `income`), `scope` (`personal` \| `shared`), `created_by`, `created_at`, `updated_at` |
-| `transaction_shares` | `transaction_id`, `user_id`, `percent`. **Ortho users only** — local splits stay on the device. |
+| `transactions` | `id`, `household_id`, `amount_cents`, `kind` (`expense` \| `income` \| `transfer`), `paid_by`, `created_by`, `created_at`, `updated_at` (no `scope` column) |
+| `transaction_shares` | `transaction_id`, `person_id`, `amount_cents`. One cents-share per household person (the values sum to the transaction total); keyed by person, not user, since owners are `household_people`. |
 
 ### Roles and permissions
 

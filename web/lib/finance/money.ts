@@ -4,7 +4,7 @@ const CURRENCY_CONFIG = {
   gbp: { code: 'GBP', symbol: '£', fractionDigits: 2 },
   eur: { code: 'EUR', symbol: '€', fractionDigits: 2 },
   jpy: { code: 'JPY', symbol: '¥', fractionDigits: 0 },
-  cny: { code: 'CNY', symbol: '¥', fractionDigits: 2 },
+  cny: { code: 'CNY', symbol: 'CN¥', fractionDigits: 2 },
   bdt: { code: 'BDT', symbol: '৳', fractionDigits: 2 },
 } as const
 
@@ -84,7 +84,9 @@ export function toUSDCents(
   // fromCurrency is accepted for symmetry with toDisplayAmount; the cents math
   // is currency-agnostic (storage is always USD cents).
   void fromCurrency
-  const usdAmount = rate === 0 ? 0 : displayAmount / rate
+  // Guard rate <= 0 (matches iOS `guard rate > 0`): a zero or negative rate has
+  // no meaningful inverse, so return 0 rather than Infinity/a negative.
+  const usdAmount = rate <= 0 ? 0 : displayAmount / rate
   return roundHalfAwayFromZero(usdAmount * 100)
 }
 

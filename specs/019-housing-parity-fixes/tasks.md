@@ -142,8 +142,8 @@ property detail; the shared vector asserts identical values on web and iOS.
 
 - [x] T024 From `web/`: run `npm test` and `npx tsc --noEmit` — full suite green, `lib/` coverage at threshold, and `git diff shared/test-vectors/` shows only the new `housing-net-rental.json` (SC-005).
 - [x] T025 [P] Reconcile documentation with the fixed behavior: `docs/shared.md` (the date-parse invariant now truly holds for lease/payment/closing dates — remove the overstated wording, note lease dates), `PARITY.md` (add a housing-net-rental vector row + note the resolved net-rental divergence and the restored lease-date parity), `docs/web.md` and `docs/ios.md` (Housing sections: local-date parsing, occupied-only net, deliberate vacancy).
-- [ ] T026 Push `019-housing-parity-fixes`; `GH_TOKEN=placeholder gh run watch <id> --exit-status` the iOS CI; if a "new vector fails only on CI" error appears, fix the pbxproj Copy-Bundle entry (T016). Inspect the uploaded simulator screenshots for the Housing tab.
-- [ ] T027 Update this tasks.md ledger (check off completed tasks; record any deviations from plan/research as a short "Deviations" list), and run `/speckit-analyze` for a cross-artifact consistency pass before opening the PR.
+- [x] T026 Push `019-housing-parity-fixes`; `GH_TOKEN=placeholder gh run watch <id> --exit-status` the iOS CI; if a "new vector fails only on CI" error appears, fix the pbxproj Copy-Bundle entry (T016). Inspect the uploaded simulator screenshots for the Housing tab.
+- [x] T027 Update this tasks.md ledger (check off completed tasks; record any deviations from plan/research as a short "Deviations" list), and run `/speckit-analyze` for a cross-artifact consistency pass before opening the PR.
 
 ---
 

@@ -42,10 +42,10 @@ enum Lenient<T: RawRepresentable & Codable>: Codable where T.RawValue == String 
 ///
 /// The Swift `Transaction` collapses two tables into one value, so the API
 /// glues them: on read it joins shares back onto rows; on write it splits
-/// a Transaction into the parent row + N share rows. For `.shared` scope a
-/// share row is materialized per owner (with the explicit or derived
-/// percent). For `.personal` scope no share rows are written — the owner is
-/// implicit via `created_by`.
+/// a Transaction into the parent row + N share rows. There is no scope column
+/// — a `transaction_shares` row is materialized unconditionally for every
+/// owner, carrying that owner's cents (`amount_cents`) keyed by `person_id`;
+/// the per-owner amounts sum to the transaction's total.
 struct TransactionsAPI {
     private let client: SupabaseClient
 
@@ -82,12 +82,14 @@ struct TransactionsAPI {
 
     // MARK: - Write
 
-    /// Insert a new transaction. For `.shared` scope, materializes one share
-    /// row per owner. The two inserts are sequential; if the shares insert
-    /// fails after the parent succeeded, we delete the just-inserted parent
-    /// before rethrowing so we never leave an orphaned, share-less row (which
-    /// rehydrate would misread as "creator owns the full amount"). v2 work
-    /// could wrap this in a `create_transaction_with_shares` RPC for atomicity.
+    /// Insert a new transaction. Materializes one `transaction_shares` row per
+    /// owner (unconditional — there is no scope column), each carrying that
+    /// owner's `amount_cents` keyed by `person_id`. The two inserts are
+    /// sequential; if the shares insert fails after the parent succeeded, we
+    /// delete the just-inserted parent before rethrowing so we never leave an
+    /// orphaned, share-less row (which rehydrate would misread as "creator owns
+    /// the full amount"). v2 work could wrap this in a
+    /// `create_transaction_with_shares` RPC for atomicity.
     func create(_ tx: Transaction) async throws {
         let row = TransactionRecord.from(tx)
         try await client

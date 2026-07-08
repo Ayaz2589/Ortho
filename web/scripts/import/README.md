@@ -65,7 +65,7 @@ Manage transactions directly (spec 005). Same OTP / `ADMIN=1` auth as `ingest`.
 
 ```bash
 make tx-list [MONTH=YYYY-MM] [QUERY=text] [CATEGORY=a,b] [SOURCE=a,b] [OWNER=name] [KIND=expense|income|transfer] [LIMIT=N]
-make tx-add  MERCHANT='Corner Coffee' AMOUNT='4.50' [DATE=YYYY-MM-DD] [CATEGORY=…] [KIND=…] [SCOPE=…] [SOURCE='…']
+make tx-add  MERCHANT='Corner Coffee' AMOUNT='4.50' [DATE=YYYY-MM-DD] [CATEGORY=…] [KIND=…] [SOURCE='…']
 make tx-edit ID=<uuid>
 make tx-rm   ID=<uuid> [DRY_RUN=1]
 ```
@@ -77,8 +77,8 @@ make tx-rm   ID=<uuid> [DRY_RUN=1]
   (OR within a dimension), OWNER by household-person name, KIND incl.
   transfer. Scope is the whole household, like the apps. If the fetch hits
   LIMIT (default 200) the truncation is printed — never silent.
-- **tx-add** — validates like the web form (amount > 0, merchant non-empty, valid category); personal by default, `SCOPE=shared` prompts for owners + split; confirm before write.
-- **tx-edit** — shows current values, edits field-by-field (incl. personal↔shared), confirm to save.
+- **tx-add** — validates like the web form (amount > 0, merchant non-empty, valid category); prompts for owners + split when the household has 2+ people (every transaction is household-scoped); confirm before write.
+- **tx-edit** — shows current values, edits field-by-field, confirm to save (a stored custom split is preserved).
 - **tx-rm** — shows the row, `DRY_RUN=1` previews; otherwise `y/N` confirm; shares cascade.
 
 Listing is household-wide in sign-in mode (RLS still bounds you to your own
@@ -93,7 +93,7 @@ See [spec 005](../../../specs/005-transaction-crud-cli/) and its [`contracts/cli
 ```
 engine/    pure logic: readInput, extractText, csv, detectBank, money, dates,
            categorize, exclusions, reconcile, split, dedupe, toTransaction,
-           filters, validate, render, args, types
+           filters, validate, render, args, ownerMatch, types
 profiles/  per-bank profiles (td-bank.ts, apple-card.ts, amex-gold.ts PDF; chase-csv.ts CSV) + registry
 db/        client (sign-in / admin), lookups, persist, transactions (CRUD)
 cli.ts     ingest orchestration + interactive review

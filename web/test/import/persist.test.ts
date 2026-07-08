@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { txRecord, shareRows, persist } from '../../scripts/import/db/persist'
+import { balanceBetween } from '../../lib/balances'
 import type { Transaction } from '../../lib/types'
 
 const single: Transaction = {
@@ -25,7 +26,7 @@ const multi: Transaction = {
 }
 
 describe('txRecord', () => {
-  it('emits exactly the web store insert shape (no owner_ids/shares/scope)', () => {
+  it('emits exactly the web store insert shape (incl. paid_by; no owner_ids/shares/scope)', () => {
     expect(txRecord(single)).toEqual({
       id: 't1',
       household_id: 'h1',
@@ -36,7 +37,13 @@ describe('txRecord', () => {
       source: 'TD Bank',
       date: '2026-05-04T12:00:00.000Z',
       created_by: 'u1',
+      // paid_by is part of the store's insert shape; a payer-less row writes null.
+      paid_by: null,
     })
+  })
+
+  it('persists paid_by when the imported transaction has a payer', () => {
+    expect(txRecord({ ...single, paid_by: 'u1' })).toMatchObject({ paid_by: 'u1' })
   })
 })
 
@@ -123,5 +130,21 @@ describe('persist — compensation on shares failure (013/US5)', () => {
     const { supabase, calls } = mockQueue([ok, ok])
     await expect(persist(supabase, [multi])).resolves.toBe(1)
     expect(calls.find((c) => c[0] === 'delete')).toBeUndefined()
+  })
+})
+
+// --- Spec 020: paid_by must survive the import so settle-up counts CLI rows. ---
+describe('paid_by → settle-up correctness', () => {
+  const expense: Transaction = {
+    ...multi, id: 't3', paid_by: 'u1', amount_cents: 10000,
+    owner_ids: ['u1', 'u2'], shares: { u1: 6000, u2: 4000 },
+  }
+  it('an imported expense with a payer is counted in balanceBetween (u2 owes u1)', () => {
+    expect(txRecord(expense).paid_by).toBe('u1')
+    expect(balanceBetween('u1', 'u2', [expense])).toBe(4000)
+  })
+  it('regression: a payer-less expense is silently dropped from settle-up', () => {
+    const { paid_by: _omit, ...noPayer } = expense
+    expect(balanceBetween('u1', 'u2', [noPayer as Transaction])).toBe(0)
   })
 })
