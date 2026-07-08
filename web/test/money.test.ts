@@ -144,7 +144,7 @@ describe('CURRENCY_CONFIG', () => {
     ['gbp', 'GBP', '£', 2],
     ['eur', 'EUR', '€', 2],
     ['jpy', 'JPY', '¥', 0],
-    ['cny', 'CNY', '¥', 2],
+    ['cny', 'CNY', 'CN¥', 2],
     ['bdt', 'BDT', '৳', 2],
   ])('%s has shape { code, symbol, fractionDigits }', (key, code, symbol, digits) => {
     const config = CURRENCY_CONFIG[key]

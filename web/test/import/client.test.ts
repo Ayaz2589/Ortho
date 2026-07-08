@@ -49,16 +49,16 @@ describe('makeClient — email OTP sign-in', () => {
 })
 
 describe('makeClient — admin (service role)', () => {
-  it('uses the service-role key and the given user id', async () => {
+  it('uses the service-role key; admin attribution is resolved by the CLI (empty userId)', async () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://x.supabase.co'
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'svc-real'
-    const c = await makeClient({ admin: true, asUserId: 'u1' })
-    expect(c.userId).toBe('u1')
+    const c = await makeClient({ admin: true })
+    expect(c.userId).toBe('')
   })
   it('rejects a placeholder service key', async () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://x.supabase.co'
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'YOUR_SERVICE_ROLE_KEY_HERE'
-    await expect(makeClient({ admin: true, asUserId: 'u1' })).rejects.toThrow(/SERVICE_ROLE_KEY/)
+    await expect(makeClient({ admin: true })).rejects.toThrow(/SERVICE_ROLE_KEY/)
   })
 })
 

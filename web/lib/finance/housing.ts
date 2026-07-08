@@ -35,7 +35,13 @@ export function netRentalCents(units: RentUnit[], mortgagePaymentCents: number):
  *  the pure math above consumes. Structural input so this stays free of app types
  *  (and safe for the vector generator). Every surface uses this one mapping. */
 export function rentUnitsFrom(
-  units: ReadonlyArray<{ monthly_rent_cents: number; tenant_name: string | null }>
+  units: ReadonlyArray<{ monthly_rent_cents: number; tenant_name: string | null; occupied?: boolean }>
 ): RentUnit[] {
-  return units.map((u) => ({ rentCents: u.monthly_rent_cents, occupied: isUnitOccupied(u.tenant_name) }))
+  return units.map((u) => ({
+    rentCents: u.monthly_rent_cents,
+    // Explicit occupancy when present (spec 020 US4); fall back to tenant-name
+    // inference for rows not yet migrated to the `occupied` column. `?? ` keeps
+    // an explicit `false` (a deliberately-vacant unit), only undefined falls back.
+    occupied: u.occupied ?? isUnitOccupied(u.tenant_name),
+  }))
 }

@@ -103,8 +103,12 @@ struct Property: Identifiable, Hashable, Codable {
 
 extension Property {
     /// Units mapped to the resolved-occupancy shape the shared math consumes.
+    /// Occupancy is sourced from the explicit `unit.occupied` flag (spec 020) —
+    /// which itself falls back to tenant-name inference at decode time for
+    /// pre-migration rows — NOT recomputed from the tenant name here. Mirrors
+    /// web `rentUnitsFrom`.
     private var rentUnits: [HousingMath.RentUnit] {
-        units.map { HousingMath.RentUnit(rentCents: $0.monthlyRent, occupied: !$0.isVacant) }
+        units.map { HousingMath.RentUnit(rentCents: $0.monthlyRent, occupied: $0.occupied) }
     }
 
     /// Sum of configured rents for **occupied** units only. Vacant units

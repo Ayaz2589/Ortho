@@ -12,6 +12,7 @@ import {
 import { Drawer, DrawerHeader } from '@/components/web/Drawer'
 import { TextInput, MoneyInput, parseMoney, DatePicker } from '@/components/inputs'
 import { fractionDigits } from '@/lib/finance/currency'
+import { isUnitOccupied } from '@/lib/finance/housing'
 import type {
   Property,
   PropertyKind,
@@ -53,6 +54,7 @@ interface DraftUnit {
   name: string
   rent: string // display-currency string
   tenant: string
+  occupied: boolean
 }
 
 export function AddPropertyModal({
@@ -116,6 +118,7 @@ export function AddPropertyModal({
           name: u.name,
           rent: centsToDisplay(u.monthly_rent_cents, currency, r),
           tenant: u.tenant_name ?? '',
+          occupied: u.occupied ?? isUnitOccupied(u.tenant_name),
         }))
       )
     } else {
@@ -196,6 +199,7 @@ export function AddPropertyModal({
         tenant_name: u.tenant === '' ? null : u.tenant,
         tenant_email: null,
         sort_order: i,
+        occupied: u.occupied,
       }))
     }
 
@@ -230,13 +234,13 @@ export function AddPropertyModal({
     kind === 'primary_home'
       ? t("Monthly principal + interest is computed from the loan amount, rate, and term. Taxes and insurance aren't tracked yet.")
       : kind === 'multifamily'
-        ? t("Add each unit's rent and tenant. Net balance is total unit rent minus the mortgage payment.")
+        ? t("Add each unit's rent and tenant. Net balance is occupied unit rent minus the mortgage payment.")
         : t('Rent reminders use the day of the month from your lease start date.')
 
   const addUnit = () =>
     setUnits((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), name: `Unit ${prev.length + 1}`, rent: '', tenant: '' },
+      { id: crypto.randomUUID(), name: `Unit ${prev.length + 1}`, rent: '', tenant: '', occupied: true },
     ])
   const removeUnit = (id: string) => setUnits((prev) => prev.filter((u) => u.id !== id))
   const patchUnit = (id: string, patch: Partial<DraftUnit>) =>
@@ -365,6 +369,20 @@ export function AddPropertyModal({
                       onChange={(e) => patchUnit(u.id, { tenant: e.target.value })}
                       placeholder={t('Optional')}
                     />
+                  </FieldRow>
+                  <FieldRow label={t('Occupancy')}>
+                    <div className="relative flex items-center gap-1">
+                      <select
+                        value={u.occupied ? 'occupied' : 'vacant'}
+                        onChange={(e) => patchUnit(u.id, { occupied: e.target.value === 'occupied' })}
+                        aria-label={t('Occupancy')}
+                        className="appearance-none bg-transparent pr-5 text-right text-[15px] font-normal text-text outline-none"
+                      >
+                        <option value="occupied">{t('Occupied')}</option>
+                        <option value="vacant">{t('Vacant')}</option>
+                      </select>
+                      <ChevronDown size={14} className="pointer-events-none absolute right-0 text-text-3" />
+                    </div>
                   </FieldRow>
                 </div>
               ))}

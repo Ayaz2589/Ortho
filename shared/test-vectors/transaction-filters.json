@@ -188,6 +188,98 @@
       ]
     },
     {
+      "name": "search merchant trailing newline (trimmed)",
+      "transactions": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "household_id": "00000000-0000-0000-0000-000000000201",
+          "merchant": "Bistro",
+          "category": "dining",
+          "kind": "expense",
+          "amount_cents": 0,
+          "source": "Amex Gold",
+          "date": "2026-05-04T12:00:00.000Z",
+          "created_by": "00000000-0000-0000-0000-000000000999",
+          "created_at": "",
+          "updated_at": "",
+          "owner_ids": [
+            "00000000-0000-0000-0000-000000000101"
+          ],
+          "shares": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "household_id": "00000000-0000-0000-0000-000000000201",
+          "merchant": "Blue Bottle",
+          "category": "coffee",
+          "kind": "expense",
+          "amount_cents": 0,
+          "source": "TD Bank",
+          "date": "2026-05-10T12:00:00.000Z",
+          "created_by": "00000000-0000-0000-0000-000000000999",
+          "created_at": "",
+          "updated_at": "",
+          "owner_ids": [
+            "00000000-0000-0000-0000-000000000101"
+          ],
+          "shares": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000003",
+          "household_id": "00000000-0000-0000-0000-000000000201",
+          "merchant": "Payroll",
+          "category": "income",
+          "kind": "income",
+          "amount_cents": 0,
+          "source": "TD Bank",
+          "date": "2026-06-01T12:00:00.000Z",
+          "created_by": "00000000-0000-0000-0000-000000000999",
+          "created_at": "",
+          "updated_at": "",
+          "owner_ids": [
+            "00000000-0000-0000-0000-000000000102"
+          ],
+          "shares": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000004",
+          "household_id": "00000000-0000-0000-0000-000000000201",
+          "merchant": "Whole Foods",
+          "category": "groceries",
+          "kind": "expense",
+          "amount_cents": 0,
+          "source": "Chase",
+          "date": "2026-04-20T12:00:00.000Z",
+          "created_by": "00000000-0000-0000-0000-000000000999",
+          "created_at": "",
+          "updated_at": "",
+          "owner_ids": [
+            "00000000-0000-0000-0000-000000000101",
+            "00000000-0000-0000-0000-000000000102"
+          ],
+          "shares": {}
+        }
+      ],
+      "context": {
+        "ownerNames": {
+          "00000000-0000-0000-0000-000000000101": "Ayaz",
+          "00000000-0000-0000-0000-000000000102": "Tasnuva"
+        }
+      },
+      "criteria": {
+        "query": "bistro\n",
+        "categories": [],
+        "kind": "all",
+        "sources": [],
+        "owners": [],
+        "dateFrom": null,
+        "dateTo": null
+      },
+      "expectedIds": [
+        "00000000-0000-0000-0000-000000000001"
+      ]
+    },
+    {
       "name": "search source",
       "transactions": [
         {

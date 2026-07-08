@@ -131,6 +131,11 @@ export interface Unit {
   tenant_name: string | null
   tenant_email: string | null
   sort_order: number
+  /** Explicit occupancy (spec 020). Optional so rows not yet migrated to the
+   *  `occupied` column keep working — consumers fall back to tenant-name
+   *  inference (`isUnitOccupied`) when it is absent. Only occupied units'
+   *  rent counts toward net rental income. */
+  occupied?: boolean
 }
 
 export interface RentalPayment {

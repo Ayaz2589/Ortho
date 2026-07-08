@@ -47,7 +47,7 @@ Three surfaces, one backend:
 desktop/responsive canvas — never a redesign.** Because the pure finance logic (money/currency,
 splits, balances, filters, insights, mortgage, dashboard month scope) is implemented twice — once
 in TypeScript (`web/lib/*`, `web/components/dashboard/range.ts`) and once in Swift (mirrored files
-in `iOS/Ortho-iOS/`) — seven **golden test vectors** in `shared/test-vectors/` pin both sides:
+in `iOS/Ortho-iOS/`) — eleven **golden test vectors** in `shared/test-vectors/` pin both sides:
 web *generates* them from the TS engines, and both the web Vitest parity suites and the iOS XCTest
 parity suites *assert* the same JSON files, so neither language can silently drift.
 
@@ -74,7 +74,7 @@ shared TS functions but is deliberately **outside** the golden-vector harness.
 2. **Read `PARITY.md`** — the parity matrix and divergences; you will need it before touching any
    shared logic.
 3. **Read the root `CLAUDE.md`** — it points at the active feature plan (currently
-   `specs/014-receipt-statement-scan/plan.md`) and session-continuity notes
+   `specs/020-drift-reconciliation/plan.md`) and session-continuity notes
    (`.claude/context-summaries/latest.md` if it exists).
 4. **Skim `.specify/memory/constitution.md`** — the design/testing constitution every plan gates
    on (tokens-only design, calm-over-dense, loss never red, test-first with golden vectors).
@@ -87,7 +87,7 @@ shared TS functions but is deliberately **outside** the golden-vector harness.
    a golden-vector-drift check on any `web/**` or `shared/test-vectors/**` change.
 6. **Set up web**: `cd web && npm install && npm test` (Node 22 per root `.nvmrc`; on Linux ARM
    you may need `@rolldown/binding-linux-arm64-gnu` since macOS-installed `node_modules` lacks
-   Linux bindings). Expect the full suite green (731 tests as of 2026-07-04). Run `npx tsc --noEmit`
+   Linux bindings). Expect the full suite green (809 tests as of 2026-07-07). Run `npx tsc --noEmit`
    too — it is part of the web CI gate.
 7. **Check env/credentials**: `web/.env.local` (gitignored) needs `NEXT_PUBLIC_SUPABASE_URL` +
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`; iOS needs the gitignored

@@ -3308,7 +3308,7 @@
         }
       }
     },
-    "Add each unit's rent and tenant. Net balance is total unit rent minus the mortgage payment." : {
+    "Add each unit's rent and tenant. Net balance is occupied unit rent minus the mortgage payment." : {
       "extractionState" : "manual",
       "localizations" : {
         "bn" : {
@@ -3320,7 +3320,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add each unit's rent and tenant. Net balance is total unit rent minus the mortgage payment."
+            "value" : "Add each unit's rent and tenant. Net balance is occupied unit rent minus the mortgage payment."
           }
         },
         "es" : {
@@ -10889,6 +10889,47 @@
         }
       }
     },
+    "Occupied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "দখলকৃত"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Occupied"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ocupada"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "入居中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "입주"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已入住"
+          }
+        }
+      }
+    },
     "One-shot seed from bundled JSON" : {
       "shouldTranslate" : false
     },
@@ -14946,6 +14987,47 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "水电费"
+          }
+        }
+      }
+    },
+    "Vacant" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "খালি"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vacant"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vacante"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空室"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공실"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空置"
           }
         }
       }

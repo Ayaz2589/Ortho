@@ -1,5 +1,16 @@
 # Ortho — Architecture
 
+> ⚠️ **ARCHIVED — historical (pre-Supabase prototype).** This document describes
+> the original local-only, sample-data prototype and is kept for its design
+> rationale (design system, tab bar, dual-mode sheets, USD-cents choice) only.
+> Its data-layer and ownership sections are **out of date**: there is no
+> `scope`/`personal` transaction (dropped in the household-people migration),
+> ownership is `Set<Person.ID>` materialized from `transaction_shares` (not
+> `Set<User.ID>`), shares are per-person integer `amount_cents` (not
+> `[User.ID: Decimal]` percentages), and all data lives in Supabase behind email
+> OTP auth. For the current architecture read **`docs/ios.md`**, **`docs/supabase.md`**,
+> **`PARITY.md`**, and the source. Do not treat anything below as current truth.
+
 Ortho is a household budgeting iOS app. Members of a household share
 expenses and income, attribute each transaction to one or more household
 members, and (for multi-owner expenses) split the amount by percentage.

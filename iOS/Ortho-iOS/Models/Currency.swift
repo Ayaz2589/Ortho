@@ -9,9 +9,26 @@ enum Currency: String, CaseIterable, Identifiable, Hashable, Codable {
 
     var id: String { rawValue }
 
-    /// ISO 4217 code — used as `NumberFormatter.currencyCode` for symbol +
-    /// grouping + fraction digits per locale.
+    /// ISO 4217 code — used as `NumberFormatter.currencyCode` for grouping +
+    /// fraction digits per locale.
     var code: String { rawValue.uppercased() }
+
+    /// The currency's display symbol. A FIXED table (NOT locale-derived) so it
+    /// is byte-identical to web `CURRENCY_CONFIG[...].symbol` and never drifts
+    /// with the device locale — in particular CNY stays "CN¥" (disambiguated
+    /// from JPY "¥") instead of collapsing to a locale-chosen "¥".
+    /// Locked by `shared/test-vectors/currency-symbols.json`.
+    var symbol: String {
+        switch self {
+        case .usd: "$"
+        case .cad: "CA$"
+        case .gbp: "£"
+        case .eur: "€"
+        case .jpy: "¥"
+        case .cny: "CN¥"
+        case .bdt: "৳"
+        }
+    }
 
     var displayName: LocalizedStringResource {
         switch self {
