@@ -47,7 +47,7 @@ Three surfaces, one backend:
 desktop/responsive canvas — never a redesign.** Because the pure finance logic (money/currency,
 splits, balances, filters, insights, mortgage, dashboard month scope) is implemented twice — once
 in TypeScript (`web/lib/*`, `web/components/dashboard/range.ts`) and once in Swift (mirrored files
-in `iOS/Ortho-iOS/`) — seven **golden test vectors** in `shared/test-vectors/` pin both sides:
+in `iOS/Ortho-iOS/`) — eleven **golden test vectors** in `shared/test-vectors/` pin both sides:
 web *generates* them from the TS engines, and both the web Vitest parity suites and the iOS XCTest
 parity suites *assert* the same JSON files, so neither language can silently drift.
 
@@ -97,7 +97,7 @@ drift test that runs in web CI. Never edit the copy — edit `services/billing` 
    (including the `_shared/` drift lock).
 6. **Set up web**: `cd web && npm install && npm test` (Node 22 per root `.nvmrc`; on Linux ARM
    you may need `@rolldown/binding-linux-arm64-gnu` since macOS-installed `node_modules` lacks
-   Linux bindings). Expect the full suite green (790 tests as of 2026-07-05). Run `npx tsc --noEmit`
+   Linux bindings). Expect the full suite green (873 tests as of 2026-07-08). Run `npx tsc --noEmit`
    too — it is part of the web CI gate.
 7. **Check env/credentials**: `web/.env.local` (gitignored) needs `NEXT_PUBLIC_SUPABASE_URL` +
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`; iOS needs the gitignored

@@ -27,7 +27,9 @@ struct FilterContext {
 
 /// Subset of `txs` passing ALL dimensions (OR within a multi-select). Order preserved.
 func filterTransactions(_ txs: [Transaction], _ c: FilterCriteria, _ ctx: FilterContext) -> [Transaction] {
-    let q = c.query.trimmingCharacters(in: .whitespaces).lowercased()
+    // `.whitespacesAndNewlines` matches JS `String.prototype.trim()` (which also
+    // strips newlines) so a trailing "\n" in the query behaves identically.
+    let q = c.query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     return txs.filter { tx in
         // search
         if !q.isEmpty {
@@ -59,7 +61,7 @@ func filterTransactions(_ txs: [Transaction], _ c: FilterCriteria, _ ctx: Filter
 /// Count of non-default dimensions (for the "N filters active" badge).
 func activeFilterCount(_ c: FilterCriteria) -> Int {
     var n = 0
-    if !c.query.trimmingCharacters(in: .whitespaces).isEmpty { n += 1 }
+    if !c.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { n += 1 }
     if !c.categories.isEmpty { n += 1 }
     if c.kind != .all { n += 1 }
     if !c.sources.isEmpty { n += 1 }
@@ -72,16 +74,33 @@ func activeFilterCount(_ c: FilterCriteria) -> Int {
 func availableSources(_ txs: [Transaction]) -> [String] {
     var set = Set<String>()
     for tx in txs {
-        let s = tx.source.trimmingCharacters(in: .whitespaces)
+        let s = tx.source.trimmingCharacters(in: .whitespacesAndNewlines)
         if !s.isEmpty { set.insert(s) }
     }
-    return set.sorted()
+    // Localized, case-insensitive order — mirrors web `a.localeCompare(b)` (a
+    // locale-aware collation), NOT Swift's default Unicode code-point `sorted()`.
+    return set.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
 }
 
 /// "2026-05" → half-open UTC month window. Timezone-stable (matches the TS).
+///
+/// Input is validated STRICTLY against `^\d{4}-\d{2}$`: "2026-5", "26-5",
+/// "2026-005", and "2026--5" are all rejected (exactly like web's regex).
+/// Web THROWS `INVALID_MONTH` on a bad string; every Swift call site here uses
+/// `if let (from, to) = monthBounds(...)`, so the mirrored strictness surfaces
+/// as the documented safe failure `nil` (a bad month yields no window) rather
+/// than a trap.
 func monthBounds(_ yyyymm: String) -> (dateFrom: Date, dateTo: Date)? {
-    let parts = yyyymm.split(separator: "-")
-    guard parts.count == 2, let y = Int(parts[0]), let mo = Int(parts[1]), (1...12).contains(mo) else { return nil }
+    // Strict shape: 4 ASCII digits, '-', 2 ASCII digits. `split` is too lenient
+    // (it drops empty fields), so validate the exact layout character by character.
+    let chars = Array(yyyymm)
+    func isDigit(_ c: Character) -> Bool { c.isASCII && c.isNumber }
+    guard chars.count == 7, chars[4] == "-",
+          isDigit(chars[0]), isDigit(chars[1]), isDigit(chars[2]), isDigit(chars[3]),
+          isDigit(chars[5]), isDigit(chars[6]),
+          let y = Int(String(chars[0...3])),
+          let mo = Int(String(chars[5...6])),
+          (1...12).contains(mo) else { return nil }
     var cal = Calendar(identifier: .gregorian)
     cal.timeZone = TimeZone(identifier: "UTC")!
     guard let from = cal.date(from: DateComponents(year: y, month: mo, day: 1)),

@@ -54,6 +54,7 @@ iOS/
 │   │   │   ├── ScanInference.swift      # history-first category/owners guesses + duplicate claiming
 │   │   │   └── ScanRefiner.swift        # optional FoundationModels merchant cleanup (availability-gated)
 │   │   └── LegacyImporter.swift, TDBankMay2026Importer.swift   # DEBUG-only one-shot seeders
+│   ├── Config/                      # spec 015 test-build gating: FeatureFlags.swift, TestBuild.swift
 │   ├── DesignSystem/
 │   │   ├── AppTheme.swift           # color tokens (bg/surface/text/text2/text3/hairline/accent/positive/destructive)
 │   │   ├── AppFont.swift            # Lato; size-driven weight (≥24pt → Light, else Regular); Font.lato(size:)
@@ -74,7 +75,7 @@ iOS/
 │   │   │   ├── TransactionSplits.swift      # vector-locked split math (spec 007) — mirror of web/lib/splits.ts
 │   │   │   ├── TransactionFilters.swift     # vector-locked filtering (spec 006) — mirror of web/lib/transactionFilters.ts
 │   │   │   └── Scan/                        # spec 014 — scan UI: ScanSession state machine, the custom AVFoundation scan
-│   │   │                                    # camera (`ScanCameraView`), statement interstitial + summary (wizard chrome lives
+│   │   │                                    # camera (`ScanCameraView`, in `ScanCaptureView.swift`), statement interstitial + summary (wizard chrome lives
 │   │   │                                    # in AddTransactionSheet as its fourth prefill source)
 │   │   ├── Housing/                         # HousingView (count-aware), PropertyDetail/Content, Add sheets,
 │   │   │                                    # MortgageCards, MultifamilyCards, RentalCards
@@ -84,10 +85,11 @@ iOS/
 │   ├── Localizable.xcstrings        # string catalog, fully translated for en/bn/es/ja/zh/ko (coverage locked by a web Vitest suite)
 │   ├── Fonts/                       # Lato-Light/Regular/Bold/Black.ttf
 │   └── Resources/legacy-import.json # GITIGNORED personal data for DEBUG LegacyImporter
-├── Ortho-iOSTests/                  # 7 parity suites asserting shared/test-vectors/*.json
-│   ├── CurrencyParityTests.swift, TransactionSplitParityTests.swift, TransactionFilterParityTests.swift,
-│   ├── InsightParityTests.swift, MortgageParityTests.swift, MemberBalanceParityTests.swift,
-│   └── DashboardScopeParityTests.swift
+├── Ortho-iOSTests/                  # 13 files: 11 golden-vector parity suites + FeatureFlags + ScanParser
+│   ├── CurrencyParityTests, CurrencyNameParityTests, CurrencySymbolParityTests, TransactionSplitParityTests,
+│   ├── TransactionFilterParityTests, InsightParityTests, MortgageParityTests, MemberBalanceParityTests,
+│   ├── DashboardScopeParityTests, HousingNetRentalParityTests, LeaseParityTests,   # ← 11 vector suites
+│   └── FeatureFlagsTests.swift, ScanParserTests.swift                              # spec 015 / spec 014
 ├── build/, build-device/, temp/     # local build artifacts + scratch (gitignored)
 └── .claude/settings.json            # allows Bash(xcodebuild *)
 ```
@@ -102,7 +104,7 @@ iOS/
 
 ### State: one `@Observable` store
 
-`App/AppState.swift` (~1,260 lines) is the single source of truth. Views read it via `@Environment(AppState.self)`; per-screen UI state stays as local `@State`. It owns:
+`App/AppState.swift` (~1,360 lines) is the single source of truth. Views read it via `@Environment(AppState.self)`; per-screen UI state stays as local `@State`. It owns:
 
 - **Domain collections**: `users`, `people` (household members as `Person`), `transactions`, `cards`, `households`, `properties`, `rentalPayments`, `budgets` — all populated **only from Supabase after sign-in** (the app launches with empty collections; sample data only exists for previews/tests).
 - **Auth**: `session`, `authPhase`, `pendingSignInEmail`, `authError`, `bootstrapDidFail`, `isLoadingInitialData`.
@@ -150,7 +152,7 @@ Structure per `specs/018-subscription-system/plan.md`; verify against the source
 
 - `Transaction` (`Models/Transaction.swift`): `amount: Int64` **USD cents, always ≥ 0** (direction from `kind: expense | income | transfer`); `ownerIDs: Set<Person.ID>` + `shares: [Person.ID: Int64]` materialized from `transaction_shares`; `householdID == nil` ⇒ personal scope; `createdBy` (auth UUID, drives RLS); `paidBy` — for an expense, who fronted the money (defaults to the current person on add); for a **transfer** (reimbursement/settle-up, spec `012`), the sender, with the single owner being the recipient. `effectiveShares` falls back to an even split over the canonical `orderedOwnerIds` order.
 - `Person` (`Models/Person.swift`): household member from `household_people` — name-only people need no Ortho account (`linkedUserID` nil); the account holder is linked to `auth.uid()`. Soft-removed via `removedAt` so history keeps resolving names. `AppState.user(_:)` resolves owner IDs through `people` first, then `users`, then `User.placeholder`.
-- Housing: `Property` (`kind: primaryHome | multifamily | rental`) uses optional-field discrimination (`mortgage`, `lease`, `units`); `MortgageInfo` carries all amortization math as pure functions (vector-locked); `LeaseInfo` computes renewal/due-day helpers; `RentalPayment` logs rent received.
+- Housing: `Property` (`kind: primaryHome | multifamily | rental`) uses optional-field discrimination (`mortgage`, `lease`, `units`); `MortgageInfo` carries all amortization math as pure functions (vector-locked); `LeaseInfo` computes renewal/due-day helpers; `RentalPayment` logs rent received. **Net rental** is `Property.occupiedMonthlyRentCents` / `netMonthlyBalanceCents` → the shared `HousingMath` enum (occupied-only rent − mortgage payment), mirrored by web `lib/finance/housing.ts` and vector-locked by `housing-net-rental.json` (spec 019). The Dashboard `HousingSnapshotCard` and the property-detail `MultifamilyNetBalanceCard` both read this one figure — vacant units (no tenant name) contribute zero. Date-only columns (`closing_date`, `lease_start/end`, payment `date`) decode as **local** calendar days via the `.current`-timezone `dateOnly` decoder.
 - `Currency`: 7 cases (usd/cad/gbp/eur/jpy/cny/bdt) with fallback rates; display conversion at render time via `Money` + live FX.
 
 ### Parity core (mirrored from web, vector-locked)
@@ -166,6 +168,9 @@ These files are line-for-line semantic mirrors of `web/lib/*` / `web/components/
 | `Services/InsightEngine.swift` | `lib/finance/insights.ts` | `insights.json` |
 | `Models/MortgageInfo.swift` | `lib/finance/mortgage.ts` | `mortgage.json` |
 | `Features/Dashboard/DashboardRange.swift` | `components/dashboard/range.ts` | `dashboard-month-scope.json` |
+| `Models/Property.swift` (`HousingMath`) | `lib/finance/housing.ts` | `housing-net-rental.json` (spec 019) |
+| `Models/Currency.swift` + `DesignSystem/Money.swift` | `lib/finance/currency.ts` + `money.ts` | `currency-names.json` / `currency-symbols.json` (spec 020) |
+| `Models/LeaseInfo.swift` | `components/housing/lease.ts` | `lease.json` (spec 020) |
 
 The split math deliberately uses `Double` (IEEE-754, identical to TS `number`) so the two implementations cannot diverge; leftover cents land on the same owner via `orderedOwnerIds` (ascending UUID-string sort).
 
@@ -229,7 +234,7 @@ result — a receipt fixture prefills the form, a statement fixture lands on the
 Foundation-Models refiner is disabled here so shots are deterministic. The same fixtures are
 asserted field-by-field by `Ortho-iOSTests/ScanParserTests.swift` against their
 `<name>.expected.json` (loaded from the APP bundle — no test-target pbxproj resources). CI
-screenshots the scan flow per language as `<lang>-scan-<receipt|interstitial|row|summary>.png`.
+screenshots the scan flow per language as `<lang>-scan-<receipt|interstitial|row|summary|fallback>.png`.
 
 Prerequisite: create the gitignored config once:
 
@@ -246,7 +251,7 @@ xcodebuild -project Ortho-iOS.xcodeproj -scheme Ortho-iOS \
   -destination 'generic/platform=iOS Simulator' -configuration Debug build
 ```
 
-Test (the 7 parity suites; 22 tests green as of the last audit in `PARITY.md`):
+Test (13 test files — 11 golden-vector parity suites + FeatureFlags + ScanParser; validated on macOS CI):
 
 ```sh
 cd iOS

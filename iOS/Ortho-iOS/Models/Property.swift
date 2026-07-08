@@ -102,13 +102,20 @@ struct Property: Identifiable, Hashable, Codable {
 // MARK: - Multifamily derived financials
 
 extension Property {
+    /// Units mapped to the resolved-occupancy shape the shared math consumes.
+    /// Occupancy is sourced from the explicit `unit.occupied` flag (spec 020) —
+    /// which itself falls back to tenant-name inference at decode time for
+    /// pre-migration rows — NOT recomputed from the tenant name here. Mirrors
+    /// web `rentUnitsFrom`.
+    private var rentUnits: [HousingMath.RentUnit] {
+        units.map { HousingMath.RentUnit(rentCents: $0.monthlyRent, occupied: $0.occupied) }
+    }
+
     /// Sum of configured rents for **occupied** units only. Vacant units
     /// contribute zero — their `monthlyRent` is the asking number, not
     /// money you're collecting. Returns 0 for non-multifamily properties.
     var occupiedMonthlyRentCents: Int64 {
-        units
-            .filter { !$0.isVacant }
-            .reduce(0) { $0 + $1.monthlyRent }
+        HousingMath.occupiedRentCents(rentUnits)
     }
 
     /// Multifamily net monthly cashflow — occupied rent minus the
@@ -117,8 +124,29 @@ extension Property {
     /// non-multifamily properties (no rental-income side).
     var netMonthlyBalanceCents: Int64 {
         guard kind == .multifamily else { return 0 }
-        let mortgagePayment = mortgage?.monthlyPaymentCents ?? 0
-        return occupiedMonthlyRentCents - mortgagePayment
+        return HousingMath.netRentalCents(rentUnits, mortgagePaymentCents: mortgage?.monthlyPaymentCents ?? 0)
+    }
+}
+
+/// Housing rental-income math — the single source of truth for the net rental
+/// figure shown on BOTH the Dashboard housing summary and the property-detail
+/// "Net balance" card, so the two screens can never disagree.
+///
+/// Mirrors web `web/lib/finance/housing.ts` and is pinned by
+/// `shared/test-vectors/housing-net-rental.json` (asserted by the web Vitest
+/// suite and `HousingNetRentalParityTests`). Integer USD cents throughout.
+enum HousingMath {
+    struct RentUnit { let rentCents: Int64; let occupied: Bool }
+
+    /// Sum of rents for OCCUPIED units only.
+    static func occupiedRentCents(_ units: [RentUnit]) -> Int64 {
+        units.filter(\.occupied).reduce(0) { $0 + $1.rentCents }
+    }
+
+    /// Occupied rent minus the mortgage payment. May be negative; never gated on
+    /// a mortgage (pass `mortgagePaymentCents: 0` for a paid-off property).
+    static func netRentalCents(_ units: [RentUnit], mortgagePaymentCents: Int64) -> Int64 {
+        occupiedRentCents(units) - mortgagePaymentCents
     }
 }
 

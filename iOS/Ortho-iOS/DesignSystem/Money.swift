@@ -15,14 +15,21 @@ enum Money {
         let absAmount = NSDecimalNumber(decimal: amount.magnitude)
         let body = formatter(for: currency).string(from: absAmount)
             ?? "\(currency.code) 0"
-        guard leadingPlus else { return body }
-        return "+\(body)"
+        // Sign owned here, mirroring web money.ts:
+        //   sign = amount < 0 ? '−' : leadingPlus && amount > 0 ? '+' : ''
+        // Unicode minus (U+2212) for shown negatives; a leading "+" only for a
+        // strictly-positive amount when `leadingPlus` is set (never on zero).
+        if amount < 0 { return "\u{2212}\(body)" }
+        if leadingPlus && amount > 0 { return "+\(body)" }
+        return body
     }
 
     /// Just the currency's symbol — used for the leading glyph in the
-    /// add-transaction amount hero.
+    /// add-transaction amount hero. A FIXED table (`Currency.symbol`), NOT
+    /// locale-derived, so it matches web byte-for-byte and never drifts with
+    /// the device locale. Locked by `shared/test-vectors/currency-symbols.json`.
     static func symbol(for currency: Currency) -> String {
-        formatter(for: currency).currencySymbol ?? currency.code
+        currency.symbol
     }
 
     /// Parse a user-typed amount in `currency` and round to USD cents.

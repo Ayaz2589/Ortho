@@ -39,9 +39,9 @@ tx-list:
 	cd $(WEB) && npx tsx $(TX) list $(if $(MONTH),--month '$(MONTH)') $(if $(QUERY),--query '$(QUERY)') $(if $(CATEGORY),--category '$(CATEGORY)') $(if $(SOURCE),--source '$(SOURCE)') $(if $(OWNER),--owner '$(OWNER)') $(if $(KIND),--kind '$(KIND)') $(if $(LIMIT),--limit '$(LIMIT)') $(if $(filter 1,$(ADMIN)),--admin)
 
 # Create one transaction:
-#   make tx-add MERCHANT='..' AMOUNT='12.34' [DATE=YYYY-MM-DD] [CATEGORY=..] [KIND=..] [SCOPE=..] [SOURCE='..'] [ADMIN=1]
+#   make tx-add MERCHANT='..' AMOUNT='12.34' [DATE=YYYY-MM-DD] [CATEGORY=..] [KIND=..] [SOURCE='..'] [ADMIN=1]
 tx-add:
-	cd $(WEB) && npx tsx $(TX) add $(if $(MERCHANT),--merchant '$(MERCHANT)') $(if $(AMOUNT),--amount '$(AMOUNT)') $(if $(DATE),--date '$(DATE)') $(if $(CATEGORY),--category '$(CATEGORY)') $(if $(KIND),--kind '$(KIND)') $(if $(SCOPE),--scope '$(SCOPE)') $(if $(SOURCE),--source '$(SOURCE)') $(if $(filter 1,$(ADMIN)),--admin)
+	cd $(WEB) && npx tsx $(TX) add $(if $(MERCHANT),--merchant '$(MERCHANT)') $(if $(AMOUNT),--amount '$(AMOUNT)') $(if $(DATE),--date '$(DATE)') $(if $(CATEGORY),--category '$(CATEGORY)') $(if $(KIND),--kind '$(KIND)') $(if $(SOURCE),--source '$(SOURCE)') $(if $(filter 1,$(ADMIN)),--admin)
 
 # Edit one transaction interactively:
 #   make tx-edit ID=<uuid> [ADMIN=1]

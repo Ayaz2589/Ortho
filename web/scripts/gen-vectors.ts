@@ -21,10 +21,12 @@ import { generateInsights } from '../lib/finance/insights'
 import { filterTransactions, monthBounds, emptyCriteria, type FilterCriteria, type FilterContext } from '../lib/transactionFilters'
 import { computeShares, validateSplit, seedSplit, orderedOwnerIds, type SplitInput } from '../lib/splits'
 import { toDisplayAmount, toUSDCents } from '../lib/finance/money'
-import { CURRENCIES, FALLBACK_RATE_FROM_USD } from '../lib/finance/currency'
+import { CURRENCIES, CURRENCY_NAMES, currencySymbol, FALLBACK_RATE_FROM_USD } from '../lib/finance/currency'
 import { availableMonths, availableRanges, monthReferenceDate, stepMonth } from '../components/dashboard/range'
 import { balanceBetween } from '../lib/balances'
-import type { Transaction, Budget, Property } from '../lib/types'
+import { occupiedRentCents, netRentalCents, type RentUnit } from '../lib/finance/housing'
+import { rentDueDay, daysUntilNextRent, daysUntilEnd, isRenewalSoon } from '../components/housing/lease'
+import type { Transaction, Budget, Property, LeaseInfo } from '../lib/types'
 
 // The vectors must be identical no matter where they are generated: pin the
 // process timezone before any Date math runs. Both assertion suites pin the
@@ -288,6 +290,9 @@ const may = monthBounds('2026-05')
 const FILTER_CASES: Array<{ name: string; transactions: Transaction[]; context: FilterContext; criteria: FilterCriteria }> = [
   { name: 'no filters → all', transactions: FSET, context: FCTX, criteria: emptyCriteria() },
   { name: 'search merchant', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), query: 'bistro' } },
+  // Query whitespace trim must strip a trailing newline (JS `.trim()`); locks the
+  // iOS fix to `.whitespacesAndNewlines` — iOS `.whitespaces` left the `\n` and missed.
+  { name: 'search merchant trailing newline (trimmed)', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), query: 'bistro\n' } },
   { name: 'search source', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), query: 'td bank' } },
   { name: 'search owner name', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), query: 'tasnuva' } },
   { name: 'search miss → empty', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), query: 'zzz' } },
@@ -440,6 +445,44 @@ const currency = {
   }),
 }
 
+// ── Currency name / symbol vectors ──────────────────────────────────────────
+// Lock the per-currency display NAME and SYMBOL so web and iOS never disagree
+// (previously vector-blind: GBP name 'British'→'UK' and CNY symbol '¥'→'CN¥'
+// had drifted). Both platforms read a FIXED table — no locale derivation.
+const currencyNames = Object.fromEntries(CURRENCIES.map((c) => [c, CURRENCY_NAMES[c]]))
+const currencySymbols = Object.fromEntries(CURRENCIES.map((c) => [c, currencySymbol(c)]))
+
+// ── Lease date-math vectors ─────────────────────────────────────────────────
+// First vector for the lease helpers (previously untested). Locks rentDueDay,
+// daysUntilNextRent (incl. the due-day > month-length CLAMP), daysUntilEnd, and
+// isRenewalSoon so iOS — which overflowed a day-31 due date into the next month —
+// matches web. asOf is injected; integer/boolean outputs are timezone-stable.
+const leaseOf = (o: Partial<LeaseInfo>): LeaseInfo =>
+  ({ property_id: 'p', monthly_rent_cents: 250000, lease_start: '2025-01-01', lease_end: '2026-01-01', security_deposit_cents: null, paid_with_source: null, ...o }) as LeaseInfo
+
+const LEASE_CASES: Array<{ name: string; lease: Partial<LeaseInfo>; asOf: string }> = [
+  { name: 'due today (start-of-month lease)', lease: { lease_start: '2025-09-01', lease_end: '2026-08-31' }, asOf: '2025-09-01' },
+  { name: 'due-day 31 clamps to June 30 (15 days, not 16)', lease: { lease_start: '2025-01-31', lease_end: '2027-01-31' }, asOf: '2025-06-15' },
+  { name: 'due-day 31 clamps to Feb 28 (13 days)', lease: { lease_start: '2025-01-31', lease_end: '2027-01-31' }, asOf: '2025-02-15' },
+  { name: 'past due day rolls to next month', lease: { lease_start: '2025-03-05', lease_end: '2026-03-05' }, asOf: '2025-06-10' },
+  { name: 'renewal soon (ends within 60 days)', lease: { lease_start: '2024-07-15', lease_end: '2025-07-15' }, asOf: '2025-06-15' },
+  { name: 'renewal not soon', lease: { lease_start: '2025-01-01', lease_end: '2026-06-01' }, asOf: '2025-06-15' },
+]
+
+const lease = LEASE_CASES.map((c) => {
+  const l = leaseOf(c.lease)
+  const asOf = d(c.asOf)
+  return {
+    input: { name: c.name, lease: l, asOf: c.asOf },
+    expected: {
+      rentDueDay: rentDueDay(l),
+      daysUntilNextRent: daysUntilNextRent(l, asOf),
+      daysUntilEnd: daysUntilEnd(l, asOf),
+      isRenewalSoon: isRenewalSoon(l, asOf),
+    },
+  }
+})
+
 // ── Dashboard month-scope vectors ───────────────────────────────────────────
 // Locks the NEW pure date logic behind the dashboard's specific-month picker so
 // iOS and web derive the same month list, reference date, and stepping. The
@@ -543,14 +586,44 @@ const memberBalance = {
   })),
 }
 
+// ── Housing net-rental vectors ───────────────────────────────────────────────
+// Shared source of truth for the net rental figure on both the Dashboard summary
+// and the property-detail net-balance card (lib/finance/housing.ts ↔ iOS
+// Property.swift). Occupancy is a resolved boolean here so the vector is
+// platform-neutral; each surface maps its Unit → { rentCents, occupied }.
+interface HousingNetRentalInput {
+  name: string
+  units: RentUnit[]
+  mortgagePaymentCents: number
+}
+const HOUSING_NET_RENTAL_INPUTS: HousingNetRentalInput[] = [
+  { name: 'two occupied units, no mortgage (paid-off still earns rent)', units: [{ rentCents: 250000, occupied: true }, { rentCents: 240000, occupied: true }], mortgagePaymentCents: 0 },
+  { name: 'one vacant unit drags net negative (review opposite-sign case)', units: [{ rentCents: 250000, occupied: true }, { rentCents: 240000, occupied: true }, { rentCents: 260000, occupied: false }], mortgagePaymentCents: 505654 },
+  { name: 'all units vacant → net is minus the mortgage', units: [{ rentCents: 250000, occupied: false }, { rentCents: 240000, occupied: false }], mortgagePaymentCents: 300000 },
+  { name: 'no units at all → occupied rent 0', units: [], mortgagePaymentCents: 300000 },
+  { name: 'single occupied unit covering the mortgage exactly', units: [{ rentCents: 300000, occupied: true }], mortgagePaymentCents: 300000 },
+  { name: 'occupied units net positive against a mortgage', units: [{ rentCents: 200000, occupied: true }, { rentCents: 200000, occupied: true }], mortgagePaymentCents: 300000 },
+]
+const housingNetRental = HOUSING_NET_RENTAL_INPUTS.map((i) => ({
+  input: i,
+  expected: {
+    occupiedRentCents: occupiedRentCents(i.units),
+    netRentalCents: netRentalCents(i.units, i.mortgagePaymentCents),
+  },
+}))
+
 // ── Write ───────────────────────────────────────────────────────────────────
 
 mkdirSync(OUT, { recursive: true })
 writeFileSync(resolve(OUT, 'mortgage.json'), JSON.stringify(mortgage, null, 2) + '\n')
+writeFileSync(resolve(OUT, 'housing-net-rental.json'), JSON.stringify(housingNetRental, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'insights.json'), JSON.stringify(insights, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'transaction-filters.json'), JSON.stringify(filters, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'transaction-splits.json'), JSON.stringify(splits, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'currency.json'), JSON.stringify(currency, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'dashboard-month-scope.json'), JSON.stringify(dashboardMonthScope, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'member-balance.json'), JSON.stringify(memberBalance, null, 2) + '\n')
-console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight + ${filters.cases.length} filter + ${splits.cases.length} split + ${splits.ownerOrdering.length} ownerOrdering + ${currency.toDisplay.length} currency + ${dashboardMonthScope.availableMonths.length} availableMonths/${dashboardMonthScope.stepMonth.length} stepMonth + ${memberBalance.cases.length} member-balance vectors to ${OUT}`)
+writeFileSync(resolve(OUT, 'currency-names.json'), JSON.stringify(currencyNames, null, 2) + '\n')
+writeFileSync(resolve(OUT, 'currency-symbols.json'), JSON.stringify(currencySymbols, null, 2) + '\n')
+writeFileSync(resolve(OUT, 'lease.json'), JSON.stringify(lease, null, 2) + '\n')
+console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight + ${filters.cases.length} filter + ${splits.cases.length} split + ${splits.ownerOrdering.length} ownerOrdering + ${currency.toDisplay.length} currency + ${Object.keys(currencyNames).length} currency-names + ${Object.keys(currencySymbols).length} currency-symbols + ${lease.length} lease + ${dashboardMonthScope.availableMonths.length} availableMonths/${dashboardMonthScope.stepMonth.length} stepMonth + ${memberBalance.cases.length} member-balance vectors to ${OUT}`)

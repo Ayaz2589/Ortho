@@ -277,6 +277,10 @@ private struct UnitRow: Codable {
     let tenantName: String?
     let tenantEmail: String?
     let sortOrder: Int
+    /// Explicit occupancy (spec 020, `units.occupied`). Written on every save
+    /// (mirrors web, which spreads `occupied` into the units insert); decoded
+    /// defensively so a row from before the migration still loads.
+    let occupied: Bool
 
     static func from(_ u: Unit, propertyID: UUID, sortOrder: Int) -> UnitRow {
         UnitRow(
@@ -286,7 +290,8 @@ private struct UnitRow: Codable {
             monthlyRentCents: u.monthlyRent,
             tenantName: u.tenantName,
             tenantEmail: u.tenantEmail,
-            sortOrder: sortOrder
+            sortOrder: sortOrder,
+            occupied: u.occupied
         )
     }
 
@@ -296,8 +301,36 @@ private struct UnitRow: Codable {
             name: name,
             monthlyRent: monthlyRentCents,
             tenantName: tenantName,
-            tenantEmail: tenantEmail
+            tenantEmail: tenantEmail,
+            occupied: occupied
         )
+    }
+
+    init(id: UUID, propertyID: UUID, name: String, monthlyRentCents: Int64,
+         tenantName: String?, tenantEmail: String?, sortOrder: Int, occupied: Bool) {
+        self.id = id
+        self.propertyID = propertyID
+        self.name = name
+        self.monthlyRentCents = monthlyRentCents
+        self.tenantName = tenantName
+        self.tenantEmail = tenantEmail
+        self.sortOrder = sortOrder
+        self.occupied = occupied
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        propertyID = try c.decode(UUID.self, forKey: .propertyID)
+        name = try c.decode(String.self, forKey: .name)
+        monthlyRentCents = try c.decode(Int64.self, forKey: .monthlyRentCents)
+        tenantName = try c.decodeIfPresent(String.self, forKey: .tenantName)
+        tenantEmail = try c.decodeIfPresent(String.self, forKey: .tenantEmail)
+        sortOrder = try c.decode(Int.self, forKey: .sortOrder)
+        // The `occupied` column may not exist yet (migration applied later) —
+        // fall back to tenant-name inference, matching web `isUnitOccupied`.
+        occupied = try c.decodeIfPresent(Bool.self, forKey: .occupied)
+            ?? !(tenantName ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     enum CodingKeys: String, CodingKey {
@@ -308,5 +341,6 @@ private struct UnitRow: Codable {
         case tenantName       = "tenant_name"
         case tenantEmail      = "tenant_email"
         case sortOrder        = "sort_order"
+        case occupied
     }
 }

@@ -1,0 +1,7 @@
+-- Supabase local seed (referenced by config.toml [db.seed] sql_paths).
+--
+-- Intentionally EMPTY: Ortho seeds no data on `supabase db reset`. Real data
+-- lives in the shared hosted project; local development signs in against it or
+-- creates rows through the app/CLI. This file exists so the declared seed path
+-- resolves (rather than dangling); add statements here if a future workflow
+-- needs deterministic local fixtures.

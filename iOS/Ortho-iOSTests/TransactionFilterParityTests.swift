@@ -66,6 +66,39 @@ final class TransactionFilterParityTests: XCTestCase {
             XCTAssertEqual(got, c.expectedIds, "case: \(c.name)")
         }
     }
+
+    // Not covered by the shared vector: `monthBounds` STRICT `^\d{4}-\d{2}$`
+    // validation. Web THROWS INVALID_MONTH; the Swift call sites use `if let`,
+    // so the mirrored strictness surfaces as `nil` for a malformed month.
+    func testMonthBoundsStrictValidation() {
+        XCTAssertNotNil(monthBounds("2026-05"), "a well-formed month must parse")
+        XCTAssertNotNil(monthBounds("2026-12"))
+        XCTAssertNotNil(monthBounds("2026-01"))
+        for bad in ["2026-5", "26-5", "2026-005", "2026--5", "2026-13", "2026-00", "2026/05", "2026-5a", "", "2026-05 "] {
+            XCTAssertNil(monthBounds(bad), "must reject malformed month \(bad.debugDescription)")
+        }
+    }
+
+    // Not covered by the shared vector: `availableSources` uses a LOCALIZED,
+    // case-insensitive order (mirrors web `localeCompare`), NOT Swift's default
+    // Unicode code-point `sorted()` (which would put "Chase"/"TD" before "apple").
+    func testAvailableSourcesLocalizedOrder() {
+        let txs = [
+            makeTx(source: "TD Bank"),
+            makeTx(source: "apple"),
+            makeTx(source: "Chase"),
+            makeTx(source: "  "),        // blank → dropped
+            makeTx(source: "apple"),     // duplicate → deduped
+        ]
+        XCTAssertEqual(availableSources(txs), ["apple", "Chase", "TD Bank"])
+    }
+
+    private func makeTx(source: String) -> Transaction {
+        Transaction(
+            merchant: "M", category: .groceries, kind: .expense, amount: 0,
+            ownerIDs: [], source: source, date: Date(), createdBy: UUID()
+        )
+    }
 }
 
 // Regression: a single row whose `kind`/`category` the installed build doesn't

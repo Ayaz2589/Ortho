@@ -24,6 +24,16 @@ export function startOfMonth(d: Date): Date {
   return x
 }
 
+/** Parse a `YYYY-MM-DD` (or ISO) date as a **local** calendar date, so month/day
+ *  arithmetic and display are timezone-stable and match Swift's `Calendar.current`.
+ *  Plain `new Date('YYYY-MM-DD')` parses at UTC midnight and shifts a day in
+ *  negative-UTC timezones — every stored `date` column must go through here. */
+export function parseLocalDate(s: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s)
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  return new Date(s)
+}
+
 /** "Today" / "Yesterday" / weekday / "MMM d" relative to now. */
 export function dayLabel(date: Date, locale: string = 'en-US', now: Date = new Date()): string {
   const a = startOfDay(date).getTime()

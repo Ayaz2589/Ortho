@@ -11,7 +11,8 @@ import {
   yearsRemaining,
   upcomingAmortization,
 } from '@/lib/finance/mortgage'
-import { mediumDate, monthYear } from '@/lib/format'
+import { mediumDate, monthYear, parseLocalDate } from '@/lib/format'
+import { occupiedRentCents, netRentalCents, rentUnitsFrom, isUnitOccupied } from '@/lib/finance/housing'
 import type { Property } from '@/lib/types'
 import { kindMeta } from '@/components/housing/kinds'
 import { PropertyTypePicker } from '@/components/housing/PropertyTypePicker'
@@ -79,8 +80,9 @@ function MortgageColumns({ property }: { property: Property }) {
   const payment = m ? monthlyPaymentCents(m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years) : 0
 
   const units = property.units ?? []
-  const occupiedRent = units.filter((u) => (u.tenant_name ?? '').trim() !== '').reduce((s, u) => s + u.monthly_rent_cents, 0)
-  const netBalance = occupiedRent - payment
+  const rentUnits = rentUnitsFrom(units)
+  const occupiedRent = occupiedRentCents(rentUnits)
+  const netBalance = netRentalCents(rentUnits, payment)
   const isMulti = property.kind === 'multifamily'
   const isRental = property.kind === 'rental'
   // A property missing its kind's sub-row (mortgage for homes/multifamily,
@@ -91,7 +93,7 @@ function MortgageColumns({ property }: { property: Property }) {
   // prepends new payments, so raw order isn't reliable for back-dated ones.
   const payments = rentalPayments
     .filter((rp) => rp.property_id === property.id)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime())
 
   return (
     <div className="ow-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
@@ -130,8 +132,8 @@ function MortgageColumns({ property }: { property: Property }) {
                 lease ends within 60 days). */}
             {isRenewalSoon(property.lease) && <RenewalBanner lease={property.lease} />}
             <div className="ow-card">
-              <HStatRow first label={t('Lease start')} value={mediumDate(new Date(property.lease.lease_start), locale)} />
-              <HStatRow label={t('Lease end')} value={mediumDate(new Date(property.lease.lease_end), locale)} />
+              <HStatRow first label={t('Lease start')} value={mediumDate(parseLocalDate(property.lease.lease_start), locale)} />
+              <HStatRow label={t('Lease end')} value={mediumDate(parseLocalDate(property.lease.lease_end), locale)} />
               {property.lease.security_deposit_cents != null && <HStatRow label={t('Security deposit')} value={formatMoney(property.lease.security_deposit_cents)} />}
               {property.lease.paid_with_source && <HStatRow label={t('Paid with')} value={property.lease.paid_with_source} />}
             </div>
@@ -152,7 +154,7 @@ function MortgageColumns({ property }: { property: Property }) {
             <div style={{ height: 8, borderRadius: 6, background: 'var(--surface-2)', overflow: 'hidden' }}>
               <div style={{ width: `${equityFraction(m.purchase_price_cents, m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date) * 100}%`, height: '100%', background: 'var(--positive)' }} />
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 10 }}>{t('Built since closing · {0}', monthYear(new Date(m.closing_date), locale))}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 10 }}>{t('Built since closing · {0}', monthYear(parseLocalDate(m.closing_date), locale))}</div>
           </div>
         )}
 
@@ -171,7 +173,7 @@ function MortgageColumns({ property }: { property: Property }) {
                 </div>
               ) : (
                 units.map((u, i) => {
-                  const vacant = (u.tenant_name ?? '').trim() === ''
+                  const vacant = !isUnitOccupied(u.tenant_name)
                   return (
                     <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 20px', minHeight: 60, borderTop: i === 0 ? 'none' : '0.5px solid var(--hairline)' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -217,7 +219,7 @@ function MortgageColumns({ property }: { property: Property }) {
                 .map((rp, i) => (
                   <div key={rp.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', minHeight: 56, borderTop: i === 0 ? 'none' : '0.5px solid var(--hairline)' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14.5, fontWeight: 400 }}>{mediumDate(new Date(rp.date), locale)}</div>
+                      <div style={{ fontSize: 14.5, fontWeight: 400 }}>{mediumDate(parseLocalDate(rp.date), locale)}</div>
                       {rp.note && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{rp.note}</div>}
                     </div>
                     <div style={{ fontSize: 15, fontWeight: 400, fontVariantNumeric: 'tabular-nums' }}>{formatMoney(rp.amount_cents)}</div>

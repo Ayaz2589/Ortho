@@ -1,0 +1,122 @@
+[
+  {
+    "input": {
+      "name": "due today (start-of-month lease)",
+      "lease": {
+        "property_id": "p",
+        "monthly_rent_cents": 250000,
+        "lease_start": "2025-09-01",
+        "lease_end": "2026-08-31",
+        "security_deposit_cents": null,
+        "paid_with_source": null
+      },
+      "asOf": "2025-09-01"
+    },
+    "expected": {
+      "rentDueDay": 1,
+      "daysUntilNextRent": 0,
+      "daysUntilEnd": 364,
+      "isRenewalSoon": false
+    }
+  },
+  {
+    "input": {
+      "name": "due-day 31 clamps to June 30 (15 days, not 16)",
+      "lease": {
+        "property_id": "p",
+        "monthly_rent_cents": 250000,
+        "lease_start": "2025-01-31",
+        "lease_end": "2027-01-31",
+        "security_deposit_cents": null,
+        "paid_with_source": null
+      },
+      "asOf": "2025-06-15"
+    },
+    "expected": {
+      "rentDueDay": 31,
+      "daysUntilNextRent": 15,
+      "daysUntilEnd": 595,
+      "isRenewalSoon": false
+    }
+  },
+  {
+    "input": {
+      "name": "due-day 31 clamps to Feb 28 (13 days)",
+      "lease": {
+        "property_id": "p",
+        "monthly_rent_cents": 250000,
+        "lease_start": "2025-01-31",
+        "lease_end": "2027-01-31",
+        "security_deposit_cents": null,
+        "paid_with_source": null
+      },
+      "asOf": "2025-02-15"
+    },
+    "expected": {
+      "rentDueDay": 31,
+      "daysUntilNextRent": 13,
+      "daysUntilEnd": 715,
+      "isRenewalSoon": false
+    }
+  },
+  {
+    "input": {
+      "name": "past due day rolls to next month",
+      "lease": {
+        "property_id": "p",
+        "monthly_rent_cents": 250000,
+        "lease_start": "2025-03-05",
+        "lease_end": "2026-03-05",
+        "security_deposit_cents": null,
+        "paid_with_source": null
+      },
+      "asOf": "2025-06-10"
+    },
+    "expected": {
+      "rentDueDay": 5,
+      "daysUntilNextRent": 25,
+      "daysUntilEnd": 268,
+      "isRenewalSoon": false
+    }
+  },
+  {
+    "input": {
+      "name": "renewal soon (ends within 60 days)",
+      "lease": {
+        "property_id": "p",
+        "monthly_rent_cents": 250000,
+        "lease_start": "2024-07-15",
+        "lease_end": "2025-07-15",
+        "security_deposit_cents": null,
+        "paid_with_source": null
+      },
+      "asOf": "2025-06-15"
+    },
+    "expected": {
+      "rentDueDay": 15,
+      "daysUntilNextRent": 0,
+      "daysUntilEnd": 30,
+      "isRenewalSoon": true
+    }
+  },
+  {
+    "input": {
+      "name": "renewal not soon",
+      "lease": {
+        "property_id": "p",
+        "monthly_rent_cents": 250000,
+        "lease_start": "2025-01-01",
+        "lease_end": "2026-06-01",
+        "security_deposit_cents": null,
+        "paid_with_source": null
+      },
+      "asOf": "2025-06-15"
+    },
+    "expected": {
+      "rentDueDay": 1,
+      "daysUntilNextRent": 16,
+      "daysUntilEnd": 351,
+      "isRenewalSoon": false
+    }
+  }
+]

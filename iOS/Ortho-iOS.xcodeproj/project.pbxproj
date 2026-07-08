@@ -21,7 +21,15 @@
 		AA0014000000000000000002 /* ScanParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0014000000000000000001 /* ScanParserTests.swift */; };
 		AA0015000000000000000002 /* FeatureFlagsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0015000000000000000001 /* FeatureFlagsTests.swift */; };
 		AA0018000000000000000002 /* EntitlementLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0018000000000000000001 /* EntitlementLogicTests.swift */; };
-		AA0019000000000000000002 /* EntitlementGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0019000000000000000001 /* EntitlementGateTests.swift */; };
+		AA0022000000000000000002 /* EntitlementGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0022000000000000000001 /* EntitlementGateTests.swift */; };
+		AA0019000000000000000002 /* HousingNetRentalParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0019000000000000000001 /* HousingNetRentalParityTests.swift */; };
+		AA0019000000000000000004 /* housing-net-rental.json in Resources */ = {isa = PBXBuildFile; fileRef = AA0019000000000000000003 /* housing-net-rental.json */; };
+		AA0020000000000000000002 /* currency-names.json in Resources */ = {isa = PBXBuildFile; fileRef = AA0020000000000000000001 /* currency-names.json */; };
+		AA0020000000000000000004 /* currency-symbols.json in Resources */ = {isa = PBXBuildFile; fileRef = AA0020000000000000000003 /* currency-symbols.json */; };
+		AA0020000000000000000006 /* lease.json in Resources */ = {isa = PBXBuildFile; fileRef = AA0020000000000000000005 /* lease.json */; };
+		AA0021000000000000000002 /* CurrencyNameParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0021000000000000000001 /* CurrencyNameParityTests.swift */; };
+		AA0021000000000000000004 /* CurrencySymbolParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0021000000000000000003 /* CurrencySymbolParityTests.swift */; };
+		AA0021000000000000000006 /* LeaseParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0021000000000000000005 /* LeaseParityTests.swift */; };
 		B5F85A62800B52CFBF244E27 /* transaction-filters.json in Resources */ = {isa = PBXBuildFile; fileRef = 7BB4B1B9837EAE1B6C707190 /* transaction-filters.json */; };
 		C193B52B38D45CCD8086AB46 /* insights.json in Resources */ = {isa = PBXBuildFile; fileRef = 2769D0C2D228268FBA560175 /* insights.json */; };
 		CDDC361CED2034F43CA9B013 /* TransactionSplitParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F17A0ACBC22C65C00F424C5 /* TransactionSplitParityTests.swift */; };
@@ -60,7 +68,15 @@
 		AA0014000000000000000001 /* ScanParserTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ScanParserTests.swift; path = "Ortho-iOSTests/ScanParserTests.swift"; sourceTree = "<group>"; };
 		AA0015000000000000000001 /* FeatureFlagsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FeatureFlagsTests.swift; path = "Ortho-iOSTests/FeatureFlagsTests.swift"; sourceTree = "<group>"; };
 		AA0018000000000000000001 /* EntitlementLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EntitlementLogicTests.swift; path = "Ortho-iOSTests/EntitlementLogicTests.swift"; sourceTree = "<group>"; };
-		AA0019000000000000000001 /* EntitlementGateTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EntitlementGateTests.swift; path = "Ortho-iOSTests/EntitlementGateTests.swift"; sourceTree = "<group>"; };
+		AA0022000000000000000001 /* EntitlementGateTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EntitlementGateTests.swift; path = "Ortho-iOSTests/EntitlementGateTests.swift"; sourceTree = "<group>"; };
+		AA0019000000000000000001 /* HousingNetRentalParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = HousingNetRentalParityTests.swift; path = "Ortho-iOSTests/HousingNetRentalParityTests.swift"; sourceTree = "<group>"; };
+		AA0019000000000000000003 /* housing-net-rental.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; name = "housing-net-rental.json"; path = "../shared/test-vectors/housing-net-rental.json"; sourceTree = "<group>"; };
+		AA0020000000000000000001 /* currency-names.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; name = "currency-names.json"; path = "../shared/test-vectors/currency-names.json"; sourceTree = "<group>"; };
+		AA0020000000000000000003 /* currency-symbols.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; name = "currency-symbols.json"; path = "../shared/test-vectors/currency-symbols.json"; sourceTree = "<group>"; };
+		AA0020000000000000000005 /* lease.json */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json; name = lease.json; path = "../shared/test-vectors/lease.json"; sourceTree = "<group>"; };
+		AA0021000000000000000001 /* CurrencyNameParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CurrencyNameParityTests.swift; path = "Ortho-iOSTests/CurrencyNameParityTests.swift"; sourceTree = "<group>"; };
+		AA0021000000000000000003 /* CurrencySymbolParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CurrencySymbolParityTests.swift; path = "Ortho-iOSTests/CurrencySymbolParityTests.swift"; sourceTree = "<group>"; };
+		AA0021000000000000000005 /* LeaseParityTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LeaseParityTests.swift; path = "Ortho-iOSTests/LeaseParityTests.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -103,7 +119,9 @@
 				AA0012000000000000000001 /* MemberBalanceParityTests.swift */,
 				AA0014000000000000000001 /* ScanParserTests.swift */,
 				AA0015000000000000000001 /* FeatureFlagsTests.swift */,
+				AA0019000000000000000001 /* HousingNetRentalParityTests.swift */,
 				AA0012000000000000000003 /* member-balance.json */,
+				AA0019000000000000000003 /* housing-net-rental.json */,
 				6F17A0ACBC22C65C00F424C5 /* TransactionSplitParityTests.swift */,
 				2769D0C2D228268FBA560175 /* insights.json */,
 				70EE7257C8C1E7DF781423A6 /* mortgage.json */,
@@ -114,7 +132,13 @@
 				A1D7E0000B011000000000A0 /* DashboardScopeParityTests.swift */,
 				A1D7E0020B011000000000A2 /* dashboard-month-scope.json */,
 				AA0018000000000000000001 /* EntitlementLogicTests.swift */,
-				AA0019000000000000000001 /* EntitlementGateTests.swift */,
+				AA0022000000000000000001 /* EntitlementGateTests.swift */,
+				AA0020000000000000000001 /* currency-names.json */,
+				AA0020000000000000000003 /* currency-symbols.json */,
+				AA0020000000000000000005 /* lease.json */,
+				AA0021000000000000000001 /* CurrencyNameParityTests.swift */,
+				AA0021000000000000000003 /* CurrencySymbolParityTests.swift */,
+				AA0021000000000000000005 /* LeaseParityTests.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -241,9 +265,13 @@
 				74265C9D95B09C1A42E1E975 /* mortgage.json in Resources */,
 				B5F85A62800B52CFBF244E27 /* transaction-filters.json in Resources */,
 				AA0012000000000000000004 /* member-balance.json in Resources */,
+				AA0019000000000000000004 /* housing-net-rental.json in Resources */,
 				67EC116180321EA940B5E616 /* transaction-splits.json in Resources */,
 				9B0ECD5B6B941029E99E638F /* currency.json in Resources */,
 				A1D7E0030B011000000000A3 /* dashboard-month-scope.json in Resources */,
+				AA0020000000000000000002 /* currency-names.json in Resources */,
+				AA0020000000000000000004 /* currency-symbols.json in Resources */,
+				AA0020000000000000000006 /* lease.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -260,11 +288,15 @@
 				AA0012000000000000000002 /* MemberBalanceParityTests.swift in Sources */,
 				AA0014000000000000000002 /* ScanParserTests.swift in Sources */,
 				AA0015000000000000000002 /* FeatureFlagsTests.swift in Sources */,
+				AA0019000000000000000002 /* HousingNetRentalParityTests.swift in Sources */,
 				CDDC361CED2034F43CA9B013 /* TransactionSplitParityTests.swift in Sources */,
 				56F9A5351754B3502C7B5BA0 /* CurrencyParityTests.swift in Sources */,
 				A1D7E0010B011000000000A1 /* DashboardScopeParityTests.swift in Sources */,
 				AA0018000000000000000002 /* EntitlementLogicTests.swift in Sources */,
-				AA0019000000000000000002 /* EntitlementGateTests.swift in Sources */,
+				AA0022000000000000000002 /* EntitlementGateTests.swift in Sources */,
+				AA0021000000000000000002 /* CurrencyNameParityTests.swift in Sources */,
+				AA0021000000000000000004 /* CurrencySymbolParityTests.swift in Sources */,
+				AA0021000000000000000006 /* LeaseParityTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

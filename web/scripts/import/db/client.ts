@@ -41,8 +41,6 @@ export interface ClientOptions {
   admin: boolean
   /** Email for OTP sign-in (sign-in mode). */
   email?: string
-  /** In admin mode, the user id to attribute created rows to (resolved by the CLI). */
-  asUserId?: string
   /** Announce that the code email was sent (UI hook). */
   onCodeSent?: (email: string) => void
   /** Prompt for and return the emailed verification code (sign-in mode). */
@@ -61,7 +59,9 @@ export async function makeClient(opts: ClientOptions): Promise<AuthedClient> {
       throw new Error('MISSING_ENV: a real SUPABASE_SERVICE_ROLE_KEY is required for ADMIN=1')
     }
     const supabase = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-    return { supabase, userId: opts.asUserId ?? '' }
+    // Admin mode attributes created_by by name-matching the statement holder,
+    // resolved after the fact by the CLI — there is no ambient admin user id.
+    return { supabase, userId: '' }
   }
 
   // Email OTP sign-in (mirrors the apps).

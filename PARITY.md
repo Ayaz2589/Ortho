@@ -23,6 +23,16 @@ test suites assert. The **CLI** writes to the same tables and reuses the shared 
 functions where it can, but it is **not** part of the golden-vector harness and has a few intentional and
 a few unintended divergences (below).
 
+> Last reconciled: **2026-07-07, spec 020 (drift reconciliation)** — a 41-item doc/config/parity drift
+> audit (adversarially verified) was fixed: the CLI importer now writes `paid_by` (imported expenses count
+> in settle-up); local `config.toml` email `otp_length` corrected 6→8; dead CLI knobs (`SCOPE`, `asUserId`)
+> removed; and a cluster of previously **vector-blind** iOS↔web divergences aligned + newly pinned with
+> golden vectors — currency display **names** (GBP "UK Pound") and **symbols** (CNY "CN¥") via
+> `currency-names.json` / `currency-symbols.json`, lease date math (due-day clamp) via `lease.json`, plus
+> insights 2-decimals, money sign / leading-plus, `toUSDCents` rate guard, `sharePercent` rounding, and
+> filter query-trim / month-validation / source-sort. Unit occupancy became an explicit `units.occupied`
+> column (completes 019 US5). The i18n catalog-parity lock was hardened to catch mislabeled shared keys.
+>
 > Spec-018 addendum (**2026-07-05**): the entitlement-gate derivation row + subscription divergences
 > added. The lock is a three-way **identical-literal-vector** table (core/web/iOS, V01–V19 + digest)
 > rather than a golden vector — entitlement policy is not finance math. Web suite 790 green.
@@ -48,21 +58,21 @@ a few unintended divergences (below).
 
 | Capability | web | iOS | CLI | Shared source of truth |
 |---|:--:|:--:|:--:|---|
-| Money / USD-cents invariant | ✅ | ✅ | ✅ | `lib/finance/money.ts` + `currency.ts` → `currency.json` |
+| Money / USD-cents invariant | ✅ | ✅ | ✅ | `lib/finance/money.ts` + `currency.ts` → `currency.json` (+ display names/symbols → `currency-names.json` / `currency-symbols.json`, spec 020) |
 | Currency conversion (display) | ✅ | ✅ | — (USD-only) | same as above |
 | Splits & owner shares | ✅ | ✅ | ✅ | `lib/splits.ts` → `transaction-splits.json` |
 | Canonical leftover-cent order | ✅ | ✅ | ✅ | `orderedOwnerIds` (now used by all three) |
-| Transaction + shares data contract | ✅ | ✅ | ✅ | columns mirrored across all three (incl. `paid_by`) |
+| Transaction + shares data contract | ✅ | ✅ | ✅ | columns mirrored across all three (incl. `paid_by` — the CLI `paid_by` write gap was closed in spec 020) |
 | Member reimbursement / settle-up balance | ✅ | ✅ | — | `lib/balances.ts` ↔ `Balances.swift` → `member-balance.json` (+ `paid_by`, `transfer` kind) |
 | Atomic parent+shares write | ✅ (rollback) | ✅ (rollback) | ✅ (rollback) | — (all three compensate, spec 013; an RPC would make it truly atomic) |
 | Category / kind / source taxonomy | ✅ | ✅ | ✅ | Postgres `transaction_category`/`transaction_kind` enums (+ `transfer`) / `lib/types.ts` |
 | Date storage & timezone | ✅ | ✅ | ✅ | noon-UTC transaction timestamps (spec 004; apps adopted 2026-07-02); date-only columns = local calendar day |
 | Full-UI localization (6 languages) | ✅ | ✅ | — (English) | `web/lib/i18n/*` seeded from iOS `Localizable.xcstrings` |
-| Transaction filtering / listing | ✅ | ✅ | ✅ | `lib/transactionFilters.ts` → `transaction-filters.json` (CLI runs the same function in-process, spec 013) |
+| Transaction filtering / listing | ✅ | ✅ | ✅ | `lib/transactionFilters.ts` → `transaction-filters.json` (CLI runs the same function in-process, spec 013; query-trim / month-validation / source-sort aligned iOS↔web in spec 020) |
 | Dashboard month selection | ✅ | ✅ | — | `components/dashboard/range.ts` ↔ `DashboardRange.swift` (+ `monthBounds` → `dashboard-month-scope.json` / `transaction-filters.json`; `availableRanges` vectored in spec 013) |
 | Insights engine | ✅ | ✅ | — | `insights.json` (8/8 rules + `preview_merchants` ordering/casing, spec 013) |
-| Mortgage / housing math | ✅ | ✅ | — | `lib/finance/mortgage.ts` → `mortgage.json` |
-| Auth (email-OTP, 8-digit) | ✅ | ✅ | ⚠️ | — (each calls Supabase SDK) |
+| Mortgage / housing math | ✅ | ✅ | — | `lib/finance/mortgage.ts` → `mortgage.json`; net rental (occupied-only) `lib/finance/housing.ts` ↔ `Property.swift` `HousingMath` → `housing-net-rental.json` (spec 019). Housing date-only values (lease/payment/closing) parse **local** on both surfaces. Lease date math (rent-due day, clamped) vectored by `lease.json` and occupancy made an explicit `units.occupied` column (spec 020). |
+| Auth (email-OTP, 8-digit) | ✅ | ✅ | ⚠️ | — (each calls Supabase SDK; local `config.toml` `otp_length` corrected 6→8 in spec 020) |
 | Concurrent iOS + web sessions | ✅ | ✅ | — | single-active-platform lock **removed** (feature 010) |
 | Max session length (30-day cap) | ✅ | ✅ | ✅ | Supabase session timebox (720h) — clients sign out → sign-in on expiry |
 | Entitlement gate derivation (spec 018) | ✅ | ✅ | — | `services/billing/src/derive.ts` (canonical) ↔ `web/lib/entitlements.ts` ↔ `iOS/Ortho-iOS/Shared/EntitlementLogic.swift` — identical literal vectors V01–V19 + sha256 `88715c83…a48e2` (`specs/018-subscription-system/contracts/entitlement-state.md`); deliberately **not** a golden vector (no money/date engine) |
@@ -92,7 +102,13 @@ neither language can silently drift:
 - **Transaction filters** (apps) — `filterTransactions` (`lib/transactionFilters.ts` ↔ iOS
   `TransactionFilters.swift`), vectored.
 - **Insights** (apps) — `generateInsights` ↔ `InsightEngine`, 8/8 rules vectored.
-- **Mortgage** (apps) — `lib/finance/mortgage.ts` ↔ iOS `MortgageInfo.swift`, vectored.
+- **Mortgage** (apps) — `lib/finance/mortgage.ts` ↔ iOS `MortgageInfo.swift`, vectored. The upcoming
+  amortization schedule advances labels by whole calendar months (day-clamped) on both surfaces (spec
+  019 fixed a web `setMonth` overflow that mislabeled month-end schedules).
+- **Housing net rental** (apps) — occupied-only unit rent − mortgage payment (`lib/finance/housing.ts`
+  ↔ iOS `Property.swift` `HousingMath`), vectored by `housing-net-rental.json` (spec 019). The Dashboard
+  housing summary and the property-detail Net balance render this **one** figure, so they can no longer
+  disagree; vacant units contribute zero (the asking rent is not money collected).
 - **Dashboard month scope** (apps) — `availableMonths` / `monthReferenceDate` / `stepMonth`
   (`components/dashboard/range.ts` ↔ `DashboardRange.swift`), vectored by `dashboard-month-scope.json`;
   the selected-month window reuses the already-vectored `monthBounds`. (Feature `011`.)
@@ -168,6 +184,11 @@ others are real gaps:`
   person name, `KIND` incl. transfer. Non-admin scope is **household-wide** like the apps; the fetch cap
   (default 200, `LIMIT=` to raise) is printed when hit — never silent. Locked by
   `web/test/import/list-parity.test.ts` (CLI ids ≡ shared-filter ids per scenario).
+- ✅ **`paid_by` write (RESOLVED 2026-07-07, spec 020):** the CLI importer previously omitted `paid_by` from
+  its `transactions` insert, so imported expenses landed `paid_by = NULL` and were silently dropped from
+  settle-up (`balanceBetween`). `db/persist.ts` `txRecord` now writes `paid_by` (all CLI create/update paths
+  mirror the web store), so a CLI-imported expense participates in the reimbursement balance. Locked by
+  `web/test/import/persist.test.ts`.
 - **Date storage convention (RESOLVED 2026-07-02):** all three surfaces now write transaction dates as
   noon UTC of the picked local calendar day (`T12:00:00.000Z`, the spec-004 convention) — web's add/edit
   form and iOS's sheet were both normalized to it, so a row entered anywhere renders on the same calendar

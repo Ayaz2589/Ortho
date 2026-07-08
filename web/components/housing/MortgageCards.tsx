@@ -8,7 +8,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { useApp } from '@/lib/store'
-import { mediumDate, monthYear } from '@/lib/format'
+import { mediumDate, monthYear, parseLocalDate } from '@/lib/format'
 import {
   monthlyPaymentCents,
   currentPrincipalBalanceCents,
@@ -151,7 +151,7 @@ export function EquityProgress({ mortgage }: { mortgage: MortgageInfo }) {
           />
         </div>
         <p className="text-[13px] text-text-2">
-          {t('Built since closing · {0}', monthYear(new Date(mortgage.closing_date), locale))}
+          {t('Built since closing · {0}', monthYear(parseLocalDate(mortgage.closing_date), locale))}
         </p>
       </div>
     </Section>
