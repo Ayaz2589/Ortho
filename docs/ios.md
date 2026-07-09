@@ -1,8 +1,24 @@
-# iOS App (`iOS/`)
+# iOS App (`iOS/`) — FROZEN, historical reference
 
-## 1. Purpose
+> **spec 021 (2026-07-09): `iOS/Ortho-iOS/` is retired.** It stays in the repository, unmodified,
+> as a historical reference and rollback path — it receives **no new feature work**, is governed by
+> neither the current design system nor the current testing discipline
+> (`.specify/memory/constitution.md` v2.0.0 explicitly excludes it), and its CI
+> (`.github/workflows/ios-ci.yml`) is manual-trigger-only, build-only. **iOS ships going forward
+> from the web/TypeScript codebase wrapped natively via Capacitor** — see `./web.md` for the live
+> iOS delivery mechanism (`web/ios/App/`) and the custom Scan plugin.
+>
+> **Read this document when:** you're doing archaeology on the frozen app (an emergency rollback,
+> or understanding a UX/product decision this app pioneered), or **porting the original Swift
+> source of the on-device scan pipeline** (`Services/Scan/*.swift`,
+> `Features/Transactions/Scan/*.swift`) — the Capacitor Scan plugin
+> (`web/ios/App/App/Plugins/Scan/`) is a port of exactly the code documented below. Everything else
+> in this file describes a state of the product that is no longer current; do not use it to
+> understand how Ortho works today.
 
-`iOS/` contains **Ortho-iOS**, the canonical SwiftUI client of Ortho — a calm, money-first household budgeting app for two people sharing a household. The iOS app defines the product; the web app (`web/`) is the same product re-expressed for desktop (see `./web.md`). Both clients talk to the **same Supabase backend** (`supabase/`, see `./supabase.md`) and keep their pure finance logic in lockstep via shared golden test vectors in `shared/test-vectors/` (see `./shared.md`).
+## 1. Purpose (historical)
+
+`iOS/` contains **Ortho-iOS**, the frozen SwiftUI client of Ortho — a calm, money-first household budgeting app for two people sharing a household. It *was* the canonical client until spec 021; the web app (`web/`) is now the sole canonical implementation, shipped to iOS via a Capacitor shell (see `./web.md`). Both this frozen app and the live web app talk to the **same Supabase backend** (`supabase/`, see `./supabase.md`); the golden-vector system described throughout this document (`shared/test-vectors/` — see `./shared.md`) locked this app's Swift mirrors against the TS originals while both were live and is now reframed as a web-only regression suite (see root `PARITY.md`).
 
 Four destinations: **Dashboard** (month-scoped widgets + insights + budgets), **Transactions** (collapsible month sections over day-grouped activity, with splits, filters, settle-up), **Housing** (properties: primary home / multifamily / rental with mortgage + lease math), **Settings** (household people, cards, budgets, currency, language, appearance, sign-out).
 
