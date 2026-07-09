@@ -1,12 +1,25 @@
 'use client'
 
-import { type ReactNode } from 'react'
+import { type ReactNode, useEffect, useRef } from 'react'
+import { SplashScreen } from '@capacitor/splash-screen'
 import { AppStateProvider, useApp } from '@/lib/store'
 import { TabBar } from '@/components/TabBar'
 import { Sidebar } from '@/components/Sidebar'
 
 function Shell({ children }: { children: ReactNode }) {
   const { loading, error, bootstrapFailed, dismissError, retryBootstrap, t } = useApp()
+
+  // spec 021: capacitor.config.ts sets launchAutoHide: false — hide the
+  // splash manually once loading first resolves (first meaningful paint),
+  // not on a fixed timer, so a slow cold boot never shows a blank flash.
+  // A no-op on desktop/mobile web (the plugin's web shim resolves harmlessly).
+  const splashHidden = useRef(false)
+  useEffect(() => {
+    if (loading || splashHidden.current) return
+    splashHidden.current = true
+    void SplashScreen.hide()
+  }, [loading])
+
   return (
     <div className="sm:flex sm:h-screen sm:overflow-hidden">
       <Sidebar />

@@ -39,6 +39,13 @@ const config: CapacitorConfig = {
       // cold boot never shows a blank flash between splash and content.
       launchAutoHide: false,
     },
+    StatusBar: {
+      // The status bar shows whatever the app background is instead of its
+      // own opaque bar — consistent with a design-system-driven app where
+      // the background is already themed. Only the text style needs driving
+      // (components/settings/appearance.ts's syncStatusBar).
+      overlaysWebView: true,
+    },
   },
 }
 
