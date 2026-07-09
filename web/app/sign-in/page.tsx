@@ -19,6 +19,24 @@ function SignIn() {
   }, [])
   const t = useMemo(() => makeT(language), [language])
 
+  // spec 021: this used to be the deleted `proxy.ts`'s `isAuthRoute` branch
+  // (redirect a signed-in user away from /sign-in). Under static export there
+  // is no server hop, so the check moves here, on mount.
+  useEffect(() => {
+    let cancelled = false
+    async function checkAlreadySignedIn() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!cancelled && user) router.replace('/dashboard')
+    }
+    void checkAlreadySignedIn()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [pendingEmail, setPendingEmail] = useState<string | null>(null)

@@ -10,6 +10,8 @@ import {
   type ReactNode,
 } from 'react'
 import { createClient } from './supabase/client'
+import { isTestBuild } from './test-build'
+import { readFlags } from './flags'
 import { formatMoney as fmtMoney, type CurrencyKey } from './finance/money'
 import { FALLBACK_RATE_FROM_USD } from './finance/currency'
 import { effectiveShares } from './format'
@@ -251,6 +253,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       } = await supabase.auth.getUser()
       if (!authUser) {
         setLoading(false)
+        // spec 021: this used to be caught server-side by `proxy.ts` before any
+        // client code ran; under static export there is no server hop, so
+        // bootstrap itself is the signed-out gate. Test builds with the
+        // "Bypass auth" flag on skip the redirect (contract C-TD-4/C-FF-4).
+        if (!(isTestBuild() && readFlags().bypassAuth)) {
+          window.location.assign('/sign-in')
+        }
         return
       }
       setCurrentUserId(authUser.id)
