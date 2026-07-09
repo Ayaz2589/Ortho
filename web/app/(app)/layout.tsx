@@ -10,7 +10,13 @@ function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="sm:flex sm:h-screen sm:overflow-hidden">
       <Sidebar />
-      <main className="relative flex-1 sm:min-w-0 sm:overflow-y-auto sm:[scrollbar-gutter:stable]">
+      <main
+        className="relative flex-1 sm:min-w-0 sm:overflow-y-auto sm:[scrollbar-gutter:stable]"
+        // spec 021: clears the status bar/notch/Dynamic Island on the
+        // Capacitor iOS shell — resolves to 0 on any context without a safe
+        // area (desktop browsers, older devices), so this is harmless there.
+        style={{ paddingTop: 'var(--safe-top)' }}
+      >
         {error && (
           <div className="sticky top-0 z-40 flex items-center justify-center gap-3 border-b border-hairline bg-surface px-4 py-2 text-center text-xs text-text-2">
             <span className="min-w-0">{error}</span>
@@ -35,7 +41,11 @@ function Shell({ children }: { children: ReactNode }) {
             </button>
           </div>
         )}
-        <div className="px-4 pb-24 pt-2 sm:px-8 sm:pb-12 sm:pt-4 lg:px-10">
+        {/* spec 021: the mobile tab bar grew by --safe-bottom (home indicator
+            clearance); an arbitrary-value class (not inline style) so
+            sm:pb-12 still wins at desktop widths — inline style would beat
+            it regardless of breakpoint. */}
+        <div className="px-4 pt-2 pb-[calc(6rem+var(--safe-bottom))] sm:px-8 sm:pb-12 sm:pt-4 lg:px-10">
           {loading ? (
             <div className="flex flex-1 items-center justify-center py-32 text-sm text-text-3">
               {t('Loading…')}

@@ -25,6 +25,21 @@ const config: CapacitorConfig = {
     // in Supabase's CORS settings like an ordinary origin.
     iosScheme: 'https',
   },
+  plugins: {
+    Keyboard: {
+      // Default 'native' mode resizes the whole WebView, breaking `100vh`-
+      // based layouts (dvh-based ones are unaffected either way); 'body'
+      // resizes only the body element, matching how a responsive web layout
+      // already expects to react to a shrinking viewport.
+      resize: 'body',
+    },
+    SplashScreen: {
+      // Hidden manually (SplashScreen.hide()) after first meaningful paint —
+      // see app/(app)/layout.tsx — rather than on this fixed timer, so a slow
+      // cold boot never shows a blank flash between splash and content.
+      launchAutoHide: false,
+    },
+  },
 }
 
 export default config
