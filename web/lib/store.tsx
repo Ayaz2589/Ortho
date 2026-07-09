@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { App } from '@capacitor/app'
 import { createClient } from './supabase/client'
 import { isTestBuild } from './test-build'
 import { readFlags } from './flags'
@@ -368,6 +369,23 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       window.location.assign('/sign-in')
     })
     return () => data.subscription.unsubscribe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase])
+
+  // spec 021: on the Capacitor iOS build, `onAuthStateChange` above only
+  // reacts to SIGNED_OUT, not proactive idle-tab revalidation (a documented
+  // gap vs. the native app's app-lifetime authStateChanges subscription —
+  // docs/parity-audit-2026-07-02.md). Foregrounding the app re-checks the
+  // session, closing that gap for the Capacitor build specifically; this is a
+  // no-op on desktop/mobile web (@capacitor/app's listener never fires there).
+  useEffect(() => {
+    let handle: { remove: () => void } | undefined
+    void App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) void supabase.auth.getSession()
+    }).then((h) => {
+      handle = h
+    })
+    return () => handle?.remove()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase])
 
