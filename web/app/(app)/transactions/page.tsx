@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Search, Plus, X, ArrowUpDown, ChevronDown, SlidersHorizontal } from 'lucide-react'
+import { Search, Plus, X, ArrowUpDown, ChevronDown, SlidersHorizontal, Camera, FileText } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { PageHeader, IconButton, Card, EmptyState, Modal } from '@/components/ui'
 import { useIsExpanded } from '@/lib/useMediaQuery'
@@ -12,8 +12,10 @@ import { TransactionDetailModal } from '@/components/transactions/TransactionDet
 import { BalanceSummary } from '@/components/transactions/BalanceSummary'
 import { TransactionsDesktop } from '@/components/web/TransactionsDesktop'
 import { TxModalWeb } from '@/components/web/TxModalWeb'
+import { ScanFlow } from '@/components/web/ScanFlow'
 import type { TransferPrefill } from '@/components/web/TxForm'
 import { useTransactionFilters } from '@/lib/useTransactionFilters'
+import { useScanFlow } from '@/lib/scan/useScanFlow'
 import { FilterPanel } from '@/components/web/FilterPanel'
 import { ActiveFilterChips } from '@/components/web/ActiveFilterChips'
 
@@ -28,6 +30,8 @@ export default function TransactionsPage() {
   const [copySource, setCopySource] = useState<Transaction | null>(null)
   const [settlePrefill, setSettlePrefill] = useState<TransferPrefill | null>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
+  const [scanPickerOpen, setScanPickerOpen] = useState(false)
+  const scan = useScanFlow()
 
   const hasAny = transactions.length > 0
 
@@ -111,6 +115,9 @@ export default function TransactionsPage() {
                 )}
               </span>
             )}
+            <IconButton ariaLabel={t('Scan a receipt or statement')} onClick={() => setScanPickerOpen(true)}>
+              <Camera size={18} />
+            </IconButton>
             <IconButton ariaLabel={t('Add transaction')} onClick={openAdd}>
               <Plus size={18} />
             </IconButton>
@@ -263,6 +270,41 @@ export default function TransactionsPage() {
         txId={detailId}
         onClose={() => setDetailId(null)}
       />
+
+      <Modal open={scanPickerOpen} onClose={() => setScanPickerOpen(false)} title={t('Scan')}>
+        <div className="flex flex-col gap-1 py-2">
+          <button
+            type="button"
+            onClick={() => {
+              setScanPickerOpen(false)
+              void scan.startCameraCapture()
+            }}
+            className="ortho-interactive flex items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] text-text"
+          >
+            <Camera size={20} className="text-text-2" />
+            {t('Take a photo')}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setScanPickerOpen(false)
+              void scan.startFileImport()
+            }}
+            className="ortho-interactive flex items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] text-text"
+          >
+            <FileText size={20} className="text-text-2" />
+            {t('Import a PDF from Files')}
+          </button>
+        </div>
+      </Modal>
+
+      {scan.state.phase !== 'idle' && (
+        <ScanFlow
+          state={scan.state}
+          dispatch={scan.dispatch}
+          onClose={() => scan.dispatch({ type: 'reset' })}
+        />
+      )}
     </div>
   )
 }
