@@ -1,10 +1,50 @@
 'use client'
 
-import { type ReactNode, useEffect, useRef } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { Fingerprint } from 'lucide-react'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { AppStateProvider, useApp } from '@/lib/store'
+import { useBiometricGate } from '@/lib/biometricGate'
+import { makeT } from '@/lib/i18n'
+import { asLanguage, DEFAULT_LANGUAGE, type Language } from '@/lib/language'
 import { TabBar } from '@/components/TabBar'
 import { Sidebar } from '@/components/Sidebar'
+
+/** spec 021, FR-011 — shown while `useBiometricGate()` is 'checking' or
+ *  'locked'. Never rendered on a device with no biometric enrollment (the
+ *  gate resolves straight to 'unlocked' there — see lib/biometricGate.ts).
+ *  Deliberately outside AppStateProvider: no household data should even
+ *  start rendering until the device is unlocked. Builds its own `t` from the
+ *  persisted language, same as app/sign-in/page.tsx (also unauthenticated). */
+function BiometricLockScreen({ locked, onRetry }: { locked: boolean; onRetry: () => void }) {
+  const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE)
+  useEffect(() => {
+    setLanguage(asLanguage(localStorage.getItem('language')))
+  }, [])
+  const t = useMemo(() => makeT(language), [language])
+
+  return (
+    <div
+      className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center"
+      style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
+    >
+      <Fingerprint size={40} className="text-text-3" strokeWidth={1.5} />
+      {locked && (
+        <>
+          <p className="text-[15px] text-text-2">{t('Unlock Ortho to continue')}</p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="ortho-interactive rounded-full px-5 py-2.5 text-[15px] font-normal text-accent"
+            style={{ background: 'var(--chip-bg)' }}
+          >
+            {t('Try again')}
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
 
 function Shell({ children }: { children: ReactNode }) {
   const { loading, error, bootstrapFailed, dismissError, retryBootstrap, t } = useApp()
@@ -74,6 +114,17 @@ function Shell({ children }: { children: ReactNode }) {
 }
 
 export default function AppLayout({ children }: { children: ReactNode }) {
+  const gate = useBiometricGate()
+
+  // spec 021, FR-011: 'checking' and 'locked' both render the lock screen —
+  // 'checking' shows it blank (no "Try again" yet, avoids a flash of a retry
+  // button before the first checkBiometry() resolves); a device with no
+  // enrollment never reaches either state (the gate resolves straight to
+  // 'unlocked' — see lib/biometricGate.ts).
+  if (gate.state !== 'unlocked') {
+    return <BiometricLockScreen locked={gate.state === 'locked'} onRetry={() => void gate.retry()} />
+  }
+
   return (
     <AppStateProvider>
       <Shell>{children}</Shell>
