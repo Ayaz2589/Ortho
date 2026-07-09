@@ -13,6 +13,7 @@ import { App } from '@capacitor/app'
 import { createClient } from './supabase/client'
 import { isTestBuild } from './test-build'
 import { readFlags } from './flags'
+import { hapticConfirm, hapticDestructive } from './haptics'
 import { formatMoney as fmtMoney, type CurrencyKey } from './finance/money'
 import { FALLBACK_RATE_FROM_USD } from './finance/currency'
 import { effectiveShares } from './format'
@@ -649,6 +650,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const addTransaction = (tx: Transaction) => {
     setTransactions((prev) => [tx, ...prev])
+    hapticConfirm() // spec 021, FR-012 — optimistic, so it fires immediately on tap
     ;(async () => {
       const { error: e } = await supabase.from('transactions').insert(txRecord(tx))
       if (e) {
@@ -701,6 +703,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       removed = prev.find((t) => t.id === id)
       return prev.filter((t) => t.id !== id)
     })
+    hapticDestructive() // spec 021, FR-012
     ;(async () => {
       const { error: e } = await supabase.from('transactions').delete().eq('id', id)
       if (e && removed) {
@@ -814,6 +817,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       removedPayments = prev.filter((rp) => rp.property_id === id)
       return prev.filter((rp) => rp.property_id !== id)
     })
+    hapticDestructive() // spec 021, FR-012
     ;(async () => {
       const { error: e } = await supabase.from('properties').delete().eq('id', id)
       if (e && removed) {

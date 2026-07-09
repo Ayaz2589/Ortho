@@ -9,6 +9,19 @@ import { makeTx } from './helpers/fixtures'
 const h = vi.hoisted(() => ({ mock: null as SupabaseMock | null }))
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => h.mock!.client }))
 
+// spec 021 — FR-012: key confirmation/deletion interactions get haptic
+// feedback (lib/haptics.ts, native-only; a no-op mock here just records calls).
+const { impact, notification } = vi.hoisted(() => ({
+  impact: vi.fn(() => Promise.resolve()),
+  notification: vi.fn(() => Promise.resolve()),
+}))
+vi.mock('@capacitor/haptics', () => ({
+  Haptics: { impact, notification },
+  ImpactStyle: { Light: 'LIGHT' },
+  NotificationType: { Warning: 'WARNING' },
+}))
+vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => true } }))
+
 // Import AFTER the mock is registered.
 import { AppStateProvider, useApp } from '@/lib/store'
 
@@ -139,6 +152,20 @@ describe('store (AppStateProvider)', () => {
     await waitFor(() => expect(api.transactions.find((t) => t.id === 'tx-new')).toBeUndefined())
     expect(api.transactions).toHaveLength(startLen) // back to original, others untouched
     expect(h.mock!.callsFor('transactions').some((c) => c.op === 'delete')).toBe(true)
+  })
+
+  it('addTransaction confirms with a light haptic; deleteTransaction with a warning haptic (FR-012)', async () => {
+    await renderStore()
+    impact.mockClear()
+    notification.mockClear()
+
+    const tx = makeTx({ id: 'tx-haptic', merchant: 'Blue Bottle', amount_cents: 450, owner_ids: ['u-me'], household_id: 'hh-1' })
+    await act(async () => { api.addTransaction(tx) })
+    await waitFor(() => expect(impact).toHaveBeenCalledWith({ style: 'LIGHT' }))
+    expect(notification).not.toHaveBeenCalled()
+
+    await act(async () => { api.deleteTransaction('tx-haptic') })
+    await waitFor(() => expect(notification).toHaveBeenCalledWith({ type: 'WARNING' }))
   })
 
   it('addTransaction rolls back the parent when the shares write fails (no share-less row)', async () => {
