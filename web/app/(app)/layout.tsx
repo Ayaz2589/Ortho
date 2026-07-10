@@ -21,6 +21,14 @@ function BiometricLockScreen({ locked, onRetry }: { locked: boolean; onRetry: ()
   useEffect(() => {
     setLanguage(asLanguage(localStorage.getItem('language')))
   }, [])
+  // spec 021: Shell's manual splash hide never runs while the gate holds the
+  // app locked. Once the lock screen is interactive (the 'locked' "Try again"
+  // state after a failed/cancelled unlock), dismiss the splash so it doesn't
+  // cover the unlock UI. Left up during the transient 'checking' state so the
+  // normal unlocked path never flashes the bare fingerprint icon.
+  useEffect(() => {
+    if (locked) void SplashScreen.hide()
+  }, [locked])
   const t = useMemo(() => makeT(language), [language])
 
   return (

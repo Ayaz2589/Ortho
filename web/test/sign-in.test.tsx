@@ -22,6 +22,7 @@ const h = vi.hoisted(() => ({
     (): Promise<{ data: { user: { id: string } | null }; error: null }> =>
       Promise.resolve({ data: { user: null }, error: null })
   ),
+  hide: vi.fn(() => Promise.resolve()),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -34,6 +35,8 @@ vi.mock('@/lib/supabase/client', () => ({
     from: h.from,
   }),
 }))
+
+vi.mock('@capacitor/splash-screen', () => ({ SplashScreen: { hide: h.hide } }))
 
 import SignInPage from '@/app/sign-in/page'
 
@@ -72,5 +75,14 @@ describe('web sign-in', () => {
 
     await waitFor(() => expect(h.getUser).toHaveBeenCalled())
     expect(h.replace).not.toHaveBeenCalled()
+  })
+
+  // spec 021: a signed-out launch lands here, outside the (app) Shell whose
+  // hide() dismisses the launchAutoHide:false splash. Without this the
+  // Capacitor splash covers the sign-in screen forever (regression guard).
+  it('hides the Capacitor splash on mount', async () => {
+    render(<SignInPage />)
+
+    await waitFor(() => expect(h.hide).toHaveBeenCalled())
   })
 })
