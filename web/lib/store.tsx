@@ -13,6 +13,7 @@ import { App } from '@capacitor/app'
 import { createClient } from './supabase/client'
 import { isTestBuild } from './test-build'
 import { readFlags } from './flags'
+import { signInHref } from './nav'
 import { hapticConfirm, hapticDestructive } from './haptics'
 import { formatMoney as fmtMoney, type CurrencyKey } from './finance/money'
 import { FALLBACK_RATE_FROM_USD } from './finance/currency'
@@ -260,7 +261,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         // bootstrap itself is the signed-out gate. Test builds with the
         // "Bypass auth" flag on skip the redirect (contract C-TD-4/C-FF-4).
         if (!(isTestBuild() && readFlags().bypassAuth)) {
-          window.location.assign('/sign-in')
+          window.location.assign(signInHref())
         }
         return
       }
@@ -367,7 +368,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setProperties([])
       setRentalPayments([])
       setBudgets([])
-      window.location.assign('/sign-in')
+      window.location.assign(signInHref())
     })
     return () => data.subscription.unsubscribe()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1009,7 +1010,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut()
-    window.location.href = '/sign-in'
+    window.location.href = signInHref()
   }
 
   const value: AppStateValue = {
