@@ -5,7 +5,7 @@
 // exported file itself ('/sign-in.html'); web keeps the clean '/sign-in'.
 import { describe, it, expect, vi, afterEach } from 'vitest'
 
-const isNativePlatform = vi.fn()
+const { isNativePlatform } = vi.hoisted(() => ({ isNativePlatform: vi.fn() }))
 vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform } }))
 
 import { signInHref } from '@/lib/nav'

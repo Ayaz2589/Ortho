@@ -1,59 +1,79 @@
-// spec 021 — the browser Supabase client gets a native-only Keychain storage
-// adapter (contracts/session-storage-adapter.md); desktop/mobile web keeps
-// the default @supabase/ssr cookie-based path (`storage: undefined`).
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+// spec 021 — the Supabase client's session-storage backend is chosen by
+// platform. @supabase/ssr's createBrowserClient DISCARDS a caller-provided
+// auth.storage — it builds its own document.cookie adapter and spreads it after
+// ...options.auth, so it clobbers the Keychain adapter. That put the native
+// session in evictable WKWebView cookies at https://localhost, which don't
+// round-trip across the post-sign-in navigation, so the dashboard's client read
+// no session and the app bounced back to /sign-in after a successful OTP verify.
+// The Capacitor build therefore uses raw @supabase/supabase-js createClient
+// (which forwards auth.storage to GoTrueClient → the Keychain is actually used);
+// desktop/mobile web keeps the @supabase/ssr cookie path unchanged.
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
-interface ClientOptions {
-  auth: {
-    storage?: { getItem: unknown; setItem: unknown; removeItem: unknown }
-    autoRefreshToken?: boolean
-    persistSession?: boolean
-    detectSessionInUrl?: boolean
-  }
-}
-
-const { createBrowserClient, isNativePlatform } = vi.hoisted(() => ({
-  createBrowserClient: vi.fn((_url: string, _key: string, _options: ClientOptions) => ({
-    auth: {},
-  })),
+const { createBrowserClient, createSupabaseClient, isNativePlatform } = vi.hoisted(() => ({
+  createBrowserClient: vi.fn(() => ({ mock: 'ssr' })),
+  createSupabaseClient: vi.fn(() => ({ mock: 'supabase-js' })),
   isNativePlatform: vi.fn(() => false),
 }))
 
 vi.mock('@supabase/ssr', () => ({ createBrowserClient }))
+vi.mock('@supabase/supabase-js', () => ({ createClient: createSupabaseClient }))
 vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform } }))
 vi.mock('@/lib/test-build', () => ({ isTestBuild: () => false }))
 
-import { createClient } from '@/lib/supabase/client'
-
-describe('createClient — session storage adapter', () => {
+describe('createClient — session storage backend (spec 021)', () => {
   beforeEach(() => {
+    vi.resetModules() // reset the native-client singleton between cases
     createBrowserClient.mockClear()
+    createSupabaseClient.mockClear()
+    isNativePlatform.mockReset()
     isNativePlatform.mockReturnValue(false)
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://ref.supabase.co')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon-key')
   })
+  afterEach(() => vi.unstubAllEnvs())
 
-  it('passes storage: undefined on non-native platforms (keeps the default cookie path)', () => {
+  it('web: uses @supabase/ssr createBrowserClient with the default cookie path (storage undefined)', async () => {
     isNativePlatform.mockReturnValue(false)
+    const { createClient } = await import('@/lib/supabase/client')
+
     createClient()
+
+    expect(createSupabaseClient).not.toHaveBeenCalled()
+    expect(createBrowserClient).toHaveBeenCalledTimes(1)
     const [, , options] = createBrowserClient.mock.calls[0]
     expect(options.auth.storage).toBeUndefined()
-  })
-
-  it('passes the Keychain adapter as storage on the native (Capacitor) platform', () => {
-    isNativePlatform.mockReturnValue(true)
-    createClient()
-    const [, , options] = createBrowserClient.mock.calls[0]
-    const storage = options.auth.storage
-    expect(storage).toBeDefined()
-    expect(typeof storage!.getItem).toBe('function')
-    expect(typeof storage!.setItem).toBe('function')
-    expect(typeof storage!.removeItem).toBe('function')
-  })
-
-  it('always sets persistSession/autoRefreshToken and disables detectSessionInUrl', () => {
-    createClient()
-    const [, , options] = createBrowserClient.mock.calls[0]
     expect(options.auth.persistSession).toBe(true)
     expect(options.auth.autoRefreshToken).toBe(true)
     expect(options.auth.detectSessionInUrl).toBe(false)
+  })
+
+  it('native: uses raw supabase-js createClient with the Keychain adapter (ssr would discard it)', async () => {
+    isNativePlatform.mockReturnValue(true)
+    const { createClient } = await import('@/lib/supabase/client')
+    const { keychainStorageAdapter } = await import('@/lib/auth/keychainStorage')
+
+    createClient()
+
+    expect(createBrowserClient).not.toHaveBeenCalled()
+    expect(createSupabaseClient).toHaveBeenCalledTimes(1)
+    const [, , options] = createSupabaseClient.mock.calls[0]
+    // The whole fix: auth.storage is the Keychain adapter (referential identity),
+    // so the session is written where the next client instance can read it back.
+    expect(options.auth.storage).toBe(keychainStorageAdapter)
+    expect(options.auth.persistSession).toBe(true)
+    expect(options.auth.autoRefreshToken).toBe(true)
+    expect(options.auth.detectSessionInUrl).toBe(false)
+  })
+
+  it('native: caches a single client across repeated createClient() calls', async () => {
+    isNativePlatform.mockReturnValue(true)
+    const { createClient } = await import('@/lib/supabase/client')
+
+    const a = createClient()
+    const b = createClient()
+
+    expect(createSupabaseClient).toHaveBeenCalledTimes(1)
+    expect(a).toBe(b)
   })
 })
