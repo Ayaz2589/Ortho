@@ -10,10 +10,23 @@
 // desktop/mobile web keeps the @supabase/ssr cookie path unchanged.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
+interface ClientOptions {
+  auth: {
+    storage?: unknown
+    autoRefreshToken?: boolean
+    persistSession?: boolean
+    detectSessionInUrl?: boolean
+    flowType?: string
+  }
+}
+
+// Typed params so `mock.calls[0][2]` is a known tuple element — vitest strips
+// types, but CI runs `tsc --noEmit` over test/** and an untyped vi.fn() infers
+// a zero-arg tuple ('has no element at index 2').
 const { createBrowserClient, createSupabaseClient, isNativePlatform } = vi.hoisted(() => ({
-  createBrowserClient: vi.fn(() => ({ mock: 'ssr' })),
-  createSupabaseClient: vi.fn(() => ({ mock: 'supabase-js' })),
-  isNativePlatform: vi.fn(() => false),
+  createBrowserClient: vi.fn((_url: string, _key: string, _options: ClientOptions) => ({ mock: 'ssr' })),
+  createSupabaseClient: vi.fn((_url: string, _key: string, _options: ClientOptions) => ({ mock: 'supabase-js' })),
+  isNativePlatform: vi.fn((): boolean => false),
 }))
 
 vi.mock('@supabase/ssr', () => ({ createBrowserClient }))
