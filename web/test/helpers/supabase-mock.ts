@@ -48,6 +48,10 @@ export interface SupabaseMock {
 export interface SupabaseClientLike {
   auth: {
     getUser: () => Promise<{ data: { user: unknown }; error: null }>
+    // spec 021: the Capacitor appStateChange listener re-validates via
+    // getSession() on foreground — a plain stub here (tests that care about
+    // its call count override it directly on `mock.client.auth`).
+    getSession: () => Promise<{ data: { session: unknown }; error: null }>
     onAuthStateChange: (cb: (event: string, session: unknown) => void) => {
       data: { subscription: { unsubscribe: () => void } }
     }
@@ -128,6 +132,7 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
   const client: SupabaseClientLike = {
     auth: {
       getUser: () => Promise.resolve({ data: { user: authUser }, error: null }),
+      getSession: () => Promise.resolve({ data: { session: authUser ? { user: authUser } : null }, error: null }),
       onAuthStateChange: (cb) => {
         authCallbacks.push(cb)
         return { data: { subscription: { unsubscribe: () => {} } } }

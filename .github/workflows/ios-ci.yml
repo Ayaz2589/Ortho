@@ -1,20 +1,18 @@
-# iOS CI — builds Ortho-iOS and runs the XCTest parity suites on a macOS runner.
-# Dev sandboxes are Linux and cannot build iOS; this workflow is their feedback loop.
-# Setup/usage notes live in the (gitignored) CI-SETUP.local.md at the repo root.
-name: iOS CI
+# iOS CI — manual smoke build for the FROZEN native Ortho-iOS app.
+#
+# spec 021 (Capacitor iOS consolidation): iOS/Ortho-iOS/ is retired — no new
+# feature work lands there, and its 11 XCTest parity suites are no longer kept
+# honest by a live second implementation (the web/TypeScript side is now the
+# sole canonical one; see PARITY.md and the constitution's Principle VI). Left
+# running on every push/PR, this would produce permanent, misleading red the
+# next time any vectored web function changes, since nobody updates the frozen
+# Swift mirrors. Narrowed to workflow_dispatch-only and build-only (no
+# `xcodebuild test`) so it stays a genuine "does the frozen app still compile"
+# rollback-readiness check (FR-021) without asserting parity it can no longer
+# track. iOS's LIVE feedback loop is now .github/workflows/capacitor-ios-ci.yml.
+name: iOS CI (frozen app — manual)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "iOS/**"
-      - "shared/test-vectors/**"
-      - ".github/workflows/ios-ci.yml"
-  pull_request:
-    paths:
-      - "iOS/**"
-      - "shared/test-vectors/**"
-      - ".github/workflows/ios-ci.yml"
   workflow_dispatch:
 
 concurrency:
@@ -22,8 +20,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    name: Build & test (iOS Simulator)
+  build:
+    name: Build only (frozen app, manual smoke check)
     runs-on: macos-latest
     timeout-minutes: 40
     steps:
@@ -36,8 +34,8 @@ jobs:
           sudo xcode-select -s "$XCODE_APP"
           xcodebuild -version
 
-      # The parity test suite is pure logic (golden vectors) — it never touches the
-      # network, so dummy Supabase values are enough to compile.
+      # The app never touches the network at compile time — dummy Supabase
+      # values are enough for this build-only smoke check.
       - name: Create SupabaseConfig.swift from template
         run: |
           sed -e 's|https://YOUR-PROJECT-REF.supabase.co|https://ci-placeholder.supabase.co|' \
@@ -74,7 +72,12 @@ jobs:
           echo "Using simulator UDID: $UDID"
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
 
-      - name: Build and test
+      # Build only — no `xcodebuild test`. The 11 XCTest parity suites assert
+      # golden vectors that only the web/TypeScript side still updates; with
+      # no live Swift mirror keeping them honest, running them here would be
+      # noise, not signal. This step answers one question only: does the
+      # frozen app still compile (the FR-021 rollback-readiness check)?
+      - name: Build (smoke check)
         run: |
           set -o pipefail
           if command -v xcbeautify >/dev/null 2>&1; then
@@ -82,13 +85,12 @@ jobs:
           else
             FILTER=(cat)
           fi
-          xcodebuild test \
+          xcodebuild build \
             -project iOS/Ortho-iOS.xcodeproj \
             -scheme Ortho-iOS \
             -destination "id=${{ steps.sim.outputs.udid }}" \
             -clonedSourcePackagesDirPath spm-packages \
             -derivedDataPath DerivedData \
-            -resultBundlePath TestResults.xcresult \
             2>&1 | "${FILTER[@]}"
 
       # Visual evidence: boot the app in the simulator in DEBUG -uiDemo mode
@@ -150,11 +152,3 @@ jobs:
           name: simulator-screenshots
           path: screenshots/
           if-no-files-found: error
-
-      - name: Upload result bundle
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: TestResults.xcresult
-          path: TestResults.xcresult
-          if-no-files-found: ignore

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { SplashScreen } from '@capacitor/splash-screen'
 import { createClient } from '@/lib/supabase/client'
 import { PrimaryButton } from '@/components/ui'
 import { makeT } from '@/lib/i18n'
@@ -11,6 +12,16 @@ function SignIn() {
   const router = useRouter()
   const supabase = createClient()
 
+  // spec 021: capacitor.config.ts sets launchAutoHide: false, so the splash is
+  // dismissed manually. The only other hide() lives in the (app) Shell (after
+  // app data loads) — but a signed-out launch lands here, outside that layout,
+  // so without this the Capacitor splash would cover the sign-in screen
+  // forever. First paint of the sign-in form is immediate, so hide on mount.
+  // No-op on desktop/mobile web (the plugin's web shim resolves harmlessly).
+  useEffect(() => {
+    void SplashScreen.hide()
+  }, [])
+
   // Not rendered under AppStateProvider, so build `t` locally from the same
   // persisted language the store uses (read after mount, like the store).
   const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE)
@@ -18,6 +29,24 @@ function SignIn() {
     setLanguage(asLanguage(localStorage.getItem('language')))
   }, [])
   const t = useMemo(() => makeT(language), [language])
+
+  // spec 021: this used to be the deleted `proxy.ts`'s `isAuthRoute` branch
+  // (redirect a signed-in user away from /sign-in). Under static export there
+  // is no server hop, so the check moves here, on mount.
+  useEffect(() => {
+    let cancelled = false
+    async function checkAlreadySignedIn() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!cancelled && user) router.replace('/dashboard')
+    }
+    void checkAlreadySignedIn()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')

@@ -2,8 +2,12 @@
  * Test-build feature flags (spec 015). Two disposable, per-browser toggles that
  * only exist on test builds and are forced OFF in production. Mirrors iOS's
  * `FeatureFlags`; persistence follows the `components/settings/appearance.ts`
- * read/write pattern (localStorage), plus a cookie so the server-side `proxy.ts`
- * auth gate can honor `bypassAuth` (middleware cannot read localStorage).
+ * read/write pattern (localStorage).
+ *
+ * Spec 021: the server-side `proxy.ts` auth gate that used to require a cookie
+ * mirror of `bypassAuth` (middleware couldn't read localStorage) is gone under
+ * static export — the client-side gate in `lib/store.tsx` reads `readFlags()`
+ * directly, so no cookie mirror is needed anymore.
  *
  * Safety invariant (FR-003): off a test build every flag reads `false`
  * regardless of any persisted value — so no test-data / auth-bypass path is
@@ -19,8 +23,6 @@ export interface FlagState {
 }
 
 const STORAGE_KEY = 'ortho.flags'
-/** Cookie mirror of `bypassAuth`, read by the server-side proxy gate. */
-export const BYPASS_AUTH_COOKIE = 'ortho_bypass_auth'
 
 const OFF: FlagState = { useTestData: false, bypassAuth: false }
 
@@ -42,15 +44,6 @@ export function writeFlags(next: FlagState): void {
   if (!isTestBuild()) return
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-  }
-  if (typeof document !== 'undefined') {
-    // The proxy gate reads this cookie; keep it in lockstep with the (indefinite)
-    // localStorage flag. Use the practical browser cap (400 days) rather than 24h,
-    // so the cookie doesn't silently expire first and start redirecting a still-
-    // bypassed session to /sign-in.
-    document.cookie = next.bypassAuth
-      ? `${BYPASS_AUTH_COOKIE}=1; path=/; max-age=34560000; samesite=lax`
-      : `${BYPASS_AUTH_COOKIE}=; path=/; max-age=0; samesite=lax`
   }
 }
 

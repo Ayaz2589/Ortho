@@ -1,0 +1,81 @@
+# Capacitor iOS CI — spec 021's live iOS feedback loop, replacing the frozen
+# iOS/Ortho-iOS/'s ios-ci.yml (now workflow_dispatch-only, see that file).
+# Builds the SAME web/ Next.js codebase used for desktop/mobile web, statically
+# exported and wrapped natively via Capacitor, on a macOS runner (Linux dev
+# sandboxes cannot build iOS — see docs/index.md). This is a build-only smoke
+# check (no `xcodebuild test`): most of this feature's testable logic (the
+# ported scan parser, the auth-gate migration, etc.) runs as ordinary Vitest
+# in web-ci.yml; the native Scan plugin currently has no automated test
+# target (research-report-full.md §10 item 9 — a known, tracked gap).
+name: Capacitor iOS CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/capacitor-ios-ci.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - ".github/workflows/capacitor-ios-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: capacitor-ios-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (Capacitor iOS Simulator target)
+    runs-on: macos-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Static export never makes a real network call at build time, but
+      # NEXT_PUBLIC_* vars are inlined into the client bundle regardless —
+      # placeholders keep the build deterministic without live credentials,
+      # matching ios-ci.yml's dummy-SupabaseConfig approach for the frozen app.
+      - name: Build static export
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_ci_placeholder
+        run: npm run build
+
+      - name: Select newest Xcode
+        run: |
+          XCODE_APP="$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          echo "Selecting $XCODE_APP"
+          sudo xcode-select -s "$XCODE_APP"
+          xcodebuild -version
+
+      - name: cap sync ios
+        run: npx cap sync ios
+
+      - name: Build (smoke check)
+        run: |
+          set -o pipefail
+          if command -v xcbeautify >/dev/null 2>&1; then
+            FILTER=(xcbeautify --renderer github-actions)
+          else
+            FILTER=(cat)
+          fi
+          xcodebuild build \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath DerivedData \
+            2>&1 | "${FILTER[@]}"

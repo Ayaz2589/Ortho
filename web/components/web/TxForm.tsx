@@ -4,11 +4,13 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { useApp } from '@/lib/store'
 import { SPEND_CATEGORIES, categoryMeta } from '@/lib/categories'
 import { currencySymbol, fractionDigits } from '@/lib/finance/currency'
+import { toUSDCents } from '@/lib/finance/money'
 import { groupByDay, dayLabel } from '@/lib/format'
 import { parseMoney, DatePicker } from '@/components/inputs'
 import { Avatar } from '@/components/ui'
 import { computeShares, validateSplit, orderedOwnerIds, seedSplit, type SplitInput, type SplitMethod } from '@/lib/splits'
 import type { Transaction, TransactionCategory, TransactionKind } from '@/lib/types'
+import type { ParsedCandidate } from '@/lib/scan/scanModels'
 import { Seg, CatTile, SourceDot } from './kit'
 
 const INCOME_SOURCES = ['ACH · Checking', 'ACH · Joint', 'Wire']
@@ -333,6 +335,30 @@ export function useTxForm({
     resetSplitsToEven()
   }
 
+  // Prefill from a scanned receipt/statement row (spec 021, T053). Direction
+  // always follows the candidate (debit -> expense, credit -> income) — a
+  // scan result is never a transfer. Non-USD candidates convert to USD cents
+  // via the app's own FX rate for that currency, exactly like every other
+  // amount this form stores; a null guess leaves the corresponding field at
+  // its existing default rather than clobbering it with an empty value.
+  function loadFromScanCandidate(candidate: ParsedCandidate) {
+    setDir(candidate.direction === 'credit' ? 'income' : 'expense')
+    const usdCents =
+      candidate.currency === 'usd'
+        ? candidate.amountCents
+        : toUSDCents(candidate.amountCents / 100, candidate.currency, rate(candidate.currency))
+    setAmount(centsToDisplay(usdCents, r, fd))
+    setMerchant(candidate.merchant)
+    if (candidate.categoryGuess) setCategory(candidate.categoryGuess)
+    const validOwners = (candidate.ownersGuess ?? []).filter((id) => memberIds.has(id))
+    setOwners(validOwners.length ? validOwners : [defaultOwner])
+    if (candidate.date) {
+      const { year, month, day } = candidate.date
+      setDate(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`)
+    }
+    resetSplitsToEven()
+  }
+
   /** After "Save and add another": clear the transaction-specific fields
    *  (merchant, amount, category, splits) and keep the contextual ones
    *  (kind, source, date, owners) — mirrors iOS `resetFormForAnotherEntry`. */
@@ -431,6 +457,7 @@ export function useTxForm({
     canSave,
     submit,
     loadFrom,
+    loadFromScanCandidate,
     resetForAnother,
   }
 }

@@ -9,7 +9,12 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { App } from '@capacitor/app'
 import { createClient } from './supabase/client'
+import { isTestBuild } from './test-build'
+import { readFlags } from './flags'
+import { signInHref } from './nav'
+import { hapticConfirm, hapticDestructive } from './haptics'
 import { formatMoney as fmtMoney, type CurrencyKey } from './finance/money'
 import { FALLBACK_RATE_FROM_USD } from './finance/currency'
 import { effectiveShares } from './format'
@@ -251,6 +256,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       } = await supabase.auth.getUser()
       if (!authUser) {
         setLoading(false)
+        // spec 021: this used to be caught server-side by `proxy.ts` before any
+        // client code ran; under static export there is no server hop, so
+        // bootstrap itself is the signed-out gate. Test builds with the
+        // "Bypass auth" flag on skip the redirect (contract C-TD-4/C-FF-4).
+        if (!(isTestBuild() && readFlags().bypassAuth)) {
+          window.location.assign(signInHref())
+        }
         return
       }
       setCurrentUserId(authUser.id)
@@ -356,9 +368,26 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setProperties([])
       setRentalPayments([])
       setBudgets([])
-      window.location.assign('/sign-in')
+      window.location.assign(signInHref())
     })
     return () => data.subscription.unsubscribe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase])
+
+  // spec 021: on the Capacitor iOS build, `onAuthStateChange` above only
+  // reacts to SIGNED_OUT, not proactive idle-tab revalidation (a documented
+  // gap vs. the native app's app-lifetime authStateChanges subscription —
+  // docs/parity-audit-2026-07-02.md). Foregrounding the app re-checks the
+  // session, closing that gap for the Capacitor build specifically; this is a
+  // no-op on desktop/mobile web (@capacitor/app's listener never fires there).
+  useEffect(() => {
+    let handle: { remove: () => void } | undefined
+    void App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) void supabase.auth.getSession()
+    }).then((h) => {
+      handle = h
+    })
+    return () => handle?.remove()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase])
 
@@ -622,6 +651,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const addTransaction = (tx: Transaction) => {
     setTransactions((prev) => [tx, ...prev])
+    hapticConfirm() // spec 021, FR-012 — optimistic, so it fires immediately on tap
     ;(async () => {
       const { error: e } = await supabase.from('transactions').insert(txRecord(tx))
       if (e) {
@@ -674,6 +704,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       removed = prev.find((t) => t.id === id)
       return prev.filter((t) => t.id !== id)
     })
+    hapticDestructive() // spec 021, FR-012
     ;(async () => {
       const { error: e } = await supabase.from('transactions').delete().eq('id', id)
       if (e && removed) {
@@ -787,6 +818,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       removedPayments = prev.filter((rp) => rp.property_id === id)
       return prev.filter((rp) => rp.property_id !== id)
     })
+    hapticDestructive() // spec 021, FR-012
     ;(async () => {
       const { error: e } = await supabase.from('properties').delete().eq('id', id)
       if (e && removed) {
@@ -978,7 +1010,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut()
-    window.location.href = '/sign-in'
+    window.location.href = signInHref()
   }
 
   const value: AppStateValue = {
