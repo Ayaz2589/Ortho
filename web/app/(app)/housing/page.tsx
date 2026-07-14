@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { House, Plus, ChevronLeft } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { PageHeader, IconButton, EmptyState } from '@/components/ui'
@@ -12,7 +13,14 @@ import { PropertyTypePicker } from '@/components/housing/PropertyTypePicker'
 import { AddPropertyModal } from '@/components/housing/AddPropertyModal'
 import { PropertyContent } from '@/components/housing/PropertyContent'
 import { PropertyCard } from '@/components/housing/PropertyCard'
-import { HousingDesktop } from '@/components/web/HousingDesktop'
+
+// Deferred so a mobile/iOS session never downloads the desktop composition
+// (spec 022, US3). The synchronous useIsExpanded() gate still selects the branch
+// before paint (no wrong-layout flash); the desktop chunk loads only when expanded.
+const HousingDesktop = dynamic(
+  () => import('@/components/web/HousingDesktop').then((m) => m.HousingDesktop),
+  { ssr: false, loading: () => null }
+)
 
 export default function HousingPage() {
   const { properties, currentHousehold, t } = useApp()

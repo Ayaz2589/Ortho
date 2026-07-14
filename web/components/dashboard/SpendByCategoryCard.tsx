@@ -1,9 +1,17 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { ChevronDown, MoreHorizontal } from 'lucide-react'
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import { useApp } from '@/lib/store'
+
+// Deferred so recharts leaves the Dashboard initial-load bundle (spec 022, US1).
+// The card's legend rows (the money figures) stay eager and paint immediately; the
+// donut streams in. The wrapping `h-40` div reserves its height → no layout shift.
+const CategoryPie = dynamic(() => import('./charts/CategoryPie').then((m) => m.CategoryPie), {
+  ssr: false,
+  loading: () => null,
+})
 import { Card, SectionLabel } from '@/components/ui'
 import { categoryMeta } from '@/lib/categories'
 import { shortDate } from '@/lib/format'
@@ -77,24 +85,7 @@ export function SpendByCategoryCard({
       ) : (
         <>
           <div className="mt-3 h-40 w-full">
-            <ResponsiveContainer width="100%" height={160} minWidth={0}>
-              <PieChart>
-                <Pie
-                  data={legend}
-                  dataKey="cents"
-                  nameKey="label"
-                  innerRadius="62%"
-                  outerRadius="100%"
-                  paddingAngle={2}
-                  stroke="none"
-                  isAnimationActive={false}
-                >
-                  {legend.map((e, i) => (
-                    <Cell key={i} fill={e.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
+            <CategoryPie data={legend} />
           </div>
 
           <div className="mt-2 flex flex-col">

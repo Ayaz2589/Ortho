@@ -1,12 +1,7 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { House } from 'lucide-react'
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  ResponsiveContainer,
-} from 'recharts'
 import { useApp } from '@/lib/store'
 import { mediumDate, monthYear, parseLocalDate } from '@/lib/format'
 import {
@@ -19,6 +14,14 @@ import {
   upcomingAmortization,
 } from '@/lib/finance/mortgage'
 import type { MortgageInfo } from '@/lib/types'
+
+// Deferred so recharts leaves the Housing initial-load bundle (spec 022, US1). The
+// amortization figures/legend stay eager; the bar chart streams in. The wrapping
+// `h-[140px]` div reserves its height → no layout shift.
+const AmortizationChart = dynamic(
+  () => import('./charts/AmortizationChart').then((m) => m.AmortizationChart),
+  { ssr: false, loading: () => null }
+)
 
 function Section({ children }: { children: React.ReactNode }) {
   return (
@@ -179,21 +182,7 @@ export function Amortization({ mortgage }: { mortgage: MortgageInfo }) {
       <div className="flex flex-col gap-3 p-5">
         <Label right={t('Next 12 months')}>{t('Amortization')}</Label>
         <div className="h-[140px] w-full">
-          <ResponsiveContainer width="100%" height={140} minWidth={0}>
-            <BarChart data={data} margin={{ top: 4, right: 0, bottom: 0, left: 0 }} barCategoryGap="20%">
-              <XAxis
-                dataKey="label"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 11, fill: 'var(--text-3)' }}
-                interval={0}
-              />
-              {/* Grouped (side-by-side) bars per month — matches iOS's
-                  `.position(by:)` chart semantics, not a stack. */}
-              <Bar dataKey="principal" fill="var(--positive)" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="interest" fill="rgba(26,24,21,0.18)" radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <AmortizationChart data={data} />
         </div>
         <div className="flex items-center gap-4">
           <LegendDot color="var(--positive)" label={t('Principal')} />

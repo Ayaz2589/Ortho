@@ -1,10 +1,18 @@
 'use client'
 
 import { useMemo } from 'react'
-import { AreaChart, Area, ResponsiveContainer } from 'recharts'
+import dynamic from 'next/dynamic'
 import { useApp } from '@/lib/store'
 import { Card, SectionLabel } from '@/components/ui'
 import { startOfDay } from '@/lib/format'
+
+// Deferred so recharts leaves the Dashboard initial-load bundle (spec 022, US1).
+// The Avg/day + trend readouts stay eager; the sparkline streams in. The wrapping
+// `h-20` div reserves its height → no layout shift.
+const DailyTrendChart = dynamic(
+  () => import('./charts/DailyTrendChart').then((m) => m.DailyTrendChart),
+  { ssr: false, loading: () => null }
+)
 
 /**
  * 30-day sparkline of daily expense totals, plus an average-per-day
@@ -51,20 +59,7 @@ export function DailySpendTrendCard({ now }: { now: Date }) {
       ) : (
         <>
           <div className="mt-3 h-20 w-full">
-            <ResponsiveContainer width="100%" height={80} minWidth={0}>
-              <AreaChart data={chartData} margin={{ top: 2, bottom: 2, left: 0, right: 0 }}>
-                <Area
-                  type="monotone"
-                  dataKey="v"
-                  stroke="var(--positive)"
-                  strokeWidth={1.6}
-                  fill="var(--positive)"
-                  fillOpacity={0.18}
-                  isAnimationActive={false}
-                  dot={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <DailyTrendChart data={chartData} />
           </div>
 
           <div className="mt-3 flex items-baseline justify-between">

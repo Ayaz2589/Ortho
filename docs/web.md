@@ -176,6 +176,14 @@ Three tiers, one source of truth (`lib/useMediaQuery.ts`):
 - **Type**: self-hosted Lato via `next/font/local` (the exact `.ttf` files iOS bundles — no Google Fonts CDN), exposed as `--font-lato`. iOS weight model: weight follows size (display = Light 300, body = Regular 400, **no bold**; `font-synthesis: none`).
 - Calm-design rules (from the constitution / `ortho-web` skill): hairlines over borders, no saturated status colors, loss is never red; `:focus-visible` gets a 1.5px accent outline; `.ortho-interactive` provides hover/active surface lift; `prefers-reduced-motion` collapses all transitions; long transaction lists use `.cv-row` (`content-visibility: auto`) for scroll performance.
 
+### Bundle code-splitting (spec 022)
+The three heaviest, least-frequently-needed code regions are deferred via `next/dynamic` (`{ ssr: false }` — they're browser-only and static export has no runtime SSR) so they leave the **initial-load** bundle (the set of chunks a route's built HTML references in `<script>` tags):
+- **Charts** — `recharts` is statically imported ONLY by the leaves under `components/{dashboard,housing}/charts/*` (`CategoryPie`, `DailyTrendChart`, `AmortizationChart`), which their cards dynamic-import; the card's money figures/legend stay eager and the fixed-height wrapper reserves the chart's space (no layout shift). This drops **~95 KB gzip** from `/dashboard` and `/housing` initial-load — the dominant win. A guard test (`test/bundle/no-eager-recharts.test.ts`) fails if any eager module imports `recharts`.
+- **Scan pipeline** — `lib/scan/useScanFlow.ts` dynamic-imports `scanParser`/`scanInference`/`scanPlugin`/`FilePicker` *inside* its capture callbacks (not at module top — the reducer stays eager), and `app/(app)/transactions/page.tsx` dynamic-imports the `ScanFlow` UI; both load only when a scan is initiated. Guard: `test/scan/scan-deferred.test.ts`.
+- **Desktop compositions** — the three master–detail routes dynamic-import their `components/web/*Desktop`, so a mobile/iOS session never downloads the desktop layer. The synchronous `useIsExpanded()` gate is preserved and the loading fallback is `null` (never the mobile layout), so there is no wrong-layout flash — only a brief blank on desktop while the small composition chunk loads. Guard: `test/web/form-factor-split.test.ts`.
+
+Measure with `npm run measure:bundle` (`scripts/measure-bundle.ts`): it derives each route's initial-load from the built HTML `<script>` tags — Turbopack chunk names are opaque content hashes, so filenames can't be classified — and supports `--json` / `--baseline` for before/after diffs. Full rationale and the recorded baseline/after in `specs/022-web-bundle-optimization/`.
+
 ## 5. Key files (read these first)
 
 1. `web/lib/store.tsx` — the entire client data layer: bootstrap (incl. the spec-021 client-side auth gate + Capacitor foreground liveness listener), loadAll, optimistic CRUD with rollback, atomic tx+shares writes, FX, owner resolution.
@@ -212,8 +220,13 @@ npm run build            # next build (static export, output: 'export' → web/o
 npm test                 # vitest run
 npm run test:coverage    # v8 coverage, thresholds enforced (see vitest.config.ts)
 npm run gen:vectors      # regenerate shared/test-vectors/ from the TS engines
+npm run measure:bundle   # report per-route initial-load JS sizes (needs a prior `npm run build`)
 npx tsc --noEmit         # typecheck (part of the web CI gate)
 ```
+
+`npm run measure:bundle` (spec 022) reads `web/out/` and prints each route's initial-load size; add
+`-- --json <path>` to save a baseline and `-- --baseline <path>` to print a before/after diff after a
+code-split change. See the *Bundle code-splitting* subsection in §4.
 
 `npm start` (`next start`) is gone — static export ships no Node server; serve `web/out/` with any
 static file server if you need to preview the exported bundle directly.

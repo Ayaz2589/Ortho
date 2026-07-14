@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { Search, Plus, X, ArrowUpDown, ChevronDown, SlidersHorizontal, Camera, FileText } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { PageHeader, IconButton, Card, EmptyState, Modal } from '@/components/ui'
@@ -10,14 +11,27 @@ import type { Transaction } from '@/lib/types'
 import { TransactionRow } from '@/components/transactions/TransactionRow'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 import { BalanceSummary } from '@/components/transactions/BalanceSummary'
-import { TransactionsDesktop } from '@/components/web/TransactionsDesktop'
 import { TxModalWeb } from '@/components/web/TxModalWeb'
-import { ScanFlow } from '@/components/web/ScanFlow'
 import type { TransferPrefill } from '@/components/web/TxForm'
 import { useTransactionFilters } from '@/lib/useTransactionFilters'
 import { useScanFlow } from '@/lib/scan/useScanFlow'
 import { FilterPanel } from '@/components/web/FilterPanel'
 import { ActiveFilterChips } from '@/components/web/ActiveFilterChips'
+
+// Deferred so the scan UI (interstitial/summary) loads on demand when a scan is
+// active, not on Transactions-route load (spec 022, US2). It only mounts when
+// scan.state.phase !== 'idle', so the chunk is fetched at that moment.
+const ScanFlow = dynamic(() => import('@/components/web/ScanFlow').then((m) => m.ScanFlow), {
+  ssr: false,
+})
+
+// Deferred so a mobile/iOS session never downloads the desktop composition
+// (spec 022, US3). The synchronous useIsExpanded() gate still selects the branch
+// before paint (no wrong-layout flash); the desktop chunk loads only when expanded.
+const TransactionsDesktop = dynamic(
+  () => import('@/components/web/TransactionsDesktop').then((m) => m.TransactionsDesktop),
+  { ssr: false, loading: () => null }
+)
 
 export default function TransactionsPage() {
   const isExpanded = useIsExpanded()

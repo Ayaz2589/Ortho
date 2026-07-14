@@ -10,7 +10,8 @@
     "build": "next build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "gen:vectors": "tsx scripts/gen-vectors.ts"
+    "gen:vectors": "tsx scripts/gen-vectors.ts",
+    "measure:bundle": "tsx scripts/measure-bundle.ts"
   },
   "dependencies": {
     "@aparajita/capacitor-biometric-auth": "^10.0.0",

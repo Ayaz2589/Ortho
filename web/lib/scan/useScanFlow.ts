@@ -11,20 +11,27 @@
 'use client'
 
 import { useCallback, useReducer } from 'react'
-import { FilePicker } from '@capawesome/capacitor-file-picker'
 import { useApp } from '@/lib/store'
-import { ScanPlugin } from './scanPlugin'
-import { parseScan } from './scanParser'
-import { buildScanContext } from './scanInference'
 import { createScanSessionState, scanSessionReducer } from './scanSession'
 import type { ScanDocumentText } from './scanModels'
+
+// The scan pipeline is deferred (spec 022, US2): the heavy parser/heuristics/inference
+// graph, the native Scan plugin, and the file picker are dynamically imported inside the
+// capture callbacks so they load only when the user actually initiates a scan — not on
+// Transactions-route load. Only the lightweight session reducer stays eager (it is needed
+// to render). Vitest mocks (test/scan/useScanFlow.test.tsx) apply to these dynamic imports
+// by resolved path, so behavior is unchanged.
 
 export function useScanFlow() {
   const { transactions, currency } = useApp()
   const [state, dispatch] = useReducer(scanSessionReducer, undefined, createScanSessionState)
 
   const processDocument = useCallback(
-    (document: ScanDocumentText) => {
+    async (document: ScanDocumentText) => {
+      const [{ parseScan }, { buildScanContext }] = await Promise.all([
+        import('./scanParser'),
+        import('./scanInference'),
+      ])
       const context = buildScanContext(transactions, currency, new Date())
       const result = parseScan(document, context)
       dispatch({ type: 'capture/parsed', result, document })
@@ -35,8 +42,9 @@ export function useScanFlow() {
   const startCameraCapture = useCallback(async () => {
     dispatch({ type: 'capture/start', source: 'camera' })
     try {
+      const { ScanPlugin } = await import('./scanPlugin')
       const { page } = await ScanPlugin.capture()
-      processDocument({ pages: [page] })
+      await processDocument({ pages: [page] })
     } catch {
       // Cancellation or an unavailable camera — the calm failure phase, not
       // a thrown error (the trigger UI stays usable; Retake tries again).
@@ -47,6 +55,10 @@ export function useScanFlow() {
   const startFileImport = useCallback(async () => {
     dispatch({ type: 'capture/start', source: 'file' })
     try {
+      const [{ FilePicker }, { ScanPlugin }] = await Promise.all([
+        import('@capawesome/capacitor-file-picker'),
+        import('./scanPlugin'),
+      ])
       const picked = await FilePicker.pickFiles({ types: ['application/pdf'] })
       const file = picked.files[0]
       if (!file?.path) {
@@ -57,7 +69,7 @@ export function useScanFlow() {
       }
       const fileUri = file.path.startsWith('file://') ? file.path : `file://${file.path}`
       const { pages } = await ScanPlugin.extractPDF({ fileUri })
-      processDocument({ pages })
+      await processDocument({ pages })
     } catch {
       dispatch({ type: 'capture/parsed', result: { kind: 'none' }, document: null })
     }
