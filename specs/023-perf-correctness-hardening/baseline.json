@@ -1,0 +1,190 @@
+{
+  "routes": [
+    {
+      "route": "/transactions",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "0cz1d0mv5g_q7.js",
+        "0nme4lhqx1hjm.js",
+        "0paxexg6-m0de.js",
+        "1-8s9_t85wwr4.js",
+        "1kksammigwrnp.js",
+        "1v-9-k5vvvlou.js",
+        "2-dd95pmnaayb.js",
+        "2nykiepra7i1k.js",
+        "2t-7k8o0kfrql.js",
+        "310vm2bl3xxpt.js",
+        "turbopack-0y9rvxqmsd_rk.js"
+      ],
+      "rawBytes": 1137133,
+      "gzipBytes": 328862
+    },
+    {
+      "route": "/housing",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "0cz1d0mv5g_q7.js",
+        "0paxexg6-m0de.js",
+        "1-8s9_t85wwr4.js",
+        "1kksammigwrnp.js",
+        "1v-9-k5vvvlou.js",
+        "2-dd95pmnaayb.js",
+        "221496m3xjcg2.js",
+        "2nykiepra7i1k.js",
+        "2t-7k8o0kfrql.js",
+        "310vm2bl3xxpt.js",
+        "turbopack-0y9rvxqmsd_rk.js"
+      ],
+      "rawBytes": 1120469,
+      "gzipBytes": 323276
+    },
+    {
+      "route": "/dashboard",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "0cz1d0mv5g_q7.js",
+        "0paxexg6-m0de.js",
+        "1-8s9_t85wwr4.js",
+        "1kksammigwrnp.js",
+        "1v-9-k5vvvlou.js",
+        "2-dd95pmnaayb.js",
+        "2nykiepra7i1k.js",
+        "2t-7k8o0kfrql.js",
+        "310vm2bl3xxpt.js",
+        "3b-1a_i3y5aba.js",
+        "4095mjz92kpcr.js",
+        "turbopack-0y9rvxqmsd_rk.js"
+      ],
+      "rawBytes": 1117139,
+      "gzipBytes": 325117
+    },
+    {
+      "route": "/settings",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "0cz1d0mv5g_q7.js",
+        "0paxexg6-m0de.js",
+        "1-8s9_t85wwr4.js",
+        "1kksammigwrnp.js",
+        "1lvr518tbtzq4.js",
+        "1v-9-k5vvvlou.js",
+        "2-dd95pmnaayb.js",
+        "2nykiepra7i1k.js",
+        "2t-7k8o0kfrql.js",
+        "310vm2bl3xxpt.js",
+        "turbopack-0y9rvxqmsd_rk.js"
+      ],
+      "rawBytes": 1095147,
+      "gzipBytes": 317399
+    },
+    {
+      "route": "/settings/household",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "0cz1d0mv5g_q7.js",
+        "0paxexg6-m0de.js",
+        "1-8s9_t85wwr4.js",
+        "1kksammigwrnp.js",
+        "1v-9-k5vvvlou.js",
+        "2-dd95pmnaayb.js",
+        "2nykiepra7i1k.js",
+        "2t-7k8o0kfrql.js",
+        "310vm2bl3xxpt.js",
+        "33iitvqcgbfo3.js",
+        "turbopack-0y9rvxqmsd_rk.js"
+      ],
+      "rawBytes": 1093842,
+      "gzipBytes": 316355
+    },
+    {
+      "route": "/budgets",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "0cz1d0mv5g_q7.js",
+        "0paxexg6-m0de.js",
+        "1-8s9_t85wwr4.js",
+        "1kksammigwrnp.js",
+        "1v-9-k5vvvlou.js",
+        "2-dd95pmnaayb.js",
+        "24gw_zz66ae5j.js",
+        "2nykiepra7i1k.js",
+        "2t-7k8o0kfrql.js",
+        "310vm2bl3xxpt.js",
+        "turbopack-0y9rvxqmsd_rk.js"
+      ],
+      "rawBytes": 1086465,
+      "gzipBytes": 315171
+    },
+    {
+      "route": "/sign-in",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "07ysjzrge2qcv.js",
+        "0cz1d0mv5g_q7.js",
+        "0paxexg6-m0de.js",
+        "1-8s9_t85wwr4.js",
+        "1dgvad2ok1zte.js",
+        "1kksammigwrnp.js",
+        "2-dd95pmnaayb.js",
+        "2nykiepra7i1k.js",
+        "310vm2bl3xxpt.js",
+        "turbopack-0y9rvxqmsd_rk.js"
+      ],
+      "rawBytes": 1059796,
+      "gzipBytes": 305699
+    },
+    {
+      "route": "/",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "0cz1d0mv5g_q7.js",
+        "0paxexg6-m0de.js",
+        "1-8s9_t85wwr4.js",
+        "1kksammigwrnp.js",
+        "1nhs7df5dplkz.js",
+        "2-dd95pmnaayb.js",
+        "2nykiepra7i1k.js",
+        "310vm2bl3xxpt.js",
+        "turbopack-0y9rvxqmsd_rk.js"
+      ],
+      "rawBytes": 627163,
+      "gzipBytes": 186734
+    },
+    {
+      "route": "/404",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "0cz1d0mv5g_q7.js",
+        "0paxexg6-m0de.js",
+        "1-8s9_t85wwr4.js",
+        "1kksammigwrnp.js",
+        "2-dd95pmnaayb.js",
+        "2nykiepra7i1k.js",
+        "310vm2bl3xxpt.js",
+        "turbopack-0y9rvxqmsd_rk.js"
+      ],
+      "rawBytes": 626840,
+      "gzipBytes": 186469
+    },
+    {
+      "route": "/_not-found",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "0cz1d0mv5g_q7.js",
+        "0paxexg6-m0de.js",
+        "1-8s9_t85wwr4.js",
+        "1kksammigwrnp.js",
+        "2-dd95pmnaayb.js",
+        "2nykiepra7i1k.js",
+        "310vm2bl3xxpt.js",
+        "turbopack-0y9rvxqmsd_rk.js"
+      ],
+      "rawBytes": 626840,
+      "gzipBytes": 186469
+    }
+  ],
+  "initialLoadUnionRawBytes": 1723244,
+  "initialLoadUnionGzipBytes": 494515,
+  "totalRawBytes": 2747253,
+  "chunkCount": 43
+}

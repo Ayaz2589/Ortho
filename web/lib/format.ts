@@ -34,6 +34,20 @@ export function parseLocalDate(s: string): Date {
   return new Date(s)
 }
 
+// Intl.DateTimeFormat construction is expensive and these run per row / day-header.
+// Cache one formatter per (locale, options) — the options are fixed literals, so
+// the key is stable and the formatted output byte-identical (spec 023 P2).
+const dateFormatters = new Map<string, Intl.DateTimeFormat>()
+function dateFormatter(locale: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = `${locale}|${JSON.stringify(options)}`
+  let fmt = dateFormatters.get(key)
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat(locale, options)
+    dateFormatters.set(key, fmt)
+  }
+  return fmt
+}
+
 /** "Today" / "Yesterday" / weekday / "MMM d" relative to now. */
 export function dayLabel(date: Date, locale: string = 'en-US', now: Date = new Date()): string {
   const a = startOfDay(date).getTime()
@@ -42,28 +56,26 @@ export function dayLabel(date: Date, locale: string = 'en-US', now: Date = new D
   if (diffDays === 0) return 'Today'
   if (diffDays === 1) return 'Yesterday'
   if (diffDays >= 2 && diffDays <= 6) {
-    return new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(date)
+    return dateFormatter(locale, { weekday: 'long' }).format(date)
   }
-  return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(date)
+  return dateFormatter(locale, { month: 'short', day: 'numeric' }).format(date)
 }
 
 export function shortDate(date: Date, locale: string = 'en-US'): string {
-  return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(date)
+  return dateFormatter(locale, { month: 'short', day: 'numeric' }).format(date)
 }
 
 export function mediumDate(date: Date, locale: string = 'en-US'): string {
-  return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', year: 'numeric' }).format(
-    date
-  )
+  return dateFormatter(locale, { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
 }
 
 export function monthYear(date: Date, locale: string = 'en-US'): string {
-  return new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(date)
+  return dateFormatter(locale, { month: 'short', year: 'numeric' }).format(date)
 }
 
 /** Full month name + year, e.g. "January 2025". */
 export function monthYearLong(date: Date, locale: string = 'en-US'): string {
-  return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(date)
+  return dateFormatter(locale, { month: 'long', year: 'numeric' }).format(date)
 }
 
 export function relativeTime(date: Date, now: Date = new Date()): string {

@@ -26,7 +26,7 @@ import {
   localeForLanguage,
   type Language,
 } from './language'
-import { makeT, type Translate } from './i18n'
+import { useTranslate, type Translate } from './i18n'
 import type {
   User,
   Person,
@@ -233,7 +233,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('language', next)
   }
 
-  const t = useMemo(() => makeT(language), [language])
+  const t = useTranslate(language)
 
   // supabase-js resolves with `{ error }` instead of throwing, so a missed
   // check reads as success — during bootstrap that turned a transient read

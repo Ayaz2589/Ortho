@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { createClient } from '@/lib/supabase/client'
 import { PrimaryButton } from '@/components/ui'
-import { makeT } from '@/lib/i18n'
+import { useTranslate } from '@/lib/i18n'
 import { asLanguage, DEFAULT_LANGUAGE, type Language } from '@/lib/language'
 
 function SignIn() {
@@ -28,7 +28,7 @@ function SignIn() {
   useEffect(() => {
     setLanguage(asLanguage(localStorage.getItem('language')))
   }, [])
-  const t = useMemo(() => makeT(language), [language])
+  const t = useTranslate(language)
 
   // spec 021: this used to be the deleted `proxy.ts`'s `isAuthRoute` branch
   // (redirect a signed-in user away from /sign-in). Under static export there

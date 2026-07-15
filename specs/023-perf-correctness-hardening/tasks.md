@@ -35,8 +35,8 @@ correctness bug fix lands behind a failing repro test written first.
 
 ## Phase 1: Setup (Shared)
 
-- [ ] T001 [P] Record the pre-change 023 bundle baseline: from `web/` run `npm install`, `npm run build`, then `npm run measure:bundle -- --json ../specs/023-perf-correctness-hardening/baseline.json`; confirm the i18n catalogs are classified into initial-load and record the initial-load raw/gzip number (SC-002 baseline). No code change.
-- [ ] T002 [P] Confirm a clean green baseline: from `web/` run `npm test` (all green) and `npx tsc --noEmit` (clean) to pin the pre-change state. No code change.
+- [X] T001 [P] Record the pre-change 023 bundle baseline: from `web/` run `npm install`, `npm run build`, then `npm run measure:bundle -- --json ../specs/023-perf-correctness-hardening/baseline.json`; confirm the i18n catalogs are classified into initial-load and record the initial-load raw/gzip number (SC-002 baseline). No code change.
+- [X] T002 [P] Confirm a clean green baseline: from `web/` run `npm test` (all green) and `npx tsc --noEmit` (clean) to pin the pre-change state. No code change.
 
 **Checkpoint**: baseline recorded; branch builds/tests green.
 
@@ -80,13 +80,13 @@ download, less repeated work, byte-identical output (per `contracts/perf-boundar
 **Independent test**: build → non-active catalogs absent from initial-load and a default-language
 user fetches none, measured initial-load below baseline; `npm test` green with vectors byte-identical.
 
-- [ ] T010 [P] [US2] Write FAILING guard test `web/test/i18n/no-eager-catalog.test.ts`: assert no module on the initial-load path statically imports the `es|ja|zh|ko|bn` catalogs (mirrors spec-022's `no-eager-recharts`).
-- [ ] T011 [US2] P1: lazy-load catalogs in `web/lib/i18n/index.ts` + `web/lib/store.tsx` — dynamic-`import()` only the active language's catalog in the store's after-mount preference path; `makeT` returns English identity until it resolves, then re-renders. Make T010 pass. (Shared file with T029/T040 — sequence, not parallel.)
-- [ ] T012 [US2] Update `web/test/i18n/render-locale.test.tsx` to `await` the async catalog load (behavior-preserving) and still assert no English leak once loaded.
-- [ ] T013 [US2] Verify the P1 bundle win: `npm run build` → `npm run measure:bundle -- --baseline ../specs/023-perf-correctness-hardening/baseline.json`; confirm catalogs moved out of initial-load and initial-load gzip decreased; record the delta.
-- [ ] T014 [P] [US2] P2: add a module-level `Intl.NumberFormat` cache in `web/lib/finance/money.ts` and an `Intl.DateTimeFormat` cache in `web/lib/format.ts`, each keyed by all output-affecting args. Output byte-identical (vectors green, no regen).
-- [ ] T015 [P] [US2] P3: memoize the three unmemoized dashboard aggregations — `useMemo` in `web/components/dashboard/InsightsCardStack.tsx`, `MonthSummaryCard.tsx`, and `BudgetProgressCard.tsx` (BudgetProgress computes one grouped in-range slice instead of per-category whole-array rescans). Identical rendered content.
-- [ ] T016 [US2] Verify US2: `npm test` (T010/T012 pass; regression vectors byte-identical, NOT regenerated), `npx tsc --noEmit`; record the cumulative bundle delta.
+- [X] T010 [P] [US2] Write FAILING guard test `web/test/i18n/no-eager-catalog.test.ts`: assert no module on the initial-load path statically imports the `es|ja|zh|ko|bn` catalogs (mirrors spec-022's `no-eager-recharts`).
+- [X] T011 [US2] P1: lazy-load catalogs in `web/lib/i18n/index.ts` + `web/lib/store.tsx` — dynamic-`import()` only the active language's catalog in the store's after-mount preference path; `makeT` returns English identity until it resolves, then re-renders. Make T010 pass. (Shared file with T029/T040 — sequence, not parallel.)
+- [X] T012 [US2] Update `web/test/i18n/render-locale.test.tsx` to `await` the async catalog load (behavior-preserving) and still assert no English leak once loaded.
+- [X] T013 [US2] Verify the P1 bundle win: `npm run build` → `npm run measure:bundle -- --baseline ../specs/023-perf-correctness-hardening/baseline.json`; confirm catalogs moved out of initial-load and initial-load gzip decreased; record the delta.
+- [X] T014 [P] [US2] P2: add a module-level `Intl.NumberFormat` cache in `web/lib/finance/money.ts` and an `Intl.DateTimeFormat` cache in `web/lib/format.ts`, each keyed by all output-affecting args. Output byte-identical (vectors green, no regen).
+- [X] T015 [P] [US2] P3: memoize the three unmemoized dashboard aggregations — `useMemo` in `web/components/dashboard/InsightsCardStack.tsx`, `MonthSummaryCard.tsx`, and `BudgetProgressCard.tsx` (BudgetProgress computes one grouped in-range slice instead of per-category whole-array rescans). Identical rendered content.
+- [X] T016 [US2] Verify US2: `npm test` (T010/T012 pass; regression vectors byte-identical, NOT regenerated), `npx tsc --noEmit`; record the cumulative bundle delta.
 
 **Checkpoint**: MVP complete (US1+US2) — money-correct and measurably faster, both targets, no visual change.
 

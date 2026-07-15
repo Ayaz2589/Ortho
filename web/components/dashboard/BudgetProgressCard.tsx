@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useApp } from '@/lib/store'
 import { Card, SectionLabel } from '@/components/ui'
 import { categoryMeta } from '@/lib/categories'
@@ -25,19 +26,33 @@ export function BudgetProgressCard({
   interval?: Interval
   label?: string
 } = {}) {
-  const { budgets, categoryExpenseTotal, formatMoney, t } = useApp()
+  const { budgets, transactions, formatMoney, t } = useApp()
 
   const now = new Date()
   const monthStart = interval ? interval.start : new Date(now.getFullYear(), now.getMonth(), 1)
   const monthEnd = interval ? interval.end : new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const startMs = monthStart.getTime()
+  const endMs = monthEnd.getTime()
 
-  const rows = budgets
-    .filter((b) => b.monthly_limit_cents > 0)
-    .map((b) => {
-      const spent = categoryExpenseTotal(b.category, monthStart, monthEnd)
-      return { budget: b, spent, fraction: spent / b.monthly_limit_cents }
-    })
-    .sort((a, b) => b.fraction - a.fraction)
+  // One pass over the ledger builds the in-range expense total per category —
+  // was one whole-array rescan per budgeted category via categoryExpenseTotal —
+  // memoized so unrelated store changes don't recompute it (spec 023 P3).
+  const rows = useMemo(() => {
+    const spentByCategory = new Map<string, number>()
+    for (const tx of transactions) {
+      if (tx.kind !== 'expense') continue
+      const ms = new Date(tx.date).getTime()
+      if (ms < startMs || ms >= endMs) continue
+      spentByCategory.set(tx.category, (spentByCategory.get(tx.category) ?? 0) + tx.amount_cents)
+    }
+    return budgets
+      .filter((b) => b.monthly_limit_cents > 0)
+      .map((b) => {
+        const spent = spentByCategory.get(b.category) ?? 0
+        return { budget: b, spent, fraction: spent / b.monthly_limit_cents }
+      })
+      .sort((a, b) => b.fraction - a.fraction)
+  }, [transactions, budgets, startMs, endMs])
 
   if (rows.length === 0) return null
 

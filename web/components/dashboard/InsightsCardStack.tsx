@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import {
   Crown,
   TrendingUp,
@@ -56,7 +57,12 @@ function iconFor(key: string): LucideIcon {
 export function InsightsCardStack({ now }: { now?: Date } = {}) {
   const { transactions, budgets, properties, t, locale } = useApp()
   // `now` is the scoped reference date (mid selected month, else undefined → today).
-  const insights = generateInsights(transactions, budgets, properties, now, 6, t, locale)
+  // The 363-line insight engine ran on every store change while mounted; memoize
+  // it on its real inputs so unrelated re-renders don't recompute it (spec 023 P3).
+  const insights = useMemo(
+    () => generateInsights(transactions, budgets, properties, now, 6, t, locale),
+    [transactions, budgets, properties, now, t, locale]
+  )
 
   if (insights.length === 0) return null
 

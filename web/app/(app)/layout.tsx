@@ -5,7 +5,7 @@ import { Fingerprint } from 'lucide-react'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { AppStateProvider, useApp } from '@/lib/store'
 import { useBiometricGate } from '@/lib/biometricGate'
-import { makeT } from '@/lib/i18n'
+import { useTranslate } from '@/lib/i18n'
 import { asLanguage, DEFAULT_LANGUAGE, type Language } from '@/lib/language'
 import { TabBar } from '@/components/TabBar'
 import { Sidebar } from '@/components/Sidebar'
@@ -29,7 +29,7 @@ function BiometricLockScreen({ locked, onRetry }: { locked: boolean; onRetry: ()
   useEffect(() => {
     if (locked) void SplashScreen.hide()
   }, [locked])
-  const t = useMemo(() => makeT(language), [language])
+  const t = useTranslate(language)
 
   return (
     <div
