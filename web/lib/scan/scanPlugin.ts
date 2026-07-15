@@ -6,7 +6,7 @@
 // directly, so the "empty object means null" bridge quirk (Capacitor's iOS
 // side can never resolve a bare JS null) stays contained in one place.
 
-import { registerPlugin } from '@capacitor/core'
+import { registerPlugin, type PluginListenerHandle } from '@capacitor/core'
 import type {
   ParsedCandidate,
   ScanDocumentTextPage,
@@ -41,7 +41,7 @@ interface NativeScanPlugin {
   rescue(opts: { page: ScanDocumentTextPage }): Promise<Partial<ParsedCandidateGuess>>
   checkPermissions(): Promise<{ camera: ScanPermissionState }>
   requestPermissions(): Promise<{ camera: ScanPermissionState }>
-  addListener(eventName: 'pageCaptured', listener: (data: CaptureResult) => void): void
+  addListener(eventName: 'pageCaptured', listener: (data: CaptureResult) => void): Promise<PluginListenerHandle>
 }
 
 const native = registerPlugin<NativeScanPlugin>('Scan')
@@ -83,8 +83,10 @@ export const ScanPlugin = {
 
   /** Fires once per photo AFTER the first (which resolves `capture()`
    *  itself) during a multi-photo statement-capture session — see the
-   *  contract's "Session lifecycle" note. */
-  onPageCaptured(handler: (data: CaptureResult) => void): void {
-    native.addListener('pageCaptured', handler)
+   *  contract's "Session lifecycle" note. Returns the Capacitor listener
+   *  handle so the caller can `remove()` it when the session ends/unmounts
+   *  (spec 023 B3 wires this in `useScanFlow`). */
+  onPageCaptured(handler: (data: CaptureResult) => void): Promise<PluginListenerHandle> {
+    return native.addListener('pageCaptured', handler)
   },
 }
