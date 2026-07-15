@@ -135,9 +135,9 @@ reload; forced theme → readable status bar from launch; server-revoke → fore
 
 **Independent test**: browser build — select/copy an amount and a merchant name; sign-in caption says 8-digit.
 
-- [ ] T028 [P] [US5] B8: write a FAILING test in `web/test/appearance/user-select-native-gate.test.ts` that the `-webkit-user-select:none` shell rule applies on the web build; then native-gate it in `web/app/globals.css` behind a native platform class set in the boot path (`web/app/layout.tsx`) when `Capacitor.isNativePlatform()`. Make selection work on web; iOS keeps long-press suppression.
-- [ ] T029 [P] [US5] B6: correct "6-digit" → "8-digit" in the sign-in caption string across `web/lib/i18n/*` (and the English source); add/keep a test asserting no "6-digit" string remains and the sign-in render shows 8-digit. (Shared i18n files with T011/T040 — sequence.)
-- [ ] T030 [US5] Verify US5: `npm test` + `npx tsc --noEmit`.
+- [X] T028 [P] [US5] B8: write a FAILING test in `web/test/appearance/user-select-native-gate.test.ts` that the `-webkit-user-select:none` shell rule applies on the web build; then native-gate it in `web/app/globals.css` behind a native platform class set in the boot path (`web/app/layout.tsx`) when `Capacitor.isNativePlatform()`. Make selection work on web; iOS keeps long-press suppression.
+- [X] T029 [P] [US5] B6: correct "6-digit" → "8-digit" in the sign-in caption string across `web/lib/i18n/*` (and the English source); add/keep a test asserting no "6-digit" string remains and the sign-in render shows 8-digit. (Shared i18n files with T011/T040 — sequence.)
+- [X] T030 [US5] Verify US5: `npm test` + `npx tsc --noEmit`.
 
 **Checkpoint**: small web correctness leaks closed.
 

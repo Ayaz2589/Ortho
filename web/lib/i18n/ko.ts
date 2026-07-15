@@ -256,7 +256,6 @@ const catalog: Record<string, string> = {
   "US Dollar": "미국 달러",
   "Use a different email": "다른 이메일 사용",
   "Utilities": "공과금",
-  "We'll email you a 6-digit code. No password, no fuss.": "6자리 코드를 이메일로 보내드립니다. 비밀번호 없이 간편하게.",
   "What kind of home is this? Choose one — we'll ask only the questions that fit.": "어떤 종류의 주택인가요? 하나 선택하세요 — 적합한 질문만 드립니다.",
   "Yesterday": "어제",
   "You can change type later from the property's settings, but a few fields will reset (e.g. lease dates become closing date).": "나중에 부동산 설정에서 유형을 변경할 수 있지만 일부 필드는 재설정됩니다(예: 임대 날짜가 마감일로 변경됨).",

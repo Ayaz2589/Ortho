@@ -256,7 +256,6 @@ const catalog: Record<string, string> = {
   "US Dollar": "মার্কিন ডলার",
   "Use a different email": "অন্য ইমেইল ব্যবহার করুন",
   "Utilities": "ইউটিলিটি",
-  "We'll email you a 6-digit code. No password, no fuss.": "আমরা আপনাকে একটি 6-অঙ্কের কোড ইমেইল করব। কোন পাসওয়ার্ড নেই, কোন ঝামেলা নেই।",
   "What kind of home is this? Choose one — we'll ask only the questions that fit.": "এটি কোন ধরনের বাড়ি? একটি বেছে নিন — আমরা শুধু প্রাসঙ্গিক প্রশ্ন জিজ্ঞেস করব।",
   "Yesterday": "গতকাল",
   "You can change type later from the property's settings, but a few fields will reset (e.g. lease dates become closing date).": "পরে আপনি সম্পত্তির সেটিংস থেকে ধরন পরিবর্তন করতে পারেন, তবে কিছু ক্ষেত্র রিসেট হবে (যেমন লিজের তারিখ ক্লোজিং তারিখ হবে)।",

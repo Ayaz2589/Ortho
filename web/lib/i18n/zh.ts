@@ -256,7 +256,6 @@ const catalog: Record<string, string> = {
   "US Dollar": "美元",
   "Use a different email": "使用其他邮箱",
   "Utilities": "水电费",
-  "We'll email you a 6-digit code. No password, no fuss.": "我们会通过邮箱发送6位验证码。无需密码，简单便捷。",
   "What kind of home is this? Choose one — we'll ask only the questions that fit.": "这是哪种住宅？请选择一个 — 我们只会询问相关的问题。",
   "Yesterday": "昨天",
   "You can change type later from the property's settings, but a few fields will reset (e.g. lease dates become closing date).": "您可以稍后在房产设置中更改类型，但部分字段将重置（例如租约日期变为成交日期）。",

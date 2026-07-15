@@ -251,7 +251,6 @@ const catalog: Record<string, string> = {
   "US Dollar": "Dólar estadounidense",
   "Use a different email": "Usar otro correo",
   "Utilities": "Servicios",
-  "We'll email you a 6-digit code. No password, no fuss.": "Te enviaremos un código de 6 dígitos por correo. Sin contraseñas, sin complicaciones.",
   "What kind of home is this? Choose one — we'll ask only the questions that fit.": "¿Qué tipo de vivienda es esta? Elige una — solo te haremos las preguntas adecuadas.",
   "Yesterday": "Ayer",
   "You can change type later from the property's settings, but a few fields will reset (e.g. lease dates become closing date).": "Puedes cambiar el tipo más tarde desde los ajustes de la propiedad, pero algunos campos se reiniciarán (p. ej. las fechas del contrato pasan a fecha de cierre).",

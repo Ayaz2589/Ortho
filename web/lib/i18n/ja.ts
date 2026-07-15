@@ -256,7 +256,6 @@ const catalog: Record<string, string> = {
   "US Dollar": "米ドル",
   "Use a different email": "別のメールを使う",
   "Utilities": "公共料金",
-  "We'll email you a 6-digit code. No password, no fuss.": "6桁のコードをメールで送ります。パスワード不要、簡単です。",
   "What kind of home is this? Choose one — we'll ask only the questions that fit.": "これはどんな住宅ですか？1つ選んでください — 必要な質問だけお聞きします。",
   "Yesterday": "昨日",
   "You can change type later from the property's settings, but a few fields will reset (e.g. lease dates become closing date).": "後で物件設定から種類を変更できますが、一部のフィールドはリセットされます（例: 賃貸日がクロージング日になる）。",

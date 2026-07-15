@@ -178,17 +178,19 @@ body {
   --safe-right: env(safe-area-inset-right, 0px);
 }
 
-/* Disable iOS's Copy/Look Up/Share long-press callout and text selection on
-   the app shell by default; re-enabled explicitly on inputs/textareas and
-   genuinely copyable content (transaction IDs, addresses) via .ortho-selectable. */
-html {
+/* Disable iOS's Copy/Look Up/Share long-press callout and text selection on the
+   NATIVE app shell only (`html.native`, set by the boot script when Capacitor is
+   present) — the browser build keeps normal selection so amounts and merchant
+   names stay copyable (spec 023 B8). Re-enabled on inputs/textareas and genuinely
+   copyable content (transaction IDs, addresses) via .ortho-selectable. */
+html.native {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
 }
-input,
-textarea,
-.ortho-selectable {
+html.native input,
+html.native textarea,
+html.native .ortho-selectable {
   -webkit-touch-callout: default;
   -webkit-user-select: text;
   user-select: text;
