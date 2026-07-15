@@ -34,8 +34,16 @@ function BiometricLockScreen({ locked, onRetry }: { locked: boolean; onRetry: ()
   const t = useTranslate(language)
 
   return (
+    // z-[200]: the overlay must sit ABOVE every portaled dialog layer. Drawers
+    // (.ow-drawer z-80), scrims (.ow-drawer-scrim z-70, .ow-scrim z-100) and the
+    // mobile Modal (z-50) portal to <body> and paint against the root stacking
+    // context, so a dialog left open when the app was backgrounded would render
+    // ON TOP of a lower lock overlay — leaking household data over the lock
+    // screen (spec 023 review). Keeping the subtree mounted (B4) preserves state;
+    // this z-index guarantees the opaque overlay still hides it. (guarded by
+    // test/store/biometric-lock-zorder.test.ts.)
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 px-6 text-center"
+      className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-4 px-6 text-center"
       style={{ background: 'var(--bg)', paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
     >
       <Fingerprint size={40} className="text-text-3" strokeWidth={1.5} />
