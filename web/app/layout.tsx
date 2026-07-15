@@ -43,7 +43,7 @@ const lato = localFont({
  */
 const APPEARANCE_BOOT = `(function(){try{var T=${JSON.stringify(
   THEME_VARS,
-)};var m=localStorage.getItem('appearance');var r=document.documentElement;if(m==='light'||m==='dark'){r.setAttribute('data-appearance',m);r.style.colorScheme=m;var v=T[m];for(var k in v){r.style.setProperty(k,v[k]);}}else{r.style.colorScheme='light dark';}}catch(e){}})();`
+)};var m=localStorage.getItem('appearance');var r=document.documentElement;if(m==='light'||m==='dark'){r.setAttribute('data-appearance',m);r.style.colorScheme=m;var v=T[m];for(var k in v){r.style.setProperty(k,v[k]);}}else{r.style.colorScheme='light dark';}if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()){r.classList.add('native');}}catch(e){}})();`
 
 export default function RootLayout({
   children,

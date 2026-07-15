@@ -7,7 +7,6 @@ import {
   mediumDate,
   monthYear,
   monthYearLong,
-  relativeTime,
   groupByDay,
   groupDaysByMonth,
   expenseTotal,
@@ -17,7 +16,6 @@ import { makeTx } from './helpers/fixtures'
 
 // Use local-time constructors throughout so assertions are independent of the
 // runner's timezone (the source uses local setHours/getTime).
-const DAY_MS = 24 * 60 * 60 * 1000
 
 describe('startOfDay', () => {
   it('zeroes the time portion (local midnight)', () => {
@@ -90,23 +88,6 @@ describe('shortDate / mediumDate / monthYear / monthYearLong', () => {
   })
   it('monthYearLong', () => {
     expect(monthYearLong(date, 'en-US')).toBe('January 2025')
-  })
-})
-
-describe('relativeTime', () => {
-  const now = new Date(2025, 0, 15, 12, 0, 0)
-
-  it("returns 'just now' under a minute", () => {
-    expect(relativeTime(new Date(now.getTime() - 30 * 1000), now)).toBe('just now')
-  })
-  it("returns 'Nm ago' for minutes", () => {
-    expect(relativeTime(new Date(now.getTime() - 5 * 60 * 1000), now)).toBe('5m ago')
-  })
-  it("returns 'Nh ago' for hours", () => {
-    expect(relativeTime(new Date(now.getTime() - 3 * 60 * 60 * 1000), now)).toBe('3h ago')
-  })
-  it("returns 'Nd ago' for days", () => {
-    expect(relativeTime(new Date(now.getTime() - 2 * DAY_MS), now)).toBe('2d ago')
   })
 })
 

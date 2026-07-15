@@ -8,8 +8,17 @@ import type { TransactionCategory } from '@/lib/types'
  * so the dashboard rollups are no longer duplicated per-client.
  *
  * ADDITIVE / not yet wired: the dashboard widgets still compute these locally so
- * the app keeps working before the migration is applied. Cut-over (per widget,
- * once the migration is live):
+ * the app keeps working before the migration is applied.
+ *
+ * spec 023 (D15): DELIBERATELY LEFT UNWIRED. Wiring these RPCs is a net
+ * performance LOSS as things stand — they'd add network round-trips (refetched on
+ * every range/month change) to replace in-memory loops the client already holds
+ * after loadAll(), and would break offline. This module is kept (0 bundle cost —
+ * tree-shaken while unreferenced) as the documented cut-over path, which only
+ * becomes worthwhile PAIRED WITH loadAll() windowing (a future feature, when the
+ * client no longer holds full history). Do not wire it for perf alone.
+ *
+ * Cut-over (per widget, once windowing + the migration are live):
  *   - PerOwnerBreakdownCard:  spentBy(...) per person  → fetchOwnerSpend()
  *   - SpendByCategoryCard:    category sums            → fetchCategoryTotals()
  *   - MonthSummaryCard:       income/expense/net       → fetchMonthSummary()

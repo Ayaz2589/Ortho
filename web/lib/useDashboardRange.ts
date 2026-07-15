@@ -10,6 +10,7 @@ import {
   availableRanges,
   longLabel,
   monthReferenceDate,
+  monthInsightReference,
   rangeInterval,
   type DashboardRange,
   type Interval,
@@ -126,7 +127,7 @@ export function useDashboardScope(): DashboardScope {
     [effectiveMonth, activeRange, now]
   )
   const referenceDate = useMemo<Date>(
-    () => (effectiveMonth ? monthReferenceDate(effectiveMonth) : now),
+    () => (effectiveMonth ? monthInsightReference(effectiveMonth, now) : now),
     [effectiveMonth, now]
   )
   const periodLabel = effectiveMonth ? monthLabel(effectiveMonth, locale) : longLabel(activeRange)

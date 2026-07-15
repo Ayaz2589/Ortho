@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -26,13 +27,12 @@ import {
   localeForLanguage,
   type Language,
 } from './language'
-import { makeT, type Translate } from './i18n'
+import { useTranslate, type Translate } from './i18n'
 import type {
   User,
   Person,
   Household,
   Transaction,
-  TransactionShare,
   Card,
   Property,
   MortgageInfo,
@@ -42,6 +42,19 @@ import type {
   Budget,
   TransactionCategory,
 } from './types'
+import type {
+  UserRow,
+  PersonRow,
+  TransactionRow,
+  TransactionShareRow,
+  CardRow,
+  PropertyRow,
+  MortgageInfoRow,
+  LeaseInfoRow,
+  UnitRow,
+  RentalPaymentRow,
+  BudgetRow,
+} from './supabase/rows'
 
 const PLACEHOLDER_ID = '00000000-0000-0000-0000-000000000000'
 
@@ -126,12 +139,35 @@ interface AppStateValue {
   retryBootstrap: () => void
 }
 
-const Ctx = createContext<AppStateValue | null>(null)
+/** The stable display/services surface. Its members change identity only when
+ *  their real inputs do (currency/rate/locale for money, people for owner
+ *  resolution, language for `t`) — NOT on unrelated data mutations. Splitting
+ *  it out of the changing-data context lets `React.memo`'d rows that read only
+ *  these skip re-renders when an unrelated transaction is added/edited (US6/P4,
+ *  spec 023). `useApp()` re-merges both so its public surface is unchanged. */
+type AppServices = Pick<
+  AppStateValue,
+  'rate' | 'formatMoney' | 't' | 'resolveUser' | 'ownersDisplay'
+>
+type AppData = Omit<AppStateValue, keyof AppServices>
+
+const DataCtx = createContext<AppData | null>(null)
+const ServicesCtx = createContext<AppServices | null>(null)
 
 export function useApp(): AppStateValue {
-  const v = useContext(Ctx)
-  if (!v) throw new Error('useApp must be used within AppStateProvider')
-  return v
+  const data = useContext(DataCtx)
+  const services = useContext(ServicesCtx)
+  if (!data || !services) throw new Error('useApp must be used within AppStateProvider')
+  return { ...data, ...services }
+}
+
+/** Subscribe to ONLY the stable display/services surface. Components that read
+ *  just these (the ledger rows) use this instead of `useApp()` so an unrelated
+ *  data change doesn't re-render them (paired with `React.memo`). */
+export function useAppServices(): AppServices {
+  const services = useContext(ServicesCtx)
+  if (!services) throw new Error('useAppServices must be used within AppStateProvider')
+  return services
 }
 
 const uuid = () =>
@@ -151,7 +187,7 @@ const KNOWN_KINDS = new Set(['expense', 'income', 'transfer'])
 /** Row-level enum guard, mirroring iOS's `Lenient<T>` + compactMap: a server
  *  row whose kind or category this build doesn't know is silently dropped —
  *  one bad row disappears, everything else renders, nothing crashes. */
-function isKnownTransactionRow(r: Transaction): boolean {
+function isKnownTransactionRow(r: TransactionRow): boolean {
   return KNOWN_KINDS.has(r.kind) && r.category in CATEGORIES
 }
 
@@ -161,11 +197,11 @@ function isKnownTransactionRow(r: Transaction): boolean {
  *  carry materialized shares). Rows with an unknown kind/category are dropped
  *  (see `isKnownTransactionRow`). */
 function rehydrateTransactions(
-  rows: Transaction[],
-  shares: TransactionShare[],
+  rows: TransactionRow[],
+  shares: TransactionShareRow[],
   personForUser: (createdBy: string) => string
 ): Transaction[] {
-  const byTx = new Map<string, TransactionShare[]>()
+  const byTx = new Map<string, TransactionShareRow[]>()
   for (const s of shares) {
     const arr = byTx.get(s.transaction_id) ?? []
     arr.push(s)
@@ -233,7 +269,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('language', next)
   }
 
-  const t = useMemo(() => makeT(language), [language])
+  const t = useTranslate(language)
 
   // supabase-js resolves with `{ error }` instead of throwing, so a missed
   // check reads as success — during bootstrap that turned a transient read
@@ -383,7 +419,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let handle: { remove: () => void } | undefined
     void App.addListener('appStateChange', ({ isActive }) => {
-      if (isActive) void supabase.auth.getSession()
+      if (!isActive) return
+      // Re-validate against the SERVER (getUser), not the cache-first getSession,
+      // so a session revoked server-side within the local token's TTL is caught on
+      // foreground (spec 023 B5). Sign out (→ SIGNED_OUT → redirect) only on a
+      // genuine auth rejection (401/403) or a confirmed missing user — never a
+      // transient network error, which would wrongly kick out an offline user.
+      void supabase.auth
+        .getUser()
+        .then((res: { data: { user: unknown }; error: { status?: number } | null }) => {
+          const status = res.error?.status
+          if ((res.error && (status === 401 || status === 403)) || (!res.error && !res.data.user)) {
+            void supabase.auth.signOut()
+          }
+        })
     }).then((h) => {
       handle = h
     })
@@ -447,10 +496,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       rpRes,
       budgetsRes,
     ] = await Promise.all([
-      supabase.from('users').select('*'),
+      // Column projection (US6/P5): the three highest-volume reads fetch only the
+      // fields the app uses — never select('*'). Keep these lists in lockstep with
+      // the `User`/`Transaction`/`TransactionShare` types; the Supabase test mock
+      // IGNORES the column list, so a missing column surfaces only at runtime/CI,
+      // not in unit tests.
+      supabase.from('users').select('id, name, initial, color_key, created_at'),
       supabase.from('household_people').select('*').eq('household_id', householdId).order('sort_order', { ascending: true }),
-      supabase.from('transactions').select('*').order('date', { ascending: false }),
-      supabase.from('transaction_shares').select('*'),
+      supabase
+        .from('transactions')
+        .select('id, household_id, merchant, category, kind, amount_cents, source, date, created_by, created_at, updated_at, paid_by')
+        .order('date', { ascending: false }),
+      supabase.from('transaction_shares').select('transaction_id, person_id, amount_cents'),
       supabase.from('cards').select('*').order('created_at', { ascending: true }),
       supabase.from('properties').select('*').order('address', { ascending: true }),
       supabase.from('mortgage_info').select('*'),
@@ -466,8 +523,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       orThrow(res)
     }
 
-    setUsers((usersRes.data as User[]) ?? [])
-    const peopleRows = (peopleRes.data as Person[]) ?? []
+    // Typed row → domain boundary (FR-018): each read is asserted to its DB row
+    // type (`lib/supabase/rows.ts`) and assigned to domain-typed state, so a
+    // renamed/removed column or changed enum fails to compile here rather than at
+    // runtime. The client itself is untyped (no `supabase gen types` in-sandbox),
+    // so these `*Row` types are the typed seam — keep them in lockstep with the
+    // column projections above and the domain types in `lib/types.ts`.
+    setUsers((usersRes.data ?? []) as UserRow[])
+    const peopleRows = (peopleRes.data ?? []) as PersonRow[]
     setPeople(peopleRows)
     setHousehold({
       id: householdId,
@@ -480,32 +543,33 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     })
     const personForUser = (createdBy: string) =>
       peopleRows.find((p) => p.linked_user_id === createdBy)?.id ?? createdBy
-    const txRows = (txRes.data as Transaction[]) ?? []
-    setTransactions(rehydrateTransactions(txRows, (sharesRes.data as TransactionShare[]) ?? [], personForUser))
-    setCards((cardsRes.data as Card[]) ?? [])
+    const txRows = (txRes.data ?? []) as TransactionRow[]
+    const shareRows = (sharesRes.data ?? []) as TransactionShareRow[]
+    setTransactions(rehydrateTransactions(txRows, shareRows, personForUser))
+    setCards((cardsRes.data ?? []) as CardRow[])
 
     // stitch properties
     const mort = new Map<string, MortgageInfo>(
-      (mortRes.data ?? []).map((m: any) => [m.property_id as string, m as MortgageInfo])
+      ((mortRes.data ?? []) as MortgageInfoRow[]).map((m) => [m.property_id, m])
     )
     const lease = new Map<string, LeaseInfo>(
-      (leaseRes.data ?? []).map((l: any) => [l.property_id as string, l as LeaseInfo])
+      ((leaseRes.data ?? []) as LeaseInfoRow[]).map((l) => [l.property_id, l])
     )
     const unitsByProp = new Map<string, Unit[]>()
-    for (const u of unitsRes.data ?? []) {
+    for (const u of (unitsRes.data ?? []) as UnitRow[]) {
       const arr = unitsByProp.get(u.property_id) ?? []
       arr.push(u)
       unitsByProp.set(u.property_id, arr)
     }
-    const props: Property[] = ((propsRes.data as Property[]) ?? []).map((p) => ({
+    const props: Property[] = ((propsRes.data ?? []) as PropertyRow[]).map((p) => ({
       ...p,
       mortgage: mort.get(p.id),
       lease: lease.get(p.id),
       units: unitsByProp.get(p.id) ?? [],
     }))
     setProperties(props)
-    setRentalPayments((rpRes.data as RentalPayment[]) ?? [])
-    setBudgets((budgetsRes.data as Budget[]) ?? [])
+    setRentalPayments((rpRes.data ?? []) as RentalPaymentRow[])
+    setBudgets((budgetsRes.data ?? []) as BudgetRow[])
   }
 
   // ---- FX ----
@@ -554,31 +618,43 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const rate = (c: CurrencyKey) => rates[c] ?? FALLBACK_RATE_FROM_USD[c]
-  const formatMoney = (cents: number, opts?: { leadingPlus?: boolean }) =>
-    fmtMoney(cents, currency, rate(currency), opts?.leadingPlus ?? false, locale)
+  // Memoized so identity is stable across unrelated re-renders (US6/P4): each
+  // changes only when its real input does. `formatMoney` still changes on
+  // currency/rate/locale — memo consumers and rows must re-render then.
+  const rate = useCallback((c: CurrencyKey) => rates[c] ?? FALLBACK_RATE_FROM_USD[c], [rates])
+  const formatMoney = useCallback(
+    (cents: number, opts?: { leadingPlus?: boolean }) =>
+      fmtMoney(cents, currency, rate(currency), opts?.leadingPlus ?? false, locale),
+    [currency, rate, locale]
+  )
 
   // ---- owner (person) resolution ----
-  const resolveUser = (id: string): User => {
-    const p = people.find((x) => x.id === id)
-    if (p) return personToUser(p)
-    return { id: PLACEHOLDER_ID, name: 'Removed', initial: '·', color_key: 'sand', created_at: '' }
-  }
+  const resolveUser = useCallback(
+    (id: string): User => {
+      const p = people.find((x) => x.id === id)
+      if (p) return personToUser(p)
+      return { id: PLACEHOLDER_ID, name: 'Removed', initial: '·', color_key: 'sand', created_at: '' }
+    },
+    [people]
+  )
 
   // Mirrors iOS AppState.ownersDisplay: every owner name comma-joined with the
   // first owner's real avatar — never a synthetic "Shared" chip or "A + B".
-  const ownersDisplay = (tx: Transaction): OwnerDisplay => {
-    const owners = tx.owner_ids
-    if (owners.length === 0) {
-      return { avatarUser: resolveUser(PLACEHOLDER_ID), label: '—', count: 0 }
-    }
-    const users = owners.map(resolveUser)
-    return {
-      avatarUser: users[0],
-      label: users.map((u) => u.name).join(', '),
-      count: owners.length,
-    }
-  }
+  const ownersDisplay = useCallback(
+    (tx: Transaction): OwnerDisplay => {
+      const owners = tx.owner_ids
+      if (owners.length === 0) {
+        return { avatarUser: resolveUser(PLACEHOLDER_ID), label: '—', count: 0 }
+      }
+      const users = owners.map(resolveUser)
+      return {
+        avatarUser: users[0],
+        label: users.map((u) => u.name).join(', '),
+        count: owners.length,
+      }
+    },
+    [resolveUser]
+  )
 
   const activePeople = useMemo(
     () => people.filter((p) => !p.removed_at).sort((a, b) => a.sort_order - b.sort_order),
@@ -664,9 +740,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         // Shares failed to write — roll back the parent so no share-less
         // transaction survives (it would rehydrate as "creator owns all").
         // Matches iOS's all-or-nothing write.
-        await supabase.from('transactions').delete().eq('id', tx.id)
-        setTransactions((prev) => prev.filter((t) => t.id !== tx.id))
-        setError(res.error ?? 'Could not save who this transaction is split between.')
+        const { error: delErr } = await supabase.from('transactions').delete().eq('id', tx.id)
+        if (delErr) {
+          // The compensating rollback ALSO failed: the parent is still in the DB
+          // with no shares. Keep the row in local state (don't hide an orphaned
+          // row) and surface the failure so it isn't presented as a clean
+          // rollback — it stays flagged until the next successful loadAll (B7).
+          setError(`This transaction may not have saved correctly (${res.error ?? delErr.message}). Reload to reconcile.`)
+        } else {
+          setTransactions((prev) => prev.filter((t) => t.id !== tx.id))
+          setError(res.error ?? 'Could not save who this transaction is split between.')
+        }
       }
     })()
   }
@@ -690,8 +774,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         // re-write its shares so the row never ends up share-less (atomic with iOS).
         if (prevTx) {
           setTransactions((prev) => prev.map((t) => (t.id === tx.id ? prevTx! : t)))
-          await supabase.from('transactions').update(txRecord(prevTx)).eq('id', tx.id)
-          await writeShares(prevTx)
+          const { error: upErr } = await supabase.from('transactions').update(txRecord(prevTx)).eq('id', tx.id)
+          const restore = upErr ? { ok: false as const } : await writeShares(prevTx)
+          if (upErr || !restore.ok) {
+            // The compensating restore ALSO failed: the DB row may be inconsistent
+            // with the reverted local state. Flag it so it isn't presented as a
+            // clean revert — reconciles on the next successful loadAll (B7).
+            setError('This transaction may not have saved correctly. Reload to reconcile.')
+            return
+          }
         }
         setError(res.error ?? 'Could not save who this transaction is split between.')
       }
@@ -1013,7 +1104,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     window.location.href = signInHref()
   }
 
-  const value: AppStateValue = {
+  // Stable services surface — memoized so unrelated data changes don't churn its
+  // identity (US6/P4). Each member is itself memoized to its real inputs above.
+  const services: AppServices = useMemo(
+    () => ({ rate, formatMoney, t, resolveUser, ownersDisplay }),
+    [rate, formatMoney, t, resolveUser, ownersDisplay]
+  )
+
+  // Changing-data surface — a fresh object each provider render (it only re-renders
+  // when its own state changes, which is exactly when this should change).
+  const data: AppData = {
     loading,
     error,
     bootstrapFailed,
@@ -1039,11 +1139,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     locale,
     setCurrency,
     chooseLanguage,
-    rate,
-    formatMoney,
-    t,
-    resolveUser,
-    ownersDisplay,
     categoryExpenseTotal,
     monthlySpentBy,
     spentBy,
@@ -1070,7 +1165,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     retryBootstrap,
   }
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
+  return (
+    <DataCtx.Provider value={data}>
+      <ServicesCtx.Provider value={services}>{children}</ServicesCtx.Provider>
+    </DataCtx.Provider>
+  )
 }
 
 export { paletteFor }

@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useApp } from '@/lib/store'
 import { Card } from '@/components/ui'
 import { shortDate } from '@/lib/format'
@@ -28,18 +29,21 @@ export function MonthSummaryCard({
   const { transactions, formatMoney, locale, t } = useApp()
   const isThisMonth = range === 'thisMonth' && !isSpecificMonth
 
-  const inRange = (date: string) => {
-    const t = new Date(date).getTime()
-    return t >= interval.start.getTime() && t < interval.end.getTime()
-  }
-
-  let income = 0
-  let expenses = 0
-  for (const t of transactions) {
-    if (!inRange(t.date)) continue
-    if (t.kind === 'income') income += t.amount_cents
-    else if (t.kind === 'expense') expenses += t.amount_cents
-  }
+  // Memoize the in-range income/expense sweep so unrelated store changes don't
+  // re-scan the ledger every render (spec 023 P3); identical totals.
+  const { income, expenses } = useMemo(() => {
+    const startMs = interval.start.getTime()
+    const endMs = interval.end.getTime()
+    let inc = 0
+    let exp = 0
+    for (const tx of transactions) {
+      const ms = new Date(tx.date).getTime()
+      if (ms < startMs || ms >= endMs) continue
+      if (tx.kind === 'income') inc += tx.amount_cents
+      else if (tx.kind === 'expense') exp += tx.amount_cents
+    }
+    return { income: inc, expenses: exp }
+  }, [transactions, interval.start, interval.end])
   const net = income - expenses
 
   const sign = net > 0 ? '+' : net < 0 ? '−' : ''

@@ -27,6 +27,11 @@ function centsToDisplay(cents: number, rate: number, fd: number): string {
   return ((cents / 100) * rate).toFixed(fd)
 }
 
+/** Order-insensitive equality of two owner-id lists. */
+function sameOwnerSet(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((id) => b.includes(id))
+}
+
 /** The LOCAL calendar day of a Date as "YYYY-MM-DD". Extracting the UTC day
  *  (`iso.slice(0, 10)`) shows/saves the wrong day for legacy iOS-written
  *  evening timestamps — the form always works in the user's calendar. */
@@ -154,10 +159,13 @@ export function useTxForm({
   const [amount, setAmount] = useState(
     initialTransfer ? centsToDisplay(initialTransfer.amountCents, r, fd) : src ? centsToDisplay(src.amount_cents, r, fd) : ''
   )
-  // Snapshot of the pre-filled amount in edit mode. If the user doesn't touch
-  // the field, Save reuses `editing.amount_cents` verbatim so FX round-trip
-  // rounding never silently shifts the stored cents (mirrors iOS).
-  const [originalAmountText] = useState(editing ? centsToDisplay(editing.amount_cents, r, fd) : '')
+  // The pre-filled amount's exact cents: the stored total in edit mode, or the
+  // exact balance for a settle-up transfer prefill. If the user doesn't touch
+  // the field, Save reuses these cents verbatim so an FX round-trip never shifts
+  // the stored total (mirrors iOS) — for a settle-up this keeps the transfer
+  // exactly zeroing the balance in a non-USD display currency (spec 023 B9).
+  const originalAmountCents = editing ? editing.amount_cents : initialTransfer ? initialTransfer.amountCents : null
+  const [originalAmountText] = useState(originalAmountCents != null ? centsToDisplay(originalAmountCents, r, fd) : '')
   const [merchant, setMerchant] = useState(src?.merchant ?? '')
   const [category, setCategory] = useState<TransactionCategory>(
     src && src.kind === 'expense' ? src.category : 'groceries'
@@ -203,6 +211,16 @@ export function useTxForm({
     for (const id of initialOwners) t[id] = centsToDisplay(initialSeed.values[id] ?? 0, r, fd)
     return t
   })
+  // Snapshot of the initial split text, mirroring `originalAmountText`. When the
+  // amount, split method/values, and owner set are all untouched in edit mode,
+  // Save reuses the STORED per-owner cents verbatim so a cents→display→cents FX
+  // round-trip can't drift the shares off the parent total (spec 023 B1).
+  const [originalSplitText] = useState<Record<string, string>>(() => {
+    if (initialSeed.method !== 'value') return {}
+    const t: Record<string, string> = {}
+    for (const id of initialOwners) t[id] = centsToDisplay(initialSeed.values[id] ?? 0, r, fd)
+    return t
+  })
 
   const isIncome = direction === 'income'
   const isTransfer = direction === 'transfer'
@@ -222,8 +240,36 @@ export function useTxForm({
   }
 
   const splitInput = buildSplit()
-  const shares = cents ? computeShares(cents, orderedOwnerIds(owners), splitInput) : {}
-  const splitValidation = cents ? validateSplit(cents, owners, splitInput) : ({ ok: true } as const)
+
+  // The amount field's `originalAmountText` guard keeps an untouched amount at
+  // its stored cents; the split shares get the same protection. In edit mode,
+  // when the amount, the split method/values, and the owner set are ALL
+  // unchanged, reuse the stored per-owner cents verbatim and skip re-validation —
+  // otherwise a cents→display→cents round-trip (lossy for GBP/EUR) drifts the
+  // shares off the total, either false-blocking Save or writing shares that don't
+  // sum to the parent (the #1 money invariant). All share math runs against
+  // `effectiveCents`, never the re-parsed amount field (spec 023 B1 / research D6).
+  const amountUntouched = originalAmountCents != null && amount === originalAmountText
+  // `cents ?? 0` keeps this a `number` (0 is falsy in the guards below, and
+  // `submit` early-returns on `!cents`, so it never stores a 0 amount).
+  const effectiveCents = amountUntouched && originalAmountCents != null ? originalAmountCents : cents ?? 0
+  const splitUntouched =
+    !!editing &&
+    splitMethod === initialSeed.method &&
+    sameOwnerSet(owners, initialOwners) &&
+    owners.every((id) => (splitText[id] ?? '') === (originalSplitText[id] ?? ''))
+  const reuseStoredShares = amountUntouched && splitUntouched
+
+  const shares = reuseStoredShares
+    ? editing!.shares
+    : effectiveCents
+      ? computeShares(effectiveCents, orderedOwnerIds(owners), splitInput)
+      : {}
+  const splitValidation = reuseStoredShares
+    ? ({ ok: true } as const)
+    : effectiveCents
+      ? validateSplit(effectiveCents, owners, splitInput)
+      : ({ ok: true } as const)
   const splitOk = owners.length < 2 || splitValidation.ok
   const splitReason = splitValidation.ok ? null : splitValidation.reason
 
@@ -371,13 +417,12 @@ export function useTxForm({
 
   function submit(): boolean {
     if (!canSave || !cents) return false
-    // Untouched amount in edit mode → keep the stored cents exactly (no FX
-    // round-trip drift). Mirrors iOS's `originalAmountText` guard.
-    const finalCents = editing && amount === originalAmountText ? editing.amount_cents : cents
     const base = {
       id: editing?.id ?? crypto.randomUUID(),
       household_id: currentHousehold?.id ?? '',
-      amount_cents: finalCents,
+      // `effectiveCents` keeps an untouched amount at its stored cents (no FX
+      // round-trip drift); the split `shares` below get the same guarantee (B1).
+      amount_cents: effectiveCents,
       // Noon UTC on the picked calendar day — the shared cross-client date
       // convention (spec 004; iOS + CLI write the same instant).
       date: `${date}T12:00:00.000Z`,
@@ -396,7 +441,7 @@ export function useTxForm({
         source: '',
         paid_by: transferFrom,
         owner_ids: [transferTo],
-        shares: { [transferTo]: finalCents },
+        shares: { [transferTo]: effectiveCents },
       }
     } else {
       tx = {
@@ -407,7 +452,7 @@ export function useTxForm({
         source,
         paid_by: isIncome ? null : paidBy,
         owner_ids: owners,
-        shares: computeShares(finalCents, orderedOwnerIds(owners), splitInput),
+        shares,
       }
     }
     if (editing) updateTransaction(tx)
@@ -802,6 +847,31 @@ export function TxCopyList({ onPick, onBack }: { onPick: (tx: Transaction) => vo
  * panel so New/Edit live in the same slide-out as the transaction detail.
  * In New mode it offers "Copy from recent" (a sub-view of this panel).
  */
+/** The shared New/Edit form body — the copy-from-recent affordance, the fields,
+ *  and (New only) save-and-add-another — rendered identically by the modal
+ *  (mobile) and the drawer (desktop). Each surface keeps its own chrome (header)
+ *  and copy-picker wrapper, which legitimately differ; only this inner assembly
+ *  is shared, so the two forms can't drift out of sync (FR-020). */
+export function TxFormBody({
+  form,
+  allowCopy,
+  showAddAnother,
+  onPick,
+}: {
+  form: TxFormApi
+  allowCopy: boolean
+  showAddAnother: boolean
+  onPick: () => void
+}) {
+  return (
+    <>
+      {allowCopy && <CopyFromRecentButton onClick={onPick} />}
+      <TxFormFields form={form} />
+      {showAddAnother && <SaveAndAddAnotherButton form={form} />}
+    </>
+  )
+}
+
 export function TxFormContent({
   title,
   editing,
@@ -857,9 +927,7 @@ export function TxFormContent({
         </button>
       </div>
       <div style={{ overflow: 'auto', paddingTop: 16 }}>
-        {allowCopy && <CopyFromRecentButton onClick={() => setPicking(true)} />}
-        <TxFormFields form={form} />
-        {!editing && <SaveAndAddAnotherButton form={form} />}
+        <TxFormBody form={form} allowCopy={allowCopy} showAddAnother={!editing} onPick={() => setPicking(true)} />
       </div>
     </>
   )

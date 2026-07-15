@@ -9,11 +9,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
-const { capture, extractPDF } = vi.hoisted(() => ({
+const { capture, extractPDF, onPageCaptured } = vi.hoisted(() => ({
   capture: vi.fn(),
   extractPDF: vi.fn(),
+  onPageCaptured: vi.fn(),
 }))
-vi.mock('@/lib/scan/scanPlugin', () => ({ ScanPlugin: { capture, extractPDF } }))
+vi.mock('@/lib/scan/scanPlugin', () => ({ ScanPlugin: { capture, extractPDF, onPageCaptured } }))
 
 const { pickFiles } = vi.hoisted(() => ({ pickFiles: vi.fn() }))
 vi.mock('@capawesome/capacitor-file-picker', () => ({ FilePicker: { pickFiles } }))
@@ -33,6 +34,8 @@ describe('useScanFlow', () => {
     capture.mockReset()
     extractPDF.mockReset()
     pickFiles.mockReset()
+    onPageCaptured.mockReset()
+    onPageCaptured.mockResolvedValue({ remove: vi.fn() })
     store.transactions = []
     store.currency = 'usd'
   })
@@ -55,6 +58,47 @@ describe('useScanFlow', () => {
 
     await waitFor(() => expect(result.current.state.phase).toBe('receiptPrefilled'))
     expect(result.current.state.receiptCandidate?.merchant).toBe('CORNER PLACE')
+  })
+
+  it('retains every page of a multi-shot statement capture (B3)', async () => {
+    const f = { x: 0, y: 0, width: 0, height: 0 }
+    const page1 = { lines: [{ text: 'STATEMENT PERIOD 06/01/2026 - 06/30/2026', frame: f }, { text: '06/05  UBER TRIP  $18.50', frame: f }], tables: [] }
+    const page2 = { lines: [{ text: '06/08  BLUE BOTTLE  $6.25', frame: f }], tables: [] }
+    capture.mockResolvedValue({ imageUri: 'file:///tmp/1.jpg', page: page1 })
+    let pageHandler: ((data: { imageUri: string; page: typeof page1 }) => void) | undefined
+    onPageCaptured.mockImplementation((h) => {
+      pageHandler = h as typeof pageHandler
+      return Promise.resolve({ remove: vi.fn() })
+    })
+
+    const { result } = renderHook(() => useScanFlow())
+    await act(async () => {
+      await result.current.startCameraCapture()
+    })
+    // Listener subscribed before the first page; first page parsed a statement.
+    expect(onPageCaptured).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(result.current.state.phase).toBe('interstitial'))
+    expect(result.current.state.lastDocument?.pages).toHaveLength(1)
+
+    // A second photo arrives via pageCaptured — it must NOT be dropped: the
+    // document re-parses with both pages.
+    await act(async () => {
+      pageHandler?.({ imageUri: 'file:///tmp/2.jpg', page: page2 })
+    })
+    await waitFor(() => expect(result.current.state.lastDocument?.pages).toHaveLength(2))
+    expect(result.current.state.phase).toBe('interstitial')
+  })
+
+  it('removes the pageCaptured listener when the hook unmounts', async () => {
+    const remove = vi.fn()
+    onPageCaptured.mockResolvedValue({ remove })
+    capture.mockResolvedValue({ imageUri: 'file:///tmp/1.jpg', page: { lines: [], tables: [] } })
+    const { result, unmount } = renderHook(() => useScanFlow())
+    await act(async () => {
+      await result.current.startCameraCapture()
+    })
+    unmount()
+    expect(remove).toHaveBeenCalled()
   })
 
   it('camera cancellation lands on the failed phase, never throws', async () => {
