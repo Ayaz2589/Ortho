@@ -5,6 +5,7 @@ import { Fingerprint } from 'lucide-react'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { AppStateProvider, useApp } from '@/lib/store'
 import { useBiometricGate } from '@/lib/biometricGate'
+import { applyAppearance, readAppearance } from '@/components/settings/appearance'
 import { useTranslate } from '@/lib/i18n'
 import { asLanguage, DEFAULT_LANGUAGE, type Language } from '@/lib/language'
 import { TabBar } from '@/components/TabBar'
@@ -128,6 +129,14 @@ function Shell({ children, active }: { children: ReactNode; active: boolean }) {
 export default function AppLayout({ children }: { children: ReactNode }) {
   const gate = useBiometricGate()
   const unlocked = gate.state === 'unlocked'
+
+  // spec 023 B10: apply the persisted appearance — including the native
+  // status-bar text style — at app-shell mount, so the status bar matches the
+  // light/dark theme from launch and on every tab, not only after the Settings
+  // page is opened. No-op on desktop/mobile web (syncStatusBar is native-only).
+  useEffect(() => {
+    applyAppearance(readAppearance())
+  }, [])
 
   // spec 023 B4: the provider is ALWAYS mounted; the biometric lock renders as a
   // fixed opaque OVERLAY above it while 'checking'/'locked', instead of the old

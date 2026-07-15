@@ -18,14 +18,24 @@ export type BiometricGateState = 'checking' | 'unlocked' | 'locked'
 export function useBiometricGate() {
   const [state, setState] = useState<BiometricGateState>('checking')
   const availableRef = useRef(false)
+  // spec 023 B9: guard against re-entrant unlocks. @capacitor/app fires
+  // appStateChange for transient interruptions too (Control Center, the
+  // notification shade, even the Face ID sheet's own resign/activate), which
+  // could otherwise trigger a second authenticate() while one is still pending —
+  // a double Face ID prompt or a lock flash. Ignore foregrounds while in flight.
+  const inFlightRef = useRef(false)
 
   const attemptUnlock = useCallback(async () => {
+    if (inFlightRef.current) return
+    inFlightRef.current = true
     try {
       await BiometricAuth.authenticate({ reason: 'Unlock Ortho' })
       setState('unlocked')
     } catch {
       // Cancelled, failed, or lockout — stay locked; `retry()` tries again.
       setState('locked')
+    } finally {
+      inFlightRef.current = false
     }
   }, [])
 

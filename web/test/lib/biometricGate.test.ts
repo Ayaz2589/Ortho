@@ -89,6 +89,29 @@ describe('useBiometricGate', () => {
     await waitFor(() => expect(result.current.state).toBe('unlocked'))
   })
 
+  it('does not re-enter authentication while an unlock is already in flight (B9)', async () => {
+    checkBiometry.mockResolvedValue({ isAvailable: true })
+    let resolveAuth: (() => void) | undefined
+    authenticate.mockImplementation(() => new Promise<void>((res) => { resolveAuth = () => res() }))
+    const { result } = renderHook(() => useBiometricGate())
+    // Initial check → locked → attemptUnlock (1st prompt, pending).
+    await waitFor(() => expect(authenticate).toHaveBeenCalledTimes(1))
+
+    // A transient interruption while the 1st prompt is pending must NOT fire a
+    // second authenticate() (double Face ID prompt).
+    act(() => appStateCallback?.({ isActive: false }))
+    act(() => appStateCallback?.({ isActive: true }))
+    await new Promise((r) => setTimeout(r, 10))
+    expect(authenticate).toHaveBeenCalledTimes(1)
+
+    // Once the pending prompt resolves, the gate unlocks.
+    await act(async () => {
+      resolveAuth?.()
+      await Promise.resolve()
+    })
+    await waitFor(() => expect(result.current.state).toBe('unlocked'))
+  })
+
   it('never re-locks on background when the device has no biometric enrollment', async () => {
     checkBiometry.mockResolvedValue({ isAvailable: false })
     const { result } = renderHook(() => useBiometricGate())
