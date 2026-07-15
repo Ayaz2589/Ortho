@@ -5,6 +5,7 @@ import { ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expenseTotal } from '@/lib/format'
 import { useMonthAccordion } from '@/lib/useMonthAccordion'
+import { transferParties } from '@/lib/transaction'
 import type { Transaction } from '@/lib/types'
 import { Avatar, StackedAvatars } from '@/components/ui'
 import { TransactionDetailBody } from '@/components/transactions/TransactionDetailBody'
@@ -107,8 +108,9 @@ function TxRow({
   const isTransfer = tx.kind === 'transfer'
   const ownerUsers = tx.owner_ids.map(resolveUser)
   const single = ownerUsers.length === 1 ? ownerUsers[0] : null
+  const parties = transferParties(tx)
   const title = isTransfer
-    ? `${tx.paid_by ? resolveUser(tx.paid_by).name : '—'} → ${tx.owner_ids[0] ? resolveUser(tx.owner_ids[0]).name : '—'}`
+    ? `${parties.from ? resolveUser(parties.from).name : '—'} → ${parties.to ? resolveUser(parties.to).name : '—'}`
     : tx.merchant
   return (
     <div className="ow-row-wrap cv-row">

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { MoreHorizontal, Copy, Trash2 } from 'lucide-react'
 import { useApp } from '@/lib/store'
+import { transferParties } from '@/lib/transaction'
 import { categoryMeta } from '@/lib/categories'
 import { Avatar, StackedAvatars } from '@/components/ui'
 import type { Transaction } from '@/lib/types'
@@ -39,8 +40,9 @@ export function TransactionRow({
   const ownerLabel = ownerUsers.map((u) => u.name).join(', ')
   const isIncome = tx.kind === 'income'
   const isTransfer = tx.kind === 'transfer'
+  const parties = transferParties(tx)
   const transferTitle = isTransfer
-    ? `${tx.paid_by ? resolveUser(tx.paid_by).name : '—'} → ${tx.owner_ids[0] ? resolveUser(tx.owner_ids[0]).name : '—'}`
+    ? `${parties.from ? resolveUser(parties.from).name : '—'} → ${parties.to ? resolveUser(parties.to).name : '—'}`
     : null
 
   return (
