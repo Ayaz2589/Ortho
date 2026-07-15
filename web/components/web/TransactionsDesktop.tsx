@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { ChevronDown, SlidersHorizontal } from 'lucide-react'
-import { useApp } from '@/lib/store'
+import { useApp, useAppServices } from '@/lib/store'
 import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expenseTotal } from '@/lib/format'
 import { useMonthAccordion } from '@/lib/useMonthAccordion'
 import { transferParties } from '@/lib/transaction'
@@ -92,7 +92,7 @@ function TxDetailContent({
   )
 }
 
-function TxRow({
+function TxRowImpl({
   tx,
   selected,
   onClick,
@@ -103,7 +103,7 @@ function TxRow({
   onClick: () => void
   onCopy: () => void
 }) {
-  const { formatMoney, resolveUser, t } = useApp()
+  const { formatMoney, resolveUser, t } = useAppServices()
   const isIncome = tx.kind === 'income'
   const isTransfer = tx.kind === 'transfer'
   const ownerUsers = tx.owner_ids.map(resolveUser)
@@ -167,6 +167,14 @@ function TxRow({
     </div>
   )
 }
+
+/** Memoized on the data props only (`tx` identity + `selected`) — the row reads
+ *  the stable services context and its callbacks are pure functions of `tx` and
+ *  stable setters, so an unrelated ledger mutation skips this row (US6/P4). */
+const TxRow = memo(
+  TxRowImpl,
+  (a, b) => a.tx === b.tx && a.selected === b.selected
+)
 
 export function TransactionsDesktop() {
   const { transactions, formatMoney, deleteTransaction, locale, t } = useApp()
@@ -250,7 +258,9 @@ export function TransactionsDesktop() {
   const selectRow = (id: string) => {
     setAddOpen(false)
     setEditing(false)
-    setSelectedId(id === selectedId ? null : id)
+    // Functional toggle: a memoized row that skipped a re-render keeps an older
+    // onClick closure, so resolve against the latest selection, not a captured one.
+    setSelectedId((cur) => (id === cur ? null : id))
   }
 
   const months = useMemo(() => groupDaysByMonth(groupByDay(f.filtered)), [f.filtered])

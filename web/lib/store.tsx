@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -126,12 +127,35 @@ interface AppStateValue {
   retryBootstrap: () => void
 }
 
-const Ctx = createContext<AppStateValue | null>(null)
+/** The stable display/services surface. Its members change identity only when
+ *  their real inputs do (currency/rate/locale for money, people for owner
+ *  resolution, language for `t`) — NOT on unrelated data mutations. Splitting
+ *  it out of the changing-data context lets `React.memo`'d rows that read only
+ *  these skip re-renders when an unrelated transaction is added/edited (US6/P4,
+ *  spec 023). `useApp()` re-merges both so its public surface is unchanged. */
+type AppServices = Pick<
+  AppStateValue,
+  'rate' | 'formatMoney' | 't' | 'resolveUser' | 'ownersDisplay'
+>
+type AppData = Omit<AppStateValue, keyof AppServices>
+
+const DataCtx = createContext<AppData | null>(null)
+const ServicesCtx = createContext<AppServices | null>(null)
 
 export function useApp(): AppStateValue {
-  const v = useContext(Ctx)
-  if (!v) throw new Error('useApp must be used within AppStateProvider')
-  return v
+  const data = useContext(DataCtx)
+  const services = useContext(ServicesCtx)
+  if (!data || !services) throw new Error('useApp must be used within AppStateProvider')
+  return { ...data, ...services }
+}
+
+/** Subscribe to ONLY the stable display/services surface. Components that read
+ *  just these (the ledger rows) use this instead of `useApp()` so an unrelated
+ *  data change doesn't re-render them (paired with `React.memo`). */
+export function useAppServices(): AppServices {
+  const services = useContext(ServicesCtx)
+  if (!services) throw new Error('useAppServices must be used within AppStateProvider')
+  return services
 }
 
 const uuid = () =>
@@ -460,10 +484,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       rpRes,
       budgetsRes,
     ] = await Promise.all([
-      supabase.from('users').select('*'),
+      // Column projection (US6/P5): the three highest-volume reads fetch only the
+      // fields the app uses — never select('*'). Keep these lists in lockstep with
+      // the `User`/`Transaction`/`TransactionShare` types; the Supabase test mock
+      // IGNORES the column list, so a missing column surfaces only at runtime/CI,
+      // not in unit tests.
+      supabase.from('users').select('id, name, initial, color_key, created_at'),
       supabase.from('household_people').select('*').eq('household_id', householdId).order('sort_order', { ascending: true }),
-      supabase.from('transactions').select('*').order('date', { ascending: false }),
-      supabase.from('transaction_shares').select('*'),
+      supabase
+        .from('transactions')
+        .select('id, household_id, merchant, category, kind, amount_cents, source, date, created_by, created_at, updated_at, paid_by')
+        .order('date', { ascending: false }),
+      supabase.from('transaction_shares').select('transaction_id, person_id, amount_cents'),
       supabase.from('cards').select('*').order('created_at', { ascending: true }),
       supabase.from('properties').select('*').order('address', { ascending: true }),
       supabase.from('mortgage_info').select('*'),
@@ -567,31 +599,43 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const rate = (c: CurrencyKey) => rates[c] ?? FALLBACK_RATE_FROM_USD[c]
-  const formatMoney = (cents: number, opts?: { leadingPlus?: boolean }) =>
-    fmtMoney(cents, currency, rate(currency), opts?.leadingPlus ?? false, locale)
+  // Memoized so identity is stable across unrelated re-renders (US6/P4): each
+  // changes only when its real input does. `formatMoney` still changes on
+  // currency/rate/locale — memo consumers and rows must re-render then.
+  const rate = useCallback((c: CurrencyKey) => rates[c] ?? FALLBACK_RATE_FROM_USD[c], [rates])
+  const formatMoney = useCallback(
+    (cents: number, opts?: { leadingPlus?: boolean }) =>
+      fmtMoney(cents, currency, rate(currency), opts?.leadingPlus ?? false, locale),
+    [currency, rate, locale]
+  )
 
   // ---- owner (person) resolution ----
-  const resolveUser = (id: string): User => {
-    const p = people.find((x) => x.id === id)
-    if (p) return personToUser(p)
-    return { id: PLACEHOLDER_ID, name: 'Removed', initial: '·', color_key: 'sand', created_at: '' }
-  }
+  const resolveUser = useCallback(
+    (id: string): User => {
+      const p = people.find((x) => x.id === id)
+      if (p) return personToUser(p)
+      return { id: PLACEHOLDER_ID, name: 'Removed', initial: '·', color_key: 'sand', created_at: '' }
+    },
+    [people]
+  )
 
   // Mirrors iOS AppState.ownersDisplay: every owner name comma-joined with the
   // first owner's real avatar — never a synthetic "Shared" chip or "A + B".
-  const ownersDisplay = (tx: Transaction): OwnerDisplay => {
-    const owners = tx.owner_ids
-    if (owners.length === 0) {
-      return { avatarUser: resolveUser(PLACEHOLDER_ID), label: '—', count: 0 }
-    }
-    const users = owners.map(resolveUser)
-    return {
-      avatarUser: users[0],
-      label: users.map((u) => u.name).join(', '),
-      count: owners.length,
-    }
-  }
+  const ownersDisplay = useCallback(
+    (tx: Transaction): OwnerDisplay => {
+      const owners = tx.owner_ids
+      if (owners.length === 0) {
+        return { avatarUser: resolveUser(PLACEHOLDER_ID), label: '—', count: 0 }
+      }
+      const users = owners.map(resolveUser)
+      return {
+        avatarUser: users[0],
+        label: users.map((u) => u.name).join(', '),
+        count: owners.length,
+      }
+    },
+    [resolveUser]
+  )
 
   const activePeople = useMemo(
     () => people.filter((p) => !p.removed_at).sort((a, b) => a.sort_order - b.sort_order),
@@ -1041,7 +1085,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     window.location.href = signInHref()
   }
 
-  const value: AppStateValue = {
+  // Stable services surface — memoized so unrelated data changes don't churn its
+  // identity (US6/P4). Each member is itself memoized to its real inputs above.
+  const services: AppServices = useMemo(
+    () => ({ rate, formatMoney, t, resolveUser, ownersDisplay }),
+    [rate, formatMoney, t, resolveUser, ownersDisplay]
+  )
+
+  // Changing-data surface — a fresh object each provider render (it only re-renders
+  // when its own state changes, which is exactly when this should change).
+  const data: AppData = {
     loading,
     error,
     bootstrapFailed,
@@ -1067,11 +1120,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     locale,
     setCurrency,
     chooseLanguage,
-    rate,
-    formatMoney,
-    t,
-    resolveUser,
-    ownersDisplay,
     categoryExpenseTotal,
     monthlySpentBy,
     spentBy,
@@ -1098,7 +1146,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     retryBootstrap,
   }
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
+  return (
+    <DataCtx.Provider value={data}>
+      <ServicesCtx.Provider value={services}>{children}</ServicesCtx.Provider>
+    </DataCtx.Provider>
+  )
 }
 
 export { paletteFor }
