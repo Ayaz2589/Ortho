@@ -847,6 +847,31 @@ export function TxCopyList({ onPick, onBack }: { onPick: (tx: Transaction) => vo
  * panel so New/Edit live in the same slide-out as the transaction detail.
  * In New mode it offers "Copy from recent" (a sub-view of this panel).
  */
+/** The shared New/Edit form body — the copy-from-recent affordance, the fields,
+ *  and (New only) save-and-add-another — rendered identically by the modal
+ *  (mobile) and the drawer (desktop). Each surface keeps its own chrome (header)
+ *  and copy-picker wrapper, which legitimately differ; only this inner assembly
+ *  is shared, so the two forms can't drift out of sync (FR-020). */
+export function TxFormBody({
+  form,
+  allowCopy,
+  showAddAnother,
+  onPick,
+}: {
+  form: TxFormApi
+  allowCopy: boolean
+  showAddAnother: boolean
+  onPick: () => void
+}) {
+  return (
+    <>
+      {allowCopy && <CopyFromRecentButton onClick={onPick} />}
+      <TxFormFields form={form} />
+      {showAddAnother && <SaveAndAddAnotherButton form={form} />}
+    </>
+  )
+}
+
 export function TxFormContent({
   title,
   editing,
@@ -902,9 +927,7 @@ export function TxFormContent({
         </button>
       </div>
       <div style={{ overflow: 'auto', paddingTop: 16 }}>
-        {allowCopy && <CopyFromRecentButton onClick={() => setPicking(true)} />}
-        <TxFormFields form={form} />
-        {!editing && <SaveAndAddAnotherButton form={form} />}
+        <TxFormBody form={form} allowCopy={allowCopy} showAddAnother={!editing} onPick={() => setPicking(true)} />
       </div>
     </>
   )
