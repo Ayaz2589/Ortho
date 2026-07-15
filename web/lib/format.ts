@@ -78,17 +78,6 @@ export function monthYearLong(date: Date, locale: string = 'en-US'): string {
   return dateFormatter(locale, { month: 'long', year: 'numeric' }).format(date)
 }
 
-export function relativeTime(date: Date, now: Date = new Date()): string {
-  const seconds = Math.round((now.getTime() - date.getTime()) / 1000)
-  if (seconds < 60) return 'just now'
-  const minutes = Math.round(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.round(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.round(hours / 24)
-  return `${days}d ago`
-}
-
 /** Group transactions into day buckets, newest day first; items within a day newest first. */
 export interface TxDayGroup {
   day: Date

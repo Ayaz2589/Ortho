@@ -176,7 +176,7 @@ deduped helpers have a single definition.
 - [ ] T038 [P] [US7] FR-020: extract `web/lib/useMonthAccordion.ts` from the mobile+desktop duplication and use it in `web/app/(app)/transactions/page.tsx` and `web/components/web/TransactionsDesktop.tsx`.
 - [ ] T039 [P] [US7] FR-020: extract a shared `<TxFormBody>` component from the duplicated assembly in `web/components/web/TxModalWeb.tsx` and `web/components/web/TxForm.tsx`; both wrap it. (TxForm.tsx — sequence after T004.)
 - [ ] T040 [P] [US7] FR-021: purge the ~200 dead i18n keys (diff catalog keys vs reachable `t()` calls + an allowlist of dynamic sources) across `web/lib/i18n/*`; add `web/test/i18n/catalog-reachability.test.ts` asserting every key is reachable or allowlisted. (Shared i18n files with T011/T029 — sequence.)
-- [ ] T041 [P] [US7] FR-022: delete the orphaned `relativeTime` in `web/lib/format.ts` (grep-confirm zero refs first); resolve `web/lib/api/aggregates.ts` = KEEP documented-unwired (add a one-line status note; do NOT wire it).
+- [X] T041 [P] [US7] FR-022: delete the orphaned `relativeTime` in `web/lib/format.ts` (grep-confirm zero refs first); resolve `web/lib/api/aggregates.ts` = KEEP documented-unwired (add a one-line status note; do NOT wire it).
 - [ ] T042 [US7] Verify US7: `npx tsc --noEmit` (typed boundary — a scratch column rename now fails), `npm test` (guard + all green), and the grep checks from quickstart.md §US7.
 
 **Checkpoint**: codebase hardened against future breakage; no user-facing change.
