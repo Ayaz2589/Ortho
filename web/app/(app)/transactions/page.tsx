@@ -6,7 +6,8 @@ import { Search, Plus, X, ArrowUpDown, ChevronDown, SlidersHorizontal, Camera, F
 import { useApp } from '@/lib/store'
 import { PageHeader, IconButton, Card, EmptyState, Modal } from '@/components/ui'
 import { useIsExpanded } from '@/lib/useMediaQuery'
-import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expenseTotal, startOfMonth } from '@/lib/format'
+import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expenseTotal } from '@/lib/format'
+import { useMonthAccordion } from '@/lib/useMonthAccordion'
 import type { Transaction } from '@/lib/types'
 import { TransactionRow } from '@/components/transactions/TransactionRow'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
@@ -52,26 +53,7 @@ export default function TransactionsPage() {
   const months = useMemo(() => groupDaysByMonth(groupByDay(f.filtered)), [f.filtered])
   const noMatches = hasAny && f.filtered.length === 0
 
-  // Collapse every month by default except the current (or most recent) one; any
-  // active filter expands all so matches aren't hidden inside a collapsed month.
-  const currentMonthKey = useMemo(() => startOfMonth(new Date()).getTime(), [])
-  const defaultOpenKey = useMemo(() => {
-    if (months.some((m) => m.month.getTime() === currentMonthKey)) return currentMonthKey
-    return months[0]?.month.getTime() ?? null
-  }, [months, currentMonthKey])
-
-  const [openMonths, setOpenMonths] = useState<Set<number> | null>(null)
-  const isMonthOpen = (key: number) =>
-    f.count > 0 || (openMonths === null ? key === defaultOpenKey : openMonths.has(key))
-  function toggleMonth(key: number) {
-    setOpenMonths((prev) => {
-      const base = prev ?? (defaultOpenKey !== null ? new Set([defaultOpenKey]) : new Set<number>())
-      const next = new Set(base)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }
+  const { isMonthOpen, toggleMonth } = useMonthAccordion(months, f.count)
 
   function openAdd() {
     setCopySource(null)

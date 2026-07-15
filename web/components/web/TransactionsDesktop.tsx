@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { useApp } from '@/lib/store'
-import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expenseTotal, startOfMonth } from '@/lib/format'
+import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expenseTotal } from '@/lib/format'
+import { useMonthAccordion } from '@/lib/useMonthAccordion'
 import type { Transaction } from '@/lib/types'
 import { Avatar, StackedAvatars } from '@/components/ui'
 import { TransactionDetailBody } from '@/components/transactions/TransactionDetailBody'
@@ -253,28 +254,7 @@ export function TransactionsDesktop() {
   const months = useMemo(() => groupDaysByMonth(groupByDay(f.filtered)), [f.filtered])
   const noMatches = transactions.length > 0 && f.filtered.length === 0
 
-  // Collapse every month by default except one: the current month, or — if it
-  // has no transactions — the most recent month that does. Any active filter
-  // expands all months so matches aren't hidden inside a collapsed section.
-  const currentMonthKey = useMemo(() => startOfMonth(new Date()).getTime(), [])
-  const defaultOpenKey = useMemo(() => {
-    if (months.some((m) => m.month.getTime() === currentMonthKey)) return currentMonthKey
-    return months[0]?.month.getTime() ?? null
-  }, [months, currentMonthKey])
-
-  // `null` = untouched, follow the default; once the user toggles we track an
-  // explicit set so the default stops overriding their choices.
-  const [openMonths, setOpenMonths] = useState<Set<number> | null>(null)
-  const isMonthOpen = (key: number) =>
-    f.count > 0 || (openMonths === null ? key === defaultOpenKey : openMonths.has(key))
-  const toggleMonth = (key: number) =>
-    setOpenMonths((prev) => {
-      const base = prev ?? (defaultOpenKey !== null ? new Set([defaultOpenKey]) : new Set<number>())
-      const next = new Set(base)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
+  const { isMonthOpen, toggleMonth } = useMonthAccordion(months, f.count)
 
   return (
     <div
