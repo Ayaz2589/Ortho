@@ -33,7 +33,6 @@ import type {
   Person,
   Household,
   Transaction,
-  TransactionShare,
   Card,
   Property,
   MortgageInfo,
@@ -43,6 +42,19 @@ import type {
   Budget,
   TransactionCategory,
 } from './types'
+import type {
+  UserRow,
+  PersonRow,
+  TransactionRow,
+  TransactionShareRow,
+  CardRow,
+  PropertyRow,
+  MortgageInfoRow,
+  LeaseInfoRow,
+  UnitRow,
+  RentalPaymentRow,
+  BudgetRow,
+} from './supabase/rows'
 
 const PLACEHOLDER_ID = '00000000-0000-0000-0000-000000000000'
 
@@ -175,7 +187,7 @@ const KNOWN_KINDS = new Set(['expense', 'income', 'transfer'])
 /** Row-level enum guard, mirroring iOS's `Lenient<T>` + compactMap: a server
  *  row whose kind or category this build doesn't know is silently dropped —
  *  one bad row disappears, everything else renders, nothing crashes. */
-function isKnownTransactionRow(r: Transaction): boolean {
+function isKnownTransactionRow(r: TransactionRow): boolean {
   return KNOWN_KINDS.has(r.kind) && r.category in CATEGORIES
 }
 
@@ -185,11 +197,11 @@ function isKnownTransactionRow(r: Transaction): boolean {
  *  carry materialized shares). Rows with an unknown kind/category are dropped
  *  (see `isKnownTransactionRow`). */
 function rehydrateTransactions(
-  rows: Transaction[],
-  shares: TransactionShare[],
+  rows: TransactionRow[],
+  shares: TransactionShareRow[],
   personForUser: (createdBy: string) => string
 ): Transaction[] {
-  const byTx = new Map<string, TransactionShare[]>()
+  const byTx = new Map<string, TransactionShareRow[]>()
   for (const s of shares) {
     const arr = byTx.get(s.transaction_id) ?? []
     arr.push(s)
@@ -511,8 +523,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       orThrow(res)
     }
 
-    setUsers((usersRes.data as User[]) ?? [])
-    const peopleRows = (peopleRes.data as Person[]) ?? []
+    // Typed row → domain boundary (FR-018): each read is asserted to its DB row
+    // type (`lib/supabase/rows.ts`) and assigned to domain-typed state, so a
+    // renamed/removed column or changed enum fails to compile here rather than at
+    // runtime. The client itself is untyped (no `supabase gen types` in-sandbox),
+    // so these `*Row` types are the typed seam — keep them in lockstep with the
+    // column projections above and the domain types in `lib/types.ts`.
+    setUsers((usersRes.data ?? []) as UserRow[])
+    const peopleRows = (peopleRes.data ?? []) as PersonRow[]
     setPeople(peopleRows)
     setHousehold({
       id: householdId,
@@ -525,32 +543,33 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     })
     const personForUser = (createdBy: string) =>
       peopleRows.find((p) => p.linked_user_id === createdBy)?.id ?? createdBy
-    const txRows = (txRes.data as Transaction[]) ?? []
-    setTransactions(rehydrateTransactions(txRows, (sharesRes.data as TransactionShare[]) ?? [], personForUser))
-    setCards((cardsRes.data as Card[]) ?? [])
+    const txRows = (txRes.data ?? []) as TransactionRow[]
+    const shareRows = (sharesRes.data ?? []) as TransactionShareRow[]
+    setTransactions(rehydrateTransactions(txRows, shareRows, personForUser))
+    setCards((cardsRes.data ?? []) as CardRow[])
 
     // stitch properties
     const mort = new Map<string, MortgageInfo>(
-      (mortRes.data ?? []).map((m: any) => [m.property_id as string, m as MortgageInfo])
+      ((mortRes.data ?? []) as MortgageInfoRow[]).map((m) => [m.property_id, m])
     )
     const lease = new Map<string, LeaseInfo>(
-      (leaseRes.data ?? []).map((l: any) => [l.property_id as string, l as LeaseInfo])
+      ((leaseRes.data ?? []) as LeaseInfoRow[]).map((l) => [l.property_id, l])
     )
     const unitsByProp = new Map<string, Unit[]>()
-    for (const u of unitsRes.data ?? []) {
+    for (const u of (unitsRes.data ?? []) as UnitRow[]) {
       const arr = unitsByProp.get(u.property_id) ?? []
       arr.push(u)
       unitsByProp.set(u.property_id, arr)
     }
-    const props: Property[] = ((propsRes.data as Property[]) ?? []).map((p) => ({
+    const props: Property[] = ((propsRes.data ?? []) as PropertyRow[]).map((p) => ({
       ...p,
       mortgage: mort.get(p.id),
       lease: lease.get(p.id),
       units: unitsByProp.get(p.id) ?? [],
     }))
     setProperties(props)
-    setRentalPayments((rpRes.data as RentalPayment[]) ?? [])
-    setBudgets((budgetsRes.data as Budget[]) ?? [])
+    setRentalPayments((rpRes.data ?? []) as RentalPaymentRow[])
+    setBudgets((budgetsRes.data ?? []) as BudgetRow[])
   }
 
   // ---- FX ----
