@@ -238,3 +238,28 @@ stable behavior tests) and US7 (typing/dedup/dead-code). Every story ends green 
 `npx tsc --noEmit`; perf/refactor stories additionally prove the regression vectors are byte-identical
 (no regen except the reviewed B2 diff). The branch push is gated on BOTH web CI and the Capacitor iOS
 CI staying green (T045).
+
+---
+
+## Post-implementation review (spec 023 — pre-merge)
+
+A multi-agent adversarial review of the full branch diff (`main...HEAD`, 7 dimensions:
+money-correctness, store-context split, Supabase boundary/projection, i18n lazy-load + dead-key
+purge, native/scan, refactor-parity, general regressions) verified each finding by an independent
+refuter. The two silent-risk areas — the `loadAll` column projection vs. `supabase/migrations/*.sql`
+and the dead-key purge vs. live `t()` callers — came back clean. Two regressions this branch
+introduced survived verification and were fixed test-first (commit `b4e4ad0`):
+
+- **B4 review (HIGH) — biometric lock z-order.** The B4 overlay (which now keeps the app subtree
+  mounted rather than unmounting it) rendered at `z-50`, below portaled drawers/scrims/modals
+  (70–100). An open dialog at background time painted household data over the lock screen (FR-011
+  leak). Fixed: overlay raised to `z-[200]`; guard `test/store/biometric-lock-zorder.test.ts`.
+- **B2 review (LOW) — month-insight reference timezone rollover.** `monthInsightReference` built a
+  noon-UTC last-day instant, but `insights.ts` buckets the month with local getters, so for viewers
+  at UTC+12+ the completed month rolled into the next (empty) month, re-suppressing the under-budget
+  card B2 fixed. Fixed: reference built on the local calendar (identical instant under `TZ=UTC`, no
+  vector change); UTC+13 regression test added. `monthInsightReference` is not golden-vectored, so
+  no `shared/test-vectors` changed.
+
+Post-fix: 974 tests green (was 970; +4), `tsc` clean, static export builds (11 routes), finance
+vectors byte-identical, Web CI + Capacitor iOS CI green on `b4e4ad0`.
