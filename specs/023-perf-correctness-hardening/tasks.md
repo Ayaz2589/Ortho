@@ -123,7 +123,7 @@ reload; forced theme → readable status bar from launch; server-revoke → fore
 - [X] T024 [US4] B4: render the biometric lock as an overlay OVER a kept-mounted `AppStateProvider` in `web/app/(app)/layout.tsx` (remove the early-return unmount); add a jsdom test asserting the provider is not unmounted (and `runBootstrap` does not re-run) when the gate toggles locked→unlocked.
 - [X] T025 [P] [US4] B10: call `applyAppearance(readAppearance())` once at app-shell mount (or add `StatusBar.setStyle` to the boot path) so the status-bar style matches the theme from first launch and on every tab — `web/app/(app)/layout.tsx` and/or `web/app/layout.tsx` + `web/components/settings/appearance.ts`.
 - [X] T026 [P] [US4] B9: guard `web/lib/biometricGate.ts` against re-entrant `attemptUnlock` (ignore `appStateChange` while unlocking) and/or debounce the foreground re-auth; unit-test the guard logic.
-- [ ] T027 [US4] Verify US4 (web-testable parts): `npm test` (T021/T022/T024/T026) + `npx tsc --noEmit`; the Swift/native items (T023, T025-native, status bar) are build-verified in T045 and by a manual device check.
+- [X] T027 [US4] Verify US4 (web-testable parts): `npm test` (T021/T022/T024/T026) + `npx tsc --noEmit`; the Swift/native items (T023, T025-native, status bar) are build-verified in T045 and by a manual device check. ✅ All web-testable US4 parts green (B5 liveness, B3 JS multi-page, B4 overlay, B9 re-entrancy) + tsc clean + Capacitor iOS CI green. Remaining device/manual check: B3 camera dismissal (T023, Swift), B10 status bar, B4 unlock-preserves-state — verified via CI build + a manual device pass, not from Linux.
 
 **Checkpoint**: iOS native-feel + session-liveness fixes in; pending iOS CI/device confirmation.
 
@@ -185,9 +185,9 @@ deduped helpers have a single definition.
 
 ## Phase 10: Polish & Cross-Cutting Concerns
 
-- [ ] T043 [P] Update `docs/web.md` (i18n lazy-load, `Intl` formatter cache, store-context split, typed Supabase boundary, dead-key reachability guard) and add a note to `PARITY.md` where a capability row applies (B7 client-side compensation; aggregates kept unwired).
-- [ ] T044 Final verification pass from `web/`: `npm run build` (static export succeeds, `out/` produced), `npm run measure:bundle -- --baseline ../specs/023-perf-correctness-hardening/baseline.json` (record the cumulative initial-load delta — SC-002), `npm test` (all green incl. regression-vector parity suites), `npx tsc --noEmit` (clean).
-- [ ] T045 Push `023-perf-correctness-hardening`; watch web CI and the Capacitor iOS build with `GH_TOKEN=placeholder gh run watch --exit-status` to confirm `web-ci.yml` AND `capacitor-ios-ci.yml` stay green (the only iOS signal from a Linux sandbox — SC-005/SC-007).
+- [X] T043 [P] Update `docs/web.md` (i18n lazy-load, `Intl` formatter cache, store-context split, typed Supabase boundary, dead-key reachability guard) and add a note to `PARITY.md` where a capability row applies (B7 client-side compensation; aggregates kept unwired). ✅ docs/web.md data-layer + bundle sections updated; PARITY.md atomic-write row notes the B7 checked-compensation hardening.
+- [X] T044 Final verification pass from `web/`: `npm run build` (static export succeeds, `out/` produced), `npm run measure:bundle -- --baseline ../specs/023-perf-correctness-hardening/baseline.json` (record the cumulative initial-load delta — SC-002), `npm test` (all green incl. regression-vector parity suites), `npx tsc --noEmit` (clean). ✅ Build succeeds (11 routes prerendered); initial-load ~28 KB gzip/route below baseline (union −210.9 KB raw), no regression from US6/US7; 970 tests green; tsc clean; vectors byte-identical.
+- [X] T045 Push `023-perf-correctness-hardening`; watch web CI and the Capacitor iOS build with `GH_TOKEN=placeholder gh run watch --exit-status` to confirm `web-ci.yml` AND `capacitor-ios-ci.yml` stay green (the only iOS signal from a Linux sandbox — SC-005/SC-007). ✅ Pushed through HEAD `367e6a9`; both Web CI and Capacitor iOS CI green on each push. (T023 Swift remains for a macOS session; PR #14 still draft pending owner decision.)
 
 ---
 
