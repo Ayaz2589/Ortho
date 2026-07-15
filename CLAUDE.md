@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/022-web-bundle-optimization/plan.md`
+`specs/023-perf-correctness-hardening/plan.md`
 <!-- SPECKIT END -->
 
 ## Project documentation
