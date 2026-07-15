@@ -117,7 +117,7 @@ Face ID (B9) — per C-B3/4/5/9/10, research D8/D9/D10. **iOS-runtime items veri
 **Independent test**: device check — capture dismisses to review (multi-page kept); Face-ID unlock, no
 reload; forced theme → readable status bar from launch; server-revoke → foreground signs out.
 
-- [ ] T021 [P] [US4] B5: write a FAILING store test in `web/test/store/foreground-liveness.test.tsx` asserting the `appStateChange` handler calls `getSession`; then change `web/lib/store.tsx` to `supabase.auth.getUser()` (server round-trip) and drive sign-out on its error. Make it pass. (store.tsx — sequence after T008.)
+- [X] T021 [P] [US4] B5: write a FAILING store test in `web/test/store/foreground-liveness.test.tsx` asserting the `appStateChange` handler calls `getSession`; then change `web/lib/store.tsx` to `supabase.auth.getUser()` (server round-trip) and drive sign-out on its error. Make it pass. (store.tsx — sequence after T008.)
 - [ ] T022 [P] [US4] B3 (JS): wire `web/lib/scan/useScanFlow.ts` to `ScanPlugin.onPageCaptured` (accumulate pages, parse on an explicit "Done"); add a mocked-plugin test asserting multi-page pages are retained.
 - [ ] T023 [US4] B3 (Swift): dismiss `ScanCaptureController` in `deliverFirstCapture` for the single-shot flow and wire the multi-page "done" path; clean up temp JPEGs — `web/ios/App/App/Plugins/Scan/ScanCaptureController.swift` + `ScanPlugin.swift`. Build-verified by iOS CI (T045).
 - [ ] T024 [US4] B4: render the biometric lock as an overlay OVER a kept-mounted `AppStateProvider` in `web/app/(app)/layout.tsx` (remove the early-return unmount); add a jsdom test asserting the provider is not unmounted (and `runBootstrap` does not re-run) when the gate toggles locked→unlocked.

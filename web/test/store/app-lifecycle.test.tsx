@@ -1,16 +1,20 @@
 // @vitest-environment jsdom
 //
-// spec 021 — closes the documented (docs/parity-audit-2026-07-02.md) web-vs-iOS
-// liveness gap for the Capacitor build specifically: foregrounding the app
-// re-validates the session the same way the native app's launch-time
-// authStateChanges subscription did (contracts/session-storage-adapter.md).
+// spec 021 — closes the web-vs-iOS liveness gap for the Capacitor build:
+// foregrounding re-validates the session (docs/parity-audit-2026-07-02.md).
+// spec 023 B5 — the re-validation now hits the SERVER via getUser (not the
+// cache-first getSession), so a session revoked server-side within the local
+// token TTL is caught; a genuine auth rejection signs out, a transient network
+// error does not (no kicking out an offline user).
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, waitFor } from '@testing-library/react'
 import { makeSupabaseMock, primeFxCache, stubNoNetwork } from '../helpers/supabase-mock'
 
-const { addListener, getSession } = vi.hoisted(() => ({
+type GetUserResult = { data: { user: { id: string } | null }; error: { status?: number; message: string } | null }
+const { addListener, getUser, signOut } = vi.hoisted(() => ({
   addListener: vi.fn(),
-  getSession: vi.fn(() => Promise.resolve({ data: { session: null }, error: null })),
+  getUser: vi.fn<() => Promise<GetUserResult>>(() => Promise.resolve({ data: { user: { id: 'u-me' } }, error: null })),
+  signOut: vi.fn(() => Promise.resolve({ error: null })),
 }))
 vi.mock('@capacitor/app', () => ({ App: { addListener } }))
 
@@ -31,9 +35,11 @@ describe('appStateChange liveness listener', () => {
       appStateCallback = cb
       return Promise.resolve({ remove: vi.fn() })
     })
-    getSession.mockClear()
+    getUser.mockClear()
+    getUser.mockResolvedValue({ data: { user: { id: 'u-me' } }, error: null })
+    signOut.mockClear()
     const mock = makeSupabaseMock({ authUser: { id: 'u-me', email: 'me@example.com' } })
-    mock.client.auth.getSession = getSession
+    Object.assign(mock.client.auth, { getUser, signOut })
     createClient.mockReturnValue(mock.client)
   })
 
@@ -42,20 +48,37 @@ describe('appStateChange liveness listener', () => {
     await waitFor(() => expect(addListener).toHaveBeenCalledWith('appStateChange', expect.any(Function)))
   })
 
-  it('re-validates the session when the app becomes active', async () => {
+  it('re-validates against the server (getUser) when the app becomes active', async () => {
     render(<AppStateProvider>{null}</AppStateProvider>)
     await waitFor(() => expect(addListener).toHaveBeenCalled())
-
+    getUser.mockClear()
     appStateCallback?.({ isActive: true })
-    await waitFor(() => expect(getSession).toHaveBeenCalled())
+    await waitFor(() => expect(getUser).toHaveBeenCalled())
+  })
+
+  it('signs out when the session was revoked server-side (getUser → 401)', async () => {
+    render(<AppStateProvider>{null}</AppStateProvider>)
+    await waitFor(() => expect(addListener).toHaveBeenCalled())
+    getUser.mockResolvedValue({ data: { user: null }, error: { status: 401, message: 'invalid token' } })
+    appStateCallback?.({ isActive: true })
+    await waitFor(() => expect(signOut).toHaveBeenCalled())
+  })
+
+  it('does NOT sign out on a transient network error (no auth status)', async () => {
+    render(<AppStateProvider>{null}</AppStateProvider>)
+    await waitFor(() => expect(addListener).toHaveBeenCalled())
+    getUser.mockResolvedValue({ data: { user: null }, error: { status: 0, message: 'network down' } })
+    signOut.mockClear()
+    appStateCallback?.({ isActive: true })
+    await new Promise((r) => setTimeout(r, 10))
+    expect(signOut).not.toHaveBeenCalled()
   })
 
   it('does not re-validate when the app becomes inactive', async () => {
     render(<AppStateProvider>{null}</AppStateProvider>)
     await waitFor(() => expect(addListener).toHaveBeenCalled())
-
-    getSession.mockClear()
+    getUser.mockClear()
     appStateCallback?.({ isActive: false })
-    expect(getSession).not.toHaveBeenCalled()
+    expect(getUser).not.toHaveBeenCalled()
   })
 })

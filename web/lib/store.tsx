@@ -383,7 +383,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let handle: { remove: () => void } | undefined
     void App.addListener('appStateChange', ({ isActive }) => {
-      if (isActive) void supabase.auth.getSession()
+      if (!isActive) return
+      // Re-validate against the SERVER (getUser), not the cache-first getSession,
+      // so a session revoked server-side within the local token's TTL is caught on
+      // foreground (spec 023 B5). Sign out (→ SIGNED_OUT → redirect) only on a
+      // genuine auth rejection (401/403) or a confirmed missing user — never a
+      // transient network error, which would wrongly kick out an offline user.
+      void supabase.auth
+        .getUser()
+        .then((res: { data: { user: unknown }; error: { status?: number } | null }) => {
+          const status = res.error?.status
+          if ((res.error && (status === 401 || status === 403)) || (!res.error && !res.data.user)) {
+            void supabase.auth.signOut()
+          }
+        })
     }).then((h) => {
       handle = h
     })
