@@ -159,10 +159,13 @@ export function useTxForm({
   const [amount, setAmount] = useState(
     initialTransfer ? centsToDisplay(initialTransfer.amountCents, r, fd) : src ? centsToDisplay(src.amount_cents, r, fd) : ''
   )
-  // Snapshot of the pre-filled amount in edit mode. If the user doesn't touch
-  // the field, Save reuses `editing.amount_cents` verbatim so FX round-trip
-  // rounding never silently shifts the stored cents (mirrors iOS).
-  const [originalAmountText] = useState(editing ? centsToDisplay(editing.amount_cents, r, fd) : '')
+  // The pre-filled amount's exact cents: the stored total in edit mode, or the
+  // exact balance for a settle-up transfer prefill. If the user doesn't touch
+  // the field, Save reuses these cents verbatim so an FX round-trip never shifts
+  // the stored total (mirrors iOS) — for a settle-up this keeps the transfer
+  // exactly zeroing the balance in a non-USD display currency (spec 023 B9).
+  const originalAmountCents = editing ? editing.amount_cents : initialTransfer ? initialTransfer.amountCents : null
+  const [originalAmountText] = useState(originalAmountCents != null ? centsToDisplay(originalAmountCents, r, fd) : '')
   const [merchant, setMerchant] = useState(src?.merchant ?? '')
   const [category, setCategory] = useState<TransactionCategory>(
     src && src.kind === 'expense' ? src.category : 'groceries'
@@ -246,10 +249,10 @@ export function useTxForm({
   // shares off the total, either false-blocking Save or writing shares that don't
   // sum to the parent (the #1 money invariant). All share math runs against
   // `effectiveCents`, never the re-parsed amount field (spec 023 B1 / research D6).
-  const amountUntouched = !!editing && amount === originalAmountText
+  const amountUntouched = originalAmountCents != null && amount === originalAmountText
   // `cents ?? 0` keeps this a `number` (0 is falsy in the guards below, and
   // `submit` early-returns on `!cents`, so it never stores a 0 amount).
-  const effectiveCents = amountUntouched && editing ? editing.amount_cents : cents ?? 0
+  const effectiveCents = amountUntouched && originalAmountCents != null ? originalAmountCents : cents ?? 0
   const splitUntouched =
     !!editing &&
     splitMethod === initialSeed.method &&

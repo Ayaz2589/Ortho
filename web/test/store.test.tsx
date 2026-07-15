@@ -187,6 +187,30 @@ describe('store (AppStateProvider)', () => {
     expect(h.mock!.callsFor('transactions').some((c) => c.op === 'delete')).toBe(true)
   })
 
+  it('addTransaction keeps the row + flags an error when the shares write AND the rollback delete both fail (B7)', async () => {
+    // Double failure: the transaction_shares insert fails AND the compensating
+    // parent delete also fails, so the parent survives in the DB with no shares.
+    // The app must NOT silently drop it from local state as if the rollback
+    // succeeded (that hides an orphaned "creator owns all" row) — it keeps the
+    // row visible and surfaces the error (spec 023 B7).
+    h.mock = makeSupabaseMock({
+      ...dataset(),
+      insertErrors: { transaction_shares: 'shares RLS denied' },
+      deleteErrors: { transactions: 'delete blocked' },
+    })
+    await renderStore()
+    const startLen = api.transactions.length
+
+    const tx = makeTx({ id: 'tx-orphan', merchant: 'Bistro', amount_cents: 1000, owner_ids: ['u-me', 'u-jordan'], household_id: 'hh-1' })
+    await act(async () => { api.addTransaction(tx) })
+
+    await waitFor(() => expect(api.error).not.toBeNull())
+    // Not silently dropped — the failed rollback leaves the row flagged, not
+    // presented as a clean revert.
+    expect(api.transactions.find((t) => t.id === 'tx-orphan')).toBeDefined()
+    expect(api.transactions).toHaveLength(startLen + 1)
+  })
+
   it('spentBy returns each person\'s exact cents share, reconciling to the total', async () => {
     await renderStore()
     // The seeded shared expense ($50.00) is split 50/50 across the two people.

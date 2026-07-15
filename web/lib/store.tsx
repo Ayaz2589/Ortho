@@ -664,9 +664,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         // Shares failed to write — roll back the parent so no share-less
         // transaction survives (it would rehydrate as "creator owns all").
         // Matches iOS's all-or-nothing write.
-        await supabase.from('transactions').delete().eq('id', tx.id)
-        setTransactions((prev) => prev.filter((t) => t.id !== tx.id))
-        setError(res.error ?? 'Could not save who this transaction is split between.')
+        const { error: delErr } = await supabase.from('transactions').delete().eq('id', tx.id)
+        if (delErr) {
+          // The compensating rollback ALSO failed: the parent is still in the DB
+          // with no shares. Keep the row in local state (don't hide an orphaned
+          // row) and surface the failure so it isn't presented as a clean
+          // rollback — it stays flagged until the next successful loadAll (B7).
+          setError(`This transaction may not have saved correctly (${res.error ?? delErr.message}). Reload to reconcile.`)
+        } else {
+          setTransactions((prev) => prev.filter((t) => t.id !== tx.id))
+          setError(res.error ?? 'Could not save who this transaction is split between.')
+        }
       }
     })()
   }
@@ -690,8 +698,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         // re-write its shares so the row never ends up share-less (atomic with iOS).
         if (prevTx) {
           setTransactions((prev) => prev.map((t) => (t.id === tx.id ? prevTx! : t)))
-          await supabase.from('transactions').update(txRecord(prevTx)).eq('id', tx.id)
-          await writeShares(prevTx)
+          const { error: upErr } = await supabase.from('transactions').update(txRecord(prevTx)).eq('id', tx.id)
+          const restore = upErr ? { ok: false as const } : await writeShares(prevTx)
+          if (upErr || !restore.ok) {
+            // The compensating restore ALSO failed: the DB row may be inconsistent
+            // with the reverted local state. Flag it so it isn't presented as a
+            // clean revert — reconciles on the next successful loadAll (B7).
+            setError('This transaction may not have saved correctly. Reload to reconcile.')
+            return
+          }
         }
         setError(res.error ?? 'Could not save who this transaction is split between.')
       }
