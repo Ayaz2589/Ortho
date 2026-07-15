@@ -69,7 +69,7 @@ ever tracked between them, is in
 | Canonical leftover-cent order | ✅ | ✅ | `orderedOwnerIds` |
 | Transaction + shares data contract | ✅ | ✅ | columns mirrored (incl. `paid_by`) |
 | Member reimbursement / settle-up balance | ✅ | — | `lib/balances.ts` → `member-balance.json` (+ `paid_by`, `transfer` kind) |
-| Atomic parent+shares write | ✅ (rollback) | ✅ (rollback) | client-side compensation on both (an RPC would make it truly atomic — still tracked, out of scope) |
+| Atomic parent+shares write | ✅ (rollback) | ✅ (rollback) | client-side compensation on both; spec 023/B7 hardened web to **check** every compensating write and, if a rollback also fails, keep the row flagged + surface a "reload to reconcile" error rather than present a share-less row as consistent (an RPC would make it truly atomic — still tracked, out of scope) |
 | Category / kind / source taxonomy | ✅ | ✅ | Postgres `transaction_category`/`transaction_kind` enums (+ `transfer`) / `lib/types.ts` |
 | Date storage & timezone | ✅ | ✅ | noon-UTC transaction timestamps; date-only columns = local calendar day |
 | Full-UI localization (6 languages) | ✅ | — (English) | `web/lib/i18n/*` |
