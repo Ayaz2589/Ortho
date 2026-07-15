@@ -130,6 +130,26 @@ export function monthReferenceDate(yyyymm: string): Date {
 }
 
 /**
+ * Reference date for the budget/insight engines when a specific month is
+ * selected: `now` when `yyyymm` is the current month (real elapsed time),
+ * otherwise the month's LAST day at noon UTC (fully elapsed). Never the
+ * mid-month `monthReferenceDate` heuristic — that reported "~14 days left" for
+ * a long-finished month and, pinning `monthProgress` at ~0.48, permanently
+ * suppressed the "under budget" card (whose rule needs `monthProgress >= 0.7`).
+ * (spec 023 B2). Future months — not reachable from the month picker, which only
+ * lists months with data — fall through to the fully-elapsed branch.
+ */
+export function monthInsightReference(yyyymm: string, now: Date = new Date()): Date {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(yyyymm)) {
+    throw new Error(`INVALID_MONTH: ${JSON.stringify(yyyymm)}`)
+  }
+  const [y, m] = yyyymm.split('-').map(Number)
+  if (now.getFullYear() === y && now.getMonth() + 1 === m) return now
+  const lastDay = new Date(y, m, 0).getDate()
+  return new Date(`${yyyymm}-${String(lastDay).padStart(2, '0')}T12:00:00.000Z`)
+}
+
+/**
  * Step to the chronologically adjacent month within `months` (which is
  * newest-first), or `null` at the data edge. `'prev'` = older, `'next'` = newer.
  */

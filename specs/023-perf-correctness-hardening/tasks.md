@@ -99,10 +99,10 @@ can fire in month-select mode (per C-B2 / research D7).
 
 **Independent test**: select a completed under-budget month → correct day-count + the positive card appears.
 
-- [ ] T017 [P] [US3] Write FAILING repro test in `web/test/finance/insights-month-select.test.ts`: a completed past month + under-budget spend; assert the current output shows ~14 "days left" and never fires the under-budget card.
-- [ ] T018 [US3] Fix B2: derive `daysLeft`/`monthProgress` from the selected interval (a completed past month is fully elapsed) in `web/components/dashboard/range.ts` and/or `web/lib/finance/insights.ts`; leave the current-month/default path unchanged. Make T017 pass.
-- [ ] T019 [US3] Regenerate the affected vectors: `npm run gen:vectors`; `git diff shared/test-vectors` MUST show ONLY month-select day-count/rule fields changing (current-month/default unchanged) — review, then stage the reviewed diff. This is the sole sanctioned vector change.
-- [ ] T020 [US3] Verify US3: `npm test` (incl. T017) + `npx tsc --noEmit`.
+- [X] T017 [P] [US3] Write FAILING repro test in `web/test/finance/insights-month-select.test.ts`: a completed past month + under-budget spend; assert the current output shows ~14 "days left" and never fires the under-budget card.
+- [X] T018 [US3] Fix B2: derive `daysLeft`/`monthProgress` from the selected interval (a completed past month is fully elapsed) in `web/components/dashboard/range.ts` and/or `web/lib/finance/insights.ts`; leave the current-month/default path unchanged. Make T017 pass.
+- [X] T019 [US3] Regenerate the affected vectors: `npm run gen:vectors`; `git diff shared/test-vectors` MUST show ONLY month-select day-count/rule fields changing (current-month/default unchanged) — review, then stage the reviewed diff. This is the sole sanctioned vector change.
+- [X] T020 [US3] Verify US3: `npm test` (incl. T017) + `npx tsc --noEmit`.
 
 **Checkpoint**: insights are trustworthy for any month.
 
