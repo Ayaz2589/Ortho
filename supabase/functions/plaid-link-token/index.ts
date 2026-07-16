@@ -56,11 +56,14 @@ Deno.serve(async (req) => {
 
   const service = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
 
-  // Linked banks are household facts: the caller must belong to one.
+  // Linked banks are household facts: the caller must belong to one. Ordered
+  // for determinism (review 024): a user somehow in two households always
+  // links into their FIRST household rather than an arbitrary one.
   const { data: membership } = await service
     .from('household_members')
     .select('household_id')
     .eq('user_id', user.id)
+    .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle()
   if (!membership) return errorResponse('not_household_member')

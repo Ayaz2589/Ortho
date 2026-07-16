@@ -200,6 +200,33 @@ describe('US2-3 — foreground poll fallback (lost hand-back)', () => {
     await waitFor(() => expect(localStorage.getItem(PENDING_LINK_SESSION_KEY)).toBeNull())
   })
 
+  it('exchange_failed is TERMINAL (public token consumed) — record cleared, no retry loop', async () => {
+    pendingHosted()
+    await mountSettled()
+    aggregation.completeLinkSession.mockResolvedValueOnce({ ok: false, code: 'exchange_failed' })
+    await foreground()
+    await waitFor(() => expect(localStorage.getItem(PENDING_LINK_SESSION_KEY)).toBeNull())
+    // A later foreground attempts nothing — the loop is broken.
+    await foreground()
+    expect(aggregation.completeLinkSession).toHaveBeenCalledTimes(2)
+  })
+
+  it('a stale record owned by another user (session_not_owned) clears instead of re-failing forever', async () => {
+    pendingHosted()
+    await mountSettled()
+    aggregation.completeLinkSession.mockResolvedValueOnce({ ok: false, code: 'session_not_owned' })
+    await foreground()
+    await waitFor(() => expect(localStorage.getItem(PENDING_LINK_SESSION_KEY)).toBeNull())
+  })
+
+  it('provider_unreachable is transient — the record survives for the next foreground', async () => {
+    pendingHosted()
+    await mountSettled()
+    aggregation.completeLinkSession.mockResolvedValueOnce({ ok: false, code: 'provider_unreachable' })
+    await foreground()
+    expect(localStorage.getItem(PENDING_LINK_SESSION_KEY)).not.toBeNull()
+  })
+
   it('backgrounding does not attempt completion', async () => {
     pendingHosted()
     await mountSettled()

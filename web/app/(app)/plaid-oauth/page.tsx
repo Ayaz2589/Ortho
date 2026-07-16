@@ -6,6 +6,11 @@
  * their own site; Plaid sends the member back HERE, and Link must resume with
  * the SAME stored link token plus receivedRedirectUri (Plaid's documented SPA
  * pattern). Registered in the Plaid Dashboard as APP_BASE_URL + /plaid-oauth.
+ *
+ * Outcomes are never swallowed (review 024): success redirects to Linked
+ * banks (the new bank is in the refreshed list); a FAILED exchange stays here
+ * with one calm line and the way back — the member who just typed their bank
+ * credentials must never land on an unchanged page with zero explanation.
  */
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -27,22 +32,32 @@ const EmbeddedPlaidLink = dynamic(() => import('@/components/settings/EmbeddedPl
 export default function PlaidOauthReturnPage() {
   const { t, refreshLinkedBanks } = useApp()
   const router = useRouter()
-  // 'none' until the client-side read proves otherwise: the static export
-  // prerenders this page at build time, where localStorage doesn't exist.
-  const [pending, setPending] = useState<PendingLinkSession | null>(null)
-  const [checked, setChecked] = useState(false)
+  // undefined = the client-side localStorage read hasn't happened yet (the
+  // static export prerenders this page at build time, where storage doesn't
+  // exist); null = read, nothing pending.
+  const [pending, setPending] = useState<PendingLinkSession | null | undefined>(undefined)
+  const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
     setPending(readPendingLinkSession(new Date()))
-    setChecked(true)
   }, [])
 
   async function finish(publicToken: string) {
     if (!pending) return
     const res = await completeLinkSession(pending.sessionId, publicToken)
+    // Either way the single-use token is spent — a retry starts a fresh flow.
     clearPendingLinkSession()
-    if (res.ok) void refreshLinkedBanks()
-    router.replace('/settings/linked-banks')
+    if (res.ok) {
+      void refreshLinkedBanks()
+      router.replace('/settings/linked-banks')
+    } else {
+      setPending(null)
+      setNotice(
+        res.code === 'provider_unreachable'
+          ? t('Couldn’t reach the bank-connection service. Try again in a bit.')
+          : t('The connection could not be completed. Try again.')
+      )
+    }
   }
 
   function abandon() {
@@ -63,14 +78,22 @@ export default function PlaidOauthReturnPage() {
               onExit={abandon}
             />
           </>
-        ) : checked ? (
+        ) : pending === null ? (
           <>
-            <p className="text-[15px] text-text-2">{t('No bank connection is in progress.')}</p>
-            <Link href="/settings/linked-banks" className="text-[15px] text-accent">
+            {!notice && (
+              <p className="text-[15px] text-text-2">{t('No bank connection is in progress.')}</p>
+            )}
+            <Link
+              href="/settings/linked-banks"
+              className="inline-flex min-h-11 items-center text-[15px] text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            >
               {t('Back to Linked banks')}
             </Link>
           </>
         ) : null}
+        <p role="status" aria-live="polite" className="min-h-4 text-[13px] leading-relaxed text-text-3">
+          {notice}
+        </p>
       </div>
     </ReadingColumn>
   )

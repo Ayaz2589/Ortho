@@ -17,6 +17,13 @@ export type PendingLinkSession = {
 
 export const PENDING_LINK_SESSION_KEY = 'ortho.plaid.pendingLinkSession'
 
+/** Plaid keeps a finished hosted session's results retrievable for ~6h AFTER
+ *  the link token expires (research.md D3) — a hosted record must survive
+ *  that long so a member who finished in the browser last night still lands
+ *  their bank this morning (review 024). Embedded records die with the token:
+ *  the token IS the session there. */
+const HOSTED_RESULTS_GRACE_MS = 6 * 60 * 60 * 1000
+
 export function savePendingLinkSession(session: PendingLinkSession): void {
   try {
     window.localStorage.setItem(PENDING_LINK_SESSION_KEY, JSON.stringify(session))
@@ -68,7 +75,10 @@ export function readPendingLinkSession(now: Date): PendingLinkSession | null {
     return null
   }
 
-  if (new Date(r.expiresAt).getTime() <= now.getTime()) {
+  const expiresAtMs = new Date(r.expiresAt).getTime()
+  const effectiveExpiryMs =
+    r.mode === 'hosted' ? expiresAtMs + HOSTED_RESULTS_GRACE_MS : expiresAtMs
+  if (effectiveExpiryMs <= now.getTime()) {
     clearPendingLinkSession()
     return null
   }

@@ -131,6 +131,18 @@ describe('FR-012 — dark until the operator configures the provider', () => {
     expect(document.querySelector('.text-destructive')).toBeNull()
   })
 
+  it('a household-less visitor gets the membership line, not a doomed button', async () => {
+    aggregation.checkLinkingAvailable.mockResolvedValue({
+      ok: false,
+      code: 'not_household_member',
+    })
+    await mounted()
+    expect(
+      await screen.findByText('You need to be in a household to link a bank.')
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Connect a bank' })).not.toBeInTheDocument()
+  })
+
   it('configured: disclosure + an enabled Connect button (FR-002)', async () => {
     await mounted()
     expect(

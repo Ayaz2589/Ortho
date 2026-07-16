@@ -105,6 +105,33 @@ describe('resuming the OAuth detour', () => {
   })
 })
 
+describe('a failed exchange after the detour is SURFACED, never swallowed', () => {
+  it('stays on the page with a calm line and the way back — no silent redirect', async () => {
+    savePendingLinkSession({
+      sessionId: 's-1',
+      linkToken: 'link-sandbox-1',
+      mode: 'embedded',
+      expiresAt: '2099-01-01T00:00:00Z',
+    })
+    aggregation.completeLinkSession.mockResolvedValue({ ok: false, code: 'exchange_failed' })
+    render(<PlaidOauthReturnPage />)
+    await waitFor(() => expect(plaidLink.open).toHaveBeenCalled())
+    await act(async () => {
+      plaidLink.config!.onSuccess('public-oauth-1', {})
+    })
+    expect(
+      await screen.findByText('The connection could not be completed. Try again.')
+    ).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'The connection could not be completed. Try again.'
+    )
+    expect(router.replace).not.toHaveBeenCalled()
+    expect(screen.getByRole('link', { name: 'Back to Linked banks' })).toBeInTheDocument()
+    // The consumed session's record is gone — a retry starts fresh.
+    expect(localStorage.getItem(PENDING_LINK_SESSION_KEY)).toBeNull()
+  })
+})
+
 describe('arriving with nothing pending', () => {
   it('states it calmly and links back to Linked banks — never an error tone', () => {
     render(<PlaidOauthReturnPage />)

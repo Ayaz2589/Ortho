@@ -116,6 +116,73 @@ describe('bootstrap loads linked banks with the fan-out', () => {
   })
 })
 
+describe('deploy-before-migrate fails OPEN (the 018 PGRST202 lesson, applied to tables)', () => {
+  it('a missing linked_institutions table (PGRST205) leaves bootstrap healthy with empty lists', async () => {
+    const ds = dataset()
+    ds.selectErrors = {
+      linked_institutions: {
+        message: "Could not find the table 'public.linked_institutions' in the schema cache",
+        code: 'PGRST205',
+      },
+      linked_accounts: {
+        message: "Could not find the table 'public.linked_accounts' in the schema cache",
+        code: 'PGRST205',
+      },
+    }
+    await boot(ds)
+    expect(probe!.bootstrapFailed).toBe(false)
+    expect(probe!.linkedInstitutions).toEqual([])
+    expect(probe!.linkedAccounts).toEqual([])
+    // The rest of the app loaded normally — the feature is simply dark.
+    expect(probe!.currentHousehold?.id).toBe('hh-1')
+  })
+
+  it('a 42P01 relation-does-not-exist error also fails open', async () => {
+    const ds = dataset()
+    ds.selectErrors = {
+      linked_institutions: { message: 'relation "public.linked_institutions" does not exist', code: '42P01' },
+    }
+    await boot(ds)
+    expect(probe!.bootstrapFailed).toBe(false)
+    expect(probe!.linkedInstitutions).toEqual([])
+  })
+
+  it('any OTHER linked-banks read error still fails bootstrap loudly (no fake empty state)', async () => {
+    const ds = dataset()
+    ds.selectErrors = { linked_institutions: 'permission denied for table linked_institutions' }
+    await boot(ds)
+    expect(probe!.bootstrapFailed).toBe(true)
+  })
+})
+
+describe('sign-out clears linked-bank state (the SIGNED_OUT invariant)', () => {
+  it('SIGNED_OUT wipes linkedInstitutions/linkedAccounts and the pending link record', async () => {
+    const originalLocation = window.location
+    const assignSpy = vi.fn()
+    Object.defineProperty(window, 'location', {
+      value: { ...originalLocation, assign: assignSpy },
+      writable: true,
+      configurable: true,
+    })
+    try {
+      await boot(dataset())
+      expect(probe!.linkedInstitutions).toHaveLength(1)
+      localStorage.setItem(
+        'ortho.plaid.pendingLinkSession',
+        JSON.stringify({ sessionId: 's-1', linkToken: 'x', mode: 'hosted', expiresAt: '2099-01-01T00:00:00Z' })
+      )
+      await act(async () => {
+        h.mock!.emitAuthChange('SIGNED_OUT')
+      })
+      expect(probe!.linkedInstitutions).toEqual([])
+      expect(probe!.linkedAccounts).toEqual([])
+      expect(localStorage.getItem('ortho.plaid.pendingLinkSession')).toBeNull()
+    } finally {
+      Object.defineProperty(window, 'location', { value: originalLocation, configurable: true })
+    }
+  })
+})
+
 describe('refreshLinkedBanks', () => {
   it('refetches both tables (the post-connect/post-disconnect path)', async () => {
     const ds = dataset()

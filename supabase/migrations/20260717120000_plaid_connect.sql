@@ -280,3 +280,77 @@ revoke all on function public.delete_institution_secret(uuid)      from public;
 grant execute on function public.store_institution_secret(uuid, text) to service_role;
 grant execute on function public.get_institution_secret(uuid)         to service_role;
 grant execute on function public.delete_institution_secret(uuid)      to service_role;
+
+-- One-transaction completion of a link attempt (spec 024 review finding):
+-- institution upsert + Vault secret + account rows + session flip succeed or
+-- fail ATOMICALLY. Without this, an edge-function crash mid-persist could
+-- leave a member-visible half-linked institution (an 'active' row with no
+-- secret and no accounts) that no retry can heal — the exchange's public
+-- token is single-use. The on-conflict branch also makes re-linking a
+-- disconnected institution safe: reactivation, secret replacement, and
+-- account refresh land together or not at all.
+create or replace function public.complete_plaid_link(
+  p_session_id              uuid,
+  p_provider_item_id        text,
+  p_provider_institution_id text,
+  p_institution_name        text,
+  p_access_token            text,
+  p_accounts                jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.plaid_link_sessions%rowtype;
+  v_inst_id uuid;
+begin
+  select * into v_session from public.plaid_link_sessions where id = p_session_id;
+  if v_session.id is null then
+    raise exception 'unknown link session %', p_session_id;
+  end if;
+
+  insert into public.linked_institutions
+      (household_id, provider, provider_item_id, provider_institution_id,
+       institution_name, created_by)
+    values
+      (v_session.household_id, 'plaid', p_provider_item_id, p_provider_institution_id,
+       coalesce(p_institution_name, ''), v_session.user_id)
+  on conflict (provider, provider_item_id) do update
+    set status          = 'active',
+        disconnected_at = null,
+        institution_name = case
+          when coalesce(excluded.institution_name, '') <> '' then excluded.institution_name
+          else public.linked_institutions.institution_name
+        end
+  returning id into v_inst_id;
+
+  -- Replaces any previous secret (deliberate re-link) inside this transaction.
+  perform public.store_institution_secret(v_inst_id, p_access_token);
+
+  insert into public.linked_accounts
+      (institution_id, provider_account_id, name, official_name, mask,
+       account_type, account_subtype)
+    select v_inst_id, a.provider_account_id, coalesce(a.name, ''), a.official_name,
+           a.mask, coalesce(a.account_type, ''), a.account_subtype
+      from jsonb_to_recordset(coalesce(p_accounts, '[]'::jsonb))
+        as a(provider_account_id text, name text, official_name text, mask text,
+             account_type text, account_subtype text)
+  on conflict (institution_id, provider_account_id) do update
+    set name            = excluded.name,
+        official_name   = excluded.official_name,
+        mask            = excluded.mask,
+        account_type    = excluded.account_type,
+        account_subtype = excluded.account_subtype;
+
+  update public.plaid_link_sessions
+     set status = 'completed', institution_id = v_inst_id, completed_at = now()
+   where id = p_session_id;
+
+  return v_inst_id;
+end;
+$$;
+
+revoke all on function public.complete_plaid_link(uuid, text, text, text, text, jsonb) from public;
+grant execute on function public.complete_plaid_link(uuid, text, text, text, text, jsonb) to service_role;

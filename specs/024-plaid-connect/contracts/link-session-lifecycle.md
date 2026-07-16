@@ -10,17 +10,28 @@ see `data-model.md`); the client holds a small pending-session record locally.
             ┌────────────────────────────────────────────┐
  start ──► pending ──(plaid-exchange succeeds)──► completed
             │  │
-            │  └─(client reports abandon)──► abandoned
+            │  └─(post-consumption failure — server)──► abandoned
             └─(expires_at < now())──► "expired" (derived, still stored 'pending')
 ```
 
 - `completed` is terminal and idempotent: re-exchanging returns the stored
   institution + accounts, never a second institution (FR-004).
-- Expiry is **derived at read time** (`expires_at < now()`), never flipped by
-  a cron. An expired session answers `session_expired` (410) and can never
-  complete.
-- `abandoned` is best-effort hygiene from the client (user cancelled Link);
-  nothing load-bearing reads it.
+- Expiry is **derived at read time**, never flipped by a cron — but for
+  HOSTED sessions the server resolves `/link/token/get` BEFORE any expiry
+  verdict: Plaid keeps a finished hosted session's results retrievable ~6h
+  after the link token expires, and that window must work (review 024). An
+  embedded session past `expires_at` answers `session_expired` (410).
+- `abandoned` is TERMINAL, set by the **server** when a failure happens after
+  the single-use public token was consumed (exchange succeeded but persist
+  failed, or Plaid rejected a consumed token): no retry of this session can
+  ever succeed. Exchanging an abandoned session answers `session_expired` so
+  clients reset calmly and start a fresh flow.
+- Persistence is **atomic** (`complete_plaid_link` RPC): institution + Vault
+  secret + accounts + the session flip land in one transaction — a crash can
+  never leave a member-visible half-link. Compensation therefore only handles
+  the provider side: a brand-new Item is best-effort `/item/remove`d on
+  failure; a pre-existing institution's live access is never revoked by a
+  failed re-link attempt.
 
 ## Client pending record (`web/lib/plaidLinkSession.ts`)
 
@@ -33,8 +44,12 @@ While a session is pending, the client persists exactly:
 in `localStorage` under a single fixed key.
 
 - Written when `plaid-link-token` succeeds; cleared on: successful exchange,
-  `session_expired`, `session_not_found`, explicit user cancel (which also
-  fires the abandon report), or local expiry check.
+  any TERMINAL code (`session_expired`, `session_not_found`,
+  `session_not_owned`, `exchange_failed`), explicit user cancel, sign-out
+  (a record must never survive into another member's session on the device),
+  or the local expiry check — where HOSTED records get the +6h results grace
+  and embedded records die with the token (review 024). Kept on
+  `session_incomplete` (still in the browser) and transient failures.
 - The `linkToken` is stored because the **web OAuth return** must re-init
   Link with the *same* token (+ `receivedRedirectUri`) — Plaid's documented
   SPA pattern. It is short-lived (~30 min) and session-scoped.

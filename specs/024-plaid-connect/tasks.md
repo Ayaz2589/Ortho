@@ -173,3 +173,55 @@ end-to-end, feature-dark until operator keys exist. Then US2 (iOS), US3
 (disconnect — required before any real shipping), US4 (attribution), polish.
 Each checkpoint leaves the branch green and pushed; suites must pass at every
 checkpoint, not just at the end.
+
+---
+
+## Review addendum (2026-07-16) — 8-angle review, fixes applied
+
+An 8-angle finder review (line-by-line, removed-behavior, cross-file,
+reuse, simplification, efficiency, altitude, conventions) surfaced 14
+distinct findings after dedup. Fixed in the review-fix commit:
+
+1. **BLOCKER — deploy-before-migrate bootstrap failure**: the linked-banks
+   bootstrap selects now fail OPEN on PGRST205/42P01 (missing tables), the
+   018 PGRST202 lesson applied to tables. Any other error stays fail-loud.
+2. **Atomic persist**: new `complete_plaid_link` RPC lands institution +
+   Vault secret + accounts + session flip in one transaction (closes the
+   crash-window half-link and the reactivate-before-secret re-link bug).
+3. **Compensation ordering**: `institutionIsNew` is resolved BEFORE any
+   fallible post-exchange step, so a failed `/accounts/get` now actually
+   `/item/remove`s the orphaned Item (it previously never did).
+4. **Terminal sessions**: post-consumption failures mark the session
+   `abandoned` server-side (exchange on abandoned → `session_expired`);
+   the client clears its record on all terminal codes — no more silent
+   every-foreground retry loops against a consumed public token.
+5. **Hosted 6h results window**: the server resolves `/link/token/get`
+   before any expiry verdict; the client keeps hosted records for
+   expiry + 6h (embedded still dies with the token).
+6. **Disconnect zombie**: a FAILED `get_institution_secret` read now
+   answers `disconnect_failed` instead of masquerading as "no secret"
+   (which deleted the only token copy without revoking at Plaid).
+7. **Sign-out hygiene**: SIGNED_OUT clears linked-bank state and the
+   pending record (no cross-user leakage on a shared device).
+8. **OAuth-return outcomes**: a failed exchange after a bank-OAuth detour
+   is surfaced on /plaid-oauth with a calm line + way back — never a
+   silent redirect.
+9. **Deep-linked no-household state**: the page renders the membership
+   line instead of a doomed Connect button.
+10. Deterministic household selection (`order by created_at`); cached
+    `mediumDate` formatter instead of per-render `Intl.DateTimeFormat`;
+    `institutionPayload` selects parallelized; hit-target/focus fixes on
+    the return-route links; dead export + double casts removed.
+
+Recorded, deliberately NOT changed (reported for future work):
+- `invokeAggregation`/`invokeBilling` duplication → a shared
+  `invokeEdgeFunction` helper (touches 018 code; separate change).
+- The 6-copy caller-resolution boilerplate across edge functions → a
+  `resolveCaller` helper in `_shared/http.ts` (same reason).
+- Parametrizing the per-service `sync-to-functions.mjs`/drift-lock pair.
+- A store-level outcome channel so hand-back completions can show
+  "Bank connected." (component-local notices today; success is still
+  visible via the refreshed list).
+- `window.location.assign` for Hosted Link relies on Capacitor's
+  cancel-external-navigations default — consistent with 018's checkout
+  link-out precedent; revisit if `server.allowNavigation` ever changes.

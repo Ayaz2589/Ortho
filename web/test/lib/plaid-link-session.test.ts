@@ -66,4 +66,23 @@ describe('pending link-session record', () => {
     savePendingLinkSession(record({ mode: 'hosted' }))
     expect(readPendingLinkSession(NOW)?.mode).toBe('hosted')
   })
+
+  it('a hosted record OUTLIVES its link-token expiry by the 6h results window', () => {
+    // Plaid keeps a finished hosted session's results retrievable ~6h after
+    // the link token expires (research.md D3) — the member who finished in
+    // the browser last night must still complete this morning (review 024).
+    savePendingLinkSession(record({ mode: 'hosted', expiresAt: '2026-07-16T11:00:00Z' }))
+    expect(readPendingLinkSession(NOW)?.sessionId).toBe('s-1') // 1h past expiry: kept
+  })
+
+  it('a hosted record past expiry + 6h clears like any other', () => {
+    savePendingLinkSession(record({ mode: 'hosted', expiresAt: '2026-07-16T05:00:00Z' }))
+    expect(readPendingLinkSession(NOW)).toBeNull() // 7h past expiry: gone
+    expect(window.localStorage.getItem(PENDING_LINK_SESSION_KEY)).toBeNull()
+  })
+
+  it('embedded records still clear AT expiry (no grace — the token is the session)', () => {
+    savePendingLinkSession(record({ mode: 'embedded', expiresAt: '2026-07-16T11:59:00Z' }))
+    expect(readPendingLinkSession(NOW)).toBeNull()
+  })
 })

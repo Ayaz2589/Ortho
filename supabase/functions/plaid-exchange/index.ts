@@ -1,9 +1,12 @@
 // Spec 024 — complete a bank-connection attempt (contracts/plaid-functions.md §2).
-// Idempotent: a completed session returns its stored result. Compensating: any
-// failure after /item/public_token/exchange best-effort /item/remove's the
-// orphaned provider access (on the Trial plan an orphan permanently burns one
-// of 10 Item slots) and cleans this attempt's rows, leaving the session
-// pending for a calm retry (contracts/link-session-lifecycle.md).
+// Idempotent: a completed session returns its stored result. Persistence is
+// ATOMIC: the complete_plaid_link RPC lands institution + Vault secret +
+// accounts + session flip in one transaction, so no member-visible half-link
+// can exist. Compensation (review 024): the public token is single-use, so any
+// failure after /item/public_token/exchange is TERMINAL for this session —
+// best-effort /item/remove the orphaned Item when this attempt minted it (an
+// orphan permanently burns one of the Trial plan's 10 slots), mark the session
+// 'abandoned' so clients reset calmly, and answer exchange_failed.
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import { errorResponse, json, preflight, requiredEnv } from '../_shared/http.ts'
 import {
@@ -30,18 +33,20 @@ type SessionRow = {
 
 /** Contract payload: institution + accounts, display fields only (SC-002). */
 async function institutionPayload(service: SupabaseClient, institutionId: string) {
-  const { data: inst } = await service
-    .from('linked_institutions')
-    .select('id, provider, institution_name, status, created_by, created_at')
-    .eq('id', institutionId)
-    .maybeSingle()
+  const [{ data: inst }, { data: accounts }] = await Promise.all([
+    service
+      .from('linked_institutions')
+      .select('id, provider, institution_name, status, created_by, created_at')
+      .eq('id', institutionId)
+      .maybeSingle(),
+    service
+      .from('linked_accounts')
+      .select('id, name, official_name, mask, account_type, account_subtype')
+      .eq('institution_id', institutionId)
+      .order('created_at', { ascending: true })
+      .order('name', { ascending: true }),
+  ])
   if (!inst) return null
-  const { data: accounts } = await service
-    .from('linked_accounts')
-    .select('id, name, official_name, mask, account_type, account_subtype')
-    .eq('institution_id', institutionId)
-    .order('created_at', { ascending: true })
-    .order('name', { ascending: true })
   return {
     institution: {
       id: inst.id,
@@ -119,9 +124,11 @@ Deno.serve(async (req) => {
     return payload ? json(200, payload) : errorResponse('exchange_failed')
   }
 
-  if (new Date(session.expires_at).getTime() <= Date.now()) {
-    return errorResponse('session_expired')
-  }
+  // A previous attempt consumed this session's public token and failed past
+  // the point of recovery — clients must reset, not retry (review 024).
+  if (session.status === 'abandoned') return errorResponse('session_expired')
+
+  const expired = new Date(session.expires_at).getTime() <= Date.now()
 
   const plaid: PlaidClient = createPlaidClient(fetch as unknown as FetchLike, {
     clientId: env.PLAID_CLIENT_ID,
@@ -129,16 +136,25 @@ Deno.serve(async (req) => {
     env: env.PLAID_ENV as PlaidEnv,
   })
 
-  // Resolve the public token: embedded Link hands it to the page (onSuccess);
-  // hosted sessions are resolved server-side from the session's link token.
+  // Resolve the public token. Embedded Link hands it to the page (onSuccess)
+  // and dies with the link token. Hosted sessions are resolved server-side —
+  // and DELIBERATELY before any expiry gate: Plaid keeps a finished hosted
+  // session's results retrievable for ~6h AFTER the link token expires
+  // (research.md D3), so a member who finished in the browser last night can
+  // still land their bank this morning (review 024).
   let resolvedPublicToken: string
   if (typeof publicToken === 'string' && publicToken.length > 0) {
+    if (expired) return errorResponse('session_expired')
     resolvedPublicToken = publicToken
   } else if (session.mode === 'hosted') {
     const got = await plaid.post('/link/token/get', { link_token: session.link_token })
     if (!got.ok) return errorResponse(got.code)
     const result = parseHostedSessionResult(got.data)
-    if (!result) return errorResponse('session_incomplete')
+    if (!result) {
+      // No finished result: still-in-the-browser (waiting) vs never-finished
+      // (expired token AND no result → this session can never produce one).
+      return errorResponse(expired ? 'session_expired' : 'session_incomplete')
+    }
     resolvedPublicToken = result
   } else {
     return errorResponse('invalid_request')
@@ -147,41 +163,53 @@ Deno.serve(async (req) => {
   const exchanged = await plaid.post('/item/public_token/exchange', {
     public_token: resolvedPublicToken,
   })
-  if (!exchanged.ok) return errorResponse(exchanged.code)
+  if (!exchanged.ok) {
+    // A consumed/expired public token can never be exchanged again — mark the
+    // session terminal so the client resets instead of silently re-failing on
+    // every foreground (review 024).
+    if (exchanged.code === 'provider_error' && exchanged.providerErrorCode === 'INVALID_PUBLIC_TOKEN') {
+      await service
+        .from('plaid_link_sessions')
+        .update({ status: 'abandoned' })
+        .eq('id', session.id)
+      return errorResponse('session_expired')
+    }
+    return errorResponse(exchanged.code)
+  }
   const tokens = parseExchangeResponse(exchanged.data)
   if (!tokens) return errorResponse('provider_error')
 
-  // ---- From here on, every failure compensates (research.md D7). -----------
-  let institutionId: string | null = null
-  let institutionIsNew = false
-  const compensate = async () => {
-    // Kill the orphaned provider access first — but never for a pre-existing
-    // institution (its live token is not this attempt's to revoke).
+  // ---- The public token is now consumed: from here every failure is -------
+  // ---- terminal for this session and must compensate (research.md D7). ----
+
+  // Know BEFORE anything can fail whether this Item is new to us — only a
+  // brand-new Item may be /item/remove'd on failure (a pre-existing
+  // institution's live access is not this attempt's to revoke).
+  const { data: existing } = await service
+    .from('linked_institutions')
+    .select('id')
+    .eq('provider', 'plaid')
+    .eq('provider_item_id', tokens.itemId)
+    .maybeSingle()
+  const institutionIsNew = !existing
+
+  const failTerminally = async () => {
     if (institutionIsNew) {
       try {
         await plaid.post('/item/remove', { access_token: tokens.accessToken })
       } catch {
         // Best-effort: an unreachable Plaid here leaves an orphan we cannot
-        // help; the session stays pending so a retry can be attempted.
-      }
-      if (institutionId) {
-        await service.rpc('delete_institution_secret', { p_institution_id: institutionId })
-        // Cascades linked_accounts + the secret mapping row.
-        await service.from('linked_institutions').delete().eq('id', institutionId)
+        // help; the session is still marked terminal below.
       }
     }
+    await service.from('plaid_link_sessions').update({ status: 'abandoned' }).eq('id', session.id)
+    return errorResponse('exchange_failed')
   }
 
   const accountsRes = await plaid.post('/accounts/get', { access_token: tokens.accessToken })
-  if (!accountsRes.ok) {
-    await compensate()
-    return errorResponse('exchange_failed')
-  }
+  if (!accountsRes.ok) return await failTerminally()
   const parsedAccounts = parseAccountsResponse(accountsRes.data)
-  if (!parsedAccounts) {
-    await compensate()
-    return errorResponse('exchange_failed')
-  }
+  if (!parsedAccounts) return await failTerminally()
 
   // Institution display name: /accounts/get usually carries it; fall back to
   // /institutions/get_by_id (free endpoint); tolerate absence ('').
@@ -194,59 +222,17 @@ Deno.serve(async (req) => {
     if (inst.ok) institutionName = parseInstitutionResponse(inst.data)
   }
 
-  // Upsert the institution on the (provider, provider_item_id) anchor. A
-  // pre-existing row means this exact Item is already linked (a concurrent
-  // completion race) — reuse it rather than duplicating.
-  const { data: existing } = await service
-    .from('linked_institutions')
-    .select('id, status')
-    .eq('provider', 'plaid')
-    .eq('provider_item_id', tokens.itemId)
-    .maybeSingle()
-
-  if (existing) {
-    institutionId = existing.id
-    if (existing.status === 'disconnected') {
-      await service
-        .from('linked_institutions')
-        .update({ status: 'active', disconnected_at: null })
-        .eq('id', existing.id)
-    }
-  } else {
-    institutionIsNew = true
-    const { data: inserted, error: insertError } = await service
-      .from('linked_institutions')
-      .insert({
-        household_id: session.household_id,
-        provider: 'plaid',
-        provider_item_id: tokens.itemId,
-        provider_institution_id: parsedAccounts.institutionId,
-        institution_name: institutionName ?? '',
-        created_by: user.id,
-      })
-      .select('id')
-      .single()
-    if (insertError || !inserted) {
-      await compensate()
-      return errorResponse('exchange_failed')
-    }
-    institutionId = inserted.id
-  }
-
-  // The access token goes to Vault (never a client-readable column) via the
-  // service-role-only wrapper RPC; re-links replace the previous secret.
-  const { error: secretError } = await service.rpc('store_institution_secret', {
-    p_institution_id: institutionId,
-    p_secret: tokens.accessToken,
-  })
-  if (secretError) {
-    await compensate()
-    return errorResponse('exchange_failed')
-  }
-
-  const { error: accountsError } = await service.from('linked_accounts').upsert(
-    parsedAccounts.accounts.map((a) => ({
-      institution_id: institutionId,
+  // Atomic persist: institution upsert (reactivating a disconnected re-link),
+  // Vault secret, accounts, session→completed — one transaction, all or
+  // nothing. On failure the DB rolled back by itself; only the provider-side
+  // orphan needs compensating.
+  const { data: institutionId, error: rpcError } = await service.rpc('complete_plaid_link', {
+    p_session_id: session.id,
+    p_provider_item_id: tokens.itemId,
+    p_provider_institution_id: parsedAccounts.institutionId,
+    p_institution_name: institutionName ?? '',
+    p_access_token: tokens.accessToken,
+    p_accounts: parsedAccounts.accounts.map((a) => ({
       provider_account_id: a.providerAccountId,
       name: a.name,
       official_name: a.officialName,
@@ -254,25 +240,8 @@ Deno.serve(async (req) => {
       account_type: a.accountType,
       account_subtype: a.accountSubtype,
     })),
-    { onConflict: 'institution_id,provider_account_id' }
-  )
-  if (accountsError) {
-    await compensate()
-    return errorResponse('exchange_failed')
-  }
-
-  // The link is now fully real (institution + secret + accounts). Marking the
-  // session completed is what makes retries idempotent; if THIS write fails we
-  // still answer 200 — the connection exists, and the unique item anchor keeps
-  // any later replay from duplicating it.
-  await service
-    .from('plaid_link_sessions')
-    .update({
-      status: 'completed',
-      institution_id: institutionId,
-      completed_at: new Date().toISOString(),
-    })
-    .eq('id', session.id)
+  })
+  if (rpcError || typeof institutionId !== 'string') return await failTerminally()
 
   const payload = await institutionPayload(service, institutionId)
   return payload ? json(200, payload) : errorResponse('exchange_failed')

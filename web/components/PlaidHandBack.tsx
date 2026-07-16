@@ -24,7 +24,9 @@ import { useApp } from '@/lib/store'
 import { completeLinkSession } from '@/lib/aggregation'
 import { clearPendingLinkSession, readPendingLinkSession } from '@/lib/plaidLinkSession'
 
-export const PLAID_DONE_URL = 'ortho://plaid-done'
+// Must match HOSTED_COMPLETION_REDIRECT_URI in services/aggregation (the
+// completion_redirect_uri the server registers with Plaid).
+const PLAID_DONE_URL = 'ortho://plaid-done'
 
 export function PlaidHandBack() {
   const { refreshLinkedBanks } = useApp()
@@ -44,11 +46,23 @@ export function PlaidHandBack() {
         if (res.ok) {
           clearPendingLinkSession()
           void refreshLinkedBanks()
-        } else if (res.code === 'session_expired' || res.code === 'session_not_found') {
+        } else if (
+          // Terminal outcomes (review 024): expired/unknown sessions, a stale
+          // record owned by a previous user of this device, and a failed
+          // exchange (the public token is single-use — no retry can ever
+          // succeed; the server marked the session abandoned). Clearing here
+          // breaks the silent every-foreground retry loop.
+          res.code === 'session_expired' ||
+          res.code === 'session_not_found' ||
+          res.code === 'session_not_owned' ||
+          res.code === 'exchange_failed'
+        ) {
           clearPendingLinkSession()
         }
-        // session_incomplete (and transient failures): keep the record; the
-        // next hand-back/foreground retries — the server is idempotent.
+        // session_incomplete (still in the browser) and transient failures
+        // (provider_unreachable, unauthenticated while signed out): keep the
+        // record; the next hand-back/foreground retries — the server is
+        // idempotent.
       } finally {
         inFlight.current = false
       }
@@ -56,20 +70,25 @@ export function PlaidHandBack() {
 
     void attempt()
 
-    const handles: Array<Promise<{ remove: () => void }>> = [
-      App.addListener('appUrlOpen', ({ url }: { url: string }) => {
-        if (!url.startsWith(PLAID_DONE_URL)) return
-        router.push('/settings/linked-banks')
-        void attempt()
-      }) as Promise<{ remove: () => void }>,
-      App.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
-        if (!isActive) return
-        void attempt()
-      }) as Promise<{ remove: () => void }>,
-    ]
+    let urlHandle: { remove: () => void } | undefined
+    let stateHandle: { remove: () => void } | undefined
+    void App.addListener('appUrlOpen', ({ url }: { url: string }) => {
+      if (!url.startsWith(PLAID_DONE_URL)) return
+      router.push('/settings/linked-banks')
+      void attempt()
+    }).then((h) => {
+      urlHandle = h
+    })
+    void App.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
+      if (!isActive) return
+      void attempt()
+    }).then((h) => {
+      stateHandle = h
+    })
 
     return () => {
-      for (const h of handles) void h.then((handle) => handle.remove())
+      urlHandle?.remove()
+      stateHandle?.remove()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

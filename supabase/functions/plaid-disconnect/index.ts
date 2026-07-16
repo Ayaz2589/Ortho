@@ -73,10 +73,15 @@ Deno.serve(async (req) => {
   }
 
   // Revoke at Plaid first. A missing secret means there is no live access to
-  // revoke (e.g. a compensated half-link) — treat like ITEM_NOT_FOUND.
-  const { data: accessToken } = await service.rpc('get_institution_secret', {
-    p_institution_id: institution.id,
-  })
+  // revoke (e.g. a compensated half-link) — treat like ITEM_NOT_FOUND. But a
+  // FAILED read is not a missing secret (review 024): proceeding would delete
+  // the only copy of a live token without revoking it — the permanent zombie
+  // FR-009 forbids. Nothing has changed yet, so the member just retries.
+  const { data: accessToken, error: secretReadError } = await service.rpc(
+    'get_institution_secret',
+    { p_institution_id: institution.id }
+  )
+  if (secretReadError) return errorResponse('disconnect_failed')
   if (accessToken) {
     const plaid = createPlaidClient(fetch as unknown as FetchLike, {
       clientId: env.PLAID_CLIENT_ID,

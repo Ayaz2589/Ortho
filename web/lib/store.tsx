@@ -29,6 +29,7 @@ import {
 } from './language'
 import { useTranslate, type Translate } from './i18n'
 import { deriveGateState, type DbEntitlement, type GateState } from './entitlements'
+import { clearPendingLinkSession } from './plaidLinkSession'
 import type {
   User,
   Person,
@@ -488,6 +489,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setRentalPayments([])
       setBudgets([])
       setEntitlement(null)
+      // Spec 024: linked banks are household data too, and the pending link
+      // record must not survive into another member's session on this device.
+      setLinkedInstitutions([])
+      setLinkedAccounts([])
+      clearPendingLinkSession()
       window.location.assign(signInHref())
     })
     return () => data.subscription.unsubscribe()
@@ -615,7 +621,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
     // A failed read must surface as an error, not render as a real-looking
     // empty state (matches iOS, which fails its bootstrap on any load error).
-    for (const res of [usersRes, peopleRes, txRes, sharesRes, cardsRes, propsRes, mortRes, leaseRes, unitsRes, rpRes, budgetsRes, linkedInstRes, linkedAcctRes]) {
+    for (const res of [usersRes, peopleRes, txRes, sharesRes, cardsRes, propsRes, mortRes, leaseRes, unitsRes, rpRes, budgetsRes]) {
+      orThrow(res)
+    }
+    // Linked banks (spec 024) fail OPEN when their tables don't exist yet —
+    // the 018 PGRST202 lesson applied to tables: Vercel ships main to
+    // production ahead of the operator's `supabase db push`, and an opt-in
+    // settings feature must never take the whole bootstrap down during that
+    // window. Any OTHER error stays fail-loud like every bootstrap read.
+    const missingTable = (e: { code?: string } | null | undefined) =>
+      e?.code === 'PGRST205' || e?.code === '42P01'
+    for (const res of [linkedInstRes, linkedAcctRes]) {
+      if (res.error && missingTable(res.error as { code?: string })) {
+        res.data = []
+        res.error = null
+      }
       orThrow(res)
     }
 

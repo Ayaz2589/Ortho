@@ -25,11 +25,12 @@ import {
   clearPendingLinkSession,
   savePendingLinkSession,
 } from '@/lib/plaidLinkSession'
+import { mediumDate } from '@/lib/format'
 import type { LinkedAccount } from '@/lib/types'
 
 const EmbeddedPlaidLink = dynamic(() => import('./EmbeddedPlaidLink'), { ssr: false })
 
-type Availability = 'checking' | 'available' | 'unconfigured'
+type Availability = 'checking' | 'available' | 'unconfigured' | 'no-household'
 type ActiveSession = { sessionId: string; linkToken: string }
 
 export function LinkedBanks() {
@@ -45,7 +46,10 @@ export function LinkedBanks() {
     let cancelled = false
     void checkLinkingAvailable().then((res) => {
       if (cancelled) return
+      // The settings entry row hides for household-less users, but this page
+      // is deep-linkable — never render a button that can only fail (review 024).
       if (!res.ok && res.code === 'not_configured') setAvailability('unconfigured')
+      else if (!res.ok && res.code === 'not_household_member') setAvailability('no-household')
       else setAvailability('available')
     })
     return () => {
@@ -146,13 +150,12 @@ export function LinkedBanks() {
   const accountsFor = (institutionId: string): LinkedAccount[] =>
     linkedAccounts.filter((a) => a.institution_id === institutionId)
 
-  /** US4 attribution: any member sees who connected a bank and when. */
+  /** US4 attribution: any member sees who connected a bank and when.
+   *  mediumDate reuses format.ts's cached per-(locale,options) formatter —
+   *  never construct Intl.DateTimeFormat in a render path (spec 023 P2). */
   const connectedLine = (createdBy: string, createdAt: string): string => {
     const name = users.find((u) => u.id === createdBy)?.name ?? ''
-    const date = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
-      new Date(createdAt)
-    )
-    return t('Connected by {0} · {1}', name, date)
+    return t('Connected by {0} · {1}', name, mediumDate(new Date(createdAt), locale))
   }
 
   return (
@@ -173,6 +176,10 @@ export function LinkedBanks() {
         {availability === 'unconfigured' ? (
           <p className="px-4 pb-3 pt-1 text-[15px] text-text-2">
             {t('Bank linking isn’t available yet.')}
+          </p>
+        ) : availability === 'no-household' ? (
+          <p className="px-4 pb-3 pt-1 text-[15px] text-text-2">
+            {t('You need to be in a household to link a bank.')}
           </p>
         ) : (
           <div className="flex min-h-[52px] items-center px-4 py-2">
