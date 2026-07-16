@@ -41,8 +41,10 @@ From `web/package.json` (`ortho-web`, requires **Node >= 20.19.0 or >= 22.12.0**
 | `tsx` | ^4.22.4 | runs the import CLI and `gen-vectors.ts` |
 | `unpdf`, `ws` | dev | PDF text extraction / Supabase realtime shim for the CLI |
 
-Desktop/mobile web deployed on Vercel (`web/.vercel/project.json`, project `ortho`); the Capacitor
-iOS shell ships via TestFlight/App Store from `web/ios/App/` (see `./deploy.md`).
+Desktop/mobile web is deployed on **Vercel** (project `ortho`), **auto-deployed from GitHub**: every
+push/merge to `main` → **production**, every other branch/PR → a **preview** URL. See §6 "Vercel
+deployment" for the one non-obvious setting (Root Directory = `web`). The Capacitor iOS shell ships
+via TestFlight/App Store from `web/ios/App/` (see `./deploy.md`).
 
 **Heads-up (from `web/AGENTS.md` / `web/CLAUDE.md`):** this Next.js version has breaking changes vs. older training data — consult the bundled guides in `web/node_modules/next/dist/docs/` before writing Next-specific code.
 
@@ -254,6 +256,24 @@ CI: `.github/workflows/web-ci.yml` runs `tsc`, `npm test`, and a vector-drift ch
 build-verifies the Capacitor iOS project on a macOS runner (spec 021). Keep `npx tsc --noEmit`
 clean — under Next's defaults a type error fails `next build`, and the web app has no other build
 gate.
+
+**Vercel deployment (production = `main`).** The GitHub repo `Ayaz2589/Ortho` is connected to the
+Vercel project `ortho` via Vercel's **Git integration**, so releases are automatic: a push/merge to
+**`main`** ships to **production**; any other branch or PR gets a throwaway **preview** URL (posted
+on the PR). No manual step and no `vercel` CLI are needed for normal releases. Two project settings
+are load-bearing because the Next app lives in the `web/` subdirectory:
+- **Root Directory = `web`** — without it the build runs from the repo root and fails immediately (no
+  `package.json` there). This is the #1 first-deploy failure.
+- **Environment Variables** — `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` set for
+  **Production** (and Preview). Vercel builds *remotely*, so the local `.env.local` is not involved;
+  `NEXT_PUBLIC_VERCEL_ENV`/`NODE_ENV` are injected by Vercel — never set them manually.
+
+Vercel serves the static export (`output: 'export'` → `out/`) as a static site (preset auto-detected).
+The `web/.vercel/` folder is a local CLI link (gitignored) and is independent of the Git integration.
+To gate production on green CI, add branch protection on `main` requiring the **Web CI** check.
+(Historical note: a `team_…`-scoped `ortho` project from earlier CLI deploys may still exist alongside
+the personal git-connected one — the connected one is authoritative; delete the stray to avoid
+confusion.)
 
 **Environment** (`web/.env.local`, not committed): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (required by the app + CLI — inlined into the client bundle at build time, including the Capacitor build); `SUPABASE_SERVICE_ROLE_KEY` (only for the CLI's `ADMIN=1` mode); `IMPORT_EMAIL` (optional, CLI OTP sign-in). The live Supabase project is `brujhxmtzfgowimprueo.supabase.co`. Supabase's CORS allow-list must include `https://localhost` for the Capacitor build (`capacitor.config.ts`'s `server.iosScheme: 'https'` avoids the default `capacitor://localhost` origin, which Supabase's CORS validator would reject).
 
