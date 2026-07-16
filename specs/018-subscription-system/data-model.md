@@ -1,6 +1,6 @@
 # Data Model: Subscription System (spec 018)
 
-Migration: `supabase/migrations/20260705130000_subscription_entitlements.sql`
+Migration: `supabase/migrations/20260716130000_subscription_entitlements.sql`
 (house ordering: enums → tables → indexes → RLS enable → policies → RPCs).
 **Zero changes to existing tables/enums/policies** (FR-030).
 
@@ -89,7 +89,7 @@ as the entitlement fetch (one round trip).
 Implemented three times, byte-equivalent semantics, locked by the shared literal vectors in
 [contracts/entitlement-state.md](./contracts/entitlement-state.md):
 core `services/billing/src/derive.ts` (canonical) → web `web/lib/entitlements.ts` (copy) →
-iOS `Shared/EntitlementLogic.swift` (mirror).
+iOS `Shared/EntitlementLogic.swift (dropped at merge — tasks.md T046)` (mirror).
 
 ```
 GateState = 'admin' | 'trialing' | 'active' | 'grace' | 'lapsed'

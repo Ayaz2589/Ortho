@@ -45,12 +45,13 @@ supabase/
     ├── 20260611120000_aggregates.sql                        # 4 dashboard aggregate RPCs
     ├── 20260616120000_household_people_and_value_splits.sql # household_people; shares -> cents; drops scope
     ├── 20260618120000_member_reimbursement.sql              # 'transfer' kind/category + transactions.paid_by
-    └── 20260705130000_subscription_entitlements.sql         # spec 018: entitlements, billing_events, ensure_entitlement()
+    ├── 20260707120000_unit_occupied.sql                     # spec 020: explicit units.occupied column
+    └── 20260716130000_subscription_entitlements.sql         # spec 018: entitlements, billing_events, ensure_entitlement()
 ```
 
 ## 4. Architecture
 
-### 4.1 Current schema (net effect of all 7 migrations)
+### 4.1 Current schema (net effect of all 9 migrations)
 
 **Enums**
 - `role`: `owner | member` (`admin` intentionally deferred — see initial migration header)
@@ -113,18 +114,19 @@ Date ranges are **half-open** (`date >= p_start AND date < p_end`), matching the
 | `20260611120000_aggregates.sql` | 002-logic-dedup | 4 aggregate RPCs so Swift + TS stop duplicating rollups |
 | `20260616120000_household_people_and_value_splits.sql` | 007-household-splits | `household_people`; `transaction_shares` percent→cents/person with backfill + rounding reconcile; drop `scope`; `household_id` NOT NULL; RLS rewrite; `household_owner_spend` redefined |
 | `20260618120000_member_reimbursement.sql` | 012-household-reimbursement | `transfer` kind + category enum values; `transactions.paid_by` + backfill from `created_by` |
-| `20260705130000_subscription_entitlements.sql` | 018-subscription-system | `entitlement_status`/`billing_plan` enums; `entitlements` + `billing_events` tables; service-role-only write posture; `ensure_entitlement()` |
+| `20260707120000_unit_occupied.sql` | 020-drift-reconciliation | explicit `units.occupied` boolean (completes 019 US5) |
+| `20260716130000_subscription_entitlements.sql` | 018-subscription-system | `entitlement_status`/`billing_plan` enums; `entitlements` + `billing_events` tables; service-role-only write posture; `ensure_entitlement()` |
 
 The 20260616 migration is **forward-only and destructive** (drops columns/constraints/policies with data backfill in between) — read it before writing any migration that touches `transactions` or `transaction_shares`.
 
 ### 4.5 Spec 018 — subscription entitlements & billing edge functions
 
-The subscription source of truth (migration `20260705130000_subscription_entitlements.sql`; contracts in `specs/018-subscription-system/contracts/`):
+The subscription source of truth (migration `20260716130000_subscription_entitlements.sql`; contracts in `specs/018-subscription-system/contracts/`):
 
 - **Enums**: `entitlement_status` (`trialing | active | past_due | paused | unpaid | canceled | admin`) and `billing_plan` (`monthly | yearly`). Stored status is **provider-shaped**; the UI gates on a *derived* state computed client-side with leeway (`contracts/entitlement-state.md`) — never conflate the two.
 - **`entitlements`** — one row per user, the single fact every surface trusts: `status`, `access_expires_at` (NULL = never expires, admin only; trial = `created_at + 31 days`; paid = the raw provider period end — leeway is applied at derivation, one place only), `plan`, `source` (`trial | stripe | operator` — the provider-adapter seam), `stripe_customer_id`/`stripe_subscription_id`, and `last_event_at` (the out-of-order event shield). RLS: exactly **one** policy, `entitlements_select_own`; **no insert/update/delete policy for any client role** — all writes are service-role or the RPC below.
 - **`billing_events`** — append-only idempotency + audit log: unique `event_id` is the webhook dedup key; `outcome` records the state-machine decision (`applied | skipped_stale | skipped_unmatched | noop`); raw `payload` kept for replay. RLS enabled with **zero policies** — invisible to all client roles.
-- **`ensure_entitlement() → entitlements`** — SECURITY DEFINER (the `accept_invite` pattern), grant-to-`authenticated`: creates the caller's 31-day trial row exactly once (`on conflict do nothing`) and returns it. The *only* non-service-role write path; idempotent, so reinstalls/re-sign-ins can never reset a trial. Both clients call it at bootstrap.
+- **`ensure_entitlement() → entitlements`** — SECURITY DEFINER (the `accept_invite` pattern), grant-to-`authenticated`: creates the caller's 31-day trial row exactly once (`on conflict do nothing`) and returns it. The *only* non-service-role write path; idempotent, so reinstalls/re-sign-ins can never reset a trial. The web client calls it at bootstrap (both delivery targets — browser and the Capacitor iOS shell — ship the same bundle).
 
 The **four edge functions** (`supabase/functions/`, Deno; HTTP contract in `contracts/billing-functions.md`; shared error envelope `{ error: { code, message } }` from `_shared/http.ts` — clients localize by `code`):
 
@@ -162,7 +164,7 @@ supabase functions deploy billing-checkout billing-portal billing-plans
 13. `iOS/Ortho-iOS/App/SupabaseConfig.swift.template` — committed placeholder for the gitignored `SupabaseConfig.swift` (project URL + publishable key).
 14. `web/scripts/import/db/client.ts` — CLI client: OTP sign-in mode vs `--admin` service-role mode; loads `web/.env.local`.
 15. `PARITY.md` — the cross-surface contract the schema serves (USD-cents invariant, half-open month ranges, `paid_by`/`transfer`).
-16. `supabase/migrations/20260705130000_subscription_entitlements.sql` — spec 018: entitlements/billing_events + `ensure_entitlement()`; the service-role-write-only posture.
+16. `supabase/migrations/20260716130000_subscription_entitlements.sql` — spec 018: entitlements/billing_events + `ensure_entitlement()`; the service-role-write-only posture.
 17. `supabase/functions/` + `services/billing/README.md` — the billing edge functions and the extraction contract of the core they embed (§4.5).
 
 ## 6. How to build / run / test

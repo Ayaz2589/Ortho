@@ -391,8 +391,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       // A failed entitlement read is a LOAD failure (recovery path), never a
       // paywall (FR-008) — orThrow routes it to bootstrapFailed like any other
       // bootstrap read. A null row (test-data mode) leaves the gate open.
-      const entRes = orThrow(await entitlementPromise)
-      setEntitlement((entRes.data as DbEntitlement | null) ?? null)
+      // EXCEPTION (merge review): a MISSING RPC (PostgREST PGRST202) means the
+      // backend simply hasn't been migrated for spec 018 yet — Vercel ships
+      // main to production on merge, ahead of the operator's live setup
+      // (quickstart §2). That must fail OPEN (feature dark, gate null), never
+      // take bootstrap down for every live user.
+      const entRes = await entitlementPromise
+      if (entRes.error && (entRes.error as { code?: string }).code === 'PGRST202') {
+        setEntitlement(null)
+      } else {
+        orThrow(entRes)
+        setEntitlement((entRes.data as DbEntitlement | null) ?? null)
+      }
     } catch (e) {
       setBootstrapFailed(true)
       setError(`Failed to load: ${(e as Error).message}`)
@@ -402,17 +412,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }
 
   /** Refetch the entitlement row on demand (paywall "Check again", checkout
-   *  return). Failure keeps the current gate — a flaky refresh must never
-   *  cause a false lapse or unlock. Returns whether the refetch SUCCEEDED so
-   *  callers can distinguish "checked: still nothing" from "couldn't check"
-   *  (review 018). */
-  async function refreshEntitlement(): Promise<boolean> {
+   *  return, app foreground). Failure keeps the current gate — a flaky refresh
+   *  must never cause a false lapse or unlock. Returns whether the refetch
+   *  SUCCEEDED so callers can distinguish "checked: still nothing" from
+   *  "couldn't check" (review 018). `quiet` suppresses the error banner for
+   *  passive (lifecycle-driven) refreshes — only explicit user actions should
+   *  surface a failure. */
+  async function refreshEntitlement(opts?: { quiet?: boolean }): Promise<boolean> {
     const { data, error: e } = await supabase
       .from('entitlements')
       .select('*')
       .limit(1)
     if (e) {
-      setError(e.message)
+      if (!opts?.quiet) setError(e.message)
       return false
     }
     const rows = (data ?? []) as DbEntitlement[]
@@ -478,6 +490,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             void supabase.auth.signOut()
           }
         })
+      // spec 018 (merge review): the gate derived at bootstrap is frozen while
+      // the Capacitor app sits resident — a trial/subscription that lapsed
+      // while suspended would otherwise never gate (FR-006). Re-read the row on
+      // every foreground; quiet, because a transient failure must keep the
+      // current gate with no banner (never a false lapse — FR-008 spirit).
+      void refreshEntitlement({ quiet: true })
     }).then((h) => {
       handle = h
     })

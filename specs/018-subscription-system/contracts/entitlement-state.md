@@ -1,12 +1,16 @@
 # Contract: Entitlement gate derivation (cross-surface lock)
 
-**Status**: BINDING. Three implementations must agree byte-for-byte on these semantics:
+**Status**: BINDING. Two implementations must agree byte-for-byte on these semantics:
 
 1. `services/billing/src/derive.ts` — canonical (used by nothing at runtime on clients; the
    package's public truth, tested in `services/billing/test/derive.test.ts`)
-2. `web/lib/entitlements.ts` — hand-copied TS (tested in `web/test/entitlements.test.ts`)
-3. `iOS/Ortho-iOS/Shared/EntitlementLogic.swift` — hand-mirrored Swift (tested in
-   `Ortho-iOSTests/EntitlementLogicTests.swift`)
+2. `web/lib/entitlements.ts` — hand-copied TS (tested in `web/test/entitlements.test.ts`);
+   the Capacitor iOS shell ships this same copy
+
+> **2026-07-16 (merge addendum, tasks.md T046):** the third implementation this contract
+> originally mandated (`iOS/Ortho-iOS/Shared/EntitlementLogic.swift` + its
+> `EntitlementLogicTests`) was dropped at the post-021 reconciliation — the native app is
+> frozen and iOS ships the web derivation. Vectors and digest are unchanged.
 
 The lock mechanism is the 017 `InviteCodec` pattern, **not** a golden vector (no money/date
 engine; FR-030): each suite embeds the **identical literal vector table** below and additionally
@@ -45,7 +49,7 @@ TRIAL_DAYS         = 31        // used by ensure_entitlement(); listed here for 
 Boundary semantics: expiry instants are **exclusive** (`now == expires + window` ⇒ lapsed) —
 vectors V05/V16 pin this on both sides of the second.
 
-## Literal vectors (embed VERBATIM in all three suites; `now` = `2026-07-05T12:00:00Z`)
+## Literal vectors (embed VERBATIM in both suites; `now` = `2026-07-05T12:00:00Z`)
 
 | id | status | accessExpiresAt | expected |
 |---|---|---|---|

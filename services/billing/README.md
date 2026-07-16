@@ -33,5 +33,6 @@ repository and reused across applications — Ortho is its first consumer, not i
 ## Tests
 
 `npm test` — Vitest. The derivation literal vectors (V01–V19 + digest) are shared verbatim with
-`web/lib/entitlements.ts` and `iOS/Ortho-iOS/Shared/EntitlementLogic.swift`; change them only by
-amending the contract in `specs/018-subscription-system/contracts/entitlement-state.md` first.
+`web/lib/entitlements.ts` (which the Capacitor iOS shell also ships; the planned Swift mirror was
+dropped when the native app was frozen — spec-018 tasks.md T046); change them only by amending
+the contract in `specs/018-subscription-system/contracts/entitlement-state.md` first.

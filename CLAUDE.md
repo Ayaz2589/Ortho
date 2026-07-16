@@ -16,17 +16,17 @@ update it when your change makes it stale.
 
 ## iOS builds & CI (Linux sandboxes cannot build iOS)
 
-iOS compile/test feedback comes from GitHub Actions:
-`.github/workflows/ios-ci.yml` builds Ortho-iOS and runs the XCTest parity
-suites on a macOS runner for pushes/PRs touching `iOS/**` or
-`shared/test-vectors/**`. After pushing iOS changes, watch the run with
-`GH_TOKEN=placeholder gh run watch --exit-status` (the placeholder is required
-for `gh` in sandboxes; the proxy injects the real token). Every run also
-uploads a `simulator-screenshots` artifact — the app booted in `-uiDemo`
-(sample-data) mode on all four tabs — so you can visually inspect UI changes
-from here; download the artifact zip via `gh api .../artifacts/<id>/zip`. If the gitignored
-`CI-SETUP.local.md` exists at the repo root, read it — it has the full CI usage
-guide plus local credentials for bootstrapping a fresh sandbox.
+iOS ships the web bundle via a Capacitor shell (spec 021) — there is no live
+native app to test. iOS feedback comes from GitHub Actions:
+`.github/workflows/capacitor-ios-ci.yml` build-verifies the Capacitor iOS
+project (`web/ios/App/`) on a macOS runner for pushes/PRs touching `web/**`.
+The frozen native app's `.github/workflows/ios-ci.yml` is manual-trigger-only
+and build-only (no tests) — an on-demand "does it still compile" check. After
+pushing, watch runs with `GH_TOKEN=placeholder gh run watch --exit-status`
+(the placeholder is required for `gh` in sandboxes; the proxy injects the real
+token). If the gitignored `CI-SETUP.local.md` exists at the repo root, read it
+— it has the full CI usage guide plus local credentials for bootstrapping a
+fresh sandbox.
 
 ## Session continuity
 

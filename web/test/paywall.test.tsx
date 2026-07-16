@@ -185,6 +185,22 @@ describe('subscribing (FR-010/012)', () => {
     expect(call?.body).toEqual({ plan: 'monthly' })
   })
 
+  it('stays usable after checkout link-out — Capacitor cancels the navigation in-place (merge review)', async () => {
+    // On the Capacitor iOS build the webview NEVER unloads: @capacitor/ios
+    // cancels the top-level navigation to the non-app-origin Stripe URL and
+    // opens it externally. jsdom's stubbed assign models exactly that. The
+    // paywall must come back re-enabled, or a returning payer can't tap
+    // "check again" (their only in-app recovery path).
+    await bootLayout(dataset())
+    await waitFor(() => expect(screen.getByRole('button', { name: /Monthly/ })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /Monthly/ }))
+    await waitFor(() =>
+      expect(assignSpy).toHaveBeenCalledWith('https://checkout.stripe.test/cs_123')
+    )
+    expect(screen.getByRole('button', { name: /check again/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /Monthly/ })).toBeEnabled()
+  })
+
   it('checkout failure announces calm copy in the status live region', async () => {
     const ds = dataset()
     ds.functions!['billing-checkout'] = { errorCode: 'provider_error' }

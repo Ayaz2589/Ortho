@@ -68,6 +68,23 @@ afterEach(() => {
   localStorage.clear()
 })
 
+describe('unmigrated backend fails OPEN (merge review — Vercel ships main before live setup)', () => {
+  it('a missing ensure_entitlement RPC (PGRST202) leaves the gate open, never fails bootstrap', async () => {
+    const ds = dataset()
+    ds.tables!.entitlements = []
+    ds.rpcErrors = {
+      ensure_entitlement: Object.assign(
+        new Error('Could not find the function public.ensure_entitlement in the schema cache'),
+        { code: 'PGRST202' }
+      ),
+    }
+    await boot(ds)
+    expect(probe!.bootstrapFailed).toBe(false)
+    expect(probe!.entitlement).toBe(null)
+    expect(probe!.gateState).toBe(null)
+  })
+})
+
 describe('US1 — trial starts automatically at bootstrap', () => {
   it('bootstrap calls ensure_entitlement and derives a trialing gate', async () => {
     await boot(dataset())

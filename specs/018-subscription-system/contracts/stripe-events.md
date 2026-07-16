@@ -69,6 +69,11 @@ single-shape extraction noop'd every live checkout).
 1. **Dedup** (outside machine): `billing_events.event_id` unique insert; conflict ⇒ `noop`, 200.
 2. **Unmatched** `userId` ⇒ `skipped_unmatched`.
 3. **Stale**: `eventCreatedAt <= entitlements.last_event_at` ⇒ `skipped_stale` (out-of-order shield; SC-007).
+   The shield is evaluated against a snapshot read; the entitlement UPDATE is **optimistic** —
+   conditioned on the snapshot's `last_event_at` (merge review). Zero rows updated means a
+   concurrent delivery won the race: the event fails re-claimably (`entitlement_write_conflict`,
+   HTTP 500) so Stripe's retry re-reads the fresh row and the machine re-runs — a genuinely
+   older event then lands as `skipped_stale` instead of overwriting newer state.
 4. **Admin wins**: stored `status='admin'` ⇒ apply only `stripe_customer_id`/`stripe_subscription_id`
    reference updates; status/expiry/plan untouched.
 

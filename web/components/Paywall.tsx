@@ -53,6 +53,12 @@ export function Paywall() {
     setNotice(null)
     const res = await startCheckout(plan)
     if (res.ok) {
+      // Clear busy BEFORE navigating (same as SubscriptionSection): on the
+      // Capacitor iOS build the webview never unloads — @capacitor/ios cancels
+      // the non-app-origin navigation and opens it in the external browser —
+      // so a stuck busy would disable both plans AND "check again", bricking
+      // the returning payer's only in-app recovery path (merge review).
+      setBusy(null)
       window.location.assign(res.value.url)
       return
     }

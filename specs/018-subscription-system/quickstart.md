@@ -27,16 +27,18 @@ trial-row bootstrap call, all five gate states (incl. never-paywall-on-load-fail
 semantics/a11y, Settings row per state, i18n key parity ×5, and the mock-harness RLS contract
 (client writes to `entitlements` are rejected by the PostgREST-faithful mocks).
 
-iOS: no local build (Linux). Push → `.github/workflows/ios-ci.yml` compiles, runs
-`EntitlementLogicTests` (same literal vectors + digest) and the parity suites, and uploads
-`-uiDemo` screenshots (paywall + Settings row visible there via the demo entitlement fixtures).
+iOS (post-021 reality; see tasks.md T046): the iOS app ships the WEB bundle via the Capacitor
+shell — there is no native billing code to test. Billing parity is covered entirely by the web
+suite (the gate literal vectors V01–V19 + digest lock in `web/test/entitlements.test.ts`), and
+`.github/workflows/capacitor-ios-ci.yml` build-verifies the shell on every `web/**` push. The
+frozen native app (`ios-ci.yml`, manual-trigger, build-only) predates spec 018 and has no paywall.
 
 ## 2. `[OPERATOR-PENDING]` — one-time live setup (networked machine)
 
 Order matters. Everything here is idempotent / re-runnable.
 
 1. **Migration**: `supabase db push` (or apply
-   `supabase/migrations/20260705130000_subscription_entitlements.sql` via the SQL editor).
+   `supabase/migrations/20260716130000_subscription_entitlements.sql` via the SQL editor).
 2. **Stripe objects** (test mode first): create Product "Ortho" with two recurring Prices
    (monthly, yearly) at chosen amounts; note the two `price_…` ids.
 3. **Function secrets**:
@@ -57,13 +59,14 @@ Order matters. Everything here is idempotent / re-runnable.
    client pins and the translator's fixtures model — an unpinned endpoint would emit whatever
    payload shape is newest at creation time); copy the signing secret into step 3's
    `STRIPE_WEBHOOK_SECRET` and re-set.
-6. **Probe**: `cd web && npx tsx scripts/ops/billing-probe.ts` — read-only; verifies migration
+6. **Probe**: `cd web && OPERATOR=1 npx tsx scripts/ops/billing-probe.ts` — read-only; verifies migration
    applied (RPC exists, tables selectable as service role), all four functions respond, prices
    resolve. Fix anything red before proceeding.
 
 ## 3. `[OPERATOR-PENDING]` — live smoke (test mode)
 
-`cd web && npx tsx scripts/ops/billing-smoke.ts` guides this; manual outline:
+`cd web && OPERATOR=1 SMOKE_EMAIL=<test-user email> npx tsx scripts/ops/billing-smoke.ts`
+guides this; manual outline:
 
 1. Sign in as a fresh test user (web) → confirm `entitlements` row appears
    (`trialing`, expiry ≈ +31d) and the app is fully usable.
@@ -81,9 +84,12 @@ Order matters. Everything here is idempotent / re-runnable.
 8. **Admin**: `update entitlements set status='admin', access_expires_at=null, source='operator'
    where user_id='<uuid>';` → that account never sees the paywall, Settings shows the admin row
    (US4). Grant this to the two real household accounts as desired.
-9. **iOS pass** (TestFlight/simulator with `SupabaseConfig.swift`): expired test user → paywall
-   → plan button opens Stripe checkout in Safari → pay → return → "Check again" → in. Verify
-   Settings parity with web (US6).
+9. **iOS pass** (the Capacitor-shell build — TestFlight or simulator; Supabase env is inlined
+   at `next build` time, no `SupabaseConfig.swift` involved): expired test user → paywall →
+   plan button opens Stripe checkout in the EXTERNAL browser (Capacitor cancels the non-app
+   navigation and hands it to the system — T046) → pay → return to the app → "Check again" →
+   in. Foregrounding also re-derives the gate on its own (merge review). Do NOT use the frozen
+   native app for this pass — it predates spec 018 and is intentionally ungated.
 10. Repeat 2–3 in **live mode** with a real card + real prices before announcing.
 
 ## 4. Rollout notes
@@ -91,9 +97,13 @@ Order matters. Everything here is idempotent / re-runnable.
 - Existing users are untouched at deploy: their entitlement row (fresh 31-day month) is created
   by their first post-rollout bootstrap (D4). No backfill script needed; nothing breaks if the
   migration deploys days before the clients ship.
-- Clients shipped BEFORE the migration is applied: bootstrap treats a failed
-  `ensure_entitlement` as entitlement-load-failure → existing recovery path (FR-008), so **do
-  not ship clients until step 2.1 is done** (runbook order above enforces this).
+- **Merging this branch to main IS the client ship** — Vercel auto-deploys `main` to
+  production (docs/web.md §6); the runbook's ordering can no longer enforce "migration before
+  clients". The client is safe either way (merge review): a MISSING `ensure_entitlement` RPC
+  (PostgREST `PGRST202`, i.e. an unmigrated backend) fails **open** — null gate, no paywall,
+  app fully usable, Settings billing row shows its calm unavailable state — while any OTHER
+  entitlement failure still routes to the recovery path (FR-008). Complete §2 to light the
+  feature up; nothing breaks if that happens days after the merge.
 - Price changes later: edit the Stripe Prices (or create new ones and update the two secrets)
   — paywall reflects them with no app release (SC-008).
 - Kill switch: granting `status='admin'` to affected users is the calm emergency lever if

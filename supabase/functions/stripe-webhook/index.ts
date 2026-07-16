@@ -201,11 +201,23 @@ Deno.serve(async (req) => {
     })
 
     if (outcome.kind === 'applied') {
-      const { error: updateError } = await supabase
-        .from('entitlements')
-        .update(toDb(outcome.row))
-        .eq('user_id', userId)
+      // OPTIMISTIC write (merge review): the staleness shield in the machine
+      // was evaluated against the snapshot read above, but concurrent
+      // deliveries (Stripe redelivery racing a newer event; the reclaim path
+      // deliberately lets both proceed) could interleave read-modify-write and
+      // let an OLDER event overwrite a NEWER row. Guard the update on the
+      // snapshot's last_event_at; zero rows updated ⇒ someone else won ⇒ fail
+      // (500, re-claimable) so Stripe's retry re-reads the fresh row and the
+      // machine re-runs — the stale event then lands as skipped_stale.
+      const snapshotEventAt = (dbRow as DbEntitlement).last_event_at
+      let update = supabase.from('entitlements').update(toDb(outcome.row)).eq('user_id', userId)
+      update =
+        snapshotEventAt === null
+          ? update.is('last_event_at', null)
+          : update.eq('last_event_at', snapshotEventAt)
+      const { data: updated, error: updateError } = await update.select('user_id')
       if (updateError) return await fail('entitlement_write_failed')
+      if (!updated || updated.length === 0) return await fail('entitlement_write_conflict')
       return await finish('applied', userId)
     }
     const detail = outcome.kind === 'noop' ? `noop:${outcome.reason}` : outcome.kind

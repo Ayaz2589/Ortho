@@ -37,7 +37,7 @@ files, no incomplete dependency).
 
 **Database (data-model.md §1–4)**
 
-- [x] T010 Write `supabase/migrations/20260705130000_subscription_entitlements.sql`: enums `entitlement_status`+`billing_plan`; `entitlements` + `billing_events` exactly per data-model; RLS enable both; single `entitlements_select_own` policy; zero policies on `billing_events`; `ensure_entitlement()` SECURITY DEFINER RPC (insert-if-absent, `now()+interval '31 days'`, returns row) granted to `authenticated` only; house section ordering + comments.
+- [x] T010 Write `supabase/migrations/20260716130000_subscription_entitlements.sql`: enums `entitlement_status`+`billing_plan`; `entitlements` + `billing_events` exactly per data-model; RLS enable both; single `entitlements_select_own` policy; zero policies on `billing_events`; `ensure_entitlement()` SECURITY DEFINER RPC (insert-if-absent, `now()+interval '31 days'`, returns row) granted to `authenticated` only; house section ordering + comments.
 
 **Client mirrors + harness**
 
@@ -157,4 +157,7 @@ Numbering note: T041–T044 were reserved for the review pass; used as follows.
   vectors + digest unchanged. Checkout link-out on iOS needs no native code: Capacitor's
   navigation policy opens any non-app-origin top-level navigation (the Stripe URL from
   `window.location.assign`) in the external browser — verified against
-  `@capacitor/ios` `WebViewDelegationHandler.swift` at merge.
+  `@capacitor/ios` `WebViewDelegationHandler.swift` at merge. The migration was retimestamped
+  `20260705130000` → `20260716130000` (unapplied on the remote, so the rename is free) so it
+  sorts after main's already-applied `20260707120000_unit_occupied.sql` and a plain
+  `supabase db push` applies it without `--include-all`.

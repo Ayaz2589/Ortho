@@ -191,7 +191,8 @@ These shape which rows exist and what the app displays, but have no regression-v
   same-tab to Stripe Checkout and consumes a one-shot `?checkout=success|cancelled` return path
   (Settings + paywall both); the **Capacitor iOS shell opens checkout/portal in the external
   browser** (US-storefront rules; no StoreKit purchase flow in v1 — StoreKit-ready adapter seam
-  documented in the spec) and relies on "Check again"/on-appear refresh instead of a return path.
+  documented in the spec) and relies on "Check again" plus foreground re-derivation (the store refetches the row and
+  re-derives the gate on every `appStateChange` resume — merge review) instead of a return path.
   **(b) Trust model (shared, documented limitation):** the paywall is enforced by service-role-only
   entitlement state plus client shell gating; data-table RLS is deliberately **not**
   subscription-aware in v1, so a hostile custom API client with valid credentials but no
