@@ -27,6 +27,10 @@ export interface SupabaseMockDataset {
   deleteErrors?: Record<string, string>
   updateErrors?: Record<string, string>
   upsertErrors?: Record<string, string>
+  /** Edge-function name -> canned result for `functions.invoke` (spec 018).
+   *  `{ data }` resolves success; `{ errorCode }` resolves a FunctionsHttpError-
+   *  shaped failure whose context body carries the contract error envelope. */
+  functions?: Record<string, { data?: unknown; errorCode?: string }>
 }
 
 export interface RecordedCall {
@@ -42,6 +46,10 @@ export interface SupabaseMock {
   callsFor(table: string): RecordedCall[]
   /** Fire the auth-state listener registered by the store (e.g. 'SIGNED_OUT'). */
   emitAuthChange(event: string, session?: unknown): void
+  /** Edge-function invocations recorded from `functions.invoke` (spec 018). */
+  invocations: { name: string; body?: unknown }[]
+  /** RPC calls recorded by name (e.g. ensure_entitlement idempotence asserts). */
+  rpcCalls: string[]
 }
 
 // A minimal structural type — enough for the store + aggregates to type-check.
@@ -55,9 +63,16 @@ export interface SupabaseClientLike {
     onAuthStateChange: (cb: (event: string, session: unknown) => void) => {
       data: { subscription: { unsubscribe: () => void } }
     }
+    signOut: () => Promise<{ error: null }>
   }
   from: (table: string) => QueryBuilder
   rpc: (name: string, params?: unknown) => Promise<{ data: unknown; error: Error | null }>
+  functions: {
+    invoke: (
+      name: string,
+      opts?: { body?: unknown }
+    ) => Promise<{ data: unknown; error: unknown }>
+  }
 }
 
 /** Writes may surface an error (used to exercise rollback paths). */
@@ -86,7 +101,11 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
     const selectMsg = dataset.selectErrors?.[table]
     const resolved = selectMsg
       ? { data: null, error: { message: selectMsg } }
-      : { data: rows, error: null }
+      : // billing_events has zero client policies: live PostgREST returns an
+        // EMPTY result set (not an error) for policy-less selects (review [29]).
+        table === 'billing_events'
+        ? { data: [] as unknown[], error: null }
+        : { data: rows, error: null }
     const writeErrors: Record<RecordedCall['op'], Record<string, string> | undefined> = {
       insert: dataset.insertErrors,
       delete: dataset.deleteErrors,
@@ -95,6 +114,22 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
     }
     const record = (op: RecordedCall['op'], payload?: unknown) => {
       calls.push({ table, op, payload })
+      // RLS-faithful guard (spec 018, corrected per review [29]): the live
+      // schema has NO client write policy on entitlements and NO client
+      // policies at all on billing_events. PostgREST's actual behavior:
+      //   INSERT/UPSERT → 42501 "permission denied" error;
+      //   UPDATE/DELETE → SUCCESS with zero rows affected (RLS filters rows
+      //   silently — no error!). The mock mirrors that, and the recorded call
+      //   lets tests assert such writes never happen at all.
+      if (table === 'entitlements' || table === 'billing_events') {
+        if (op === 'insert' || op === 'upsert') {
+          return Promise.resolve({
+            data: null,
+            error: { message: `permission denied for table ${table}` },
+          })
+        }
+        return Promise.resolve({ data: null, error: null as null }) // 0-row no-op
+      }
       const msg = writeErrors[op]?.[table]
       return Promise.resolve(
         msg ? { data: null, error: { message: msg } } : { data: null, error: null as null }
@@ -128,6 +163,8 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
   // The store subscribes for live sign-out; tests can fire events via
   // `emitAuthChange`.
   const authCallbacks: ((event: string, session: unknown) => void)[] = []
+  const invocations: { name: string; body?: unknown }[] = []
+  const rpcCalls: string[] = []
 
   const client: SupabaseClientLike = {
     auth: {
@@ -137,11 +174,34 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
         authCallbacks.push(cb)
         return { data: { subscription: { unsubscribe: () => {} } } }
       },
+      signOut: () => Promise.resolve({ error: null }),
     },
     from: (table: string) => builder(table),
     rpc: (name: string) => {
+      rpcCalls.push(name)
       const err = dataset.rpcErrors?.[name] ?? null
       return Promise.resolve({ data: err ? null : dataset.rpc?.[name] ?? null, error: err })
+    },
+    functions: {
+      invoke: (name: string, opts?: { body?: unknown }) => {
+        invocations.push({ name, body: opts?.body })
+        const conf = dataset.functions?.[name]
+        if (!conf) {
+          // Unconfigured function — behave like an unreachable endpoint.
+          return Promise.resolve({ data: null, error: new Error(`function ${name} unavailable`) })
+        }
+        if (conf.errorCode) {
+          // FunctionsHttpError-shaped: the contract error envelope rides in
+          // error.context (a Response the caller may clone().json()).
+          const body = { error: { code: conf.errorCode, message: 'calm copy' } }
+          const context = {
+            clone: () => ({ json: () => Promise.resolve(body) }),
+            json: () => Promise.resolve(body),
+          }
+          return Promise.resolve({ data: null, error: { name: 'FunctionsHttpError', context } })
+        }
+        return Promise.resolve({ data: conf.data ?? null, error: null })
+      },
     },
   }
 
@@ -152,6 +212,38 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
     emitAuthChange: (event, session = null) => {
       for (const cb of authCallbacks) cb(event, session)
     },
+    invocations,
+    rpcCalls,
+  }
+}
+
+/** A ready-made entitlements row for datasets (spec 018). */
+export function makeEntitlement(
+  overrides: Partial<{
+    user_id: string
+    status: string
+    access_expires_at: string | null
+    plan: string | null
+    source: string
+    stripe_customer_id: string | null
+    stripe_subscription_id: string | null
+    last_event_at: string | null
+    created_at: string
+    updated_at: string
+  }> = {}
+) {
+  return {
+    user_id: 'u-me',
+    status: 'trialing',
+    access_expires_at: '2099-01-01T00:00:00Z',
+    plan: null,
+    source: 'trial',
+    stripe_customer_id: null,
+    stripe_subscription_id: null,
+    last_event_at: null,
+    created_at: '2026-07-01T00:00:00Z',
+    updated_at: '2026-07-01T00:00:00Z',
+    ...overrides,
   }
 }
 

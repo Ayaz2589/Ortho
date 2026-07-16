@@ -73,13 +73,21 @@ against it. The CLI writes to the same tables and reuses some shared TS function
 deliberately **outside** the vector harness. (The pre-021 web-vs-iOS audit history is archived at
 `docs/archive/PARITY-2026-07-08.md`.)
 
+**Spec 018 added Ortho's first server-side code.** `supabase/functions/` holds four billing edge
+functions (`stripe-webhook`, `billing-checkout`, `billing-portal`, `billing-plans` — Deno, thin
+adapters), and the root `services/billing/` package is the extraction-ready billing core behind
+them: pure runtime-agnostic TypeScript with its own Vitest suite, byte-copied into
+`supabase/functions/_shared/billing/` by `npm run sync:functions` and locked byte-identical by a
+drift test that runs in web CI. Never edit the copy — edit `services/billing` and re-sync. See
+`docs/supabase.md` §4.5.
+
 ## 3. Directory of docs
 
 | Doc | Read this when… |
 |---|---|
 | [./web.md](./web.md) | …working on the Next.js app (the canonical implementation, both delivery targets): `lib/store.tsx`, responsive/desktop compositions, `globals.css` tokens, Vitest suite, the client-side auth gate, the Capacitor iOS shell (`web/ios/App/`, native plugins, the Scan plugin), the import CLI internals. |
 | [./ios.md](./ios.md) | …doing archaeology on the **frozen** native SwiftUI app (emergency rollback, or porting its original scan-pipeline Swift source into the Capacitor plugin). Not how iOS ships today. |
-| [./supabase.md](./supabase.md) | …changing the schema, enums, RLS policies, or RPCs; understanding migrations, `config.toml`, or the local stack. |
+| [./supabase.md](./supabase.md) | …changing the schema, enums, RLS policies, RPCs, or the billing edge functions (`supabase/functions/`); understanding migrations, `config.toml`, or the local stack. |
 | [./shared.md](./shared.md) | …touching any regression-vectored finance logic: how the vectors are generated, asserted, and their determinism conventions. |
 | [./makefile.md](./makefile.md) | …importing bank statements or doing terminal transaction CRUD (`make ingest`, `tx-*`), or navigating the spec-kit / `.claude` tooling at the root. |
 | [./deploy.md](./deploy.md) | …shipping to TestFlight: the manual-trigger deploy workflow, the Apple/Supabase secrets it preflights, and the owner setup steps. (Currently documents the frozen app's deploy path; the Capacitor build's release pipeline is `web/capacitor.config.ts`'s `ios.buildOptions` + `npx cap build ios` — see `./web.md`.) |
@@ -100,8 +108,9 @@ deliberately **outside** the vector harness. (The pre-021 web-vs-iOS audit histo
    Capacitor iOS shell, or the frozen native app, locally** — both need macOS/Xcode. The sandbox
    feedback loop is CI: `.github/workflows/capacitor-ios-ci.yml` build-verifies the Capacitor iOS
    project on every push touching `web/**` (see `docs/web.md` §4/§6); `.github/workflows/web-ci.yml`
-   (Linux) runs `tsc`, the Vitest suite, and a regression-vector-drift check on any `web/**` or
-   `shared/test-vectors/**` change. The frozen app's `.github/workflows/ios-ci.yml` is
+   (Linux) runs `tsc`, the Vitest suite, and a regression-vector-drift check on any `web/**`,
+   `services/**`, `supabase/functions/**`, or `shared/test-vectors/**` change — since spec 018 it
+   also typechecks and tests `services/billing` (including the `_shared/` byte-copy drift lock). The frozen app's `.github/workflows/ios-ci.yml` is
    manual-trigger-only now (see `docs/ios.md`).
 6. **Set up web**: `cd web && npm install && npm test` (Node 22 per root `.nvmrc`; on Linux ARM
    you may need `@rolldown/binding-linux-arm64-gnu` since macOS-installed `node_modules` lacks
@@ -143,6 +152,16 @@ deliberately **outside** the vector harness. (The pre-021 web-vs-iOS audit histo
   mirrored manually on the hosted project). The Capacitor build persists its session in the iOS
   Keychain (`web/lib/auth/keychainStorage.ts`, spec 021) instead of the desktop/mobile-web cookie
   path.
+- **Subscriptions / entitlements (spec 018).** The per-user `entitlements` table is the single
+  source of truth — service-role-write-only (clients may only `select` their own row; the
+  `ensure_entitlement()` RPC creates the 31-day trial exactly once). The client derives one gate
+  fact (`admin | trialing | active | grace | lapsed`) via `web/lib/entitlements.ts`, a
+  hand-mirrored copy of the canonical `services/billing/src/derive.ts` locked by identical literal
+  vectors (V01–V19 + digest) — deliberately **not** a golden vector (no money/date engine).
+  Subscribing = Stripe Checkout; managing = Stripe Customer Portal; the Capacitor iOS shell opens
+  the same hosted checkout/portal in the **external browser** (US-storefront rules). Admin bypass =
+  `status = 'admin'`, operator-granted by runbook SQL. All live deploy/Stripe steps are the
+  operator runbook in `specs/018-subscription-system/quickstart.md`.
 - **Env vars / keys.** Web + CLI + the Capacitor build (same `next build`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
   `IMPORT_EMAIL` (CLI OTP sign-in), `SUPABASE_SERVICE_ROLE_KEY` (CLI `ADMIN=1` only, bypasses
   RLS) — all in gitignored `web/.env.local`.

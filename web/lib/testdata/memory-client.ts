@@ -83,6 +83,10 @@ export function createMemoryClient(): MemoryClient {
       signOut: () => Promise.resolve({ error: null }),
     },
     from: (table: string) => builder(table),
+    // Spec 018: `ensure_entitlement` resolves null here, deliberately — a null
+    // row derives a null gate (never the paywall) and hides the Subscription
+    // settings section, matching iOS's seeded mode exactly (review 018 [21]).
+    // Test-data mode stays fully usable with zero live traffic (C-TD-1).
     rpc: () => Promise.resolve({ data: null, error: null }),
   }
 }

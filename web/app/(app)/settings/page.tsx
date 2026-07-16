@@ -16,6 +16,7 @@ import { SectionCard, LinkRow, CardRow, AddRow, ActionRow } from '@/components/s
 import { ChoiceRow } from '@/components/settings/ChoiceRows'
 import { AddCardModal } from '@/components/settings/AddCardModal'
 import { FlagsSection } from '@/components/settings/flags-section'
+import { SubscriptionSection } from '@/components/settings/SubscriptionSection'
 import {
   type Appearance,
   applyAppearance,
@@ -132,6 +133,9 @@ export default function SettingsPage() {
             {t('Cards appear in the Paid with menu when you log a new expense. Existing transactions keep their original card name.')}
           </p>
         </section>
+
+        {/* Spec 018 — after Cards on both surfaces (US7). */}
+        <SubscriptionSection />
 
         <section className="flex flex-col gap-2">
           <SectionLabel>{t('Currency')}</SectionLabel>

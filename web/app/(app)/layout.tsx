@@ -10,6 +10,7 @@ import { useTranslate } from '@/lib/i18n'
 import { asLanguage, DEFAULT_LANGUAGE, type Language } from '@/lib/language'
 import { TabBar } from '@/components/TabBar'
 import { Sidebar } from '@/components/Sidebar'
+import { Paywall } from '@/components/Paywall'
 
 /** spec 021, FR-011 — shown while `useBiometricGate()` is 'checking' or
  *  'locked'. Never rendered on a device with no biometric enrollment (the
@@ -65,7 +66,9 @@ function BiometricLockScreen({ locked, onRetry }: { locked: boolean; onRetry: ()
 }
 
 function Shell({ children, active }: { children: ReactNode; active: boolean }) {
-  const { loading, error, bootstrapFailed, dismissError, retryBootstrap, t } = useApp()
+  // spec 018: gateState drives the shell-level paywall below — 'lapsed' blocks
+  // every route; null (row unavailable) deliberately does not block (FR-008).
+  const { loading, error, bootstrapFailed, dismissError, retryBootstrap, t, gateState } = useApp()
 
   // spec 021: capacitor.config.ts sets launchAutoHide: false — hide the
   // splash manually once loading first resolves (first meaningful paint),
@@ -124,6 +127,11 @@ function Shell({ children, active }: { children: ReactNode; active: boolean }) {
             <div className="flex flex-1 items-center justify-center py-32 text-sm text-text-3">
               {t('Loading…')}
             </div>
+          ) : gateState === 'lapsed' ? (
+            // Spec 018: a successfully loaded, lapsed entitlement blocks the whole
+            // shell — every route, tab, and deep link lands here (FR-006). A null
+            // gate (row unavailable) deliberately does NOT block (FR-008).
+            <Paywall />
           ) : (
             children
           )}

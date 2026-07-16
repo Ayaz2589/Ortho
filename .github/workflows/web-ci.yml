@@ -9,11 +9,15 @@ on:
     branches: [main]
     paths:
       - "web/**"
+      - "services/**"
+      - "supabase/functions/**"
       - "shared/test-vectors/**"
       - ".github/workflows/web-ci.yml"
   pull_request:
     paths:
       - "web/**"
+      - "services/**"
+      - "supabase/functions/**"
       - "shared/test-vectors/**"
       - ".github/workflows/web-ci.yml"
   workflow_dispatch:
@@ -41,6 +45,17 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Billing core (services/billing) is a standalone extraction-ready package with its
+      # own suite — including the _shared/ drift lock that keeps the committed edge-function
+      # copy byte-identical to the source. It gates merges the same as the web suite.
+      - name: Billing core — install, typecheck & test
+        working-directory: services/billing
+        run: |
+          npm ci
+          npx tsc --noEmit
+          npx tsc -p tsconfig.tests.json --noEmit
+          npm test
 
       - name: Typecheck
         run: npx tsc --noEmit

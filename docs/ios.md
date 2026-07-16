@@ -142,6 +142,16 @@ A **Feature flags** section in `SettingsView` exposes two toggles — **Use test
 - **Seeding + auth:** `Ortho_iOSApp.useSeededData` = `isUIDemo || FeatureFlags.effectiveUseTestData()` (bypass implies test data). When true it constructs `AppState(testDataEnabled: true)` (sample-seeded), renders `RootTabView` directly, and **skips `observeAuthChanges()`** — no auth, no server traffic. Flags apply at launch (relaunch to apply, like `-uiDemo`).
 - **Isolation:** `AppState.testDataEnabled` guards the network `Task` in *every* optimistic mutator and early-returns `loadAllFromServer`, so test-mode reads/writes stay local (this also fixes the old `-uiDemo` "adds a row that deletes itself" bug). The refreshed sample dataset (`Person.sample`, modernized `Transaction.sample` with `paidBy` + a `.transfer` + a ~3-month span, `Budget.sample`, `RentalPayment.sample` + a rental `Property.sample`) is Person-keyed so balances/splits resolve. Covered by `Ortho-iOSTests/FeatureFlagsTests.swift`. Outside the golden-vector harness (PARITY.md).
 
+### Subscription gate (spec 018) — not in this app
+
+Spec 018's native Swift lift (`Shared/EntitlementLogic.swift`, `Services/EntitlementsAPI.swift`,
+`Features/Paywall/PaywallView.swift`, `SubscriptionSectionView`, +27 xcstrings keys) was written
+against this app pre-021 but **dropped at merge** — the app was already frozen, and the shipped iOS
+client (the Capacitor shell) gets the entire subscription feature from the web bundle
+(`web/lib/entitlements.ts`, `components/Paywall.tsx`, `components/settings/SubscriptionSection.tsx`
+— see `./web.md`). The frozen app therefore predates spec 018 entirely: run it against the live
+backend and it will neither gate nor render subscription UI.
+
 ### Data layer (Supabase)
 
 - The `SupabaseClient` is created once in `AppState.init` from `App/SupabaseConfig.swift` (**gitignored**; copy `SupabaseConfig.swift.template` and fill in the project URL + publishable key — RLS, not key secrecy, protects data).
@@ -329,4 +339,4 @@ There are **no Makefile targets for iOS** — the root `Makefile` only wraps the
 - **`./shared.md`** — `shared/test-vectors/*.json`, the parity contract both test suites assert.
 - **`./makefile.md`** — CLI import/CRUD tooling (web-side only; shares the same tables but not the vector harness).
 - Repo root `PARITY.md` — the audited capability-by-capability parity matrix and known divergences.
-- `specs/` mapping: `002` (golden-vector approach) · `006` → `TransactionFilters.swift` · `007` → `TransactionSplits.swift` · `008`/`009` (parity remediation: test target, vectors in bundle, auth/session fixes) · `010` (platform lock removed; concurrent sessions) · `011` → `DashboardRange.swift` + `MonthPicker.swift` · `012` → `Balances.swift`, `Transaction.paidBy`, the `transfer` kind, settle-up UI. (`001`, `003`, `004`, `005` are web/CLI-only.)
+- `specs/` mapping: `002` (golden-vector approach) · `006` → `TransactionFilters.swift` · `007` → `TransactionSplits.swift` · `008`/`009` (parity remediation: test target, vectors in bundle, auth/session fixes) · `010` (platform lock removed; concurrent sessions) · `011` → `DashboardRange.swift` + `MonthPicker.swift` · `012` → `Balances.swift`, `Transaction.paidBy`, the `transfer` kind, settle-up UI · `018` (subscription gate) → web-only; the planned Swift lift was dropped at merge (see "Subscription gate" above). (`001`, `003`, `004`, `005` are web/CLI-only.)

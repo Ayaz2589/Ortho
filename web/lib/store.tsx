@@ -28,6 +28,7 @@ import {
   type Language,
 } from './language'
 import { useTranslate, type Translate } from './i18n'
+import { deriveGateState, type DbEntitlement, type GateState } from './entitlements'
 import type {
   User,
   Person,
@@ -95,6 +96,14 @@ interface AppStateValue {
   language: Language
   /** BCP-47 locale derived from `language`, driving all Intl formatters. */
   locale: string
+  /** The signed-in user's entitlement row (spec 018) — read-only on clients. */
+  entitlement: DbEntitlement | null
+  /** The single gate fact (admin|trialing|active|grace|lapsed); null until the
+   *  row is loaded — and a null gate NEVER shows the paywall (FR-008). */
+  gateState: GateState | null
+  /** Refetch the entitlement row and re-derive the gate ("Check again").
+   *  Resolves true iff the refetch succeeded (false = keep state, couldn't check). */
+  refreshEntitlement: () => Promise<boolean>
 
   setCurrency: (c: CurrencyKey) => void
   chooseLanguage: (language: Language) => void
@@ -247,6 +256,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // navigator.language) after mount.
   const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE)
   const [locale, setLocale] = useState(DEFAULT_LOCALE)
+  const [entitlement, setEntitlement] = useState<DbEntitlement | null>(null)
   const booted = useRef(false)
 
   // ---- preferences (localStorage) ----
@@ -367,13 +377,59 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       // device-only local users into household_people (one-time).
       await ensureAccountPersonAndFoldLegacy(householdId, me)
 
+      // Spec 018: ensure the 31-day free-month row exists (server-side,
+      // insert-if-absent — reinstalls/re-sign-ins can never reset it) and read
+      // it back. Started HERE — after the profile insert above, because the
+      // RPC's row references public.users(id) — and kicked off eagerly (the
+      // lazy supabase builder starts on assimilation) so it genuinely overlaps
+      // the loadAll fan-out below. Clients cannot write entitlement state;
+      // this SECURITY DEFINER RPC is the only trusted path.
+      const entitlementPromise = Promise.resolve(supabase.rpc('ensure_entitlement'))
+
       await loadAll(householdId, householdName, authUser.id)
+
+      // A failed entitlement read is a LOAD failure (recovery path), never a
+      // paywall (FR-008) — orThrow routes it to bootstrapFailed like any other
+      // bootstrap read. A null row (test-data mode) leaves the gate open.
+      // EXCEPTION (merge review): a MISSING RPC (PostgREST PGRST202) means the
+      // backend simply hasn't been migrated for spec 018 yet — Vercel ships
+      // main to production on merge, ahead of the operator's live setup
+      // (quickstart §2). That must fail OPEN (feature dark, gate null), never
+      // take bootstrap down for every live user.
+      const entRes = await entitlementPromise
+      if (entRes.error && (entRes.error as { code?: string }).code === 'PGRST202') {
+        setEntitlement(null)
+      } else {
+        orThrow(entRes)
+        setEntitlement((entRes.data as DbEntitlement | null) ?? null)
+      }
     } catch (e) {
       setBootstrapFailed(true)
       setError(`Failed to load: ${(e as Error).message}`)
     } finally {
       setLoading(false)
     }
+  }
+
+  /** Refetch the entitlement row on demand (paywall "Check again", checkout
+   *  return, app foreground). Failure keeps the current gate — a flaky refresh
+   *  must never cause a false lapse or unlock. Returns whether the refetch
+   *  SUCCEEDED so callers can distinguish "checked: still nothing" from
+   *  "couldn't check" (review 018). `quiet` suppresses the error banner for
+   *  passive (lifecycle-driven) refreshes — only explicit user actions should
+   *  surface a failure. */
+  async function refreshEntitlement(opts?: { quiet?: boolean }): Promise<boolean> {
+    const { data, error: e } = await supabase
+      .from('entitlements')
+      .select('*')
+      .limit(1)
+    if (e) {
+      if (!opts?.quiet) setError(e.message)
+      return false
+    }
+    const rows = (data ?? []) as DbEntitlement[]
+    if (rows.length > 0) setEntitlement(rows[0])
+    return true
   }
 
   const retryBootstrap = () => {
@@ -404,6 +460,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setProperties([])
       setRentalPayments([])
       setBudgets([])
+      setEntitlement(null)
       window.location.assign(signInHref())
     })
     return () => data.subscription.unsubscribe()
@@ -433,6 +490,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             void supabase.auth.signOut()
           }
         })
+      // spec 018 (merge review): the gate derived at bootstrap is frozen while
+      // the Capacitor app sits resident — a trial/subscription that lapsed
+      // while suspended would otherwise never gate (FR-006). Re-read the row on
+      // every foreground; quiet, because a transient failure must keep the
+      // current gate with no banner (never a false lapse — FR-008 spirit).
+      void refreshEntitlement({ quiet: true })
     }).then((h) => {
       handle = h
     })
@@ -670,6 +733,23 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     () => people.find((p) => p.linked_user_id === currentUserId)?.id ?? '',
     [people, currentUserId]
   )
+
+  // The single gate fact (spec 018). Derived, not stored: recomputed whenever
+  // the row changes (bootstrap, refreshEntitlement). A null row derives a null
+  // gate, which the Shell treats as open — the paywall only ever renders from
+  // a successfully loaded, genuinely lapsed row (FR-008/009).
+  const gateState = useMemo<GateState | null>(() => {
+    if (!entitlement) return null
+    // A present-but-unparseable expiry is a data anomaly, not a lapse: fail
+    // OPEN (null gate) exactly like a load failure (FR-008 spirit) — a false
+    // paywall is the worst failure mode. Aligned with iOS (review 018 [18]).
+    const raw = entitlement.access_expires_at
+    if (raw !== null && Number.isNaN(Date.parse(raw))) return null
+    return deriveGateState(
+      { status: entitlement.status, accessExpiresAt: raw },
+      new Date().toISOString()
+    )
+  }, [entitlement])
 
   // ---- aggregation ----
   const inRange = (date: string, start: Date, end: Date) => {
@@ -1137,6 +1217,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     ratesError,
     language,
     locale,
+    entitlement,
+    gateState,
+    refreshEntitlement,
     setCurrency,
     chooseLanguage,
     categoryExpenseTotal,

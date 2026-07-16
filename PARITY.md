@@ -81,6 +81,7 @@ ever tracked between them, is in
 | Auth (email-OTP, 8-digit) | ✅ | ⚠️ | each calls the Supabase SDK; the CLI's OTP sign-in path differs by necessity (headless) |
 | Session persistence | ✅ (Keychain on the Capacitor build, cookies on desktop/mobile web) | — | `web/lib/auth/keychainStorage.ts` (native only, spec 021) |
 | Max session length (30-day cap) | ✅ | ✅ | Supabase session timebox (720h) — clients sign out → sign-in on expiry |
+| Entitlement gate derivation (spec 018) | ✅ | — | `services/billing/src/derive.ts` (canonical) ↔ `web/lib/entitlements.ts` — identical literal vectors V01–V19 + sha256 digest (`specs/018-subscription-system/contracts/entitlement-state.md`); deliberately **not** a golden vector (no money/date engine). The frozen native app's Swift mirror was dropped at merge — the Capacitor shell ships the web derivation. |
 | Regression-vector coverage | ✅ (generator + asserter, single implementation) | — | `shared/test-vectors/` + `gen-vectors.ts` |
 
 ## The regression core (shared & pinned)
@@ -183,3 +184,17 @@ These shape which rows exist and what the app displays, but have no regression-v
   isolation: `createClient()` swaps the live Supabase client for an in-memory seeded client
   (`lib/testdata/`) — outside the regression-vector harness (no money/date math), so it carries no
   vector; the sample dataset (`lib/testdata/seed.ts`) is not vectored.
+- **Subscriptions (spec 018) — per-platform checkout reach + a trust-model note.** Every surface
+  gates on the same server-side `entitlements` row and the same derived fact (matrix row above), and
+  the paywall is one component (`components/Paywall.tsx`) rendered inside the `(app)` Shell. Two
+  deliberate per-platform deltas, not drift: **(a) checkout reach** — desktop/mobile web redirects
+  same-tab to Stripe Checkout and consumes a one-shot `?checkout=success|cancelled` return path
+  (Settings + paywall both); the **Capacitor iOS shell opens checkout/portal in the external
+  browser** (US-storefront rules; no StoreKit purchase flow in v1 — StoreKit-ready adapter seam
+  documented in the spec) and relies on "Check again" plus foreground re-derivation (the store refetches the row and
+  re-derives the gate on every `appStateChange` resume — merge review) instead of a return path.
+  **(b) Trust model (shared, documented limitation):** the paywall is enforced by service-role-only
+  entitlement state plus client shell gating; data-table RLS is deliberately **not**
+  subscription-aware in v1, so a hostile custom API client with valid credentials but no
+  subscription could still read/write its own household's rows
+  (`specs/018-subscription-system/research.md` D9 records the rationale and the upgrade path).
