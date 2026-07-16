@@ -372,6 +372,22 @@ const catalog: Record<string, string> = {
   "Verifying…": "Verificando…",
   "You owe {0}": "Le debes a {0}",
   "Occupancy": "Ocupación",
+  // Linked banks (spec 024)
+  "Linked banks": "Bancos vinculados",
+  "Linked bank": "Banco vinculado",
+  "Connect a bank": "Conectar un banco",
+  "Bank connected.": "Banco conectado.",
+  "Bank sign-in happens with Plaid, a bank-connection service. Ortho never sees your bank username or password — it only receives account names, types, and last-4 digits. You can disconnect at any time, and adding transactions yourself or importing statements always stays available.": "El inicio de sesión bancario ocurre en Plaid, un servicio de conexión bancaria. Ortho nunca ve tu usuario ni tu contraseña del banco — solo recibe nombres de cuenta, tipos y los últimos 4 dígitos. Puedes desconectar cuando quieras, y añadir transacciones tú mismo o importar extractos siempre seguirá disponible.",
+  "Bank linking isn’t available yet.": "La vinculación bancaria aún no está disponible.",
+  "Couldn’t reach the bank-connection service. Try again in a bit.": "No se pudo contactar el servicio de conexión bancaria. Inténtalo de nuevo en un momento.",
+  "That connection attempt expired. Start again.": "Ese intento de conexión caducó. Empieza de nuevo.",
+  "You need to be in a household to link a bank.": "Necesitas estar en un hogar para vincular un banco.",
+  "The connection could not be completed. Try again.": "No se pudo completar la conexión. Inténtalo de nuevo.",
+  "{0} connected": "{0} conectados",
+  "None connected": "Ninguno conectado",
+  "Finishing your bank connection…": "Terminando la conexión con tu banco…",
+  "No bank connection is in progress.": "No hay ninguna conexión bancaria en curso.",
+  "Back to Linked banks": "Volver a Bancos vinculados",
 }
 
 export default catalog

@@ -372,6 +372,22 @@ const catalog: Record<string, string> = {
   "Verifying…": "인증 중…",
   "You owe {0}": "{0}에게 갚을 돈",
   "Occupancy": "입주 상태",
+  // Linked banks (spec 024)
+  "Linked banks": "연결된 은행",
+  "Linked bank": "연결된 은행",
+  "Connect a bank": "은행 연결",
+  "Bank connected.": "은행이 연결되었습니다.",
+  "Bank sign-in happens with Plaid, a bank-connection service. Ortho never sees your bank username or password — it only receives account names, types, and last-4 digits. You can disconnect at any time, and adding transactions yourself or importing statements always stays available.": "은행 로그인은 은행 연결 서비스인 Plaid에서 진행됩니다. Ortho는 은행 아이디나 비밀번호를 절대 보지 않으며 계좌 이름, 유형, 마지막 4자리만 받습니다. 언제든지 연결을 해제할 수 있고, 직접 거래를 추가하거나 명세서를 가져오는 방법도 항상 사용할 수 있습니다.",
+  "Bank linking isn’t available yet.": "은행 연결은 아직 사용할 수 없습니다.",
+  "Couldn’t reach the bank-connection service. Try again in a bit.": "은행 연결 서비스에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+  "That connection attempt expired. Start again.": "연결 시도가 만료되었습니다. 다시 시작해 주세요.",
+  "You need to be in a household to link a bank.": "은행을 연결하려면 세대에 속해 있어야 합니다.",
+  "The connection could not be completed. Try again.": "연결을 완료하지 못했습니다. 다시 시도해 주세요.",
+  "{0} connected": "{0}개 연결됨",
+  "None connected": "연결 없음",
+  "Finishing your bank connection…": "은행 연결을 마무리하는 중…",
+  "No bank connection is in progress.": "진행 중인 은행 연결이 없습니다.",
+  "Back to Linked banks": "연결된 은행으로 돌아가기",
 }
 
 export default catalog

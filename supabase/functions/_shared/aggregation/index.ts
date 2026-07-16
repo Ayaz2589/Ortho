@@ -12,6 +12,22 @@ export {
   PLAID_API_VERSION,
   PLAID_BASE_URLS,
 } from './plaidClient.ts'
+export {
+  buildLinkTokenRequest,
+  HOSTED_COMPLETION_REDIRECT_URI,
+  OAUTH_RETURN_PATH,
+  parseAccountsResponse,
+  parseExchangeResponse,
+  parseHostedSessionResult,
+  parseInstitutionResponse,
+  parseLinkTokenResponse,
+} from './plaid.ts'
+export type {
+  LinkTokenRequestOptions,
+  ParsedAccounts,
+  ParsedExchange,
+  ParsedLinkToken,
+} from './plaid.ts'
 export type {
   FetchLike,
   PlaidClient,

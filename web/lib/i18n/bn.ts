@@ -372,6 +372,22 @@ const catalog: Record<string, string> = {
   "Verifying…": "যাচাই হচ্ছে…",
   "You owe {0}": "আপনি {0}-কে দেবেন",
   "Occupancy": "দখল অবস্থা",
+  // Linked banks (spec 024)
+  "Linked banks": "যুক্ত ব্যাংক",
+  "Linked bank": "যুক্ত ব্যাংক",
+  "Connect a bank": "ব্যাংক সংযুক্ত করুন",
+  "Bank connected.": "ব্যাংক যুক্ত হয়েছে।",
+  "Bank sign-in happens with Plaid, a bank-connection service. Ortho never sees your bank username or password — it only receives account names, types, and last-4 digits. You can disconnect at any time, and adding transactions yourself or importing statements always stays available.": "ব্যাংকে সাইন-ইন হয় Plaid-এ, একটি ব্যাংক-সংযোগ পরিষেবা। Ortho কখনও আপনার ব্যাংকের ইউজারনেম বা পাসওয়ার্ড দেখে না — শুধু অ্যাকাউন্টের নাম, ধরন ও শেষ ৪টি সংখ্যা পায়। আপনি যেকোনো সময় সংযোগ বিচ্ছিন্ন করতে পারেন, আর নিজে লেনদেন যোগ করা বা স্টেটমেন্ট ইমপোর্ট করা সবসময়ই থাকবে।",
+  "Bank linking isn’t available yet.": "ব্যাংক যুক্ত করা এখনও চালু হয়নি।",
+  "Couldn’t reach the bank-connection service. Try again in a bit.": "ব্যাংক-সংযোগ পরিষেবায় পৌঁছানো যায়নি। একটু পরে আবার চেষ্টা করুন।",
+  "That connection attempt expired. Start again.": "সংযোগের সেই চেষ্টাটির মেয়াদ শেষ। আবার শুরু করুন।",
+  "You need to be in a household to link a bank.": "ব্যাংক যুক্ত করতে আপনাকে একটি পরিবারে থাকতে হবে।",
+  "The connection could not be completed. Try again.": "সংযোগটি সম্পূর্ণ করা যায়নি। আবার চেষ্টা করুন।",
+  "{0} connected": "{0}টি যুক্ত",
+  "None connected": "কোনোটি যুক্ত নয়",
+  "Finishing your bank connection…": "আপনার ব্যাংক সংযোগ সম্পন্ন হচ্ছে…",
+  "No bank connection is in progress.": "কোনো ব্যাংক সংযোগ চলছে না।",
+  "Back to Linked banks": "যুক্ত ব্যাংক-এ ফিরে যান",
 }
 
 export default catalog

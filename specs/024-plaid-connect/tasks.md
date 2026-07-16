@@ -53,31 +53,31 @@ smoke per quickstart §2.6 once operator keys exist.
 
 ### Core (provider logic, test-first)
 
-- [ ] T009 [P] [US1] Write failing tests `services/aggregation/test/link-token.test.ts`: embedded request builder (`products: ["auth"]`, `additional_consented_products: ["transactions"]`, `country_codes: ["US"]`, `user.client_user_id`, `redirect_uri = appBaseUrl + "/plaid-oauth"`, language allowlist→`en` fallback) + response parser (`link_token`, `expiration`)
-- [ ] T010 [P] [US1] Write failing tests `services/aggregation/test/exchange.test.ts`: `/item/public_token/exchange` response parse (`access_token`, `item_id`), `/accounts/get` fixture → normalized accounts (name/official_name/mask/type/subtype), `/institutions/get_by_id` fixture → name (and graceful absence)
-- [ ] T011 [US1] Implement `services/aggregation/src/plaid.ts` (builders + parsers) to green T009+T010; export via `src/index.ts`; `npm run sync:functions`
+- [X] T009 [P] [US1] Write failing tests `services/aggregation/test/link-token.test.ts`: embedded request builder (`products: ["auth"]`, `additional_consented_products: ["transactions"]`, `country_codes: ["US"]`, `user.client_user_id`, `redirect_uri = appBaseUrl + "/plaid-oauth"`, language allowlist→`en` fallback) + response parser (`link_token`, `expiration`)
+- [X] T010 [P] [US1] Write failing tests `services/aggregation/test/exchange.test.ts`: `/item/public_token/exchange` response parse (`access_token`, `item_id`), `/accounts/get` fixture → normalized accounts (name/official_name/mask/type/subtype), `/institutions/get_by_id` fixture → name (and graceful absence)
+- [X] T011 [US1] Implement `services/aggregation/src/plaid.ts` (builders + parsers) to green T009+T010; export via `src/index.ts`; `npm run sync:functions`
 
 ### Edge functions (thin adapters over the synced core)
 
-- [ ] T012 [US1] Implement `supabase/functions/plaid-link-token/index.ts`: preflight/auth per `_shared/http.ts` + billing-checkout pattern; resolve household membership (`not_household_member`); create Plaid link token (embedded path); insert `plaid_link_sessions`; respond `{sessionId, linkToken, expiresAt}`; `not_configured` when `PLAID_*` unset
-- [ ] T013 [US1] Implement `supabase/functions/plaid-exchange/index.ts` per contracts/plaid-functions.md: session load/ownership/expiry/idempotent-completed; embedded `publicToken` path; institution upsert (`on conflict (provider, provider_item_id)`), `store_institution_secret` RPC, accounts insert, session→`completed`; **compensation** (best-effort `/item/remove` + cleanup, session stays `pending`, `exchange_failed`) on any post-exchange failure
+- [X] T012 [US1] Implement `supabase/functions/plaid-link-token/index.ts`: preflight/auth per `_shared/http.ts` + billing-checkout pattern; resolve household membership (`not_household_member`); create Plaid link token (embedded path); insert `plaid_link_sessions`; respond `{sessionId, linkToken, expiresAt}`; `not_configured` when `PLAID_*` unset
+- [X] T013 [US1] Implement `supabase/functions/plaid-exchange/index.ts` per contracts/plaid-functions.md: session load/ownership/expiry/idempotent-completed; embedded `publicToken` path; institution upsert (`on conflict (provider, provider_item_id)`), `store_institution_secret` RPC, accounts insert, session→`completed`; **compensation** (best-effort `/item/remove` + cleanup, session stays `pending`, `exchange_failed`) on any post-exchange failure
 
 ### Web lib + store (test-first)
 
-- [ ] T014 [P] [US1] Write failing tests `web/test/lib/aggregation.test.ts`: invoke wrapper (mock `supabase.functions.invoke`) returns `{ok:true,...}` / `{ok:false,code}` for every contract error code, never throws provider text
-- [ ] T015 [P] [US1] Write failing tests `web/test/lib/plaid-link-session.test.ts`: pending-record persist/read/clear + expiry check per contracts/link-session-lifecycle.md (fixed localStorage key; injected clock — never the real one)
-- [ ] T016 [US1] Implement `web/lib/aggregation.ts` (billing.ts pattern) + `web/lib/plaidLinkSession.ts` to green T014+T015
-- [ ] T017 [P] [US1] Write failing test `web/test/store/linked-banks-bootstrap.test.tsx`: bootstrap fan-out includes `linked_institutions`+`linked_accounts` selects; `refreshLinkedBanks()` refetches; data exposed via `useApp()`
-- [ ] T018 [US1] Implement store additions in `web/lib/store.tsx` (DataCtx fields + services refresher) to green T017
+- [X] T014 [P] [US1] Write failing tests `web/test/lib/aggregation.test.ts`: invoke wrapper (mock `supabase.functions.invoke`) returns `{ok:true,...}` / `{ok:false,code}` for every contract error code, never throws provider text
+- [X] T015 [P] [US1] Write failing tests `web/test/lib/plaid-link-session.test.ts`: pending-record persist/read/clear + expiry check per contracts/link-session-lifecycle.md (fixed localStorage key; injected clock — never the real one)
+- [X] T016 [US1] Implement `web/lib/aggregation.ts` (billing.ts pattern) + `web/lib/plaidLinkSession.ts` to green T014+T015
+- [X] T017 [P] [US1] Write failing test `web/test/store/linked-banks-bootstrap.test.tsx`: bootstrap fan-out includes `linked_institutions`+`linked_accounts` selects; `refreshLinkedBanks()` refetches; data exposed via `useApp()`
+- [X] T018 [US1] Implement store additions in `web/lib/store.tsx` (DataCtx fields + services refresher) to green T017
 
 ### UI (test-first)
 
-- [ ] T019 [P] [US1] Write failing tests `web/test/settings/linked-banks.test.tsx`: unconfigured→calm placeholder (FR-012); empty state shows disclosure copy (FR-002); "Connect a bank" → link-token call → (mocked `usePlaidLink`) open → `onSuccess` → exchange → list shows institution + accounts without reload; `onExit` abandon → unchanged page + cleared pending record; provider failure → one calm `role="status"` line (never red)
-- [ ] T020 [US1] Implement `web/app/(app)/settings/linked-banks/page.tsx` + `web/components/settings/LinkedBanks.tsx` + `web/components/settings/PlaidLinkButton.tsx` (embedded mode; `react-plaid-link` lazy-loaded so the Plaid script never enters the initial bundle) to green T019 — tokens-only styling, real buttons, ≥40px targets
-- [ ] T021 [US1] Add the "Linked banks" entry row to `web/app/(app)/settings/page.tsx` (household-members only), following the existing settings-row pattern; extend the settings page test
-- [ ] T022 [P] [US1] Write failing tests `web/test/settings/plaid-oauth-return.test.tsx`: route resumes Link with stored `linkToken` + `receivedRedirectUri`; no pending record → calm notice + link back to Linked banks
-- [ ] T023 [US1] Implement `web/app/(app)/plaid-oauth/page.tsx` to green T022
-- [ ] T024 [US1] Add every new user-visible string to all 5 catalogs `web/lib/i18n/{bn,es,ja,ko,zh}.ts` (catalog-reachability test enforces)
+- [X] T019 [P] [US1] Write failing tests `web/test/settings/linked-banks.test.tsx`: unconfigured→calm placeholder (FR-012); empty state shows disclosure copy (FR-002); "Connect a bank" → link-token call → (mocked `usePlaidLink`) open → `onSuccess` → exchange → list shows institution + accounts without reload; `onExit` abandon → unchanged page + cleared pending record; provider failure → one calm `role="status"` line (never red)
+- [X] T020 [US1] Implement `web/app/(app)/settings/linked-banks/page.tsx` + `web/components/settings/LinkedBanks.tsx` + `web/components/settings/PlaidLinkButton.tsx` (embedded mode; `react-plaid-link` lazy-loaded so the Plaid script never enters the initial bundle) to green T019 — tokens-only styling, real buttons, ≥40px targets
+- [X] T021 [US1] Add the "Linked banks" entry row to `web/app/(app)/settings/page.tsx` (household-members only), following the existing settings-row pattern; extend the settings page test
+- [X] T022 [P] [US1] Write failing tests `web/test/settings/plaid-oauth-return.test.tsx`: route resumes Link with stored `linkToken` + `receivedRedirectUri`; no pending record → calm notice + link back to Linked banks
+- [X] T023 [US1] Implement `web/app/(app)/plaid-oauth/page.tsx` to green T022
+- [X] T024 [US1] Add every new user-visible string to all 5 catalogs `web/lib/i18n/{bn,es,ja,ko,zh}.ts` (catalog-reachability test enforces)
 
 **Checkpoint**: commit + push — full web suite + `services/aggregation` suite green; `feat(024): US1 — web embedded Plaid Link connect (TDD)`
 
@@ -93,9 +93,9 @@ idempotently.
 foreground poll (200/409/410 branches), double-completion harmlessness — all
 with Capacitor + Plaid mocked. Device smoke per quickstart §2.7.
 
-- [ ] T025 [P] [US2] Write failing tests in `services/aggregation/test/hosted-session.test.ts`: hosted request builder (`hosted_link.completion_redirect_uri = "ortho://plaid-done"`, `is_mobile_app: true`; no `redirect_uri`) + `hosted_link_url` parse + `/link/token/get` result extraction (`item_add_results[].public_token` present / absent / legacy shape) per contracts
-- [ ] T026 [US2] Implement hosted builders/parsers in `services/aggregation/src/plaid.ts` to green T025; `npm run sync:functions`
-- [ ] T027 [US2] Extend `supabase/functions/plaid-link-token/index.ts` (hosted mode → `hostedLinkUrl` in response) and `supabase/functions/plaid-exchange/index.ts` (no `publicToken` + hosted session → `/link/token/get` resolution; none yet → `session_incomplete` 409)
+- [X] T025 [P] [US2] Write failing tests in `services/aggregation/test/hosted-session.test.ts`: hosted request builder (`hosted_link.completion_redirect_uri = "ortho://plaid-done"`, `is_mobile_app: true`; no `redirect_uri`) + `hosted_link_url` parse + `/link/token/get` result extraction (`item_add_results[].public_token` present / absent / legacy shape) per contracts
+- [X] T026 [US2] Implement hosted builders/parsers in `services/aggregation/src/plaid.ts` to green T025; `npm run sync:functions`
+- [X] T027 [US2] Extend `supabase/functions/plaid-link-token/index.ts` (hosted mode → `hostedLinkUrl` in response) and `supabase/functions/plaid-exchange/index.ts` (no `publicToken` + hosted session → `/link/token/get` resolution; none yet → `session_incomplete` 409)
 - [ ] T028 [P] [US2] Write failing tests `web/test/settings/linked-banks-ios.test.tsx`: on Capacitor platform Connect requests `mode:"hosted"` and top-level-navigates to `hostedLinkUrl` (never in-page Link); `appUrlOpen` for `ortho://plaid-done` routes to Linked banks and triggers exchange; foreground `appStateChange` with a pending record → exchange; `409` keeps waiting silently, `410`/`404` clears calmly; hand-back firing twice yields exactly one institution
 - [ ] T029 [US2] Implement the platform fork in `PlaidLinkButton.tsx` + a `usePlaidHandBack` hook (in `web/lib/plaidLinkSession.ts` or alongside the component) wired at the `(app)` shell level like 018's foreground entitlement refresh, to green T028
 - [ ] T030 [US2] Register the `ortho` URL scheme in `web/ios/App/App/Info.plist` (`CFBundleURLTypes` — config only, no Swift) and note it in `web/capacitor.config.ts` comments if the house style expects it

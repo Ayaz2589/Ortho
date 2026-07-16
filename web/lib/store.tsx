@@ -42,6 +42,8 @@ import type {
   RentalPayment,
   Budget,
   TransactionCategory,
+  LinkedInstitution,
+  LinkedAccount,
 } from './types'
 import type {
   UserRow,
@@ -55,6 +57,8 @@ import type {
   UnitRow,
   RentalPaymentRow,
   BudgetRow,
+  LinkedInstitutionRow,
+  LinkedAccountRow,
 } from './supabase/rows'
 
 const PLACEHOLDER_ID = '00000000-0000-0000-0000-000000000000'
@@ -104,6 +108,13 @@ interface AppStateValue {
   /** Refetch the entitlement row and re-derive the gate ("Check again").
    *  Resolves true iff the refetch succeeded (false = keep state, couldn't check). */
   refreshEntitlement: () => Promise<boolean>
+  /** Household linked banks (spec 024) — read-only on clients; the plaid-*
+   *  edge functions (service role) do all writes. */
+  linkedInstitutions: LinkedInstitution[]
+  linkedAccounts: LinkedAccount[]
+  /** Refetch linked banks after a connect/disconnect. True iff it succeeded
+   *  (false = keep current lists, couldn't check — never a false empty). */
+  refreshLinkedBanks: () => Promise<boolean>
 
   setCurrency: (c: CurrencyKey) => void
   chooseLanguage: (language: Language) => void
@@ -246,6 +257,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [properties, setProperties] = useState<Property[]>([])
   const [rentalPayments, setRentalPayments] = useState<RentalPayment[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
+  const [linkedInstitutions, setLinkedInstitutions] = useState<LinkedInstitution[]>([])
+  const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([])
   const [currency, setCurrencyState] = useState<CurrencyKey>('usd')
   const [rates, setRates] = useState<Partial<Record<CurrencyKey, number>>>({})
   const [ratesLastFetched, setRatesLastFetched] = useState<number | null>(null)
@@ -432,6 +445,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return true
   }
 
+  /** Refetch linked banks on demand (after a connect completes or a
+   *  disconnect goes through — spec 024). Failure keeps the current lists —
+   *  a flaky refresh must never render a false "no banks linked" state. */
+  async function refreshLinkedBanks(): Promise<boolean> {
+    const [instRes, acctRes] = await Promise.all([
+      supabase.from('linked_institutions').select('*').order('created_at', { ascending: true }),
+      supabase.from('linked_accounts').select('*').order('created_at', { ascending: true }),
+    ])
+    if (instRes.error || acctRes.error) return false
+    setLinkedInstitutions((instRes.data ?? []) as LinkedInstitutionRow[])
+    setLinkedAccounts((acctRes.data ?? []) as LinkedAccountRow[])
+    return true
+  }
+
   const retryBootstrap = () => {
     void runBootstrap()
   }
@@ -558,6 +585,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       unitsRes,
       rpRes,
       budgetsRes,
+      linkedInstRes,
+      linkedAcctRes,
     ] = await Promise.all([
       // Column projection (US6/P5): the three highest-volume reads fetch only the
       // fields the app uses — never select('*'). Keep these lists in lockstep with
@@ -578,11 +607,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       supabase.from('units').select('*').order('sort_order', { ascending: true }),
       supabase.from('rental_payments').select('*').order('date', { ascending: false }),
       supabase.from('budgets').select('*'),
+      // Linked banks (spec 024): household facts like budgets — RLS scopes them,
+      // so no explicit household filter is needed (and clients cannot write).
+      supabase.from('linked_institutions').select('*').order('created_at', { ascending: true }),
+      supabase.from('linked_accounts').select('*').order('created_at', { ascending: true }),
     ])
 
     // A failed read must surface as an error, not render as a real-looking
     // empty state (matches iOS, which fails its bootstrap on any load error).
-    for (const res of [usersRes, peopleRes, txRes, sharesRes, cardsRes, propsRes, mortRes, leaseRes, unitsRes, rpRes, budgetsRes]) {
+    for (const res of [usersRes, peopleRes, txRes, sharesRes, cardsRes, propsRes, mortRes, leaseRes, unitsRes, rpRes, budgetsRes, linkedInstRes, linkedAcctRes]) {
       orThrow(res)
     }
 
@@ -633,6 +666,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setProperties(props)
     setRentalPayments((rpRes.data ?? []) as RentalPaymentRow[])
     setBudgets((budgetsRes.data ?? []) as BudgetRow[])
+    setLinkedInstitutions((linkedInstRes.data ?? []) as LinkedInstitutionRow[])
+    setLinkedAccounts((linkedAcctRes.data ?? []) as LinkedAccountRow[])
   }
 
   // ---- FX ----
@@ -1220,6 +1255,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     entitlement,
     gateState,
     refreshEntitlement,
+    linkedInstitutions,
+    linkedAccounts,
+    refreshLinkedBanks,
     setCurrency,
     chooseLanguage,
     categoryExpenseTotal,
