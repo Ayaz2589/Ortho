@@ -15,6 +15,7 @@ export {
 export {
   buildLinkTokenRequest,
   HOSTED_COMPLETION_REDIRECT_URI,
+  interpretItemRemoveResult,
   OAUTH_RETURN_PATH,
   parseAccountsResponse,
   parseExchangeResponse,
@@ -23,6 +24,7 @@ export {
   parseLinkTokenResponse,
 } from './plaid.ts'
 export type {
+  ItemRemoveOutcome,
   LinkTokenRequestOptions,
   ParsedAccounts,
   ParsedExchange,

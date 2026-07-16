@@ -2,6 +2,7 @@
 // Pure functions over untrusted JSON: parsers return null on malformed input
 // rather than throwing — the edge functions translate null into the contract
 // error codes. Nothing here performs I/O (see plaidClient.ts).
+import type { PlaidResult } from './plaidClient.ts'
 import type { LinkMode, NormalizedAccount } from './types.ts'
 
 /** Where Plaid Hosted Link hands the user back to the iOS shell. A custom
@@ -157,4 +158,17 @@ export function parseInstitutionResponse(data: unknown): string | null {
   const r = data as { institution?: { name?: unknown } } | null
   const name = r?.institution?.name
   return typeof name === 'string' ? name : null
+}
+
+export type ItemRemoveOutcome = 'removed' | 'unreachable' | 'failed'
+
+/** Interpret POST /item/remove for disconnect (FR-009): only 'removed' may
+ *  flip the institution to disconnected. ITEM_NOT_FOUND counts as removed —
+ *  the provider access is already gone, which is the very thing disconnect
+ *  promises. 'unreachable' must change NOTHING locally (no silent zombies:
+ *  the member is told and retries). */
+export function interpretItemRemoveResult(result: PlaidResult<unknown>): ItemRemoveOutcome {
+  if (result.ok) return 'removed'
+  if (result.code === 'provider_unreachable') return 'unreachable'
+  return result.providerErrorCode === 'ITEM_NOT_FOUND' ? 'removed' : 'failed'
 }

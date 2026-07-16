@@ -113,12 +113,12 @@ with Capacitor + Plaid mocked. Device smoke per quickstart §2.7.
 **Independent Test**: core tests for `/item/remove` semantics; RTL tests for
 confirm→gone and failure→retry; headless proof via quickstart §2.5 later.
 
-- [ ] T032 [P] [US3] Write failing tests `services/aggregation/test/disconnect.test.ts`: `/item/remove` request builder; response mapping — success, Plaid `ITEM_NOT_FOUND` → success (access already gone), network/5xx → `provider_unreachable`
-- [ ] T033 [US3] Implement disconnect pieces in `services/aggregation/src/plaid.ts` to green T032; `npm run sync:functions`
-- [ ] T034 [US3] Implement `supabase/functions/plaid-disconnect/index.ts` per contract: membership check, idempotent already-disconnected 200, revoke → `delete_institution_secret` → status flip; nothing changes locally on `provider_unreachable`
-- [ ] T035 [P] [US3] Write failing tests in `web/test/settings/linked-banks.test.tsx` (extend): Disconnect → confirm dialog → success removes institution from active list (and hides its accounts); failure → calm retryable `role="status"` message with institution still shown
-- [ ] T036 [US3] Implement disconnect UI in `LinkedBanks.tsx` + `disconnectInstitution` in `web/lib/aggregation.ts` to green T035
-- [ ] T037 [US3] Add any new strings to all 5 i18n catalogs
+- [X] T032 [P] [US3] Write failing tests `services/aggregation/test/disconnect.test.ts`: `/item/remove` request builder; response mapping — success, Plaid `ITEM_NOT_FOUND` → success (access already gone), network/5xx → `provider_unreachable`
+- [X] T033 [US3] Implement disconnect pieces in `services/aggregation/src/plaid.ts` to green T032; `npm run sync:functions`
+- [X] T034 [US3] Implement `supabase/functions/plaid-disconnect/index.ts` per contract: membership check, idempotent already-disconnected 200, revoke → `delete_institution_secret` → status flip; nothing changes locally on `provider_unreachable`
+- [X] T035 [P] [US3] Write failing tests in `web/test/settings/linked-banks.test.tsx` (extend): Disconnect → confirm dialog → success removes institution from active list (and hides its accounts); failure → calm retryable `role="status"` message with institution still shown
+- [X] T036 [US3] Implement disconnect UI in `LinkedBanks.tsx` + `disconnectInstitution` in `web/lib/aggregation.ts` to green T035
+- [X] T037 [US3] Add any new strings to all 5 i18n catalogs
 
 **Checkpoint**: commit + push — `feat(024): US3 — disconnect with provider-first revoke (TDD)`
 
@@ -134,8 +134,8 @@ attribution + proof).
 shows institution, accounts, "Connected by A · date"; RLS posture asserted by
 the migration review + SC-002 grep in Phase 7.
 
-- [ ] T038 [P] [US4] Write failing test (extend `web/test/settings/linked-banks.test.tsx`): institutions render connector name (resolved via existing users/people data) + connected date + status, for a member who did not connect it
-- [ ] T039 [US4] Implement attribution rendering in `LinkedBanks.tsx` to green T038; i18n the strings ×5
+- [X] T038 [P] [US4] Write failing test (extend `web/test/settings/linked-banks.test.tsx`): institutions render connector name (resolved via existing users/people data) + connected date + status, for a member who did not connect it
+- [X] T039 [US4] Implement attribution rendering in `LinkedBanks.tsx` to green T038; i18n the strings ×5
 
 **Checkpoint**: commit + push — `feat(024): US4 — household visibility & attribution`
 

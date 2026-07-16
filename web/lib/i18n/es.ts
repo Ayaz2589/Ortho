@@ -388,6 +388,11 @@ const catalog: Record<string, string> = {
   "Finishing your bank connection…": "Terminando la conexión con tu banco…",
   "No bank connection is in progress.": "No hay ninguna conexión bancaria en curso.",
   "Back to Linked banks": "Volver a Bancos vinculados",
+  "Disconnect": "Desconectar",
+  "Disconnect this bank?": "¿Desconectar este banco?",
+  "Bank disconnected.": "Banco desconectado.",
+  "Disconnecting didn’t go through. Try again.": "La desconexión no se completó. Inténtalo de nuevo.",
+  "Connected by {0} · {1}": "Conectado por {0} · {1}",
 }
 
 export default catalog

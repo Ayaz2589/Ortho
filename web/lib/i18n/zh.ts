@@ -388,6 +388,11 @@ const catalog: Record<string, string> = {
   "Finishing your bank connection…": "正在完成银行连接…",
   "No bank connection is in progress.": "当前没有正在进行的银行连接。",
   "Back to Linked banks": "返回已关联银行",
+  "Disconnect": "断开连接",
+  "Disconnect this bank?": "断开与此银行的连接？",
+  "Bank disconnected.": "已断开银行连接。",
+  "Disconnecting didn’t go through. Try again.": "未能断开连接。请重试。",
+  "Connected by {0} · {1}": "由 {0} 关联 · {1}",
 }
 
 export default catalog

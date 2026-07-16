@@ -19,6 +19,7 @@ import {
   checkLinkingAvailable,
   completeLinkSession,
   createLinkSession,
+  disconnectInstitution,
 } from '@/lib/aggregation'
 import {
   clearPendingLinkSession,
@@ -32,11 +33,13 @@ type Availability = 'checking' | 'available' | 'unconfigured'
 type ActiveSession = { sessionId: string; linkToken: string }
 
 export function LinkedBanks() {
-  const { linkedInstitutions, linkedAccounts, refreshLinkedBanks, locale, t } = useApp()
+  const { linkedInstitutions, linkedAccounts, refreshLinkedBanks, users, locale, t } = useApp()
   const [availability, setAvailability] = useState<Availability>('checking')
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [session, setSession] = useState<ActiveSession | null>(null)
+  /** Institution id awaiting the inline disconnect confirmation (US3). */
+  const [confirming, setConfirming] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -122,9 +125,35 @@ export function LinkedBanks() {
     clearPendingLinkSession()
   }
 
+  async function disconnect(institutionId: string) {
+    setConfirming(null)
+    setBusy(true)
+    setNotice(null)
+    const res = await disconnectInstitution(institutionId)
+    setBusy(false)
+    if (res.ok) {
+      setNotice(t('Bank disconnected.'))
+      void refreshLinkedBanks()
+    } else if (res.code === 'provider_unreachable') {
+      // Nothing changed server-side (FR-009) — same calm line, retryable.
+      setNotice(noticeFor('provider_unreachable'))
+    } else {
+      setNotice(t('Disconnecting didn’t go through. Try again.'))
+    }
+  }
+
   const active = linkedInstitutions.filter((i) => i.status === 'active')
   const accountsFor = (institutionId: string): LinkedAccount[] =>
     linkedAccounts.filter((a) => a.institution_id === institutionId)
+
+  /** US4 attribution: any member sees who connected a bank and when. */
+  const connectedLine = (createdBy: string, createdAt: string): string => {
+    const name = users.find((u) => u.id === createdBy)?.name ?? ''
+    const date = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
+      new Date(createdAt)
+    )
+    return t('Connected by {0} · {1}', name, date)
+  }
 
   return (
     <section className="flex flex-col gap-2" aria-labelledby="linked-banks-label">
@@ -166,9 +195,42 @@ export function LinkedBanks() {
         <SectionCard>
           {active.map((inst) => (
             <div key={inst.id} className="flex flex-col px-4 py-3">
-              <span className="text-[15px] text-text">
-                {inst.institution_name || t('Linked bank')}
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="min-w-0 text-[15px] text-text">
+                  {inst.institution_name || t('Linked bank')}
+                </span>
+                <span className="ml-auto shrink-0">
+                  {confirming === inst.id ? (
+                    <span className="flex items-center gap-2">
+                      <span className="text-[13px] text-text-2">{t('Disconnect this bank?')}</span>
+                      <button
+                        type="button"
+                        onClick={() => setConfirming(null)}
+                        className="min-h-11 px-2 text-[15px] font-normal text-text-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                      >
+                        {t('Cancel')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void disconnect(inst.id)}
+                        disabled={busy}
+                        className="min-h-11 px-2 text-[15px] font-normal text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-60"
+                      >
+                        {t('Disconnect')}
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirming(inst.id)}
+                      disabled={busy}
+                      className="min-h-11 px-2 text-[15px] font-normal text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-60"
+                    >
+                      {t('Disconnect')}
+                    </button>
+                  )}
+                </span>
+              </div>
               <ul className="mt-1 flex flex-col gap-0.5">
                 {accountsFor(inst.id).map((acct) => (
                   <li key={acct.id} className="flex items-baseline gap-2 text-[13px] text-text-2">
@@ -181,6 +243,9 @@ export function LinkedBanks() {
                   </li>
                 ))}
               </ul>
+              <span className="mt-1 text-[12px] text-text-3">
+                {connectedLine(inst.created_by, inst.created_at)}
+              </span>
             </div>
           ))}
         </SectionCard>

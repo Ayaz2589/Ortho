@@ -210,6 +210,66 @@ describe('FR-013 — failures are one calm line, never red, always retryable', (
   })
 })
 
+describe('US3 — disconnect (provider-first revoke, confirm step, calm failure)', () => {
+  beforeEach(() => {
+    store.linkedInstitutions = [INSTITUTION]
+    store.linkedAccounts = [ACCOUNT]
+    aggregation.disconnectInstitution.mockResolvedValue({
+      ok: true,
+      value: { institutionId: 'li-1', status: 'disconnected' },
+    })
+  })
+
+  it('asks before disconnecting; cancel backs out without a call', async () => {
+    await mounted()
+    fireEvent.click(await screen.findByRole('button', { name: 'Disconnect' }))
+    expect(screen.getByText('Disconnect this bank?')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(aggregation.disconnectInstitution).not.toHaveBeenCalled()
+    expect(screen.queryByText('Disconnect this bank?')).not.toBeInTheDocument()
+  })
+
+  it('confirm revokes at the provider and refreshes the household lists', async () => {
+    await mounted()
+    fireEvent.click(await screen.findByRole('button', { name: 'Disconnect' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }))
+    await waitFor(() =>
+      expect(aggregation.disconnectInstitution).toHaveBeenCalledWith('li-1')
+    )
+    expect(store.refreshLinkedBanks).toHaveBeenCalled()
+    expect(await screen.findByText('Bank disconnected.')).toBeInTheDocument()
+  })
+
+  it('an unreachable provider changes nothing: calm retry line, bank still listed', async () => {
+    aggregation.disconnectInstitution.mockResolvedValue({
+      ok: false,
+      code: 'provider_unreachable',
+    })
+    await mounted()
+    fireEvent.click(await screen.findByRole('button', { name: 'Disconnect' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }))
+    expect(
+      await screen.findByText('Couldn’t reach the bank-connection service. Try again in a bit.')
+    ).toBeInTheDocument()
+    expect(screen.getByText('First Platypus Bank')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Disconnect' })).toBeEnabled()
+    expect(document.querySelector('.text-destructive')).toBeNull()
+  })
+
+  it('other failures surface the disconnect retry line', async () => {
+    aggregation.disconnectInstitution.mockResolvedValue({
+      ok: false,
+      code: 'disconnect_failed',
+    })
+    await mounted()
+    fireEvent.click(await screen.findByRole('button', { name: 'Disconnect' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }))
+    expect(
+      await screen.findByText('Disconnecting didn’t go through. Try again.')
+    ).toBeInTheDocument()
+  })
+})
+
 describe('FR-007/008 — the household list', () => {
   it('renders active institutions with their accounts (name, mask, type)', async () => {
     store.linkedInstitutions = [INSTITUTION]
@@ -218,6 +278,15 @@ describe('FR-007/008 — the household list', () => {
     expect(await screen.findByText('First Platypus Bank')).toBeInTheDocument()
     expect(screen.getByText('Plaid Checking')).toBeInTheDocument()
     expect(screen.getByText('•••• 0000 · checking')).toBeInTheDocument()
+  })
+
+  it('shows who connected it and when, for ANY household member (US4)', async () => {
+    store.linkedInstitutions = [INSTITUTION]
+    store.linkedAccounts = [ACCOUNT]
+    await mounted()
+    // created_by u-me resolves through the household users list; the date
+    // renders in the viewer's locale.
+    expect(await screen.findByText('Connected by Maya · Jul 10, 2026')).toBeInTheDocument()
   })
 
   it('hides disconnected institutions and their accounts from the active list (US3-3)', async () => {

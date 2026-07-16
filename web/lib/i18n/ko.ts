@@ -388,6 +388,11 @@ const catalog: Record<string, string> = {
   "Finishing your bank connection…": "은행 연결을 마무리하는 중…",
   "No bank connection is in progress.": "진행 중인 은행 연결이 없습니다.",
   "Back to Linked banks": "연결된 은행으로 돌아가기",
+  "Disconnect": "연결 해제",
+  "Disconnect this bank?": "이 은행의 연결을 해제할까요?",
+  "Bank disconnected.": "은행 연결이 해제되었습니다.",
+  "Disconnecting didn’t go through. Try again.": "연결 해제가 완료되지 않았습니다. 다시 시도해 주세요.",
+  "Connected by {0} · {1}": "{0}님이 연결 · {1}",
 }
 
 export default catalog

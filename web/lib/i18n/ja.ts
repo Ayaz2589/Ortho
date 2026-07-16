@@ -388,6 +388,11 @@ const catalog: Record<string, string> = {
   "Finishing your bank connection…": "銀行との接続を完了しています…",
   "No bank connection is in progress.": "進行中の銀行接続はありません。",
   "Back to Linked banks": "連携済みの銀行に戻る",
+  "Disconnect": "連携を解除",
+  "Disconnect this bank?": "この銀行の連携を解除しますか？",
+  "Bank disconnected.": "銀行の連携を解除しました。",
+  "Disconnecting didn’t go through. Try again.": "連携の解除が完了しませんでした。もう一度お試しください。",
+  "Connected by {0} · {1}": "{0} が連携 · {1}",
 }
 
 export default catalog

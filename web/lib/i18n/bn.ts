@@ -388,6 +388,11 @@ const catalog: Record<string, string> = {
   "Finishing your bank connection…": "আপনার ব্যাংক সংযোগ সম্পন্ন হচ্ছে…",
   "No bank connection is in progress.": "কোনো ব্যাংক সংযোগ চলছে না।",
   "Back to Linked banks": "যুক্ত ব্যাংক-এ ফিরে যান",
+  "Disconnect": "সংযোগ বিচ্ছিন্ন করুন",
+  "Disconnect this bank?": "এই ব্যাংকের সংযোগ বিচ্ছিন্ন করবেন?",
+  "Bank disconnected.": "ব্যাংকের সংযোগ বিচ্ছিন্ন হয়েছে।",
+  "Disconnecting didn’t go through. Try again.": "সংযোগ বিচ্ছিন্ন করা যায়নি। আবার চেষ্টা করুন।",
+  "Connected by {0} · {1}": "{0} যুক্ত করেছেন · {1}",
 }
 
 export default catalog
