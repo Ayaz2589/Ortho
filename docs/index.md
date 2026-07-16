@@ -79,7 +79,11 @@ adapters), and the root `services/billing/` package is the extraction-ready bill
 them: pure runtime-agnostic TypeScript with its own Vitest suite, byte-copied into
 `supabase/functions/_shared/billing/` by `npm run sync:functions` and locked byte-identical by a
 drift test that runs in web CI. Never edit the copy — edit `services/billing` and re-sync. See
-`docs/supabase.md` §4.5.
+`docs/supabase.md` §4.5. **Spec 024 repeated the pattern for bank linking**: three `plaid-*`
+functions behind the `services/aggregation/` core (same sync script + drift lock), household
+`linked_institutions`/`linked_accounts` tables, and the repo's first Supabase Vault use for the
+Plaid access token — connect-only (no transaction sync yet). See `docs/supabase.md` §4.6 and
+`docs/web.md` "Linked banks".
 
 ## 3. Directory of docs
 

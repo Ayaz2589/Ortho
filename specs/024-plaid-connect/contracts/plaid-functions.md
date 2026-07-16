@@ -15,12 +15,14 @@ performs privileged work with a separate service-role client — the
 Clients localize by `code` and never render `message`. All requests are `POST`
 with a JSON body; `OPTIONS` returns the CORS preflight.
 
-**Shared error codes** (any function): `unauthorized` (401),
-`not_configured` (503 — `PLAID_CLIENT_ID`/`PLAID_SECRET`/`PLAID_ENV` missing;
-FR-012), `not_household_member` (403), `invalid_request` (400 — malformed
-body), `provider_unreachable` (502 — network/5xx from Plaid),
-`provider_error` (502 — Plaid returned a structured error we don't map more
-specifically; Plaid's `error_code` is logged server-side, never forwarded).
+**Shared error codes** (any function): `unauthenticated` (401 — the house
+code from `_shared/http.ts`), `not_configured` (503 —
+`PLAID_CLIENT_ID`/`PLAID_SECRET`/`PLAID_ENV` missing or invalid; FR-012),
+`not_household_member` (403), `invalid_request` (400 — malformed body, wrong
+method, or a missing embedded `publicToken`), `provider_unreachable` (502 —
+network/5xx from Plaid), `provider_error` (502 — Plaid returned a structured
+error we don't map more specifically; Plaid's `error_code` is logged
+server-side, never forwarded).
 
 Plaid REST specifics (base URL by `PLAID_ENV`, `Plaid-Version: 2020-09-14`,
 credentials in the JSON body) live in `services/aggregation` — see
@@ -35,10 +37,13 @@ link token.
 
 **Request**
 ```json
-{ "mode": "embedded" | "hosted", "language": "en" }
+{ "mode": "embedded" | "hosted" | "probe", "language": "en" }
 ```
-- `mode` — `embedded` (web page runs Link) or `hosted` (iOS shell; external
-  browser). Required.
+- `mode` — `embedded` (web page runs Link), `hosted` (iOS shell; external
+  browser), or `probe` (the FR-012 configured-check: after the config, auth,
+  and membership checks pass, responds `200 { "configured": true }` WITHOUT
+  creating a Plaid session or a DB row — lets the Linked banks page go calmly
+  dark instead of showing a broken button). Required.
 - `language` — optional; passed to Plaid only when in Plaid's supported set,
   else `en`.
 
@@ -86,8 +91,8 @@ session returns its existing result.
    (double hand-back safety, FR-004).
 3. `expires_at < now()` → `session_expired` (410); client clears its pending
    state and starts over.
-4. Resolve the public token: embedded → from body (`missing_public_token`,
-   400, if absent); hosted → `/link/token/get` →
+4. Resolve the public token: embedded → from body (`invalid_request`, 400,
+   if absent); hosted → `/link/token/get` →
    `link_sessions[].results.item_add_results[].public_token`; none yet →
    `session_incomplete` (409) — the caller treats this as "user hasn't
    finished", not an error state.
@@ -117,7 +122,7 @@ session returns its existing result.
 
 **Additional error codes**: `session_not_found` (404), `session_not_owned`
 (403), `session_expired` (410), `session_incomplete` (409),
-`missing_public_token` (400), `exchange_failed` (502).
+`exchange_failed` (502).
 
 ---
 

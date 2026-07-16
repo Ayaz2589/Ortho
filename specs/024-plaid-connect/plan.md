@@ -141,8 +141,9 @@ web/
 ├── app/(app)/settings/page.tsx        # + "Linked banks" entry row
 ├── app/(app)/settings/linked-banks/page.tsx   # NEW sub-page
 ├── app/(app)/plaid-oauth/page.tsx     # NEW OAuth return route (web embedded mode)
-├── components/settings/LinkedBanks.tsx        # NEW section: disclosure, list, connect, disconnect
-├── components/settings/PlaidLinkButton.tsx    # NEW platform-forked connect control (lazy)
+├── components/settings/LinkedBanks.tsx        # NEW section: disclosure, list, platform-forked connect, disconnect
+├── components/settings/EmbeddedPlaidLink.tsx  # NEW lazy Link runner (react-plaid-link, next/dynamic)
+├── components/PlaidHandBack.tsx               # NEW iOS hand-back + foreground-poll completer (app shell)
 ├── lib/i18n/{bn,es,ja,ko,zh}.ts       # + all new strings
 └── test/settings/linked-banks*.test.tsx, test/lib/aggregation.test.ts,
     test/lib/plaid-link-session.test.ts, test/store/linked-banks-bootstrap.test.tsx  # NEW
