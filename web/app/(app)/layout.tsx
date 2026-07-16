@@ -11,6 +11,7 @@ import { asLanguage, DEFAULT_LANGUAGE, type Language } from '@/lib/language'
 import { TabBar } from '@/components/TabBar'
 import { Sidebar } from '@/components/Sidebar'
 import { Paywall } from '@/components/Paywall'
+import { PlaidHandBack } from '@/components/PlaidHandBack'
 
 /** spec 021, FR-011 — shown while `useBiometricGate()` is 'checking' or
  *  'locked'. Never rendered on a device with no biometric enrollment (the
@@ -86,6 +87,10 @@ function Shell({ children, active }: { children: ReactNode; active: boolean }) {
 
   return (
     <div className="sm:flex sm:h-screen sm:overflow-hidden">
+      {/* spec 024: completes a pending Hosted Plaid Link session on the
+          Capacitor shell (ortho://plaid-done hand-back + foreground poll).
+          Renders nothing; no-op on desktop/mobile web. */}
+      <PlaidHandBack />
       <Sidebar />
       <main
         className="relative flex-1 sm:min-w-0 sm:overflow-y-auto sm:[scrollbar-gutter:stable]"

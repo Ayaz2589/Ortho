@@ -96,10 +96,10 @@ with Capacitor + Plaid mocked. Device smoke per quickstart §2.7.
 - [X] T025 [P] [US2] Write failing tests in `services/aggregation/test/hosted-session.test.ts`: hosted request builder (`hosted_link.completion_redirect_uri = "ortho://plaid-done"`, `is_mobile_app: true`; no `redirect_uri`) + `hosted_link_url` parse + `/link/token/get` result extraction (`item_add_results[].public_token` present / absent / legacy shape) per contracts
 - [X] T026 [US2] Implement hosted builders/parsers in `services/aggregation/src/plaid.ts` to green T025; `npm run sync:functions`
 - [X] T027 [US2] Extend `supabase/functions/plaid-link-token/index.ts` (hosted mode → `hostedLinkUrl` in response) and `supabase/functions/plaid-exchange/index.ts` (no `publicToken` + hosted session → `/link/token/get` resolution; none yet → `session_incomplete` 409)
-- [ ] T028 [P] [US2] Write failing tests `web/test/settings/linked-banks-ios.test.tsx`: on Capacitor platform Connect requests `mode:"hosted"` and top-level-navigates to `hostedLinkUrl` (never in-page Link); `appUrlOpen` for `ortho://plaid-done` routes to Linked banks and triggers exchange; foreground `appStateChange` with a pending record → exchange; `409` keeps waiting silently, `410`/`404` clears calmly; hand-back firing twice yields exactly one institution
-- [ ] T029 [US2] Implement the platform fork in `PlaidLinkButton.tsx` + a `usePlaidHandBack` hook (in `web/lib/plaidLinkSession.ts` or alongside the component) wired at the `(app)` shell level like 018's foreground entitlement refresh, to green T028
-- [ ] T030 [US2] Register the `ortho` URL scheme in `web/ios/App/App/Info.plist` (`CFBundleURLTypes` — config only, no Swift) and note it in `web/capacitor.config.ts` comments if the house style expects it
-- [ ] T031 [US2] Add any new strings to all 5 i18n catalogs
+- [X] T028 [P] [US2] Write failing tests `web/test/settings/linked-banks-ios.test.tsx`: on Capacitor platform Connect requests `mode:"hosted"` and top-level-navigates to `hostedLinkUrl` (never in-page Link); `appUrlOpen` for `ortho://plaid-done` routes to Linked banks and triggers exchange; foreground `appStateChange` with a pending record → exchange; `409` keeps waiting silently, `410`/`404` clears calmly; hand-back firing twice yields exactly one institution
+- [X] T029 [US2] Implement the platform fork in `PlaidLinkButton.tsx` + a `usePlaidHandBack` hook (in `web/lib/plaidLinkSession.ts` or alongside the component) wired at the `(app)` shell level like 018's foreground entitlement refresh, to green T028
+- [X] T030 [US2] Register the `ortho` URL scheme in `web/ios/App/App/Info.plist` (`CFBundleURLTypes` — config only, no Swift) and note it in `web/capacitor.config.ts` comments if the house style expects it
+- [X] T031 [US2] Add any new strings to all 5 i18n catalogs
 
 **Checkpoint**: commit + push — `feat(024): US2 — iOS Hosted Link connect with hand-back + foreground poll (TDD)`
 

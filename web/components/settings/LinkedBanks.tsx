@@ -10,6 +10,7 @@
  */
 import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { Capacitor } from '@capacitor/core'
 import { Landmark } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { SectionLabel } from '@/components/ui'
@@ -67,9 +68,14 @@ export function LinkedBanks() {
   async function connect() {
     setBusy(true)
     setNotice(null)
+    // Plaid deprecates Link inside webviews: the Capacitor iOS shell uses
+    // Hosted Link in the EXTERNAL browser (a non-app-origin top-level
+    // navigation, which Capacitor opens out-of-process); the web page runs
+    // embedded Link. Same session plumbing either way (research.md D2/D3).
+    const mode = Capacitor.isNativePlatform() ? 'hosted' : 'embedded'
     // Plaid Link renders in the app's language when it can (allowlist enforced
     // server-side); locale is BCP-47, Plaid wants the bare language tag.
-    const res = await createLinkSession('embedded', locale.split('-')[0])
+    const res = await createLinkSession(mode, locale.split('-')[0])
     setBusy(false)
     if (!res.ok) {
       if (res.code === 'not_configured') setAvailability('unconfigured')
@@ -79,9 +85,20 @@ export function LinkedBanks() {
     savePendingLinkSession({
       sessionId: res.value.sessionId,
       linkToken: res.value.linkToken,
-      mode: 'embedded',
+      mode,
       expiresAt: res.value.expiresAt,
     })
+    if (mode === 'hosted') {
+      if (!res.value.hostedLinkUrl) {
+        clearPendingLinkSession()
+        setNotice(noticeFor('provider_error'))
+        return
+      }
+      // PlaidHandBack (mounted in the app shell) finishes the session when
+      // the member returns via ortho://plaid-done or a foreground.
+      window.location.assign(res.value.hostedLinkUrl)
+      return
+    }
     setSession({ sessionId: res.value.sessionId, linkToken: res.value.linkToken })
   }
 
