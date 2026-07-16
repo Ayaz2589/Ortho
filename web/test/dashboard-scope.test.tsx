@@ -36,14 +36,17 @@ describe('useDashboardScope', () => {
     expect(result.current.isSpecificMonth).toBe(false)
   })
 
-  it('selecting a month resolves to the vectored monthBounds window + mid-month reference date', () => {
+  it('selecting a past month resolves to the vectored monthBounds window + a fully-elapsed reference date (B2)', () => {
     const { result } = renderHook(() => useDashboardScope())
     act(() => result.current.setMonth('2026-04'))
     expect(result.current.selectedMonth).toBe('2026-04')
     expect(result.current.isSpecificMonth).toBe(true)
     expect(result.current.interval.start.toISOString()).toBe('2026-04-01T00:00:00.000Z')
     expect(result.current.interval.end.toISOString()).toBe('2026-05-01T00:00:00.000Z')
-    expect(result.current.referenceDate.toISOString()).toBe('2026-04-15T12:00:00.000Z')
+    // spec 023 B2: a completed past month is fully elapsed (its last day at noon
+    // UTC), not the old mid-month 15th that showed "~14 days left" for a finished
+    // month and suppressed the under-budget insight.
+    expect(result.current.referenceDate.toISOString()).toBe('2026-04-30T12:00:00.000Z')
     expect(result.current.periodLabel).toBe('April 2026')
   })
 

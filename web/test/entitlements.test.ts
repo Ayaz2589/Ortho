@@ -11,8 +11,8 @@ import {
 } from '@/lib/entitlements'
 
 // The shared literal vectors from specs/018-subscription-system/contracts/
-// entitlement-state.md — embedded VERBATIM here, in services/billing/test/, and
-// in iOS EntitlementLogicTests.swift. Amend the contract before touching these.
+// entitlement-state.md — embedded VERBATIM here and in services/billing/test/.
+// Amend the contract before touching these.
 const VECTOR_NOW = '2026-07-05T12:00:00Z'
 
 const VECTORS: ReadonlyArray<

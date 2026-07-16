@@ -1,21 +1,38 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Search, Plus, X, ArrowUpDown, ChevronDown, SlidersHorizontal } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { Search, Plus, X, ArrowUpDown, ChevronDown, SlidersHorizontal, Camera, FileText } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { PageHeader, IconButton, Card, EmptyState, Modal } from '@/components/ui'
 import { useIsExpanded } from '@/lib/useMediaQuery'
-import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expenseTotal, startOfMonth } from '@/lib/format'
+import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expenseTotal } from '@/lib/format'
+import { useMonthAccordion } from '@/lib/useMonthAccordion'
 import type { Transaction } from '@/lib/types'
 import { TransactionRow } from '@/components/transactions/TransactionRow'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 import { BalanceSummary } from '@/components/transactions/BalanceSummary'
-import { TransactionsDesktop } from '@/components/web/TransactionsDesktop'
 import { TxModalWeb } from '@/components/web/TxModalWeb'
 import type { TransferPrefill } from '@/components/web/TxForm'
 import { useTransactionFilters } from '@/lib/useTransactionFilters'
+import { useScanFlow } from '@/lib/scan/useScanFlow'
 import { FilterPanel } from '@/components/web/FilterPanel'
 import { ActiveFilterChips } from '@/components/web/ActiveFilterChips'
+
+// Deferred so the scan UI (interstitial/summary) loads on demand when a scan is
+// active, not on Transactions-route load (spec 022, US2). It only mounts when
+// scan.state.phase !== 'idle', so the chunk is fetched at that moment.
+const ScanFlow = dynamic(() => import('@/components/web/ScanFlow').then((m) => m.ScanFlow), {
+  ssr: false,
+})
+
+// Deferred so a mobile/iOS session never downloads the desktop composition
+// (spec 022, US3). The synchronous useIsExpanded() gate still selects the branch
+// before paint (no wrong-layout flash); the desktop chunk loads only when expanded.
+const TransactionsDesktop = dynamic(
+  () => import('@/components/web/TransactionsDesktop').then((m) => m.TransactionsDesktop),
+  { ssr: false, loading: () => null }
+)
 
 export default function TransactionsPage() {
   const isExpanded = useIsExpanded()
@@ -28,32 +45,15 @@ export default function TransactionsPage() {
   const [copySource, setCopySource] = useState<Transaction | null>(null)
   const [settlePrefill, setSettlePrefill] = useState<TransferPrefill | null>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
+  const [scanPickerOpen, setScanPickerOpen] = useState(false)
+  const scan = useScanFlow()
 
   const hasAny = transactions.length > 0
 
   const months = useMemo(() => groupDaysByMonth(groupByDay(f.filtered)), [f.filtered])
   const noMatches = hasAny && f.filtered.length === 0
 
-  // Collapse every month by default except the current (or most recent) one; any
-  // active filter expands all so matches aren't hidden inside a collapsed month.
-  const currentMonthKey = useMemo(() => startOfMonth(new Date()).getTime(), [])
-  const defaultOpenKey = useMemo(() => {
-    if (months.some((m) => m.month.getTime() === currentMonthKey)) return currentMonthKey
-    return months[0]?.month.getTime() ?? null
-  }, [months, currentMonthKey])
-
-  const [openMonths, setOpenMonths] = useState<Set<number> | null>(null)
-  const isMonthOpen = (key: number) =>
-    f.count > 0 || (openMonths === null ? key === defaultOpenKey : openMonths.has(key))
-  function toggleMonth(key: number) {
-    setOpenMonths((prev) => {
-      const base = prev ?? (defaultOpenKey !== null ? new Set([defaultOpenKey]) : new Set<number>())
-      const next = new Set(base)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }
+  const { isMonthOpen, toggleMonth } = useMonthAccordion(months, f.count)
 
   function openAdd() {
     setCopySource(null)
@@ -111,6 +111,9 @@ export default function TransactionsPage() {
                 )}
               </span>
             )}
+            <IconButton ariaLabel={t('Scan a receipt or statement')} onClick={() => setScanPickerOpen(true)}>
+              <Camera size={18} />
+            </IconButton>
             <IconButton ariaLabel={t('Add transaction')} onClick={openAdd}>
               <Plus size={18} />
             </IconButton>
@@ -263,6 +266,41 @@ export default function TransactionsPage() {
         txId={detailId}
         onClose={() => setDetailId(null)}
       />
+
+      <Modal open={scanPickerOpen} onClose={() => setScanPickerOpen(false)} title={t('Scan')}>
+        <div className="flex flex-col gap-1 py-2">
+          <button
+            type="button"
+            onClick={() => {
+              setScanPickerOpen(false)
+              void scan.startCameraCapture()
+            }}
+            className="ortho-interactive flex items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] text-text"
+          >
+            <Camera size={20} className="text-text-2" />
+            {t('Take a photo')}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setScanPickerOpen(false)
+              void scan.startFileImport()
+            }}
+            className="ortho-interactive flex items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] text-text"
+          >
+            <FileText size={20} className="text-text-2" />
+            {t('Import a PDF from Files')}
+          </button>
+        </div>
+      </Modal>
+
+      {scan.state.phase !== 'idle' && (
+        <ScanFlow
+          state={scan.state}
+          dispatch={scan.dispatch}
+          onClose={() => scan.dispatch({ type: 'reset' })}
+        />
+      )}
     </div>
   )
 }

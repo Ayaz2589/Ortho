@@ -167,14 +167,6 @@ struct Ortho_iOSApp: App {
                         // offer an explicit, non-alarmist Retry instead of an
                         // empty, half-broken tab shell.
                         BootstrapRecoveryView()
-                    } else if EntitlementLogic.shouldShowPaywall(gate: appState.gateState) {
-                        // Spec 018: a successfully loaded, lapsed entitlement
-                        // blocks the whole app (FR-006/007). A nil gate (row
-                        // not loaded / load failed / seeded modes) never
-                        // gates — load failures take the recovery branch above
-                        // instead (FR-008). Seeded/-uiDemo sessions never reach
-                        // this switch at all (the `useSeededData` branch).
-                        PaywallView()
                     } else {
                         RootTabView()
                     }

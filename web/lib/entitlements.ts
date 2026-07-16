@@ -1,6 +1,6 @@
 /**
  * Entitlement gate derivation — HAND-MIRRORED from services/billing/src/derive.ts
- * (the canonical copy) and iOS Shared/EntitlementLogic.swift. All three are locked
+ * (the canonical copy); the Capacitor iOS shell ships this copy. Both are locked
  * by the identical literal vectors V01–V19 + digest in
  * specs/018-subscription-system/contracts/entitlement-state.md — amend the
  * contract before touching semantics here. Deliberately NOT imported from

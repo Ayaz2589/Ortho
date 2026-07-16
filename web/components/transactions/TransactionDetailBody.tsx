@@ -1,6 +1,7 @@
 'use client'
 
 import { useApp } from '@/lib/store'
+import { transferParties } from '@/lib/transaction'
 import { FormGroup, FieldRow, Avatar } from '@/components/ui'
 import { categoryMeta } from '@/lib/categories'
 import { effectiveShares, mediumDate } from '@/lib/format'
@@ -17,8 +18,9 @@ export function TransactionDetailBody({ tx }: { tx: Transaction }) {
   // A reimbursement: directional From (paid_by/sender) → To (recipient). Neutral
   // amount (not spend/income), no category/split/source.
   if (isTransfer) {
-    const fromU = tx.paid_by ? resolveUser(tx.paid_by) : null
-    const toU = tx.owner_ids[0] ? resolveUser(tx.owner_ids[0]) : null
+    const { from, to } = transferParties(tx)
+    const fromU = from ? resolveUser(from) : null
+    const toU = to ? resolveUser(to) : null
     return (
       <div className="flex flex-col gap-5">
         <div className="flex items-center justify-center py-2">

@@ -9,6 +9,19 @@ import { makeTx } from './helpers/fixtures'
 const h = vi.hoisted(() => ({ mock: null as SupabaseMock | null }))
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => h.mock!.client }))
 
+// spec 021 — FR-012: key confirmation/deletion interactions get haptic
+// feedback (lib/haptics.ts, native-only; a no-op mock here just records calls).
+const { impact, notification } = vi.hoisted(() => ({
+  impact: vi.fn(() => Promise.resolve()),
+  notification: vi.fn(() => Promise.resolve()),
+}))
+vi.mock('@capacitor/haptics', () => ({
+  Haptics: { impact, notification },
+  ImpactStyle: { Light: 'LIGHT' },
+  NotificationType: { Warning: 'WARNING' },
+}))
+vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => true } }))
+
 // Import AFTER the mock is registered.
 import { AppStateProvider, useApp } from '@/lib/store'
 
@@ -141,6 +154,20 @@ describe('store (AppStateProvider)', () => {
     expect(h.mock!.callsFor('transactions').some((c) => c.op === 'delete')).toBe(true)
   })
 
+  it('addTransaction confirms with a light haptic; deleteTransaction with a warning haptic (FR-012)', async () => {
+    await renderStore()
+    impact.mockClear()
+    notification.mockClear()
+
+    const tx = makeTx({ id: 'tx-haptic', merchant: 'Blue Bottle', amount_cents: 450, owner_ids: ['u-me'], household_id: 'hh-1' })
+    await act(async () => { api.addTransaction(tx) })
+    await waitFor(() => expect(impact).toHaveBeenCalledWith({ style: 'LIGHT' }))
+    expect(notification).not.toHaveBeenCalled()
+
+    await act(async () => { api.deleteTransaction('tx-haptic') })
+    await waitFor(() => expect(notification).toHaveBeenCalledWith({ type: 'WARNING' }))
+  })
+
   it('addTransaction rolls back the parent when the shares write fails (no share-less row)', async () => {
     // Force the transaction_shares insert to fail (e.g. an RLS denial). The
     // transaction+shares write must be atomic: no parent may survive without
@@ -158,6 +185,30 @@ describe('store (AppStateProvider)', () => {
     expect(api.transactions).toHaveLength(startLen)
     // The parent was deleted so no share-less transaction remains.
     expect(h.mock!.callsFor('transactions').some((c) => c.op === 'delete')).toBe(true)
+  })
+
+  it('addTransaction keeps the row + flags an error when the shares write AND the rollback delete both fail (B7)', async () => {
+    // Double failure: the transaction_shares insert fails AND the compensating
+    // parent delete also fails, so the parent survives in the DB with no shares.
+    // The app must NOT silently drop it from local state as if the rollback
+    // succeeded (that hides an orphaned "creator owns all" row) — it keeps the
+    // row visible and surfaces the error (spec 023 B7).
+    h.mock = makeSupabaseMock({
+      ...dataset(),
+      insertErrors: { transaction_shares: 'shares RLS denied' },
+      deleteErrors: { transactions: 'delete blocked' },
+    })
+    await renderStore()
+    const startLen = api.transactions.length
+
+    const tx = makeTx({ id: 'tx-orphan', merchant: 'Bistro', amount_cents: 1000, owner_ids: ['u-me', 'u-jordan'], household_id: 'hh-1' })
+    await act(async () => { api.addTransaction(tx) })
+
+    await waitFor(() => expect(api.error).not.toBeNull())
+    // Not silently dropped — the failed rollback leaves the row flagged, not
+    // presented as a clean revert.
+    expect(api.transactions.find((t) => t.id === 'tx-orphan')).toBeDefined()
+    expect(api.transactions).toHaveLength(startLen + 1)
   })
 
   it('spentBy returns each person\'s exact cents share, reconciling to the total', async () => {

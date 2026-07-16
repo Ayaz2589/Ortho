@@ -1,4 +1,5 @@
 import type { Transaction } from './types'
+import { isTransfer, transferParties } from './transaction'
 
 /**
  * Net cents owed between two household members, from the VIEWER's perspective.
@@ -27,9 +28,8 @@ export function balanceBetween(
       if (!payer) continue
       if (payer === viewer) net += t.shares[other] ?? 0
       else if (payer === other) net -= t.shares[viewer] ?? 0
-    } else if (t.kind === 'transfer') {
-      const from = t.paid_by
-      const to = t.owner_ids[0]
+    } else if (isTransfer(t)) {
+      const { from, to } = transferParties(t)
       if (!from || !to) continue
       if (from === other && to === viewer) net -= t.amount_cents
       else if (from === viewer && to === other) net += t.amount_cents

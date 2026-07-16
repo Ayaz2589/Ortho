@@ -1,0 +1,194 @@
+{
+  "routes": [
+    {
+      "route": "/housing",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "07yun4_d77iat.js",
+        "0cz1d0mv5g_q7.js",
+        "0uefab-xpqlc1.js",
+        "1-8s9_t85wwr4.js",
+        "1fgab2d20rev5.js",
+        "27jktro2p5rq9.js",
+        "2f64pc7_tx1b1.js",
+        "2ml-9-ud9f7jd.js",
+        "2nykiepra7i1k.js",
+        "310vm2bl3xxpt.js",
+        "347yyu_6jpsq5.js",
+        "3m1u3igp673z8.js",
+        "turbopack-07aulrtvt7ejc.js"
+      ],
+      "rawBytes": 1463044,
+      "gzipBytes": 423862
+    },
+    {
+      "route": "/dashboard",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "06nk--u5-459t.js",
+        "07yun4_d77iat.js",
+        "0cz1d0mv5g_q7.js",
+        "0uefab-xpqlc1.js",
+        "0zcaq48ugw6e7.js",
+        "1-8s9_t85wwr4.js",
+        "27jktro2p5rq9.js",
+        "2ml-9-ud9f7jd.js",
+        "2nykiepra7i1k.js",
+        "310vm2bl3xxpt.js",
+        "3m1u3igp673z8.js",
+        "3wbz4cqayl-73.js",
+        "turbopack-07aulrtvt7ejc.js"
+      ],
+      "rawBytes": 1456843,
+      "gzipBytes": 423512
+    },
+    {
+      "route": "/transactions",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "07yun4_d77iat.js",
+        "0cz1d0mv5g_q7.js",
+        "0uefab-xpqlc1.js",
+        "1-8s9_t85wwr4.js",
+        "27jktro2p5rq9.js",
+        "2ml-9-ud9f7jd.js",
+        "2nykiepra7i1k.js",
+        "310vm2bl3xxpt.js",
+        "39jrmvqiheron.js",
+        "3hpt--441p5s2.js",
+        "3m1u3igp673z8.js",
+        "turbopack-07aulrtvt7ejc.js"
+      ],
+      "rawBytes": 1164507,
+      "gzipBytes": 337319
+    },
+    {
+      "route": "/settings",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "07yun4_d77iat.js",
+        "0cz1d0mv5g_q7.js",
+        "0uefab-xpqlc1.js",
+        "1-8s9_t85wwr4.js",
+        "1ewqze91wnw6o.js",
+        "27jktro2p5rq9.js",
+        "2ml-9-ud9f7jd.js",
+        "2nykiepra7i1k.js",
+        "310vm2bl3xxpt.js",
+        "3m1u3igp673z8.js",
+        "turbopack-07aulrtvt7ejc.js"
+      ],
+      "rawBytes": 1095050,
+      "gzipBytes": 317153
+    },
+    {
+      "route": "/settings/household",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "07yun4_d77iat.js",
+        "0cz1d0mv5g_q7.js",
+        "0gskqsgdklcks.js",
+        "0uefab-xpqlc1.js",
+        "1-8s9_t85wwr4.js",
+        "27jktro2p5rq9.js",
+        "2ml-9-ud9f7jd.js",
+        "2nykiepra7i1k.js",
+        "310vm2bl3xxpt.js",
+        "3m1u3igp673z8.js",
+        "turbopack-07aulrtvt7ejc.js"
+      ],
+      "rawBytes": 1093695,
+      "gzipBytes": 316114
+    },
+    {
+      "route": "/budgets",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "07yun4_d77iat.js",
+        "0cz1d0mv5g_q7.js",
+        "0uefab-xpqlc1.js",
+        "1-8s9_t85wwr4.js",
+        "27jktro2p5rq9.js",
+        "2ml-9-ud9f7jd.js",
+        "2nykiepra7i1k.js",
+        "310vm2bl3xxpt.js",
+        "3m1u3igp673z8.js",
+        "3tvkjg1u3tgee.js",
+        "turbopack-07aulrtvt7ejc.js"
+      ],
+      "rawBytes": 1086318,
+      "gzipBytes": 314889
+    },
+    {
+      "route": "/sign-in",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "07yun4_d77iat.js",
+        "0cz1d0mv5g_q7.js",
+        "0e7x-z2yuxbqs.js",
+        "0uefab-xpqlc1.js",
+        "1-8s9_t85wwr4.js",
+        "1zc19dil174ai.js",
+        "27jktro2p5rq9.js",
+        "2nykiepra7i1k.js",
+        "310vm2bl3xxpt.js",
+        "turbopack-07aulrtvt7ejc.js"
+      ],
+      "rawBytes": 1059699,
+      "gzipBytes": 305330
+    },
+    {
+      "route": "/",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "07yun4_d77iat.js",
+        "0cz1d0mv5g_q7.js",
+        "0uefab-xpqlc1.js",
+        "1-8s9_t85wwr4.js",
+        "1nhs7df5dplkz.js",
+        "27jktro2p5rq9.js",
+        "2nykiepra7i1k.js",
+        "310vm2bl3xxpt.js",
+        "turbopack-07aulrtvt7ejc.js"
+      ],
+      "rawBytes": 627163,
+      "gzipBytes": 186674
+    },
+    {
+      "route": "/404",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "07yun4_d77iat.js",
+        "0cz1d0mv5g_q7.js",
+        "0uefab-xpqlc1.js",
+        "1-8s9_t85wwr4.js",
+        "27jktro2p5rq9.js",
+        "2nykiepra7i1k.js",
+        "310vm2bl3xxpt.js",
+        "turbopack-07aulrtvt7ejc.js"
+      ],
+      "rawBytes": 626840,
+      "gzipBytes": 186409
+    },
+    {
+      "route": "/_not-found",
+      "chunks": [
+        "05-c3ty_6dwfk.js",
+        "07yun4_d77iat.js",
+        "0cz1d0mv5g_q7.js",
+        "0uefab-xpqlc1.js",
+        "1-8s9_t85wwr4.js",
+        "27jktro2p5rq9.js",
+        "2nykiepra7i1k.js",
+        "310vm2bl3xxpt.js",
+        "turbopack-07aulrtvt7ejc.js"
+      ],
+      "rawBytes": 626840,
+      "gzipBytes": 186409
+    }
+  ],
+  "initialLoadUnionRawBytes": 2432894,
+  "initialLoadUnionGzipBytes": 702165,
+  "totalRawBytes": 2446404,
+  "chunkCount": 32
+}

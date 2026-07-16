@@ -19,7 +19,11 @@ export function TabBar() {
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-30 flex justify-center border-t border-hairline backdrop-blur-xl sm:hidden"
-      style={{ background: 'color-mix(in srgb, var(--surface) 85%, transparent)' }}
+      style={{
+        background: 'color-mix(in srgb, var(--surface) 85%, transparent)',
+        // spec 021: clears the home indicator on the Capacitor iOS shell (0 elsewhere).
+        paddingBottom: 'var(--safe-bottom)',
+      }}
     >
       <div className="flex w-full max-w-lg items-stretch justify-around">
         {TABS.map((tab) => {

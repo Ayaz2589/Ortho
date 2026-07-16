@@ -165,6 +165,45 @@ body {
   font-synthesis: none;
 }
 
+/* ---- spec 021: native-feel (Capacitor iOS shell) ----
+   env(safe-area-inset-*) resolves to 0 on any context without a notch/home
+   indicator (desktop web, older devices), so these are safe unconditionally —
+   no breakpoint gating needed. Paired with capacitor.config.ts's
+   `ios.contentInset: 'never'` (the WebView must not ALSO inset itself) and
+   app/layout.tsx's `viewport-fit=cover`. */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* Disable iOS's Copy/Look Up/Share long-press callout and text selection on the
+   NATIVE app shell only (`html.native`, set by the boot script when Capacitor is
+   present) — the browser build keeps normal selection so amounts and merchant
+   names stay copyable (spec 023 B8). Re-enabled on inputs/textareas and genuinely
+   copyable content (transaction IDs, addresses) via .ortho-selectable. */
+html.native {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+html.native input,
+html.native textarea,
+html.native .ortho-selectable {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Every tappable primitive gets this — removes the legacy double-tap-zoom
+   disambiguation delay so taps feel immediate, a documented WKWebView gotcha. */
+a,
+button,
+[role='button'] {
+  touch-action: manipulation;
+}
+
 /* ---- Desktop interaction states (tokens only) ---- */
 
 /* Visible keyboard focus ring — sand accent, per the design system. */

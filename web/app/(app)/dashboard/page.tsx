@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { PageHeader } from '@/components/ui'
 import { useApp } from '@/lib/store'
 import { useIsExpanded } from '@/lib/useMediaQuery'
@@ -14,7 +15,15 @@ import { PerOwnerBreakdownCard } from '@/components/dashboard/PerOwnerBreakdownC
 import { TopMerchantsCard } from '@/components/dashboard/TopMerchantsCard'
 import { HousingSnapshotCard } from '@/components/dashboard/HousingSnapshotCard'
 import { DailySpendTrendCard } from '@/components/dashboard/DailySpendTrendCard'
-import { DashboardDesktop } from '@/components/web/DashboardDesktop'
+
+// Deferred so a mobile/iOS session never downloads the desktop composition
+// (spec 022, US3). The synchronous useIsExpanded() gate below still selects the
+// branch before paint (no wrong-layout flash); the desktop chunk loads only when
+// isExpanded is true.
+const DashboardDesktop = dynamic(
+  () => import('@/components/web/DashboardDesktop').then((m) => m.DashboardDesktop),
+  { ssr: false, loading: () => null }
+)
 
 export default function DashboardPage() {
   const { t } = useApp()

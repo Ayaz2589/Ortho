@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { ChevronDown, SlidersHorizontal } from 'lucide-react'
-import { useApp } from '@/lib/store'
-import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expenseTotal, startOfMonth } from '@/lib/format'
+import { useApp, useAppServices } from '@/lib/store'
+import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expenseTotal } from '@/lib/format'
+import { useMonthAccordion } from '@/lib/useMonthAccordion'
+import { transferParties } from '@/lib/transaction'
 import type { Transaction } from '@/lib/types'
 import { Avatar, StackedAvatars } from '@/components/ui'
 import { TransactionDetailBody } from '@/components/transactions/TransactionDetailBody'
@@ -90,7 +92,7 @@ function TxDetailContent({
   )
 }
 
-function TxRow({
+function TxRowImpl({
   tx,
   selected,
   onClick,
@@ -101,13 +103,14 @@ function TxRow({
   onClick: () => void
   onCopy: () => void
 }) {
-  const { formatMoney, resolveUser, t } = useApp()
+  const { formatMoney, resolveUser, t } = useAppServices()
   const isIncome = tx.kind === 'income'
   const isTransfer = tx.kind === 'transfer'
   const ownerUsers = tx.owner_ids.map(resolveUser)
   const single = ownerUsers.length === 1 ? ownerUsers[0] : null
+  const parties = transferParties(tx)
   const title = isTransfer
-    ? `${tx.paid_by ? resolveUser(tx.paid_by).name : '—'} → ${tx.owner_ids[0] ? resolveUser(tx.owner_ids[0]).name : '—'}`
+    ? `${parties.from ? resolveUser(parties.from).name : '—'} → ${parties.to ? resolveUser(parties.to).name : '—'}`
     : tx.merchant
   return (
     <div className="ow-row-wrap cv-row">
@@ -164,6 +167,14 @@ function TxRow({
     </div>
   )
 }
+
+/** Memoized on the data props only (`tx` identity + `selected`) — the row reads
+ *  the stable services context and its callbacks are pure functions of `tx` and
+ *  stable setters, so an unrelated ledger mutation skips this row (US6/P4). */
+const TxRow = memo(
+  TxRowImpl,
+  (a, b) => a.tx === b.tx && a.selected === b.selected
+)
 
 export function TransactionsDesktop() {
   const { transactions, formatMoney, deleteTransaction, locale, t } = useApp()
@@ -247,34 +258,15 @@ export function TransactionsDesktop() {
   const selectRow = (id: string) => {
     setAddOpen(false)
     setEditing(false)
-    setSelectedId(id === selectedId ? null : id)
+    // Functional toggle: a memoized row that skipped a re-render keeps an older
+    // onClick closure, so resolve against the latest selection, not a captured one.
+    setSelectedId((cur) => (id === cur ? null : id))
   }
 
   const months = useMemo(() => groupDaysByMonth(groupByDay(f.filtered)), [f.filtered])
   const noMatches = transactions.length > 0 && f.filtered.length === 0
 
-  // Collapse every month by default except one: the current month, or — if it
-  // has no transactions — the most recent month that does. Any active filter
-  // expands all months so matches aren't hidden inside a collapsed section.
-  const currentMonthKey = useMemo(() => startOfMonth(new Date()).getTime(), [])
-  const defaultOpenKey = useMemo(() => {
-    if (months.some((m) => m.month.getTime() === currentMonthKey)) return currentMonthKey
-    return months[0]?.month.getTime() ?? null
-  }, [months, currentMonthKey])
-
-  // `null` = untouched, follow the default; once the user toggles we track an
-  // explicit set so the default stops overriding their choices.
-  const [openMonths, setOpenMonths] = useState<Set<number> | null>(null)
-  const isMonthOpen = (key: number) =>
-    f.count > 0 || (openMonths === null ? key === defaultOpenKey : openMonths.has(key))
-  const toggleMonth = (key: number) =>
-    setOpenMonths((prev) => {
-      const base = prev ?? (defaultOpenKey !== null ? new Set([defaultOpenKey]) : new Set<number>())
-      const next = new Set(base)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
+  const { isMonthOpen, toggleMonth } = useMonthAccordion(months, f.count)
 
   return (
     <div

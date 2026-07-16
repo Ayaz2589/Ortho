@@ -1,3 +1,6 @@
+import { Capacitor } from '@capacitor/core'
+import { StatusBar, Style } from '@capacitor/status-bar'
+
 export type Appearance = 'system' | 'light' | 'dark'
 
 /**
@@ -68,6 +71,21 @@ export const THEME_VARS: Record<'light' | 'dark', Record<string, string>> = {
 }
 
 /**
+ * spec 021: drive the Capacitor status bar's text style from the SAME
+ * handler that flips the CSS tokens (research-report-full.md §7) — not just
+ * at cold launch, so toggling appearance in Settings updates it live too.
+ * `overlaysWebView: true` (capacitor.config.ts) means only the text style
+ * matters; the status bar background shows whatever the app background is.
+ * Style.Dark = light text (for a dark app background); Style.Light = dark
+ * text (for a light app background) — inverted from what the name suggests.
+ * No-op on non-native platforms.
+ */
+function syncStatusBar(effective: 'light' | 'dark') {
+  if (!Capacitor.isNativePlatform()) return
+  void StatusBar.setStyle({ style: effective === 'dark' ? Style.Dark : Style.Light })
+}
+
+/**
  * Apply the chosen appearance to <html>: forced light/dark (inline vars +
  * `data-appearance` attribute for component-level rules), or OS default
  * (clear both, hand back to the media query).
@@ -80,12 +98,16 @@ export function applyAppearance(mode: Appearance) {
   if (mode === 'system') {
     root.removeAttribute('data-appearance')
     root.style.colorScheme = 'light dark'
+    const prefersDark =
+      typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
+    syncStatusBar(prefersDark ? 'dark' : 'light')
     return
   }
   root.setAttribute('data-appearance', mode)
   root.style.colorScheme = mode
   const vars = THEME_VARS[mode]
   for (const key in vars) root.style.setProperty(key, vars[key])
+  syncStatusBar(mode)
 }
 
 export function readAppearance(): Appearance {

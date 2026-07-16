@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { MoreHorizontal, Copy, Trash2 } from 'lucide-react'
-import { useApp } from '@/lib/store'
+import { useAppServices } from '@/lib/store'
+import { transferParties } from '@/lib/transaction'
 import { categoryMeta } from '@/lib/categories'
 import { Avatar, StackedAvatars } from '@/components/ui'
 import type { Transaction } from '@/lib/types'
@@ -13,7 +14,7 @@ import type { Transaction } from '@/lib/types'
  * amount on the right. A trailing context menu (revealed on hover) offers
  * Copy + Delete. Clicking the row body opens the detail sheet.
  */
-export function TransactionRow({
+function TransactionRowImpl({
   tx,
   onOpen,
   onCopy,
@@ -26,7 +27,7 @@ export function TransactionRow({
   onDelete: () => void
   selected?: boolean
 }) {
-  const { formatMoney, resolveUser, t } = useApp()
+  const { formatMoney, resolveUser, t } = useAppServices()
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const closeMenu = () => {
@@ -39,8 +40,9 @@ export function TransactionRow({
   const ownerLabel = ownerUsers.map((u) => u.name).join(', ')
   const isIncome = tx.kind === 'income'
   const isTransfer = tx.kind === 'transfer'
+  const parties = transferParties(tx)
   const transferTitle = isTransfer
-    ? `${tx.paid_by ? resolveUser(tx.paid_by).name : '—'} → ${tx.owner_ids[0] ? resolveUser(tx.owner_ids[0]).name : '—'}`
+    ? `${parties.from ? resolveUser(parties.from).name : '—'} → ${parties.to ? resolveUser(parties.to).name : '—'}`
     : null
 
   return (
@@ -169,3 +171,17 @@ export function TransactionRow({
     </div>
   )
 }
+
+/**
+ * Memoized on the data props only (`tx` identity + `selected`). The callbacks
+ * (`onOpen`/`onCopy`/`onDelete`) are recreated on every parent render but are
+ * pure functions of `tx` (compared here) and stable store setters, so ignoring
+ * their identity churn is safe — and lets an unrelated mutation (e.g. adding a
+ * different transaction) skip re-rendering this row (US6/P4, spec 023). The row
+ * reads only the stable services context (`useAppServices`), so an unrelated
+ * data change doesn't re-render it through context either.
+ */
+export const TransactionRow = memo(
+  TransactionRowImpl,
+  (a, b) => a.tx === b.tx && a.selected === b.selected
+)

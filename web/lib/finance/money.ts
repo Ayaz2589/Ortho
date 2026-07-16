@@ -46,6 +46,27 @@ export function toDisplayAmount(
  * @param leadingPlus - Whether to prefix positive values with '+' (default: false)
  * @param locale - BCP-47 locale driving symbol placement / grouping / digits (default: 'en-US')
  */
+// Constructing an Intl.NumberFormat is one of the heaviest routine JS ops, and
+// formatMoney runs per ledger row (hundreds per render). Cache one formatter per
+// (locale, currency code, fractionDigits) tuple — the only inputs that affect
+// output — so the result is byte-identical while the formatter is built once
+// (spec 023 P2).
+const currencyFormatters = new Map<string, Intl.NumberFormat>()
+function currencyFormatter(locale: string, code: string, fractionDigits: number): Intl.NumberFormat {
+  const key = `${locale}|${code}|${fractionDigits}`
+  let fmt = currencyFormatters.get(key)
+  if (!fmt) {
+    fmt = new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: code,
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    })
+    currencyFormatters.set(key, fmt)
+  }
+  return fmt
+}
+
 export function formatMoney(
   cents: number,
   currency: CurrencyKey = 'usd',
@@ -57,12 +78,7 @@ export function formatMoney(
   // USD-cents storage invariant: always divide by 100, then apply the FX rate.
   const amount = (cents / 100) * rate
 
-  const formatted = new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: config.code,
-    minimumFractionDigits: config.fractionDigits,
-    maximumFractionDigits: config.fractionDigits,
-  }).format(Math.abs(amount))
+  const formatted = currencyFormatter(locale, config.code, config.fractionDigits).format(Math.abs(amount))
 
   // Unicode minus (U+2212) for shown negatives, per the constitution's money rules.
   const sign = amount < 0 ? '−' : leadingPlus && amount > 0 ? '+' : ''

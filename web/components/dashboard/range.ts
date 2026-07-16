@@ -130,6 +130,34 @@ export function monthReferenceDate(yyyymm: string): Date {
 }
 
 /**
+ * Reference date for the budget/insight engines when a specific month is
+ * selected: `now` when `yyyymm` is the current month (real elapsed time),
+ * otherwise the month's LAST day at noon (fully elapsed). Never the mid-month
+ * `monthReferenceDate` heuristic — that reported "~14 days left" for a
+ * long-finished month and, pinning `monthProgress` at ~0.48, permanently
+ * suppressed the "under budget" card (whose rule needs `monthProgress >= 0.7`).
+ * (spec 023 B2). Future months — not reachable from the month picker, which only
+ * lists months with data — fall through to the fully-elapsed branch.
+ *
+ * The reference is built on the LOCAL calendar (not a noon-UTC instant), because
+ * `insights.ts` derives the month entirely from LOCAL getters
+ * (`now.getFullYear()/getMonth()/getDate()`). A noon-UTC last-day instant reads
+ * as the 1st of the NEXT month for a viewer at UTC+12 or further east (NZ/Fiji),
+ * which would re-scope the whole month to the wrong (next, empty) window and
+ * re-suppress the under-budget card. Local noon on the last day lands on the
+ * selected month in every timezone (spec 023 review).
+ */
+export function monthInsightReference(yyyymm: string, now: Date = new Date()): Date {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(yyyymm)) {
+    throw new Error(`INVALID_MONTH: ${JSON.stringify(yyyymm)}`)
+  }
+  const [y, m] = yyyymm.split('-').map(Number)
+  if (now.getFullYear() === y && now.getMonth() + 1 === m) return now
+  const lastDay = new Date(y, m, 0).getDate()
+  return new Date(y, m - 1, lastDay, 12, 0, 0)
+}
+
+/**
  * Step to the chronologically adjacent month within `months` (which is
  * newest-first), or `null` at the data edge. `'prev'` = older, `'next'` = newer.
  */

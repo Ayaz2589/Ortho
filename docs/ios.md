@@ -1,8 +1,24 @@
-# iOS App (`iOS/`)
+# iOS App (`iOS/`) — FROZEN, historical reference
 
-## 1. Purpose
+> **spec 021 (2026-07-09): `iOS/Ortho-iOS/` is retired.** It stays in the repository, unmodified,
+> as a historical reference and rollback path — it receives **no new feature work**, is governed by
+> neither the current design system nor the current testing discipline
+> (`.specify/memory/constitution.md` v2.0.0 explicitly excludes it), and its CI
+> (`.github/workflows/ios-ci.yml`) is manual-trigger-only, build-only. **iOS ships going forward
+> from the web/TypeScript codebase wrapped natively via Capacitor** — see `./web.md` for the live
+> iOS delivery mechanism (`web/ios/App/`) and the custom Scan plugin.
+>
+> **Read this document when:** you're doing archaeology on the frozen app (an emergency rollback,
+> or understanding a UX/product decision this app pioneered), or **porting the original Swift
+> source of the on-device scan pipeline** (`Services/Scan/*.swift`,
+> `Features/Transactions/Scan/*.swift`) — the Capacitor Scan plugin
+> (`web/ios/App/App/Plugins/Scan/`) is a port of exactly the code documented below. Everything else
+> in this file describes a state of the product that is no longer current; do not use it to
+> understand how Ortho works today.
 
-`iOS/` contains **Ortho-iOS**, the canonical SwiftUI client of Ortho — a calm, money-first household budgeting app for two people sharing a household. The iOS app defines the product; the web app (`web/`) is the same product re-expressed for desktop (see `./web.md`). Both clients talk to the **same Supabase backend** (`supabase/`, see `./supabase.md`) and keep their pure finance logic in lockstep via shared golden test vectors in `shared/test-vectors/` (see `./shared.md`).
+## 1. Purpose (historical)
+
+`iOS/` contains **Ortho-iOS**, the frozen SwiftUI client of Ortho — a calm, money-first household budgeting app for two people sharing a household. It *was* the canonical client until spec 021; the web app (`web/`) is now the sole canonical implementation, shipped to iOS via a Capacitor shell (see `./web.md`). Both this frozen app and the live web app talk to the **same Supabase backend** (`supabase/`, see `./supabase.md`); the golden-vector system described throughout this document (`shared/test-vectors/` — see `./shared.md`) locked this app's Swift mirrors against the TS originals while both were live and is now reframed as a web-only regression suite (see root `PARITY.md`).
 
 Four destinations: **Dashboard** (month-scoped widgets + insights + budgets), **Transactions** (collapsible month sections over day-grouped activity, with splits, filters, settle-up), **Housing** (properties: primary home / multifamily / rental with mortgage + lease math), **Settings** (household people, cards, budgets, currency, language, appearance, sign-out).
 
@@ -126,17 +142,15 @@ A **Feature flags** section in `SettingsView` exposes two toggles — **Use test
 - **Seeding + auth:** `Ortho_iOSApp.useSeededData` = `isUIDemo || FeatureFlags.effectiveUseTestData()` (bypass implies test data). When true it constructs `AppState(testDataEnabled: true)` (sample-seeded), renders `RootTabView` directly, and **skips `observeAuthChanges()`** — no auth, no server traffic. Flags apply at launch (relaunch to apply, like `-uiDemo`).
 - **Isolation:** `AppState.testDataEnabled` guards the network `Task` in *every* optimistic mutator and early-returns `loadAllFromServer`, so test-mode reads/writes stay local (this also fixes the old `-uiDemo` "adds a row that deletes itself" bug). The refreshed sample dataset (`Person.sample`, modernized `Transaction.sample` with `paidBy` + a `.transfer` + a ~3-month span, `Budget.sample`, `RentalPayment.sample` + a rental `Property.sample`) is Person-keyed so balances/splits resolve. Covered by `Ortho-iOSTests/FeatureFlagsTests.swift`. Outside the golden-vector harness (PARITY.md).
 
-### Subscription gate (spec 018)
+### Subscription gate (spec 018) — not in this app
 
-Structure per `specs/018-subscription-system/plan.md`; verify against the source once the iOS batch lands via CI.
-
-- **`Shared/EntitlementLogic.swift`** — the hand-mirrored Swift twin of `services/billing/src/derive.ts` (web copy: `web/lib/entitlements.ts`): `deriveGateState(row, now)` → `admin | trialing | active | grace | lapsed` with `LEEWAY_HOURS = 48` / `DUNNING_GRACE_DAYS = 14`. Locked by `Ortho-iOSTests/EntitlementLogicTests.swift`, which embeds the **identical literal vectors V01–V19 + sha256 digest** from `specs/018-subscription-system/contracts/entitlement-state.md` — amend the contract before touching semantics. Deliberately *not* a golden vector (no money/date engine).
-- **`Services/EntitlementsAPI.swift`** — calls the `ensure_entitlement()` RPC (creates the 31-day trial row exactly once; doubles as the fetch), selects the user's own `entitlements` row, and invokes the `billing-checkout`/`billing-portal`/`billing-plans` edge functions (the user JWT rides along; clients never write entitlement state).
-- **`AppState`** — holds `entitlement` + the derived gate fact + `refreshEntitlement()`; `ensure_entitlement` runs during bootstrap in parallel with `loadAllFromServer()`. An entitlement-load failure is a **bootstrap failure** (→ `BootstrapRecoveryView`), never the paywall.
-- **Root switch** (`Ortho_iOSApp.swift`): a lapsed gate renders a full-screen, non-dismissable `PaywallView` (`Features/Paywall/`, the `BootstrapRecoveryView` shape) — no tab or deep path bypasses it. Seeded modes (`-uiDemo`, test-data flags) never gate.
-- **`PaywallView`** — plan rows priced live from `billing-plans` (operator's Stripe prices only; calm unavailable state on failure), "Check again" (refetch + re-derive), quiet sign-out. Choosing a plan **opens the same Stripe web checkout externally** (`UIApplication.open`; US-storefront link-out rules) — the app never collects payment and ships **no StoreKit purchase flow in v1**; the provider-adapter seam (normalized events + the `source` column) keeps StoreKit 2 addable later without changing the source of truth.
-- **Settings** — `SubscriptionSectionView` after Cards: same per-state copy as web (free-month days left, active plan + renewal, billing-issue notice, ended, admin "no subscription needed"), Manage → external Customer Portal. Dynamic status text uses `accessibilityValue`.
-- **`Localizable.xcstrings`** — +27 keys ×6 locales; shared-key identity with the web catalogs stays enforced by the web catalog-parity lock.
+Spec 018's native Swift lift (`Shared/EntitlementLogic.swift`, `Services/EntitlementsAPI.swift`,
+`Features/Paywall/PaywallView.swift`, `SubscriptionSectionView`, +27 xcstrings keys) was written
+against this app pre-021 but **dropped at merge** — the app was already frozen, and the shipped iOS
+client (the Capacitor shell) gets the entire subscription feature from the web bundle
+(`web/lib/entitlements.ts`, `components/Paywall.tsx`, `components/settings/SubscriptionSection.tsx`
+— see `./web.md`). The frozen app therefore predates spec 018 entirely: run it against the live
+backend and it will neither gate nor render subscription UI.
 
 ### Data layer (Supabase)
 
@@ -325,4 +339,4 @@ There are **no Makefile targets for iOS** — the root `Makefile` only wraps the
 - **`./shared.md`** — `shared/test-vectors/*.json`, the parity contract both test suites assert.
 - **`./makefile.md`** — CLI import/CRUD tooling (web-side only; shares the same tables but not the vector harness).
 - Repo root `PARITY.md` — the audited capability-by-capability parity matrix and known divergences.
-- `specs/` mapping: `002` (golden-vector approach) · `006` → `TransactionFilters.swift` · `007` → `TransactionSplits.swift` · `008`/`009` (parity remediation: test target, vectors in bundle, auth/session fixes) · `010` (platform lock removed; concurrent sessions) · `011` → `DashboardRange.swift` + `MonthPicker.swift` · `012` → `Balances.swift`, `Transaction.paidBy`, the `transfer` kind, settle-up UI · `018` → `Shared/EntitlementLogic.swift`, `Services/EntitlementsAPI.swift`, `Features/Paywall/PaywallView.swift` (subscription gate). (`001`, `003`, `004`, `005` are web/CLI-only.)
+- `specs/` mapping: `002` (golden-vector approach) · `006` → `TransactionFilters.swift` · `007` → `TransactionSplits.swift` · `008`/`009` (parity remediation: test target, vectors in bundle, auth/session fixes) · `010` (platform lock removed; concurrent sessions) · `011` → `DashboardRange.swift` + `MonthPicker.swift` · `012` → `Balances.swift`, `Transaction.paidBy`, the `transfer` kind, settle-up UI · `018` (subscription gate) → web-only; the planned Swift lift was dropped at merge (see "Subscription gate" above). (`001`, `003`, `004`, `005` are web/CLI-only.)

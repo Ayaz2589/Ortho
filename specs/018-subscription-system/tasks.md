@@ -141,3 +141,20 @@ Numbering note: T041–T044 were reserved for the review pass; used as follows.
 - [x] T042 Review fix pass (web): paywall checkout-return + honest check-again, plans live region + payload validation, focus management, singular day, one-shot params, unparseable-expiry fail-open, harness live-RLS shapes, memory-client parity, +2 i18n keys ×5.
 - [x] T043 Review fix pass (iOS): microsecond timestamp parsing + tests, single-fire announcements, in-session entitlement refresh, honest check-again, singular day, comment/contract citations, +2 xcstrings keys.
 - [x] T044 Contracts/PARITY sync: stripe-events failure modes + API version binding + resolution order, entitlement-state unparseable rule, quickstart endpoint version pin, PARITY checkout-return divergence.
+
+## Merge-time addendum (2026-07-16, reconciliation onto post-021 main)
+
+- [x] T046 Reconcile the branch onto main (specs 019–023 landed since the fork; spec 021
+  retired the native SwiftUI app in favor of the Capacitor-wrapped web build). Resolved the
+  7 conflicts (shell `layout.tsx` paywall gate composed with the 021/023 splash + biometric-lock
+  shell; `store.tsx` entitlement state composed with the 023 store-context split; docs/PARITY
+  tails). **The entire native-Swift lift (T012, T016/T017, T028–T030, T032, the xcstrings half of
+  T033 — `EntitlementLogic.swift`, `EntitlementsAPI.swift`, `PaywallView.swift`,
+  `SubscriptionSectionView.swift`, `EntitlementGateTests`/`EntitlementLogicTests`, +27 xcstrings
+  keys) was DROPPED at merge**: the frozen app receives no feature work, and the shipped iOS
+  client (Capacitor shell) gets the whole feature from the web bundle. The entitlement
+  literal-vector lock is now two-way (`services/billing/src/derive.ts` ↔ `web/lib/entitlements.ts`);
+  vectors + digest unchanged. Checkout link-out on iOS needs no native code: Capacitor's
+  navigation policy opens any non-app-origin top-level navigation (the Stripe URL from
+  `window.location.assign`) in the external browser — verified against
+  `@capacitor/ios` `WebViewDelegationHandler.swift` at merge.

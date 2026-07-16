@@ -6,10 +6,8 @@ import type { Transaction } from '@/lib/types'
 import { WebModal } from './WebModal'
 import {
   useTxForm,
-  TxFormFields,
+  TxFormBody,
   TxCopyList,
-  CopyFromRecentButton,
-  SaveAndAddAnotherButton,
   type TransferPrefill,
 } from './TxForm'
 
@@ -65,11 +63,7 @@ export function TxModalWeb({
           onBack={() => setPicking(false)}
         />
       ) : (
-        <>
-          {allowCopy && <CopyFromRecentButton onClick={() => setPicking(true)} />}
-          <TxFormFields form={form} />
-          {!editing && <SaveAndAddAnotherButton form={form} />}
-        </>
+        <TxFormBody form={form} allowCopy={allowCopy} showAddAnother={!editing} onPick={() => setPicking(true)} />
       )}
     </WebModal>
   )
