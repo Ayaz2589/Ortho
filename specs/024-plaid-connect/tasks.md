@@ -20,10 +20,10 @@ it fail, then implement to green. Never regenerate a test to match code.
 
 **Purpose**: the new core package skeleton, deps, CI wiring — no behavior yet.
 
-- [ ] T001 Scaffold `services/aggregation/` mirroring `services/billing/`: `package.json` (name `@ortho/aggregation-core`, `vitest` devDep, scripts `test` + `sync:functions`), `tsconfig.json` (`lib: ["ES2022"]`, `types: []`), `tsconfig.tests.json`, `README.md` (extraction contract), `scripts/sync-to-functions.mjs` (byte-copy `src/` → `supabase/functions/_shared/aggregation/`), empty `src/index.ts`; `npm install` to create `package-lock.json`
-- [ ] T002 [P] Add `react-plaid-link@4.1.1` to `web/package.json` (`cd web && npm install react-plaid-link`)
-- [ ] T003 [P] Wire `services/aggregation` into CI in `.github/workflows/web-ci.yml`: replicate the billing steps (npm ci, `tsc --noEmit`, `tsc -p tsconfig.tests.json --noEmit`, `npm test`) for the new package
-- [ ] T004 Write the drift lock `services/aggregation/test/shared-sync.test.ts` (byte-identical file-set assertion vs `supabase/functions/_shared/aggregation/`, copied from billing's), watch it fail, then run `npm run sync:functions` to green it
+- [X] T001 Scaffold `services/aggregation/` mirroring `services/billing/`: `package.json` (name `@ortho/aggregation-core`, `vitest` devDep, scripts `test` + `sync:functions`), `tsconfig.json` (`lib: ["ES2022"]`, `types: []`), `tsconfig.tests.json`, `README.md` (extraction contract), `scripts/sync-to-functions.mjs` (byte-copy `src/` → `supabase/functions/_shared/aggregation/`), empty `src/index.ts`; `npm install` to create `package-lock.json`
+- [X] T002 [P] Add `react-plaid-link@4.1.1` to `web/package.json` (`cd web && npm install react-plaid-link`)
+- [X] T003 [P] Wire `services/aggregation` into CI in `.github/workflows/web-ci.yml`: replicate the billing steps (npm ci, `tsc --noEmit`, `tsc -p tsconfig.tests.json --noEmit`, `npm test`) for the new package
+- [X] T004 Write the drift lock `services/aggregation/test/shared-sync.test.ts` (byte-identical file-set assertion vs `supabase/functions/_shared/aggregation/`, copied from billing's), watch it fail, then run `npm run sync:functions` to green it
 
 **Checkpoint**: commit + push — `chore(024): scaffold services/aggregation package, CI wiring, react-plaid-link`
 
