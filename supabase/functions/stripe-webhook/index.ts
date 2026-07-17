@@ -8,6 +8,7 @@ import { applyBillingEvent } from '../_shared/billing/machine.ts'
 import type { EntitlementRow } from '../_shared/billing/normalize.ts'
 import { translateStripeEvent, type StripeEventLike } from '../_shared/billing/stripe.ts'
 import { json } from '../_shared/http.ts'
+import { optimisticWriteLanded, RECLAIMABLE_OUTCOMES } from './idempotency.ts'
 
 type DbEntitlement = {
   user_id: string
@@ -108,7 +109,7 @@ Deno.serve(async (req) => {
       .from('billing_events')
       .update({ outcome: 'received' })
       .eq('event_id', event.id)
-      .in('outcome', ['received', 'failed'])
+      .in('outcome', [...RECLAIMABLE_OUTCOMES])
       .select('id')
     if (reclaimError) return json(500, { error: 'event_log_write_failed' })
     if (!reclaimed || reclaimed.length === 0) {
@@ -217,7 +218,7 @@ Deno.serve(async (req) => {
           : update.eq('last_event_at', snapshotEventAt)
       const { data: updated, error: updateError } = await update.select('user_id')
       if (updateError) return await fail('entitlement_write_failed')
-      if (!updated || updated.length === 0) return await fail('entitlement_write_conflict')
+      if (!optimisticWriteLanded(updated?.length ?? 0)) return await fail('entitlement_write_conflict')
       return await finish('applied', userId)
     }
     const detail = outcome.kind === 'noop' ? `noop:${outcome.reason}` : outcome.kind

@@ -85,3 +85,29 @@ jobs:
             git diff --stat ../shared/test-vectors
             exit 1
           fi
+
+  # Edge functions run on Deno (not Node/tsc), so they were previously UNCHECKED
+  # by CI — a type error or a broken idempotency/compensation seam could merge
+  # silently. This job type-checks every function in the real Deno/jsr/npm context
+  # and runs the pure-logic unit tests (idempotency reclaim predicate, optimistic
+  # write conflict rule, plaid-exchange committed-but-response-lost recovery).
+  edge-functions:
+    name: Edge functions — Deno check & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: supabase/functions
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check every edge function
+        run: >
+          deno check
+          plaid-exchange/index.ts stripe-webhook/index.ts
+          plaid-link-token/index.ts plaid-disconnect/index.ts
+          billing-checkout/index.ts billing-portal/index.ts billing-plans/index.ts
+      - name: Test edge-function logic
+        run: deno test
