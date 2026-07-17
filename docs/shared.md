@@ -37,23 +37,29 @@ shared/
     ├── insights.json                # (918 ln) InsightEngine / lib/finance/insights.ts: snapshot +
     │                                #   pinned referenceDate → fired insights (id/severity/category/
     │                                #   magnitude_cents/preview_merchants)
-    ├── transaction-filters.json     # (1408 ln) filterTransactions / lib/transactionFilters.ts:
+    ├── transaction-filters.json     # (1500 ln) filterTransactions / lib/transactionFilters.ts:
     │                                #   query/categories/kind/sources/owners/date-window cases → expectedIds
     ├── transaction-splits.json      # (535 ln) computeShares/validateSplit/seedSplit/orderedOwnerIds
     │                                #   (lib/splits.ts): even/percent/value splits, leftover-cent placement,
     │                                #   save-gate validations, edit-seed round-trips, canonical owner ordering
     ├── currency.json                # (692 ln) toDisplayAmount/toUSDCents (lib/finance/money.ts +
     │                                #   lib/finance/currency.ts) across all 7 currencies at fallback rates
+    ├── currency-names.json          # (9 ln) CURRENCY_NAMES (lib/finance/currency.ts): per-currency
+    │                                #   display NAME keyed by code (spec 020)
+    ├── currency-symbols.json        # (9 ln) CURRENCY_SYMBOLS (lib/finance/currency.ts): per-currency
+    │                                #   SYMBOL, cny=CN¥, keyed by code (spec 020)
     ├── dashboard-month-scope.json   # (267 ln) availableMonths/availableRanges/monthReferenceDate/stepMonth
     │                                #   (components/dashboard/range.ts) — dashboard range + month picker logic
     ├── member-balance.json          # (352 ln) balanceBetween (lib/balances.ts): reimbursement/settle-up
     │                                #   net cents between two members, incl. transfer-kind reimbursements
-    └── housing-net-rental.json      # occupiedRentCents/netRentalCents (lib/finance/housing.ts):
-                                     #   occupied-only unit rent − mortgage payment; the single figure the
-                                     #   Dashboard summary and property-detail Net balance both show (spec 019)
+    ├── housing-net-rental.json      # (113 ln) occupiedRentCents/netRentalCents (lib/finance/housing.ts):
+    │                                #   occupied-only unit rent − mortgage payment; the single figure the
+    │                                #   Dashboard summary and property-detail Net balance both show (spec 019)
+    └── lease.json                   # (122 ln) rentDueDay/daysUntilNextRent/daysUntilEnd/isRenewalSoon
+                                     #   (components/housing/lease.ts) with an injected asOf (spec 020)
 ```
 
-Note: `shared/test-vectors/README.md` documents only 4 of the 8 files (mortgage, insights, filters, splits); `currency.json`, `dashboard-month-scope.json`, `member-balance.json`, and `housing-net-rental.json` were added later (features 008–019 era) and are documented in the generator source and `PARITY.md` instead.
+Note: `shared/test-vectors/README.md` now documents all eleven files (its "Files (11)" section, refreshed in feature 020), though it still frames them as a cross-language contract — read it alongside this doc's spec-021 banner. `gen-vectors.ts` and `PARITY.md` remain the most current per-case references.
 
 ## 4. Architecture — how the regression loop works
 
@@ -93,12 +99,12 @@ Key properties:
 Read in this order:
 
 1. `shared/test-vectors/README.md` — the contract, per-file schemas (for the original 4), timezone rules, regen and run instructions.
-2. `web/scripts/gen-vectors.ts` — the single generator; defines every case for all 8 files and is the de-facto schema documentation for the files the README omits. Heavily commented with the parity rationale (R1–R8 references) — still accurate as *rationale*, even though there's no second language left to compare against.
+2. `web/scripts/gen-vectors.ts` — the single generator; defines every case for all 11 files and is the de-facto schema documentation for any file the README under-documents. Heavily commented with the parity rationale (R1–R8 references) — still accurate as *rationale*, even though there's no second language left to compare against.
 3. `PARITY.md` (repo root) — the web-vs-CLI matrix mapping each capability → TS file → vector file; §"How parity is enforced" is the operational summary.
 4. `web/package.json` — `"gen:vectors": "tsx scripts/gen-vectors.ts"` and the Node engines constraint.
-5. Consumers (each mirrors one JSON): `web/test/mortgage.parity.test.ts`, `web/test/insights.parity.test.ts`, `web/test/transaction-filters.parity.test.ts`, `web/test/splits.parity.test.ts`, `web/test/currency.parity.test.ts`, `web/test/dashboard-month-scope.parity.test.ts`, `web/test/member-balance.parity.test.ts`, `web/test/housing-net-rental.parity.test.ts`.
-6. **Historical (frozen, not run in CI)**: `iOS/Ortho-iOSTests/MortgageParityTests.swift`, `InsightParityTests.swift`, `TransactionFilterParityTests.swift`, `TransactionSplitParityTests.swift`, `CurrencyParityTests.swift`, `DashboardScopeParityTests.swift`, `MemberBalanceParityTests.swift`, `HousingNetRentalParityTests.swift` — untouched, part of the frozen app.
-7. Vectored implementations: `web/lib/finance/mortgage.ts`, `web/lib/finance/insights.ts`, `web/lib/finance/money.ts`, `web/lib/finance/currency.ts`, `web/lib/transactionFilters.ts`, `web/lib/splits.ts`, `web/lib/balances.ts`, `web/components/dashboard/range.ts`, `web/lib/finance/housing.ts`. (The frozen app's Swift mirrors — `iOS/Ortho-iOS/Models/MortgageInfo.swift`, `Services/InsightEngine.swift`, etc. — are historical only.)
+5. Consumers (11 suites, each mirrors one JSON): `web/test/mortgage.parity.test.ts`, `web/test/insights.parity.test.ts`, `web/test/transaction-filters.parity.test.ts`, `web/test/splits.parity.test.ts`, `web/test/currency.parity.test.ts`, `web/test/currency-names.parity.test.ts`, `web/test/currency-symbols.parity.test.ts`, `web/test/dashboard-month-scope.parity.test.ts`, `web/test/member-balance.parity.test.ts`, `web/test/housing-net-rental.parity.test.ts`, `web/test/lease.parity.test.ts`.
+6. **Historical (frozen, not run in CI)**: `iOS/Ortho-iOSTests/MortgageParityTests.swift`, `InsightParityTests.swift`, `TransactionFilterParityTests.swift`, `TransactionSplitParityTests.swift`, `CurrencyParityTests.swift`, `CurrencyNameParityTests.swift`, `CurrencySymbolParityTests.swift`, `DashboardScopeParityTests.swift`, `MemberBalanceParityTests.swift`, `HousingNetRentalParityTests.swift`, `LeaseParityTests.swift` — untouched, part of the frozen app.
+7. Vectored implementations: `web/lib/finance/mortgage.ts`, `web/lib/finance/insights.ts`, `web/lib/finance/money.ts`, `web/lib/finance/currency.ts`, `web/lib/transactionFilters.ts`, `web/lib/splits.ts`, `web/lib/balances.ts`, `web/components/dashboard/range.ts`, `web/lib/finance/housing.ts`, `web/components/housing/lease.ts`. (The frozen app's Swift mirrors — `iOS/Ortho-iOS/Models/MortgageInfo.swift`, `Services/InsightEngine.swift`, etc. — are historical only.)
 8. `iOS/Ortho-iOS.xcodeproj/project.pbxproj` — where the eleven *existing* JSONs are referenced (`../shared/test-vectors/...`) and added to Copy Bundle Resources, as of when the app was frozen. Not touched going forward.
 
 ## 6. How to build / run / test
