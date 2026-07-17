@@ -93,6 +93,7 @@ Plaid access token — connect-only (no transaction sync yet). See `docs/supabas
 | [./ios.md](./ios.md) | …doing archaeology on the **frozen** native SwiftUI app (emergency rollback, or porting its original scan-pipeline Swift source into the Capacitor plugin). Not how iOS ships today. |
 | [./supabase.md](./supabase.md) | …changing the schema, enums, RLS policies, RPCs, or the billing/Plaid edge functions (`supabase/functions/`); understanding migrations, `config.toml`, or the local stack. |
 | [./shared.md](./shared.md) | …touching any regression-vectored finance logic: how the vectors are generated, asserted, and their determinism conventions. |
+| [./finance.md](./finance.md) | …working in the pure financial models themselves (`web/lib/finance/*`, `splits.ts`, `balances.ts`, `transactionFilters.ts`, dashboard range, lease): the USD-cents invariant, every calculation engine, rounding/timezone conventions, and how they're pinned. |
 | [./makefile.md](./makefile.md) | …importing bank statements or doing terminal transaction CRUD (`make ingest`, `tx-*`), or navigating the spec-kit / `.claude` tooling at the root. |
 | [./deploy.md](./deploy.md) | …shipping to TestFlight: the manual-trigger deploy workflow, the Apple/Supabase secrets it preflights, and the owner setup steps. (Currently documents the frozen app's deploy path; the Capacitor build's release pipeline is `web/capacitor.config.ts`'s `ios.buildOptions` + `npx cap build ios` — see `./web.md`.) |
 

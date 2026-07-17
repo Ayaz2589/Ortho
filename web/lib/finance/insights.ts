@@ -1,6 +1,7 @@
 import type { Transaction, Budget, Property, Insight, TransactionCategory } from '../types'
 import { CATEGORIES } from '../categories'
 import { monthlyPaymentCents } from './mortgage'
+import { INSIGHT_THRESHOLDS as T } from './insights-thresholds'
 
 // Insights mirror the iOS InsightEngine. Money is rendered in USD with 2
 // decimals here (the engine is currency-agnostic; display conversion happens
@@ -114,9 +115,9 @@ export function generateInsights(
   for (const c of monthByCat.keys()) {
     const current = monthByCat.get(c) ?? 0
     const prior = priorByCat.get(c) ?? 0
-    if (prior < 2000 || current < 2000) continue
+    if (prior < T.momMinCents || current < T.momMinCents) continue
     const delta = (current - prior) / prior
-    if (Math.abs(delta) < 0.25) continue
+    if (Math.abs(delta) < T.momDeltaFloor) continue
     const pct = Math.round(Math.abs(delta) * 100)
     const up = delta > 0
     out.push({
@@ -135,7 +136,7 @@ export function generateInsights(
     if (b.monthly_limit_cents <= 0) continue
     const spent = monthByCat.get(b.category) ?? 0
     const fraction = spent / b.monthly_limit_cents
-    if (fraction >= 1.0) {
+    if (fraction >= T.budgetOverFraction) {
       const over = spent - b.monthly_limit_cents
       out.push({
         id: `budget-over-${b.category}-${monthTag(now)}`,
@@ -146,7 +147,7 @@ export function generateInsights(
         category: b.category,
         magnitude_cents: over,
       })
-    } else if (fraction >= 0.85) {
+    } else if (fraction >= T.budgetNearFraction) {
       const remaining = b.monthly_limit_cents - spent
       out.push({
         id: `budget-near-${b.category}-${monthTag(now)}`,
@@ -157,7 +158,7 @@ export function generateInsights(
         category: b.category,
         magnitude_cents: spent,
       })
-    } else if (fraction <= 0.5 && monthProgress >= 0.7) {
+    } else if (fraction <= T.budgetUnderFraction && monthProgress >= T.budgetUnderProgress) {
       const remaining = b.monthly_limit_cents - spent
       out.push({
         id: `budget-under-${b.category}-${monthTag(now)}`,
@@ -187,7 +188,7 @@ export function generateInsights(
         category: null,
         magnitude_cents: -net,
       })
-    } else if (monthIncome > 0 && net / monthIncome >= 0.2) {
+    } else if (monthIncome > 0 && net / monthIncome >= T.savingsRateFloor) {
       const pct = Math.round((net / monthIncome) * 100)
       out.push({
         id: `cashflow-savings-${monthTag(now)}`,
@@ -203,7 +204,7 @@ export function generateInsights(
 
   // --- Rule 5: Recurring subscriptions (trailing 6 months) ---
   const sixMonthsAgo = new Date(now)
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - T.recurringWindowMonths)
   const trailing = transactions.filter(
     (t) => t.kind === 'expense' && new Date(t.date).getTime() >= sixMonthsAgo.getTime()
   )
@@ -216,7 +217,7 @@ export function generateInsights(
   }
   const recurring: { merchant: string; avg: number }[] = []
   for (const [, group] of byMerchant) {
-    if (group.length < 3) continue
+    if (group.length < T.recurringMinCount) continue
     const sorted = group
       .slice()
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
@@ -228,9 +229,9 @@ export function generateInsights(
           (1000 * 60 * 60 * 24)
       )
       gaps++
-      if (days >= 28 && days <= 35) monthlyHits++
+      if (days >= T.recurringCadenceMinDays && days <= T.recurringCadenceMaxDays) monthlyHits++
     }
-    if (gaps === 0 || monthlyHits / gaps < 0.8) continue
+    if (gaps === 0 || monthlyHits / gaps < T.recurringHitRatio) continue
     // Truncate toward zero to match iOS `Int64` integer division (InsightEngine.swift).
     // Display casing comes from the merchant's MOST RECENT transaction (iOS-canonical).
     recurring.push({
@@ -273,7 +274,7 @@ export function generateInsights(
   }
   const medians = new Map<TransactionCategory, number>()
   for (const [c, group] of trailingByCat) {
-    if (group.length < 5) continue
+    if (group.length < T.outlierMedianMinCount) continue
     const sorted = group.map((t) => t.amount_cents).sort((a, b) => a - b)
     medians.set(c, sorted[Math.floor(sorted.length / 2)])
   }
@@ -282,7 +283,7 @@ export function generateInsights(
     const median = medians.get(t.category)
     if (!median || median <= 0) continue
     const multiple = t.amount_cents / median
-    if (multiple < 2.0) continue
+    if (multiple < T.outlierMultiple) continue
     if (!outlier || t.amount_cents > outlier.tx.amount_cents) outlier = { tx: t, multiple }
   }
   if (outlier) {
@@ -294,7 +295,7 @@ export function generateInsights(
       id: `outlier-${tx.id}`,
       title: tr('Unusual {0} charge', tr(catLabel(tx.category))),
       body: tr('{0} at {1} on {2} — {3} the typical amount.', usd(tx.amount_cents), tx.merchant, when, `${multiple.toFixed(1)}×`),
-      severity: tx.amount_cents >= 50000 ? 'warning' : 'info',
+      severity: tx.amount_cents >= T.outlierWarnCents ? 'warning' : 'info',
       icon: 'sparkle',
       category: tx.category,
       magnitude_cents: tx.amount_cents,
@@ -303,9 +304,9 @@ export function generateInsights(
 
   // --- Rule 7: Daily trend (30 vs prior 30) ---
   const recent30Start = new Date(now)
-  recent30Start.setDate(recent30Start.getDate() - 30)
+  recent30Start.setDate(recent30Start.getDate() - T.trendWindowDays)
   const prior30Start = new Date(now)
-  prior30Start.setDate(prior30Start.getDate() - 60)
+  prior30Start.setDate(prior30Start.getDate() - 2 * T.trendWindowDays)
   const recent30 = sumCents(
     transactions.filter(
       (t) => t.kind === 'expense' && new Date(t.date).getTime() >= recent30Start.getTime()
@@ -317,9 +318,9 @@ export function generateInsights(
       return t.kind === 'expense' && ts >= prior30Start.getTime() && ts < recent30Start.getTime()
     })
   )
-  if (prior30 >= 10000) {
+  if (prior30 >= T.trendMinPriorCents) {
     const delta = (recent30 - prior30) / prior30
-    if (Math.abs(delta) >= 0.2) {
+    if (Math.abs(delta) >= T.trendDeltaFloor) {
       const pct = Math.round(Math.abs(delta) * 100)
       const up = delta > 0
       out.push({
@@ -345,10 +346,11 @@ export function generateInsights(
     if (payment > 0) {
       const ratio = payment / monthIncome
       const pct = Math.round(ratio * 100)
-      const severity = ratio < 0.28 ? 'positive' : ratio <= 0.35 ? 'info' : 'warning'
+      const severity =
+        ratio < T.mortgageComfortableRatio ? 'positive' : ratio <= T.mortgageHighRatio ? 'info' : 'warning'
       out.push({
         id: `mortgage-ratio-${monthTag(now)}`,
-        title: ratio > 0.35 ? tr('Mortgage at {0}% of income — high', pct) : tr('Mortgage at {0}% of income', pct),
+        title: ratio > T.mortgageHighRatio ? tr('Mortgage at {0}% of income — high', pct) : tr('Mortgage at {0}% of income', pct),
         body: tr('{0} P&I vs {1} income this month. Lenders typically target below 28%.', usd(payment), usd(monthIncome)),
         severity,
         icon: 'house',
