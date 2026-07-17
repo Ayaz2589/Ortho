@@ -35,3 +35,30 @@ export function decideCompletionAfterRpcError(recheck: SessionRecheck | null): C
   }
   return { outcome: 'compensate' }
 }
+
+// The three terminal actions the rpcError/ambiguous branch can take:
+//   'success'          — return the institution payload (200)
+//   'exchange_failed'  — commit CONFIRMED but the payload couldn't be built
+//                        (transient read blip); answer exchange_failed and leave
+//                        the link INTACT
+//   'compensate'       — commit unconfirmed; revoke the orphan Item + abandon
+export type PostCommitAction = 'success' | 'exchange_failed' | 'compensate'
+
+/**
+ * Fold the commit decision together with whether the institution payload could
+ * be built into the single terminal action for the recovery branch.
+ *
+ * The load-bearing rule: a CONFIRMED commit (decision 'success') must map to
+ * 'exchange_failed' — NEVER 'compensate' — when the payload read returns nothing.
+ * Compensating there would /item/remove the access token the RPC just stored and
+ * abandon a 'completed' session, resurrecting the exact live-link-destruction bug
+ * this recovery exists to prevent. Only an UNCONFIRMED commit ('compensate')
+ * revokes.
+ */
+export function postCommitAction(
+  decision: CompletionDecision,
+  payloadAvailable: boolean,
+): PostCommitAction {
+  if (decision.outcome === 'compensate') return 'compensate'
+  return payloadAvailable ? 'success' : 'exchange_failed'
+}

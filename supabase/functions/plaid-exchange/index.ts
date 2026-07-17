@@ -9,7 +9,7 @@
 // 'abandoned' so clients reset calmly, and answer exchange_failed.
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import { errorResponse, json, preflight, requiredEnv } from '../_shared/http.ts'
-import { decideCompletionAfterRpcError } from './completion.ts'
+import { decideCompletionAfterRpcError, postCommitAction } from './completion.ts'
 import {
   createPlaidClient,
   parseAccountsResponse,
@@ -255,11 +255,18 @@ Deno.serve(async (req) => {
       status: recheck?.status ?? null,
       institutionId: recheck?.institution_id ?? null,
     })
-    if (decision.outcome === 'success') {
-      const payload = await institutionPayload(service, decision.institutionId)
-      if (payload) return json(200, payload)
-    }
-    return await failTerminally()
+    // Build the payload only when the commit is confirmed, then let
+    // postCommitAction() pick the terminal action. A confirmed commit NEVER
+    // compensates — even when the payload read blips (null) — so failTerminally()
+    // can't revoke the token the RPC just stored (see completion.ts).
+    const payload =
+      decision.outcome === 'success'
+        ? await institutionPayload(service, decision.institutionId)
+        : null
+    const action = postCommitAction(decision, payload !== null)
+    if (action === 'success' && payload) return json(200, payload)
+    if (action === 'compensate') return await failTerminally()
+    return errorResponse('exchange_failed')
   }
 
   const payload = await institutionPayload(service, institutionId)
