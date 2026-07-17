@@ -168,6 +168,15 @@ A **Developer** section on the Settings page (`components/settings/flags-section
 - **Test infrastructure**: `test/helpers/supabase-mock.ts` gained a `functions.invoke` fake and RLS-faithful guards (client writes to `entitlements` rejected; `billing_events` invisible even to reads); `lib/testdata/memory-client.ts` resolves `ensure_entitlement` to a null row — null gate, no paywall — so test-data mode never gates and never talks to the live backend.
 - **i18n**: +29 keys in all five catalogs (27 initial + 2 from the T042 review pass). **Ops**: `scripts/ops/billing-probe.ts` (read-only deploy probe) and `scripts/ops/billing-smoke.ts` (guided test-mode checkout→webhook→flip) are `[OPERATOR-PENDING]` tools — runbook in `specs/018-subscription-system/quickstart.md`.
 
+### Linked banks — Plaid Connect (spec 024)
+- **Scope**: connect + list + disconnect ONLY (no transactions/balances/owner assignment — future sync feature). Opt-in and disclosure-first; manual entry/import/scan stay first-class (`FUTURE-TASKS.md` §1.1).
+- **Settings › Linked banks** (`app/(app)/settings/linked-banks/page.tsx` → `components/settings/LinkedBanks.tsx`): disclosure copy, connect flow, active institutions with account name/mask/type, `Connected by {name} · {date}` attribution, inline-confirm disconnect. Dark until the operator configures Plaid — the page probes `plaid-link-token {mode:"probe"}` on mount (FR-012) and renders a calm "not available yet" line when `not_configured`.
+- **Two Link modes, one component**: web runs embedded Plaid Link (`react-plaid-link`, loaded via `next/dynamic` in `components/settings/EmbeddedPlaidLink.tsx` so Plaid's CDN loader stays out of the initial bundle); the Capacitor shell top-level-navigates to a **Hosted Link** URL (Plaid deprecates webview Link) and returns via `ortho://plaid-done`.
+- **`components/PlaidHandBack.tsx`** (mounted in the `(app)` shell, renders nothing): completes a pending hosted session on mount, on the `appUrlOpen` hand-back (routes to Linked banks), and on `appStateChange` foreground; `session_incomplete` waits silently, expiry clears calmly — the server exchange is idempotent, so double hand-backs are harmless. The `ortho` URL scheme lives in `web/ios/App/App/Info.plist` (`CFBundleURLTypes`, config only).
+- **`lib/aggregation.ts`** wraps `functions.invoke` for `plaid-link-token`/`plaid-exchange`/`plaid-disconnect` (billing.ts pattern; localize by `code`). **`lib/plaidLinkSession.ts`** holds the one pending-session localStorage record (session id + short-lived link token — never a public/access token); the web bank-OAuth detour returns to **`/plaid-oauth`**, which re-inits Link with the stored token + `receivedRedirectUri`.
+- **Store**: bootstrap fan-out also selects `linked_institutions`/`linked_accounts` (client read-only; RLS household-scoped) and exposes `refreshLinkedBanks()`.
+- **i18n**: +20 keys in all five catalogs. **Ops**: `scripts/ops/plaid-smoke.ts` — headless sandbox roundtrip (`/sandbox/public_token/create` → exchange → disconnect), `[OPERATOR-PENDING]`; runbook in `specs/024-plaid-connect/quickstart.md`.
+
 ### Data layer — one React context, optimistic writes
 `lib/store.tsx` (`AppStateProvider` / `useApp()`) is the whole client data layer, mirroring iOS `AppState`:
 - **Bootstrap** (once, in the `(app)` layout): `auth.getUser()` → upsert the `users` profile row → find-or-create `households` + `household_members` → ensure the account holder has a `household_people` row (and fold legacy device-only `localUsers` from localStorage) → `loadAll()`.
@@ -288,6 +297,9 @@ are load-bearing because the Next app lives in the `web/` subdirectory:
 - **Environment Variables** — `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` set for
   **Production** (and Preview). Vercel builds *remotely*, so the local `.env.local` is not involved;
   `NEXT_PUBLIC_VERCEL_ENV`/`NODE_ENV` are injected by Vercel — never set them manually.
+  An env-less build (today's Preview scope) no longer fails: `lib/supabase/client.ts` falls back to
+  placeholder values (the Capacitor-CI pattern), so preview deploys build green but render a bundle
+  that cannot sign in — scope the two vars to **Preview** in the dashboard for fully working previews.
 
 Vercel serves the static export (`output: 'export'` → `out/`) as a static site (preset auto-detected).
 The `web/.vercel/` folder is a local CLI link (gitignored) and is independent of the Git integration.

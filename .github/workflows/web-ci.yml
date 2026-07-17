@@ -57,6 +57,16 @@ jobs:
           npx tsc -p tsconfig.tests.json --noEmit
           npm test
 
+      # Aggregation core (services/aggregation, spec 024) — same standalone-package
+      # posture as billing: its suite includes the _shared/aggregation drift lock.
+      - name: Aggregation core — install, typecheck & test
+        working-directory: services/aggregation
+        run: |
+          npm ci
+          npx tsc --noEmit
+          npx tsc -p tsconfig.tests.json --noEmit
+          npm test
+
       - name: Typecheck
         run: npx tsc --noEmit
 

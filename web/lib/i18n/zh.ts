@@ -372,6 +372,27 @@ const catalog: Record<string, string> = {
   "Verifying…": "验证中…",
   "You owe {0}": "您欠{0}",
   "Occupancy": "入住情况",
+  // Linked banks (spec 024)
+  "Linked banks": "已关联银行",
+  "Linked bank": "已关联银行",
+  "Connect a bank": "关联银行",
+  "Bank connected.": "银行已关联。",
+  "Bank sign-in happens with Plaid, a bank-connection service. Ortho never sees your bank username or password — it only receives account names, types, and last-4 digits. You can disconnect at any time, and adding transactions yourself or importing statements always stays available.": "银行登录在 Plaid（一项银行连接服务）上进行。Ortho 绝不会看到你的银行用户名或密码 — 只会收到账户名称、类型和末四位数字。你可以随时断开连接，自己记账或导入账单的方式也始终可用。",
+  "Bank linking isn’t available yet.": "银行关联功能暂未开放。",
+  "Couldn’t reach the bank-connection service. Try again in a bit.": "无法连接银行连接服务。请稍后再试。",
+  "That connection attempt expired. Start again.": "该连接尝试已过期。请重新开始。",
+  "You need to be in a household to link a bank.": "需要先加入家庭才能关联银行。",
+  "The connection could not be completed. Try again.": "连接未能完成。请重试。",
+  "{0} connected": "已关联 {0} 个",
+  "None connected": "未关联",
+  "Finishing your bank connection…": "正在完成银行连接…",
+  "No bank connection is in progress.": "当前没有正在进行的银行连接。",
+  "Back to Linked banks": "返回已关联银行",
+  "Disconnect": "断开连接",
+  "Disconnect this bank?": "断开与此银行的连接？",
+  "Bank disconnected.": "已断开银行连接。",
+  "Disconnecting didn’t go through. Try again.": "未能断开连接。请重试。",
+  "Connected by {0} · {1}": "由 {0} 关联 · {1}",
 }
 
 export default catalog

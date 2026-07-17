@@ -66,6 +66,7 @@ export default function SettingsPage() {
   const {
     cards,
     budgets,
+    linkedInstitutions,
     currentHousehold,
     currentUserEmail,
     currency,
@@ -105,6 +106,18 @@ export default function SettingsPage() {
           <SectionLabel>{t('Household')}</SectionLabel>
           <SectionCard>
             <LinkRow href="/settings/household" label={t('Household')} peek={currentHousehold?.name} />
+            {/* Linked banks (spec 024) — household members only; a user with no
+                household never sees the entry (spec edge case). */}
+            {currentHousehold && (
+              <LinkRow
+                href="/settings/linked-banks"
+                label={t('Linked banks')}
+                peek={(() => {
+                  const n = linkedInstitutions.filter((i) => i.status === 'active').length
+                  return n ? t('{0} connected', n) : t('None connected')
+                })()}
+              />
+            )}
           </SectionCard>
         </section>
 

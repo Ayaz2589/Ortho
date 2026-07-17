@@ -35,8 +35,15 @@ export function createClient() {
     return createMemoryClient() as unknown as ReturnType<typeof createBrowserClient>
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  // Missing build-time env falls back to placeholders instead of throwing:
+  // Vercel PREVIEW builds have no NEXT_PUBLIC_SUPABASE_* (Production-scoped
+  // vars), and the static-export prerender constructs this client while
+  // rendering every (app) page — the '!' assertions killed every preview
+  // deploy at "Generating static pages". Same pattern as the Capacitor iOS
+  // CI build (ci-placeholder.supabase.co). A placeholder bundle renders but
+  // can't sign in; scope real values to Preview in Vercel for live previews.
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://env-missing.supabase.co'
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'sb_publishable_env_missing'
 
   // Capacitor iOS: raw supabase-js so `auth.storage` (Keychain) is honored.
   if (Capacitor.isNativePlatform()) {

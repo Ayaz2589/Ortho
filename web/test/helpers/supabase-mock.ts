@@ -21,8 +21,11 @@ export interface SupabaseMockDataset {
   /** Table name -> error message, to make `.insert()` on that table fail
    *  (exercises the atomic transaction+shares write rollback). */
   insertErrors?: Record<string, string>
-  /** Table name -> error message for `.select()` reads (bootstrap fail-loud paths). */
-  selectErrors?: Record<string, string>
+  /** Table name -> error for `.select()` reads (bootstrap fail-loud paths).
+   *  A plain string is a message; an object can carry a PostgREST `code`
+   *  (e.g. PGRST205 for a table missing from the schema cache — spec 024's
+   *  deploy-before-migrate fail-open). */
+  selectErrors?: Record<string, string | { message: string; code?: string }>
   /** Table name -> error message for `.delete()` / `.update()` / `.upsert()`. */
   deleteErrors?: Record<string, string>
   updateErrors?: Record<string, string>
@@ -98,9 +101,9 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
 
   function builder(table: string): QueryBuilder {
     const rows = (tables[table] ?? []) as unknown[]
-    const selectMsg = dataset.selectErrors?.[table]
-    const resolved = selectMsg
-      ? { data: null, error: { message: selectMsg } }
+    const selectErr = dataset.selectErrors?.[table]
+    const resolved = selectErr
+      ? { data: null, error: typeof selectErr === 'string' ? { message: selectErr } : selectErr }
       : // billing_events has zero client policies: live PostgREST returns an
         // EMPTY result set (not an error) for policy-less selects (review [29]).
         table === 'billing_events'

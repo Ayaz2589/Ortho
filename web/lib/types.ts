@@ -154,6 +154,46 @@ export interface Budget {
   monthly_limit_cents: number
 }
 
+/** Aggregation provider seam (spec 024): a second provider extends this union
+ *  (plus the Postgres enum) without reshaping household data. */
+export type LinkedProvider = 'plaid'
+export type LinkedInstitutionStatus = 'active' | 'disconnected'
+
+/** One standing bank connection made through an aggregation provider
+ *  (Supabase `linked_institutions`, spec 024). Display metadata only — the
+ *  provider access credential lives server-side in Vault and has no client
+ *  type on purpose. Clients read; only edge functions write. */
+export interface LinkedInstitution {
+  id: string
+  household_id: string
+  provider: LinkedProvider
+  provider_item_id: string
+  provider_institution_id: string | null
+  institution_name: string
+  status: LinkedInstitutionStatus
+  /** User who connected it (US4 attribution). */
+  created_by: string
+  created_at: string
+  updated_at: string
+  disconnected_at: string | null
+}
+
+/** One bank account revealed by a linked institution (Supabase
+ *  `linked_accounts`, spec 024). Never balances, never transactions —
+ *  connect-only scope. Type/subtype are Plaid vocabulary rendered verbatim. */
+export interface LinkedAccount {
+  id: string
+  institution_id: string
+  provider_account_id: string
+  name: string
+  official_name: string | null
+  /** Last-4 display mask; the provider may omit it. */
+  mask: string | null
+  account_type: string
+  account_subtype: string | null
+  created_at: string
+}
+
 export interface Insight {
   id: string
   title: string

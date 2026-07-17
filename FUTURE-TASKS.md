@@ -84,6 +84,13 @@ transaction filters/search, 6-language i18n, iOS (SwiftUI) + web (Next.js).
   security/compliance surface. If pursued, make it **opt-in** and keep the
   manual/import/scan paths as first-class. We already have the ingestion shape
   (`transactions` + `transaction_shares`, dedupe in the CLI) to reuse.
+- **Status (2026-07-16, spec 024):** the CONNECT half is built — opt-in Plaid
+  Link (embedded on web, Hosted Link on iOS), household-scoped
+  `linked_institutions`/`linked_accounts`, access token in Supabase Vault,
+  disconnect with provider-first revoke; manual/import/scan remain first-class
+  and untouched. Transactions/balances **sync remains future work** (webhooks,
+  staging/review queue, dedupe against manual rows — reuse the spec-014 review
+  wizard per `.claude/research/2026-07-16-*` reports).
 
 ### 1.2 Manual accounts / balances as first-class objects 🟡
 - **What:** Explicit "accounts" (checking, savings, card, cash) with balances,

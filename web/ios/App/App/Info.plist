@@ -18,6 +18,20 @@
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<!-- spec 024: Plaid Hosted Link hands the member back to the app via
+	     ortho://plaid-done (completion_redirect_uri). Configuration only — no
+	     native code; the web bundle's appUrlOpen listener does the rest. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>AyazUddin.Ortho-iOS</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>ortho</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>

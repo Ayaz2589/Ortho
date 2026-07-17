@@ -117,3 +117,29 @@ export interface BudgetRow {
   category: TransactionCategory
   monthly_limit_cents: number
 }
+
+export interface LinkedInstitutionRow {
+  id: string
+  household_id: string
+  provider: 'plaid'
+  provider_item_id: string
+  provider_institution_id: string | null
+  institution_name: string
+  status: 'active' | 'disconnected'
+  created_by: string
+  created_at: string
+  updated_at: string
+  disconnected_at: string | null
+}
+
+export interface LinkedAccountRow {
+  id: string
+  institution_id: string
+  provider_account_id: string
+  name: string
+  official_name: string | null
+  mask: string | null
+  account_type: string
+  account_subtype: string | null
+  created_at: string
+}
