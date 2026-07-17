@@ -12,7 +12,7 @@ import type { Transaction } from '@/lib/types'
 import { TransactionRow } from '@/components/transactions/TransactionRow'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 import { BalanceSummary } from '@/components/transactions/BalanceSummary'
-import { TxModalWeb } from '@/components/web/TxModalWeb'
+import { useRouter } from 'next/navigation'
 import type { TransferPrefill } from '@/components/web/TxForm'
 import { useTransactionFilters } from '@/lib/useTransactionFilters'
 import { useScanFlow } from '@/lib/scan/useScanFlow'
@@ -36,14 +36,12 @@ const TransactionsDesktop = dynamic(
 
 export default function TransactionsPage() {
   const isExpanded = useIsExpanded()
+  const router = useRouter()
   const { transactions, formatMoney, deleteTransaction, locale, t } = useApp()
   const f = useTransactionFilters()
 
   const [searchActive, setSearchActive] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
-  const [addOpen, setAddOpen] = useState(false)
-  const [copySource, setCopySource] = useState<Transaction | null>(null)
-  const [settlePrefill, setSettlePrefill] = useState<TransferPrefill | null>(null)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [scanPickerOpen, setScanPickerOpen] = useState(false)
   const scan = useScanFlow()
@@ -55,20 +53,22 @@ export default function TransactionsPage() {
 
   const { isMonthOpen, toggleMonth } = useMonthAccordion(months, f.count)
 
+  // This component is the MOBILE tree (desktop early-returns <TransactionsDesktop/>
+  // above), so add/edit navigate to their dedicated pages instead of opening the
+  // in-place tray (spec 025). Copy/settle intent rides the query string.
   function openAdd() {
-    setCopySource(null)
-    setSettlePrefill(null)
-    setAddOpen(true)
+    router.push('/transactions/new')
   }
   function openCopy(tx: Transaction) {
-    setCopySource(tx)
-    setSettlePrefill(null)
-    setAddOpen(true)
+    router.push(`/transactions/new?copyFrom=${encodeURIComponent(tx.id)}`)
   }
   function openSettle(prefill: TransferPrefill) {
-    setCopySource(null)
-    setSettlePrefill(prefill)
-    setAddOpen(true)
+    const q = new URLSearchParams({
+      from: prefill.from,
+      to: prefill.to,
+      amount: String(prefill.amountCents),
+    })
+    router.push(`/transactions/new?${q.toString()}`)
   }
 
   // Desktop (≥1024px): the ledger table + detail drawer.
@@ -247,19 +247,6 @@ export default function TransactionsPage() {
       >
         <FilterPanel f={f} />
       </Modal>
-
-      {addOpen && (
-        <TxModalWeb
-          open
-          onClose={() => {
-            setAddOpen(false)
-            setCopySource(null)
-            setSettlePrefill(null)
-          }}
-          copying={copySource}
-          initialTransfer={settlePrefill}
-        />
-      )}
 
       <TransactionDetailModal
         open={detailId !== null}

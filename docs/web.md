@@ -63,8 +63,8 @@ web/
 │       ├── layout.tsx          # 'use client' shell: AppStateProvider + Sidebar + TabBar + paywall gate (spec 018);
 │       │                       #   SplashScreen.hide() after first paint; biometric lock overlay (spec 023)
 │       ├── dashboard/page.tsx  # branches mobile stack vs DashboardDesktop at ≥1024px
-│       ├── transactions/page.tsx
-│       ├── housing/page.tsx
+│       ├── transactions/page.tsx, transactions/new/page.tsx, transactions/edit/page.tsx  # spec 025: mobile new/edit as pages
+│       ├── housing/page.tsx, housing/new/page.tsx, housing/edit/page.tsx                 # spec 025: mobile new/edit as pages
 │       ├── budgets/page.tsx
 │       ├── settings/page.tsx, settings/household/page.tsx, settings/linked-banks/page.tsx  # linked-banks: spec 024
 │       └── plaid-oauth/page.tsx  # spec 024: web bank-OAuth return route (re-inits Link w/ stored token)
@@ -81,8 +81,9 @@ web/
 │   ├── dashboard/              # widget cards (MonthSummary, Insights, BudgetProgress, SpendByCategory,
 │   │                           #   PerOwnerBreakdown, TopMerchants, HousingSnapshot, DailySpendTrend,
 │   │                           #   MonthPicker, RangePicker) + range.ts (pure range math, regression-vector-locked)
-│   ├── transactions/           # TransactionRow, TransactionDetailModal/Body, BalanceSummary
-│   ├── housing/                # PropertyCard/Content, Mortgage/Rental/Multifamily cards, Add modals + lease.ts/rate.ts/kinds.ts (pure helpers)
+│   ├── transactions/           # TransactionRow, TransactionDetailModal/Body (mobile detail; Edit navigates — spec 025), BalanceSummary
+│   ├── housing/                # PropertyCard/Content, Mortgage/Rental/Multifamily cards; PropertyForm (shared body) +
+│   │                           #   AddPropertyModal (desktop Drawer wrapper) + PropertyFormPageClient/PropertyKindChoices (mobile page, spec 025) + lease.ts/rate.ts/kinds.ts
 │   ├── budgets/BudgetDrawer.tsx
 │   ├── Paywall.tsx             # spec 018: blocking gate content (plans, check again, quiet sign-out)
 │   ├── PlaidHandBack.tsx       # spec 024: renders nothing; completes hosted sessions on hand-back/foreground
@@ -93,7 +94,8 @@ web/
 │   │                           #   driven by lib/scan/scanSession.ts
 │   └── web/                    # ≥1024px desktop chrome: DashboardDesktop, TransactionsDesktop,
 │                               #   HousingDesktop, Drawer (shared slide-out), WebModal, TxForm,
-│                               #   TxModalWeb, FilterPanel, ActiveFilterChips, kit.tsx (WebPageHeader, Seg…)
+│                               #   FilterPanel, ActiveFilterChips, kit.tsx (WebPageHeader, Seg…);
+│                               #   TxFormPageClient + FormPageHeader (spec 025: mobile new/edit tx page chrome)
 ├── lib/
 │   ├── store.tsx               # AppStateProvider — the entire client data layer (React context); client-side auth
 │   │                           #   gate (spec 021, replaces the deleted proxy.ts) + Capacitor appStateChange listener
@@ -201,6 +203,8 @@ Three tiers, one source of truth (`lib/useMediaQuery.ts`):
 - **< 640px (mobile)**: bottom `TabBar` (`sm:hidden`), single-column stacks, bottom padding `pb-24` clears the bar.
 - **640–1023px (sm)**: `Sidebar` appears as a 72px icon rail; TabBar hides; `<main>` becomes the scroll container (`sm:h-screen sm:overflow-y-auto`).
 - **≥ 1024px (lg / "expanded")**: `useIsExpanded()` flips pages to the desktop compositions in `components/web/` — pages literally branch: `if (isExpanded) return <DashboardDesktop scope={scope} />` (see `app/(app)/dashboard/page.tsx`). Desktop uses a 12-column `ow-grid`, a ledger table + right-side detail **Drawer** (`components/web/Drawer.tsx`: portal to `<body>`, scrim, Escape/scrim-click close, scroll lock), and centered `WebModal`s. Scope/filter state is lifted into hooks (`useDashboardScope`, `useTransactionFilters`) so a window resize across the breakpoint preserves selection.
+
+**Mobile new/edit are dedicated pages (spec 025).** On `< 1024px` the add/edit **transaction** and **property** flows are their own routes (`transactions/new`, `transactions/edit`, `housing/new`, `housing/edit`) rather than overlays; on `≥ 1024px` the desktop tray/drawer is unchanged. Because the app is `output:'export'` (no `[id]` dynamic routes for runtime UUIDs, no intercepting/parallel routes) and Capacitor serves the app root for extensionless deep-links, the routes are **static** and carry intent as query params read from `window.location` in a mount effect (the `plaid-oauth` precedent — the codebase has **zero** `useSearchParams()` uses, avoiding the static-export Suspense deopt): `edit?id=`, `new?copyFrom=` / `?from&to&amount` (settle-up) / `?kind=`. Each page self-guards — `router.replace()` to the list at desktop width or on an unresolvable id. The mobile list pages/`TransactionDetailModal` are already the non-expanded branch, so their triggers just `router.push`; the shared form logic (`useTxForm`/`TxFormBody`, and the extracted `PropertyForm` body used by both the desktop `AddPropertyModal` Drawer and the mobile `PropertyFormPageClient`) is unchanged. Guard: `test/web/form-factor-split.test.ts` also asserts the new pages never import a `*Desktop` composition.
 
 ### Styling & design tokens
 - **`app/globals.css` is the single source of truth for tokens.** Semantic CSS variables (`--bg`, `--surface`, `--text/-2/-3`, `--accent`, `--positive`, `--destructive`, `--hairline`), the six household palettes (`peach/slate/sage/terracotta/mauve/sand` bg+fg), desktop handoff tokens (`--surface-2`, `--chip-bg`, `--chip-text`), fixed category tints (`--cat-*`), and motion/elevation tokens. Dark mode comes from `@media (prefers-color-scheme: dark)` plus `:root[data-appearance='light'|'dark']` override blocks for the Settings toggle.
