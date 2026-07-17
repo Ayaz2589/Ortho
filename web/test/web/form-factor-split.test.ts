@@ -35,3 +35,23 @@ describe('desktop compositions are dynamically imported per route (spec 022 US3 
     })
   }
 })
+
+// Spec 025 — the dedicated MOBILE new/edit pages must never pull the desktop
+// tray/composition code into their bundle: they render the shared form body only.
+const MOBILE_FORM_PAGES = [
+  'app/(app)/transactions/new/page.tsx',
+  'app/(app)/transactions/edit/page.tsx',
+  'app/(app)/housing/new/page.tsx',
+  'app/(app)/housing/edit/page.tsx',
+]
+
+describe('mobile new/edit pages never import desktop compositions (spec 025)', () => {
+  for (const page of MOBILE_FORM_PAGES) {
+    it(`${page} references no *Desktop composition and self-guards on useIsExpanded`, () => {
+      const src = read(page)
+      expect(/TransactionsDesktop|HousingDesktop/.test(src)).toBe(false)
+      // Desktop keeps its tray, so each page must guard the breakpoint.
+      expect(/useIsExpanded/.test(src)).toBe(true)
+    })
+  }
+})
