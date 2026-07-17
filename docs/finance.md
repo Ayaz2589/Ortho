@@ -592,7 +592,75 @@ it is a bank-connection capability with no money/date engine, hence no vector ro
 
 ---
 
-## 16. Cross-links
+## 16. Known limitations & hardening backlog
+
+The math itself is careful; the risk has shifted from the code to its
+*scaffolding*. These are the standing weaknesses, most-impactful first. Spec 025
+(`specs/025-finance-hardening/`) tracks the work.
+
+### H1 — The regression suite is a change-detector, not a correctness oracle
+Since spec 021 froze the Swift mirror, `gen-vectors.ts` writes whatever the TS
+returns and the Vitest suites assert the TS reproduces it. There is **no
+independently-computed expected value anywhere** — regenerating after an
+*unintended* change launders the bug into the vectors and CI stays green. The
+safety net is "review the diff," which is thin for money.
+*Fix:* add a tier of hand-verified goldens (mortgage payment, split, balance
+computed independently) and property-based invariants (`shares` always sum to
+`amount_cents`; `computeShares(seedSplit(x)) === x`; `toUSDCents ∘ toDisplayAmount`
+round-trips within tolerance). These *assert truth*, so they can't be laundered.
+
+### H2 — Obsolete "mirror Swift exactly" constraints are now dead-weight debt
+Several functions preserve rounding/representation choices solely to match the
+now-frozen native app. The sharpest is `upcomingAmortization` (`mortgage.ts`),
+which deliberately drops back to **floating-point dollars** (`/100`, compute in
+floats, `*100`) to mirror Swift — a self-inflicted float path in an otherwise
+integer-cents codebase, justified by a constraint that no longer exists.
+*Fix:* re-evaluate each "mirror Swift" choice on its own merits; where an
+integer-cents formulation is clearly better, adopt it **behind a hand-verified
+golden** so the vector change is a reviewed, correct behavior change (not a
+laundered one). Lower priority than H1 — it's latent, not active, harm.
+
+### H3 — The cents invariant is enforced by discipline, not by types or the DB
+Two gaps:
+- `amount_cents` (and every `*_cents` field) is typed `number` — nothing stops a
+  caller passing dollars. There is no branded `Cents` type.
+- The shares-sum-to-total invariant has **no SQL constraint and no atomic RPC**:
+  web does client-side compensating rollback, the CLI does not, and a share-less
+  row is reachable (see `PARITY.md`). For financial data, "we roll back in the
+  client if the second write fails" silently corrupts on the unhappy path.
+*Fix (two independently shippable pieces):* (a) a branded `Cents` type at the
+finance-layer boundary; (b) move the sum invariant into the database (a
+`CHECK`/trigger, or an atomic parent+shares RPC). (b) needs a Supabase migration
+and is a separate PR from the pure-TS work.
+
+### H4 — The date model is a three-regime split-brain
+Filter windows are UTC half-open `[from, to)`; housing date-only values are
+**local** calendar dates (`parseLocalDate`); insight dates are UTC-midnight
+mid-month. Each is individually justified and documented (§12), but the next
+date-touching feature has three different "correct" answers depending on which
+engine it lands in.
+*Fix:* no behavior change warranted — this is a comprehension cost. Keep §12 and
+the per-function comments authoritative; treat any new date logic as requiring an
+explicit choice of regime. Tracked as a documentation/guard-rail item, not a
+refactor.
+
+### Smaller notes
+- **Insights thresholds are inline magic numbers** ($20 / 25% / 85% / 28–35 days /
+  80% / 2× / $500 / 20% / 28%/35%) scattered across ~350 lines. Extracting them to
+  one named `INSIGHT_THRESHOLDS` config improves readability and testability with
+  zero behavior change (the values, and thus the vectors, stay identical).
+- **`toUSDCents` silently returns 0 on `rate <= 0`** — defensive, but it converts a
+  data problem into a zero amount rather than surfacing it. Keep the guard;
+  consider logging/telemetry at the call sites that supply the rate.
+- **`generateInsights` is O(passes)** — ~7 full transaction scans with repeated
+  `new Date(t.date)` parsing. Irrelevant at household scale; an easy cleanup if the
+  file is ever touched for another reason.
+- **Ortho is USD accounting with display conversion, not multi-currency.** One
+  global `rate`, no per-transaction currency, so historical rows re-convert at the
+  current rate. A valid product choice — stated here so it's not mistaken for
+  multi-currency support.
+
+## 17. Cross-links
 
 - [`shared.md`](./shared.md) — the vector harness mechanics, determinism rules,
   and the full per-file vector map.
