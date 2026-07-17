@@ -119,10 +119,12 @@ export function translateStripeEvent(
         if (end !== null && (maxEnd === null || end > maxEnd)) {
           maxEnd = end
           // Line price: pre-2025 `line.price.id`; dahlia `line.pricing.price_details.price`.
+          // Take the price from THIS max-period line only — no `?? priceId`
+          // fallback, or a lower-period line's price would bleed onto a max line
+          // that has none, making the derived plan depend on line order.
           priceId =
             asStr(asRec(rec?.['price'])?.['id']) ??
-            asStr(asRec(asRec(rec?.['pricing'])?.['price_details'])?.['price']) ??
-            priceId
+            asStr(asRec(asRec(rec?.['pricing'])?.['price_details'])?.['price'])
         }
       }
       const plan = planForPrice(priceId, config)
