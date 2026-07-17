@@ -31,9 +31,12 @@ export function FormPageHeader({
       >
         {cancelLabel}
       </button>
-      <div className="pointer-events-none absolute left-0 right-0 text-center text-[16px] font-normal tracking-[-0.3px] text-text">
+      {/* A real heading (not a bare div) so the page has a programmatic name and
+          is reachable by the screen-reader "next heading" gesture — the overlays
+          this replaced announced their title via the dialog aria-label. */}
+      <h1 className="pointer-events-none absolute left-0 right-0 text-center text-[16px] font-normal tracking-[-0.3px] text-text">
         {title}
-      </div>
+      </h1>
       {onSave && (
         <button
           type="button"

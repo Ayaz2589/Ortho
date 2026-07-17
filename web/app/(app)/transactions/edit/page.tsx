@@ -1,40 +1,30 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 import { useApp } from '@/lib/store'
-import { useIsExpanded } from '@/lib/useMediaQuery'
 import { parseIdParam } from '@/lib/formPageIntent'
+import { useMobileFormPage } from '@/lib/useMobileFormPage'
 import { TxFormPageClient } from '@/components/web/TxFormPageClient'
 
 /**
- * Mobile edit-transaction page (spec 025). Resolves the target transaction from
- * the store by `?id=`. Redirects to the list when viewed at desktop width (the
- * tray stays there) or when the id is missing / unresolvable (stale link, deleted
- * while away) — mirroring the overlay's auto-dismiss-on-delete.
+ * Mobile edit-transaction page (spec 025). Resolves the target from the store by
+ * `?id=`. Redirects to the list at desktop width (the tray stays there) or when
+ * the id is missing / unresolvable (stale link, deleted while away) — mirroring
+ * the overlay's auto-dismiss-on-delete.
  */
 export default function EditTransactionPage() {
-  const router = useRouter()
-  const isExpanded = useIsExpanded()
+  const { isExpanded, search, goList, replaceList } = useMobileFormPage('/transactions')
   const { transactions, loading } = useApp()
-  const [id, setId] = useState<string | null | undefined>(undefined)
 
-  useEffect(() => {
-    if (isExpanded) router.replace('/transactions')
-  }, [isExpanded, router])
-
-  useEffect(() => {
-    setId(parseIdParam(window.location.search))
-  }, [])
-
+  const id = search === undefined ? undefined : parseIdParam(search)
   const editing = id ? transactions.find((t) => t.id === id) ?? null : null
 
   useEffect(() => {
-    if (isExpanded || id === undefined || loading) return
-    if (!editing) router.replace('/transactions')
-  }, [isExpanded, id, loading, editing, router])
+    if (isExpanded || search === undefined || loading) return
+    if (!editing) replaceList()
+  }, [isExpanded, search, loading, editing, replaceList])
 
-  if (isExpanded || id === undefined || !editing) return null
+  if (isExpanded || search === undefined || !editing) return null
 
-  return <TxFormPageClient editing={editing} onDone={() => router.push('/transactions')} />
+  return <TxFormPageClient editing={editing} onDone={goList} />
 }

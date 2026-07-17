@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useApp } from '@/lib/store'
 import type { Transaction } from '@/lib/types'
+import { FormPage } from './FormPage'
 import { FormPageHeader } from './FormPageHeader'
 import { useTxForm, TxFormBody, TxCopyList, type TransferPrefill } from './TxForm'
 
@@ -40,7 +41,7 @@ export function TxFormPageClient({
   const saveLabel = editing ? t('Save') : initialTransfer ? t('Record') : t('Add')
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-[640px] flex-col">
+    <FormPage>
       {!picking && (
         <FormPageHeader
           title={title}
@@ -71,6 +72,6 @@ export function TxFormPageClient({
           />
         )}
       </div>
-    </div>
+    </FormPage>
   )
 }

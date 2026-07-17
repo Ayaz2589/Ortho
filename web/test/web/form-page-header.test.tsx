@@ -19,7 +19,8 @@ describe('FormPageHeader', () => {
       />
     )
     expect(screen.getByRole('banner')).toBeInTheDocument()
-    expect(screen.getByText('New transaction')).toBeInTheDocument()
+    // The title is a real heading (programmatic name + reachable via the H gesture).
+    expect(screen.getByRole('heading', { name: 'New transaction' })).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(onCancel).toHaveBeenCalledTimes(1)

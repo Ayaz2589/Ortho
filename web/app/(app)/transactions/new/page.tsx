@@ -1,41 +1,25 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useApp } from '@/lib/store'
-import { useIsExpanded } from '@/lib/useMediaQuery'
-import { parseTxNewParams, type TxNewParams } from '@/lib/formPageIntent'
+import { parseTxNewParams } from '@/lib/formPageIntent'
+import { useMobileFormPage } from '@/lib/useMobileFormPage'
 import { TxFormPageClient } from '@/components/web/TxFormPageClient'
 
 /**
  * Mobile add-transaction page (spec 025). Desktop keeps its in-place tray, so at
- * ≥1024px this redirects to the list. Copy/settle-up intent rides the query
- * string and is read from `window.location` after mount (plaid-oauth precedent),
- * then reconstructed from the store.
+ * ≥1024px useMobileFormPage redirects to the list. Copy/settle-up intent rides
+ * the query string and is reconstructed from the store.
  */
 export default function NewTransactionPage() {
-  const router = useRouter()
-  const isExpanded = useIsExpanded()
+  const { isExpanded, search, goList } = useMobileFormPage('/transactions')
   const { transactions } = useApp()
-  const [params, setParams] = useState<TxNewParams | undefined>(undefined)
 
-  useEffect(() => {
-    if (isExpanded) router.replace('/transactions')
-  }, [isExpanded, router])
+  if (isExpanded || search === undefined) return null
 
-  useEffect(() => {
-    setParams(parseTxNewParams(window.location.search))
-  }, [])
-
-  if (isExpanded || params === undefined) return null
-
+  const params = parseTxNewParams(search)
   const copying = params.copyFrom ? transactions.find((t) => t.id === params.copyFrom) ?? null : null
 
   return (
-    <TxFormPageClient
-      copying={copying}
-      initialTransfer={params.transfer}
-      onDone={() => router.push('/transactions')}
-    />
+    <TxFormPageClient copying={copying} initialTransfer={params.transfer} onDone={goList} />
   )
 }

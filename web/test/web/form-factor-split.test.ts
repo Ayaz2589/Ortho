@@ -47,11 +47,12 @@ const MOBILE_FORM_PAGES = [
 
 describe('mobile new/edit pages never import desktop compositions (spec 025)', () => {
   for (const page of MOBILE_FORM_PAGES) {
-    it(`${page} references no *Desktop composition and self-guards on useIsExpanded`, () => {
+    it(`${page} references no *Desktop composition and self-guards on the breakpoint`, () => {
       const src = read(page)
       expect(/TransactionsDesktop|HousingDesktop/.test(src)).toBe(false)
-      // Desktop keeps its tray, so each page must guard the breakpoint.
-      expect(/useIsExpanded/.test(src)).toBe(true)
+      // Desktop keeps its tray, so each page must guard the breakpoint — directly
+      // via useIsExpanded or through the shared useMobileFormPage hook.
+      expect(/useIsExpanded|useMobileFormPage/.test(src)).toBe(true)
     })
   }
 })
