@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { reconcile } from '../../scripts/import/engine/reconcile'
-import type { ParsedSection, ParsedTransaction, TransactionKind } from '../../scripts/import/engine/types'
+import type { ParsedSection, ParsedTransaction } from '../../scripts/import/engine/types'
+import type { TransactionKind } from '../../lib/types'
 
 const row = (amountCents: number, kind: TransactionKind = 'expense'): ParsedTransaction =>
   ({ amountCents, kind } as ParsedTransaction)
