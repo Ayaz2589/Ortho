@@ -297,6 +297,9 @@ are load-bearing because the Next app lives in the `web/` subdirectory:
 - **Environment Variables** — `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` set for
   **Production** (and Preview). Vercel builds *remotely*, so the local `.env.local` is not involved;
   `NEXT_PUBLIC_VERCEL_ENV`/`NODE_ENV` are injected by Vercel — never set them manually.
+  An env-less build (today's Preview scope) no longer fails: `lib/supabase/client.ts` falls back to
+  placeholder values (the Capacitor-CI pattern), so preview deploys build green but render a bundle
+  that cannot sign in — scope the two vars to **Preview** in the dashboard for fully working previews.
 
 Vercel serves the static export (`output: 'export'` → `out/`) as a static site (preset auto-detected).
 The `web/.vercel/` folder is a local CLI link (gitignored) and is independent of the Git integration.
