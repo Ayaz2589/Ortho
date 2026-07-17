@@ -4,7 +4,9 @@ A living backlog of **candidate features and platform changes** we may build ove
 time. Most entries are inspired by [Monarch Money](https://www.monarch.com/)'s
 2026 feature set (a comprehensive net-worth/aggregation app). The one platform
 consolidation (Capacitor, §0.1) has since **shipped as spec 021** — kept below as
-a completed record. Everything else here is uncommitted — the idea pool.
+a completed record. Everything else here is uncommitted — the idea pool — **except
+§9 (commercial readiness)**, the prioritized pre-launch track from the 2026-07-17
+readiness review (decided work, not candidates).
 
 > This directory is the broken-out form of the former root `FUTURE-TASKS.md`:
 > one file per task, plus this index. Each file preserves its original section
@@ -74,6 +76,17 @@ spec 024 (see §1.1).
 - [§8.1 Android app](./8.1-android-app.md) — ⚪
 - [§8.2 Push notifications](./8.2-push-notifications.md) — 🟡
 
+### 9. Commercial readiness (pre-launch hardening + seed data) 🔴
+> Unlike §§0–8 (the Monarch-inspired *idea pool*), this is the **prioritized
+> pre-commercial track** from the 2026-07-17 readiness review — decided work, not
+> candidates. It runs on **two clocks**: integrity/correctness items are
+> research-independent (do now); product-shape items wait for research.
+- [§9.1 Seed-data harness + edge-case coverage corpus](./9.1-seed-data-harness-coverage.md) — 🔴 · **Feature 1, spec next** · doubles as the §9.4 verification harness
+- [§9.2 Realistic demo / onboarding seed profiles](./9.2-realistic-seed-profiles.md) — 🟡 · Feature 2, held for research
+- [§9.3 Ledger integrity — atomic split persistence](./9.3-ledger-atomic-persistence.md) — 🔴 · the one commercial **blocker**
+- [§9.4 Finance-model correctness & honest labels](./9.4-finance-model-correctness.md) — 🔴/🟡 · verify+fix timezone & CLI-split, extend oracle, relabel
+- [§9.5 Multi-currency accounting strategy](./9.5-multi-currency-strategy.md) — 🟡 · a decision that gates the money layer
+
 ### Deep dives
 - [**Plaid feature opportunities**](./plaid-feature-opportunities.md) — what the
   shipped Plaid Connect foundation (spec 024) unlocks: transaction sync, balances,
@@ -83,6 +96,14 @@ spec 024 (see §1.1).
 ---
 
 ## Rough sequencing (subject to change)
+
+**§9 commercial readiness comes first** — it precedes the idea pool below (two clocks):
+- **0a.** **§9.3 atomic persistence** + **§9.4 verify** (timezone A2, CLI-split A4) — now, in parallel; research-independent.
+- **0b.** **§9.1 seed harness + coverage corpus** — now; it's also the harness that reproduces 0a's bugs, so verification falls out of the build.
+- **0c.** targeted finance-habits / budget-app research → then **§9.2 realistic profiles**.
+- **0d.** **§9.4 oracle + labels** and the **§9.5 currency decision** — validated against the §9.1 corpus.
+
+Then the idea pool:
 
 1. ~~**§0.1 Capacitor consolidation**~~ — ✅ **done (spec 021)**; it was the force
    multiplier that unblocked Android (§8.1) + push (§8.2) and removed the parity tax.
