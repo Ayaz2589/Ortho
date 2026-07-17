@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useApp } from '@/lib/store'
 import { Modal } from '@/components/ui'
 import { TransactionDetailBody } from './TransactionDetailBody'
-import { TxModalWeb } from '@/components/web/TxModalWeb'
 
 /**
  * Read-only detail view by transaction id (re-read from the store so it
@@ -20,16 +20,16 @@ export function TransactionDetailModal({
   open: boolean
   onClose: () => void
 }) {
+  const router = useRouter()
   const { transactions, deleteTransaction, currentHousehold, t } = useApp()
-  const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const tx = txId ? transactions.find((t) => t.id === txId) ?? null : null
 
   // Auto-close when the transaction disappears (deleted) while open.
   useEffect(() => {
-    if (open && txId && !tx && !editing) onClose()
-  }, [open, txId, tx, editing, onClose])
+    if (open && txId && !tx) onClose()
+  }, [open, txId, tx, onClose])
 
   // Reset transient UI when reopening for a different tx.
   useEffect(() => {
@@ -50,7 +50,7 @@ export function TransactionDetailModal({
   return (
     <>
       <Modal
-        open={open && !editing}
+        open={open}
         onClose={onClose}
         title={title}
         left={
@@ -61,7 +61,11 @@ export function TransactionDetailModal({
         right={
           <button
             type="button"
-            onClick={() => setEditing(true)}
+            onClick={() => {
+              // Mobile-only sheet: edit is now a dedicated page (spec 025).
+              onClose()
+              router.push(`/transactions/edit?id=${encodeURIComponent(tx.id)}`)
+            }}
             className="font-normal text-accent"
           >
             {t('Edit')}
@@ -108,8 +112,6 @@ export function TransactionDetailModal({
           )}
         </div>
       </Modal>
-
-      {editing && <TxModalWeb open editing={tx} onClose={() => setEditing(false)} />}
     </>
   )
 }

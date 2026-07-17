@@ -19,7 +19,11 @@ vi.mock('@/components/transactions/TransactionRow', () => ({
 vi.mock('@/components/transactions/TransactionDetailModal', () => ({
   TransactionDetailModal: () => null,
 }))
-vi.mock('@/components/web/TxModalWeb', () => ({ TxModalWeb: () => null }))
+// The mobile page navigates to dedicated add/edit routes (spec 025).
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => '/transactions',
+}))
 vi.mock('@/components/web/TransactionsDesktop', () => ({ TransactionsDesktop: () => null }))
 
 // Controlled store. The page reads: transactions, currentHousehold, resolveUser,

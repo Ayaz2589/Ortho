@@ -13,7 +13,11 @@ vi.mock('@/components/transactions/TransactionRow', () => ({
   TransactionRow: ({ tx }: { tx: Transaction }) => <div data-testid="tx-row">{tx.merchant}</div>,
 }))
 vi.mock('@/components/transactions/TransactionDetailModal', () => ({ TransactionDetailModal: () => null }))
-vi.mock('@/components/web/TxModalWeb', () => ({ TxModalWeb: () => null }))
+// The mobile page navigates to dedicated add/edit routes (spec 025).
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => '/transactions',
+}))
 vi.mock('@/components/web/TransactionsDesktop', () => ({ TransactionsDesktop: () => null }))
 
 const HOUSEHOLD = { id: 'h1', owner_id: 'u1', name: 'Home', created_at: '2026-01-01' }
