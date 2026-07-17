@@ -6,14 +6,19 @@ import { monthlyPaymentCents } from './mortgage'
 // decimals here (the engine is currency-agnostic; display conversion happens
 // elsewhere). Amounts are USD cents.
 
+// Cache the formatter at module scope: `new Intl.NumberFormat` is one of the
+// heaviest routine JS ops (see money.ts's currencyFormatter cache), and usd() is
+// called a dozen-plus times per generateInsights run — several inside per-budget
+// loops — always with these identical en-US/USD options. Output is unchanged.
+const USD_FMT = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
 function usd(cents: number): string {
-  const dollars = Math.abs(cents) / 100
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(dollars)
+  return USD_FMT.format(Math.abs(cents) / 100)
 }
 
 const monthTag = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`

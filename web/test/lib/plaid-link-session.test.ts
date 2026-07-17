@@ -56,6 +56,18 @@ describe('pending link-session record', () => {
     expect(window.localStorage.getItem(PENDING_LINK_SESSION_KEY)).toBeNull()
   })
 
+  it('a shape-valid but non-date expiresAt reads null and is cleared (no zombie live record)', () => {
+    // expiresAt is a string (passes the shape guard) but not a date → getTime()
+    // is NaN and `NaN <= now` is false, so without the NaN guard this record
+    // would be returned as live forever.
+    window.localStorage.setItem(
+      PENDING_LINK_SESSION_KEY,
+      JSON.stringify(record({ expiresAt: 'not-a-real-date' })),
+    )
+    expect(readPendingLinkSession(NOW)).toBeNull()
+    expect(window.localStorage.getItem(PENDING_LINK_SESSION_KEY)).toBeNull()
+  })
+
   it('clearPendingLinkSession removes the record', () => {
     savePendingLinkSession(record())
     clearPendingLinkSession()
