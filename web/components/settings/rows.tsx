@@ -49,7 +49,7 @@ export function CardRow({ card, onDelete }: { card: Card; onDelete: () => void }
     <div className="flex min-h-[60px] items-center gap-3.5 px-4 py-3">
       <span
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-text-2"
-        style={{ background: 'rgba(0,0,0,0.05)' }}
+        style={{ background: 'var(--chip-bg)' }}
       >
         <CreditCard size={16} />
       </span>
@@ -113,7 +113,7 @@ export function ActionRow({
           'flex h-10 w-10 shrink-0 items-center justify-center rounded-full ' +
           (destructive ? 'text-destructive' : 'text-accent')
         }
-        style={{ background: 'rgba(0,0,0,0.05)' }}
+        style={{ background: 'var(--chip-bg)' }}
       >
         {icon}
       </span>

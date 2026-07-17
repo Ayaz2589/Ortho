@@ -219,8 +219,13 @@ async function cmdEdit(flags: Flags, rl: readline.Interface): Promise<void> {
   const k = (await rl.question(`Kind [${tx.kind}]: `)).trim()
   if (k) tx.kind = asKind(k)
 
+  // Resolve the creator's household ONLY to source the people/default owner for
+  // the reassign prompt below — do NOT overwrite tx.household_id with it. The
+  // transaction already carries its correct household from load; recomputing it
+  // from the creator's *current* membership would silently RELOCATE the
+  // transaction to a different household if the creator has since moved (e.g. an
+  // unrelated merchant-typo edit).
   const household = await resolveHousehold(supabase, tx.created_by)
-  if (household.household) tx.household_id = household.household.id
   const defaultOwnerId = household.defaultPersonId || tx.created_by
   const reassign = (await rl.question(`Owners [${tx.owner_ids.join(', ')}] — reassign? [y/N] `)).trim()
   if (/^y/i.test(reassign) && household.people.length) {

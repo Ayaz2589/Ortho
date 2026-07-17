@@ -37,7 +37,7 @@ export function PropertyTypePicker({
             >
               <span
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-text-2"
-                style={{ background: 'rgba(0,0,0,0.05)' }}
+                style={{ background: 'var(--chip-bg)' }}
               >
                 <Icon size={19} />
               </span>

@@ -84,7 +84,7 @@ export function PerOwnerBreakdownCard({
                   </div>
                   <div
                     className="h-2 w-full overflow-hidden rounded-full"
-                    style={{ background: 'rgba(0,0,0,0.05)' }}
+                    style={{ background: 'var(--chip-bg)' }}
                   >
                     <div
                       className="h-full rounded-full"
@@ -164,7 +164,7 @@ function ExpandedShares({
                 {item.tx.owner_ids.length > 1 && (
                   <span
                     className="rounded-full px-1.5 py-px text-[10px] font-normal text-text-2"
-                    style={{ background: 'rgba(0,0,0,0.06)' }}
+                    style={{ background: 'var(--chip-bg)' }}
                   >
                     {pctLabel(item.pct)}
                   </span>

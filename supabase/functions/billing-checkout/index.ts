@@ -52,14 +52,18 @@ Deno.serve(async (req) => {
 
   try {
     // Get-or-create the Stripe customer; store the mapping only if still unset
-    // (guarded update — never clobber an existing mapping on a race).
-    const { data: row } = await service
+    // (guarded update — never clobber an existing mapping on a race). A read
+    // ERROR is an infrastructure failure, not "no customer yet": fail loud (like
+    // the ensure_entitlement check above) instead of falling through and minting
+    // a second, orphaned Stripe customer on every transient DB blip (full-review).
+    const { data: row, error: readError } = await service
       .from('entitlements')
       .select('stripe_customer_id')
       .eq('user_id', user.id)
       .maybeSingle()
+    if (readError) return errorResponse('provider_error')
 
-    let customerId = row?.stripe_customer_id as string | null | undefined
+    let customerId: string | undefined = (row?.stripe_customer_id as string | null) ?? undefined
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email ?? undefined,

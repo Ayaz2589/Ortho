@@ -76,6 +76,15 @@ export function readPendingLinkSession(now: Date): PendingLinkSession | null {
   }
 
   const expiresAtMs = new Date(r.expiresAt).getTime()
+  // A shape-valid but non-date expiresAt (corrupted storage, or a server value
+  // that only passed the string-check) yields NaN, and `NaN <= now` is false — so
+  // the record would never be cleared and would be read back as a live pending
+  // session forever. Treat it as malformed: clear and reset (contract: malformed
+  // records read as null).
+  if (Number.isNaN(expiresAtMs)) {
+    clearPendingLinkSession()
+    return null
+  }
   const effectiveExpiryMs =
     r.mode === 'hosted' ? expiresAtMs + HOSTED_RESULTS_GRACE_MS : expiresAtMs
   if (effectiveExpiryMs <= now.getTime()) {

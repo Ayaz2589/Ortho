@@ -823,8 +823,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       .reduce((s, t) => s + (effectiveShares(t)[personId] ?? 0), 0)
 
   const monthlySpentBy = (personId: string) => {
+    // Build the month window on UTC midnights (mirroring the canonical monthBounds
+    // in transactionFilters.ts), NOT local ones. Transactions are stored at noon
+    // UTC (`${date}T12:00:00.000Z`); a LOCAL `new Date(y, m, 1)` window shifts the
+    // exclusive month boundary west of the noon buffer, so a last-day transaction
+    // dropped out of "this month" (and into next) for viewers at UTC+12..+14. UTC
+    // bounds line up with the stored instants regardless of viewer timezone.
     const now = new Date()
-    return spentBy(personId, new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 1))
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
+    return spentBy(personId, start, end)
   }
 
   // ---- mutations (optimistic) ----

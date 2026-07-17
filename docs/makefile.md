@@ -4,7 +4,7 @@ This doc covers the **root-level developer tooling** of the Ortho monorepo: the 
 
 ## 1. Purpose
 
-Ortho is one product on three surfaces (iOS canonical, web mirror, terminal CLI) over one Supabase backend. The root of the repo holds the glue that keeps day-to-day work orderly:
+Ortho is one product delivered on three surfaces (web is the sole canonical implementation — shipped both as responsive web and, wrapped by Capacitor, as the iOS app — plus a terminal CLI) over one Supabase backend. The root of the repo holds the glue that keeps day-to-day work orderly:
 
 - **`Makefile`** — the operator's entry point to the deterministic (no-LLM) bank-statement import CLI and terminal transaction CRUD, both of which live in `web/scripts/import/` but are invoked from the repo root.
 - **`.gitignore`** — root-level ignore policy; each app subdirectory keeps its own `.gitignore`.
@@ -17,7 +17,7 @@ Ortho is one product on three surfaces (iOS canonical, web mirror, terminal CLI)
 - **Node 22** — pinned by the root `.nvmrc` (contents: `22`). All Make targets shell into `web/` and run `npx tsx`, so they use `web/node_modules` (there is **no root `package.json`**).
 - **`tsx`** — TypeScript runner used by every Make target (`npx tsx web/scripts/import/cli.ts` / `tx.ts`), resolved from `web/`'s dependencies.
 - **GNU Make** — plain `make`, no exotic features beyond `$(if ...)` conditionals.
-- **Spec Kit `0.10.3.dev0`** — recorded in `.specify/init-options.json` (`"integration": "claude"`, sequential feature numbering, bash scripts). The bundled `speckit` workflow requires `speckit_version >= 0.8.5` (`.specify/workflows/speckit/workflow.yml`).
+- **Spec Kit `0.10.3.dev0`** — recorded in `.specify/init-options.json` (`"integration": "claude"`, sequential feature numbering, `"script": "sh"` — the scripts themselves live in `.specify/scripts/bash/`). The bundled `speckit` workflow requires `speckit_version >= 0.8.5` (`.specify/workflows/speckit/workflow.yml`).
 - **Supabase JS client + email-OTP auth** — the CLI signs in the same way the apps do (8-digit emailed OTP), or uses `SUPABASE_SERVICE_ROLE_KEY` with `ADMIN=1`.
 
 ## 3. Directory map (root-level tooling only)
@@ -34,19 +34,20 @@ Ortho/
 │   ├── skills/               # TRACKED in git — project skills (one SKILL.md each)
 │   │   ├── ortho-web/        # web design-system guide (tokens, layout, drawer patterns)
 │   │   ├── remember/         # writes a session summary to context-summaries/, prompts to clear
+│   │   ├── get-up-to-speed/  # recovers working context at session start (companion to remember)
 │   │   └── speckit-*/        # 10 Spec Kit command skills (specify, plan, tasks, implement, …)
 │   ├── context-summaries/    # GITIGNORED — per-session handoffs; latest.md = most recent
 │   └── settings.local.json   # GITIGNORED — machine-local Claude settings
 ├── .specify/                 # TRACKED — Spec Kit config & machinery
 │   ├── memory/constitution.md    # THE project constitution (design + testing principles)
-│   ├── feature.json              # points at the current feature dir (specs/020-…)
+│   ├── feature.json              # points at the current feature dir (specs/024-…)
 │   ├── templates/                # spec / plan / tasks / checklist / constitution templates
 │   ├── scripts/bash/             # create-new-feature.sh, setup-plan.sh, setup-tasks.sh,
 │   │                             # check-prerequisites.sh, common.sh
 │   ├── workflows/speckit/        # bundled "Full SDD Cycle" workflow (specify→plan→tasks→implement)
 │   ├── extensions/agent-context/ # refreshes agent context after specify/plan (hooks in extensions.yml)
 │   └── integrations/             # claude.manifest.json, speckit.manifest.json
-├── specs/                    # one numbered dir per feature, 001 … 020 (non-sequential; 016–018 skipped)
+├── specs/                    # one numbered dir per feature, 001 … 024 (non-sequential; 016–017 skipped)
 │   └── NNN-short-name/       # spec.md, plan.md, research.md, data-model.md,
 │                             # quickstart.md, tasks.md, contracts/, checklists/
 ├── node_modules/.vite/       # stray Vitest cache from a root-level run — ignorable, gitignored
@@ -118,17 +119,18 @@ The root `.gitignore` states its policy in its own header: **app subdirectories 
 ### Skills (tracked, one `SKILL.md` per directory under `.claude/skills/`)
 - **`ortho-web`** — the web design & UX guide. Encodes the design system (tokens in `colors_and_type.css` / `web/app/globals.css`, one sage + one sand accent, hairlines over borders, "room to breathe not room to cram") and desktop patterns (sidebar nav, master–detail, right-side drawer). Read it before any web UI work.
 - **`remember`** — session-continuity: summarizes the current session into `.claude/context-summaries/{YYYY-MM-DD-HHmm}.md` (UTC timestamp) plus `latest.md`, then prompts to clear context. Invoke when context is filling (>75%).
+- **`get-up-to-speed`** — the companion to `remember`: at the start of a session (or after a `/clear`) it reads `latest.md` + the standard recovery docs and briefs on what's done and what's next. Reads state; does not start the work.
 - **`speckit-*` (10 skills)** — the Spec Kit commands: `speckit-specify`, `speckit-clarify`, `speckit-plan`, `speckit-tasks`, `speckit-implement`, `speckit-analyze`, `speckit-checklist`, `speckit-constitution`, `speckit-taskstoissues`, `speckit-agent-context-update`. These drive the SDD cycle (section 7).
 
 ### Context summaries (gitignored)
 `​.claude/context-summaries/latest.md` is the most recent session handoff; dated files alongside it are older ones. The root `CLAUDE.md` instructs: **at session start, read `latest.md` if it exists** to recover prior state (work done, decisions, pending items). Summaries record commits made, key decisions (e.g. "demo data removed from iOS — do NOT reintroduce"), and gotchas — treat them as authoritative recent history.
 
 ### Root `CLAUDE.md`
-It points at (1) the **current plan** — `specs/020-drift-reconciliation/plan.md` for technologies, structure, and shell commands; (2) the deep-dive docs (`docs/index.md` and the per-subsystem guides); (3) the iOS CI workflow that provides compile/test feedback; and (4) the session-continuity rule above. When the active feature changes, this pointer changes with it (and `.specify/feature.json` tracks the same thing: `{"feature_directory": "specs/020-drift-reconciliation"}`).
+It points at (1) the **current plan** — `specs/024-plaid-connect/plan.md` for technologies, structure, and shell commands; (2) the deep-dive docs (`docs/index.md` and the per-subsystem guides); (3) the iOS CI workflow that provides compile/test feedback; and (4) the session-continuity rule above. When the active feature changes, this pointer changes with it (and `.specify/feature.json` tracks the same thing: `{"feature_directory": "specs/024-plaid-connect"}`).
 
 ## 7. `specs/` + `.specify/` — the Spec Kit process (overview)
 
-Features move through **Spec-Driven Development**: `specify → plan → tasks → implement`, each step a skill, each artifact committed. Seventeen features exist so far (`specs/001-desktop-layout` … `specs/020-drift-reconciliation`); numbering is **non-sequential** — 016–018 were skipped, so the latest is `020` (see `.specify/feature.json`).
+Features move through **Spec-Driven Development**: `specify → plan → tasks → implement`, each step a skill, each artifact committed. Twenty-two features exist so far (`specs/001-desktop-layout` … `specs/024-plaid-connect`); numbering is **non-sequential** — 016–017 were skipped, so the latest is `024` (see `.specify/feature.json`).
 
 A mature feature directory contains:
 
@@ -173,8 +175,8 @@ Verification convention (from `README.md`): favor **typecheck + tests + visual r
 8. `.claude/skills/remember/SKILL.md` — how session summaries are produced.
 9. `.claude/context-summaries/latest.md` — the most recent session handoff (local only).
 10. `web/scripts/import/README.md` — full CLI documentation (supported banks, pipeline, exit codes, env).
-11. `specs/020-drift-reconciliation/plan.md` — the current feature's plan (exemplar of the plan format + Constitution Check).
-12. `specs/020-drift-reconciliation/tasks.md` — exemplar of the task format and phase ordering.
+11. `specs/024-plaid-connect/plan.md` — the current feature's plan (exemplar of the plan format + Constitution Check).
+12. `specs/024-plaid-connect/tasks.md` — exemplar of the task format and phase ordering.
 13. `.specify/feature.json` — which feature directory is current.
 14. `.specify/extensions.yml` — the after-specify/after-plan agent-context hooks.
 15. `.nvmrc` — the Node pin.

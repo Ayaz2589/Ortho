@@ -30,7 +30,7 @@ function Chip({
       style={{
         minHeight: 40,
         color: active ? 'var(--text)' : 'var(--text-2)',
-        background: active ? 'var(--surface)' : 'rgba(0,0,0,0.04)',
+        background: active ? 'var(--surface)' : 'var(--chip-bg)',
         boxShadow: active ? '0 0 0 1.5px var(--accent)' : 'none',
       }}
     >

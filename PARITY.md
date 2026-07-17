@@ -9,7 +9,10 @@
 > Capacitor iOS shell of the same codebase. The frozen native app's
 > [`ios-ci.yml`](.github/workflows/ios-ci.yml) is manual-trigger-only (see below).
 
-> **Last reconciled: 2026-07-09, spec 021 (Capacitor iOS consolidation)** — the native SwiftUI app
+> **Last reconciled: 2026-07-17, spec 024 (Plaid Connect — connect-only bank linking).** Spec 024
+> adds a web-only bank-connection capability with no vectored money/date logic, so it introduces no
+> new parity-matrix row; spec 018 (billing/entitlements) is likewise accounted for. The deepest
+> structural reconciliation remains **spec 021 (Capacitor iOS consolidation)** — the native SwiftUI app
 > (`iOS/Ortho-iOS/`) is retired: frozen in the repository as an unmaintained historical reference,
 > no new feature work. iOS ships going forward from the **same** web/TypeScript codebase, wrapped
 > natively via Capacitor (`web/ios/App/`). There is one canonical implementation, not two — the
@@ -160,7 +163,9 @@ These shape which rows exist and what the app displays, but have no regression-v
 
 - **web only:** Dashboard, Insights, Budgets, Housing/mortgage UI, Settings, navigation (bottom tab
   bar on the Capacitor iOS shell / compact web vs. sidebar on desktop web), display-currency
-  conversion.
+  conversion, and Plaid **bank-account connection** (connect-only, spec 024 — `web/lib/aggregation.ts`
+  over the `plaid-link-token` / `plaid-exchange` / `plaid-disconnect` edge functions; no transaction
+  or money engine, hence no vector row). The CLI has no bank-linking path.
 - **CLI only:** bank detection + per-bank PDF/CSV parsers (`profiles/*`), statement reconciliation,
   dedupe, merchant→category heuristics, exclusions, and `--admin` service-role mode.
 - **On-device receipt & bank-statement scanning** — a native Capacitor plugin

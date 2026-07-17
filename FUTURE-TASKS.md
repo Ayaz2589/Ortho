@@ -2,8 +2,9 @@
 
 A living backlog of **candidate features and platform changes** we may build over
 time. Most entries are inspired by [Monarch Money](https://www.monarch.com/)'s
-2026 feature set (a comprehensive net-worth/aggregation app); one is a platform
-consolidation (Capacitor). Nothing here is committed — this is the idea pool.
+2026 feature set (a comprehensive net-worth/aggregation app). The one platform
+consolidation (Capacitor, §0.1) has since **shipped as spec 021** — kept below as
+a completed record. Everything else here is uncommitted — the idea pool.
 
 **How to use this doc**
 - Each item is described at a **high level** (what it is · how it works · how it
@@ -25,13 +26,23 @@ engine (mortgage amortization / equity, lease renewal & rent-due, multifamily
 units with occupancy + occupied-only net rental, rental-payment log),
 multi-currency (7 + live FX), on-device receipt/statement scanning, a
 deterministic bank-statement import CLI, month-scoped dashboard widgets,
-transaction filters/search, 6-language i18n, iOS (SwiftUI) + web (Next.js).
+transaction filters/search, 6-language i18n; delivered as web (Next.js, the sole
+canonical implementation) + iOS (a Capacitor native shell over the same web bundle;
+the SwiftUI app is frozen reference). Connect-only Plaid bank linking shipped in
+spec 024 (see §1.1).
 
 ---
 
 ## 0. Platform & architecture
 
 ### 0.1 Wrap the web app with Capacitor; retire the native Swift app 🔴
+> **Status (spec 021, merged PR #12): SHIPPED.** iOS now ships the Next.js bundle
+> via a Capacitor shell (`web/capacitor.config.ts`, `web/ios/App/`), build-verified
+> by `capacitor-ios-ci.yml`. The web app is the sole canonical implementation; the
+> SwiftUI app under `iOS/` is frozen historical reference (full deletion of
+> `iOS/Ortho-iOS/` was deferred). The scan pipeline survives as one custom Swift
+> Capacitor plugin (`web/ios/App/App/Plugins/Scan/`). The rationale below about
+> maintaining two implementations no longer applies — kept for historical context.
 - **What:** Ship iOS from the **existing Next.js/React web codebase** wrapped in
   [Capacitor](https://capacitorjs.com/) (a native App-Store binary around our web
   bundle — not a plain Safari PWA), instead of maintaining a separate SwiftUI app.
@@ -237,9 +248,10 @@ transaction filters/search, 6-language i18n, iOS (SwiftUI) + web (Next.js).
 
 ### 8.1 Android app ⚪
 - **What:** Monarch ships web + iOS + Android; we ship web + iOS.
-- **How it works:** if we adopt Capacitor (§0.1), Android is **nearly free** — the
-  same web bundle targets Android with the same plugins.
-- **Ortho fit:** best unlocked *by* §0.1; low marginal cost afterward, so it's a
+- **How it works:** Capacitor is now in place (§0.1, spec 021), so Android is
+  **nearly free** — the same web bundle targets Android with the same plugins (the
+  Android project itself is still unbuilt).
+- **Ortho fit:** the §0.1 precondition is met; low marginal cost now, so it's a
   reason the Capacitor bet compounds.
 
 ### 8.2 Push notifications 🟡
@@ -253,8 +265,8 @@ transaction filters/search, 6-language i18n, iOS (SwiftUI) + web (Next.js).
 
 ## Rough sequencing (subject to change)
 
-1. **§0.1 Capacitor consolidation** — the force multiplier; unblocks Android (§8.1)
-   + push (§8.2) and removes the parity tax before we add feature surface.
+1. ~~**§0.1 Capacitor consolidation**~~ — ✅ **done (spec 021)**; it was the force
+   multiplier that unblocked Android (§8.1) + push (§8.2) and removed the parity tax.
 2. **§1.2 manual accounts → §2.1 net worth** and **§3.1 goals** — high-value,
    privacy-safe, self-contained.
 3. **§4.1 flexible budgeting (rollover)**, **§4.2 subscription manager**, **§4.3

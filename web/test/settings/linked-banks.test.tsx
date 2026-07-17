@@ -4,7 +4,7 @@
 // calm abandon (US1-3), calm failures (FR-013), and the list of linked
 // institutions + accounts (FR-007/008).
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act, within } from '@testing-library/react'
 import type { LinkedAccount, LinkedInstitution } from '@/lib/types'
 import { PENDING_LINK_SESSION_KEY } from '@/lib/plaidLinkSession'
 
@@ -239,6 +239,16 @@ describe('US3 — disconnect (provider-first revoke, confirm step, calm failure)
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(aggregation.disconnectInstitution).not.toHaveBeenCalled()
     expect(screen.queryByText('Disconnect this bank?')).not.toBeInTheDocument()
+  })
+
+  it('confirm step announces the prompt and moves focus to the confirm action (a11y)', async () => {
+    await mounted()
+    fireEvent.click(await screen.findByRole('button', { name: 'Disconnect' }))
+    // The prompt is an announced group, not a bare span…
+    const group = screen.getByRole('group', { name: 'Disconnect this bank?' })
+    // …and focus follows into it (autoFocus) instead of dropping to <body> when
+    // the trigger button unmounts.
+    expect(within(group).getByRole('button', { name: 'Disconnect' })).toHaveFocus()
   })
 
   it('confirm revokes at the provider and refreshes the household lists', async () => {

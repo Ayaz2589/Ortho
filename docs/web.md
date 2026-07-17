@@ -30,11 +30,12 @@ From `web/package.json` (`ortho-web`, requires **Node >= 20.19.0 or >= 22.12.0**
 | `@supabase/ssr` | ^0.12.0 | cookie-based session on desktop/mobile web (native uses Keychain instead — see below) |
 | `lucide-react` | ^1.17.0 | outlined monochrome icons (matches the frozen app's SF Symbols) |
 | `recharts` | ^3.8.1 | dashboard charts |
+| `react-plaid-link` | ^4.1.1 | spec 024: embedded Plaid Link on web (lazy-loaded via `next/dynamic` in `components/settings/EmbeddedPlaidLink.tsx`, so the Plaid script never enters the initial bundle) |
 | `clsx` + `tailwind-merge` | ^2.1.1 / ^3.6.0 | `cn()` helper in `web/lib/utils.ts` |
 | `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios` | ^8.4.1 | native iOS shell (spec 021); SPM package manager, not CocoaPods |
-| `@capacitor/{app,camera,haptics,keyboard,share,splash-screen,status-bar}` | ^8.x | native-feel plugins — see §4 "Capacitor iOS shell" |
-| `@capawesome/capacitor-file-picker` | latest | Files-app PDF picking (statement import) |
-| `@aparajita/capacitor-{biometric-auth,secure-storage}` | latest | Face ID/Touch ID gate; Keychain-backed session storage |
+| `@capacitor/{app,haptics,keyboard,share,splash-screen,status-bar}` | ^8.x | native-feel plugins — see §4 "Capacitor iOS shell" (camera is the custom Swift Scan plugin, not `@capacitor/camera`) |
+| `@capawesome/capacitor-file-picker` | ^8.0.3 | Files-app PDF picking (statement import) |
+| `@aparajita/capacitor-{biometric-auth,secure-storage}` | ^10.0.0 / ^8.0.0 | Face ID/Touch ID gate; Keychain-backed session storage |
 | `@capacitor/assets` | ^3.0.5 (dev) | app icon / splash-screen asset generation |
 | `vitest` + `@vitest/coverage-v8` | ^4.1.8 | tests (Vitest 4 needs Node >= 20.19 for `require(ESM)`) |
 | `@testing-library/react` / `jest-dom` / `user-event`, `jsdom` | — | component tests |
@@ -65,7 +66,8 @@ web/
 │       ├── transactions/page.tsx
 │       ├── housing/page.tsx
 │       ├── budgets/page.tsx
-│       └── settings/page.tsx, settings/household/page.tsx
+│       ├── settings/page.tsx, settings/household/page.tsx, settings/linked-banks/page.tsx  # linked-banks: spec 024
+│       └── plaid-oauth/page.tsx  # spec 024: web bank-OAuth return route (re-inits Link w/ stored token)
 ├── capacitor.config.ts         # spec 021: appId (reused native-app bundle id), webDir 'out', ios/plugins config
 ├── ios/App/                    # spec 021: the Capacitor-generated native iOS project (SPM, not CocoaPods)
 │   └── App/Plugins/Scan/       # custom Swift plugin — camera capture + Vision OCR + PDFKit + FoundationModels
@@ -83,8 +85,10 @@ web/
 │   ├── housing/                # PropertyCard/Content, Mortgage/Rental/Multifamily cards, Add modals + lease.ts/rate.ts/kinds.ts (pure helpers)
 │   ├── budgets/BudgetDrawer.tsx
 │   ├── Paywall.tsx             # spec 018: blocking gate content (plans, check again, quiet sign-out)
+│   ├── PlaidHandBack.tsx       # spec 024: renders nothing; completes hosted sessions on hand-back/foreground
 │   ├── settings/               # rows, ChoiceRows, HouseholdDrawer, AddCardModal, appearance.ts (THEME_VARS +
-│   │                           #   native status-bar sync), SubscriptionSection.tsx (spec 018)
+│   │                           #   native status-bar sync), SubscriptionSection.tsx (spec 018),
+│   │                           #   LinkedBanks.tsx + EmbeddedPlaidLink.tsx (spec 024)
 │   ├── scan/                   # spec 021: React port of the scan review flow (interstitial + summary),
 │   │                           #   driven by lib/scan/scanSession.ts
 │   └── web/                    # ≥1024px desktop chrome: DashboardDesktop, TransactionsDesktop,
@@ -95,6 +99,8 @@ web/
 │   │                           #   gate (spec 021, replaces the deleted proxy.ts) + Capacitor appStateChange listener
 │   ├── entitlements.ts         # spec 018: hand-mirrored gate derivation (literal-vector-locked)
 │   ├── billing.ts              # spec 018: functions.invoke wrappers for the billing edge functions
+│   ├── aggregation.ts          # spec 024: functions.invoke wrappers for the plaid-* edge functions
+│   ├── plaidLinkSession.ts     # spec 024: pending Plaid link-session localStorage record + expiry
 │   ├── supabase/client.ts      # createBrowserClient — native-only Keychain storage adapter (spec 021)
 │   ├── auth/keychainStorage.ts # spec 021: Keychain-backed supabase-js auth.storage adapter (native only)
 │   ├── haptics.ts              # spec 021: native-aware haptic feedback (confirm/destructive), no-op on web
@@ -180,7 +186,7 @@ A **Developer** section on the Settings page (`components/settings/flags-section
 ### Data layer — one React context, optimistic writes
 `lib/store.tsx` (`AppStateProvider` / `useApp()`) is the whole client data layer, mirroring iOS `AppState`:
 - **Bootstrap** (once, in the `(app)` layout): `auth.getUser()` → upsert the `users` profile row → find-or-create `households` + `household_members` → ensure the account holder has a `household_people` row (and fold legacy device-only `localUsers` from localStorage) → `loadAll()`.
-- **`loadAll()`** issues 11 parallel Supabase selects: `users`, `household_people`, `transactions`, `transaction_shares`, `cards`, `properties`, `mortgage_info`, `lease_info`, `units`, `rental_payments`, `budgets`; it then stitches properties with their mortgage/lease/units and **rehydrates** each transaction's `owner_ids` + per-person `shares` map from `transaction_shares` rows (a `transfer` with no shares gets `owner_ids: []`, never a synthesized owner). The three highest-volume reads (`users`/`transactions`/`transaction_shares`) are **column-projected** — explicit `select(<cols>)`, never `select('*')` (spec 023/US6). Every read is a **typed row → domain boundary**: the client is untyped (no `supabase gen types` in-sandbox), so each select is asserted to a hand-written schema-mirror `*Row` type in `lib/supabase/rows.ts` and assigned to domain-typed state — a renamed/removed column or changed enum then fails `tsc` at the load boundary instead of at runtime (spec 023/FR-018). Keep `rows.ts`, the projection column lists, and `lib/types.ts` in lockstep.
+- **`loadAll()`** issues 13 parallel Supabase selects: `users`, `household_people`, `transactions`, `transaction_shares`, `cards`, `properties`, `mortgage_info`, `lease_info`, `units`, `rental_payments`, `budgets`, `linked_institutions`, `linked_accounts` (the last two added by spec 024, fail-open on PGRST205/42P01 for deploy-before-migrate); it then stitches properties with their mortgage/lease/units and **rehydrates** each transaction's `owner_ids` + per-person `shares` map from `transaction_shares` rows (a `transfer` with no shares gets `owner_ids: []`, never a synthesized owner). The three highest-volume reads (`users`/`transactions`/`transaction_shares`) are **column-projected** — explicit `select(<cols>)`, never `select('*')` (spec 023/US6). Every read is a **typed row → domain boundary**: the client is untyped (no `supabase gen types` in-sandbox), so each select is asserted to a hand-written schema-mirror `*Row` type in `lib/supabase/rows.ts` and assigned to domain-typed state — a renamed/removed column or changed enum then fails `tsc` at the load boundary instead of at runtime (spec 023/FR-018). Keep `rows.ts`, the projection column lists, and `lib/types.ts` in lockstep.
 - **Two internal contexts behind `useApp()`** (spec 023/US6/P4): a memoized, stable **services** context (`rate`, `formatMoney`, `t`, `resolveUser`, `ownersDisplay`) and a changing **data** context. `useApp()` re-merges both (unchanged public surface — no consumer import changes); the ledger rows subscribe to only the services surface via `useAppServices()` and are `React.memo`'d, so an unrelated mutation (adding a different transaction, a loading toggle) no longer re-renders every row. `formatMoney` still changes identity on currency/rate/locale, so amounts update on an FX refresh.
 - **Mutations are optimistic with rollback**: state updates immediately, the Supabase write runs async, and failure restores the previous state and sets a banner `error`. Transaction writes are **atomic with shares**: if `transaction_shares` fails after the parent insert/update, the parent is deleted/restored so a share-less row never survives (matches iOS's all-or-nothing write; see `writeShares`, `addTransaction`, `updateTransaction`).
 - **FX**: `refreshRates()` fetches `https://www.floatrates.com/daily/usd.json` and caches in localStorage (`fxRates` / `fxRatesFetchedAt`, refreshed after 24h). On fetch failure it KEEPS the last cached live rates at any age (mirrors iOS; since 2026-07-02) and surfaces a freshness caption in Settings; the hardcoded `FALLBACK_RATE_FROM_USD` (`lib/finance/currency.ts`) applies only when no cache has ever existed. `formatMoney` converts USD cents → display currency with the active locale.

@@ -86,7 +86,12 @@ function Shell({ children, active }: { children: ReactNode; active: boolean }) {
   }, [active, loading])
 
   return (
-    <div className="sm:flex sm:h-screen sm:overflow-hidden">
+    // While the biometric lock overlays this kept-mounted shell (`!active`), mark
+    // the whole subtree `inert` so keyboard focus and assistive tech cannot reach
+    // the covered household data behind the opaque overlay (FR-011). The z-index
+    // overlay only occludes visually; `inert` removes the content from the tab
+    // order and the accessibility tree. React 19 emits the attribute only when true.
+    <div className="sm:flex sm:h-screen sm:overflow-hidden" inert={!active}>
       {/* spec 024: completes a pending Hosted Plaid Link session on the
           Capacitor shell (ortho://plaid-done hand-back + foreground poll).
           Renders nothing; no-op on desktop/mobile web. */}

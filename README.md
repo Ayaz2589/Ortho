@@ -20,7 +20,8 @@ Ortho/
 │                 the canonical implementation; web/ios/App/ is its Capacitor iOS shell
 ├── iOS/          FROZEN SwiftUI app (Swift) — historical reference / rollback path only
 ├── shared/       Regression test vectors (finance logic pinning; formerly cross-language)
-├── supabase/     Postgres schema + migrations (the shared backend)
+├── supabase/     Postgres schema + migrations + edge functions (the shared backend)
+├── services/     Node cores synced into edge functions: billing (Stripe, spec 018) + aggregation (Plaid, spec 024)
 ├── specs/        Spec-Driven Development artifacts (Spec Kit)
 └── .specify/     Spec Kit config + the project constitution
 ```
@@ -103,7 +104,10 @@ required gate. Setup notes and sandbox usage live in the gitignored
 
 Postgres schema and migrations for the shared backend (households, members,
 transactions + shares, cards, properties/mortgage/lease/units, rental payments,
-budgets, aggregate RPCs). Apply with the Supabase CLI.
+budgets, aggregate RPCs, billing/entitlements [spec 018], and linked bank
+institutions/accounts via Plaid connect [spec 024]). Deno **edge functions**
+under `supabase/functions/` (Stripe billing + Plaid connect) back the last two.
+Apply with the Supabase CLI.
 
 ### Importing bank statements (`make ingest`)
 

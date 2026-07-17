@@ -147,7 +147,7 @@ export function EquityProgress({ mortgage }: { mortgage: MortgageInfo }) {
             {t('of {0} · {1}', formatMoney(mortgage.purchase_price_cents), `${(fraction * 100).toFixed(1)}%`)}
           </span>
         </div>
-        <div className="mt-0.5 h-1.5 overflow-hidden rounded-full" style={{ background: 'rgba(0,0,0,0.05)' }}>
+        <div className="mt-0.5 h-1.5 overflow-hidden rounded-full" style={{ background: 'var(--chip-bg)' }}>
           <div
             className="h-full rounded-full"
             style={{ width: `${fraction * 100}%`, background: 'var(--positive)' }}

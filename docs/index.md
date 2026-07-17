@@ -91,7 +91,7 @@ Plaid access token — connect-only (no transaction sync yet). See `docs/supabas
 |---|---|
 | [./web.md](./web.md) | …working on the Next.js app (the canonical implementation, both delivery targets): `lib/store.tsx`, responsive/desktop compositions, `globals.css` tokens, Vitest suite, the client-side auth gate, the Capacitor iOS shell (`web/ios/App/`, native plugins, the Scan plugin), the import CLI internals. |
 | [./ios.md](./ios.md) | …doing archaeology on the **frozen** native SwiftUI app (emergency rollback, or porting its original scan-pipeline Swift source into the Capacitor plugin). Not how iOS ships today. |
-| [./supabase.md](./supabase.md) | …changing the schema, enums, RLS policies, RPCs, or the billing edge functions (`supabase/functions/`); understanding migrations, `config.toml`, or the local stack. |
+| [./supabase.md](./supabase.md) | …changing the schema, enums, RLS policies, RPCs, or the billing/Plaid edge functions (`supabase/functions/`); understanding migrations, `config.toml`, or the local stack. |
 | [./shared.md](./shared.md) | …touching any regression-vectored finance logic: how the vectors are generated, asserted, and their determinism conventions. |
 | [./makefile.md](./makefile.md) | …importing bank statements or doing terminal transaction CRUD (`make ingest`, `tx-*`), or navigating the spec-kit / `.claude` tooling at the root. |
 | [./deploy.md](./deploy.md) | …shipping to TestFlight: the manual-trigger deploy workflow, the Apple/Supabase secrets it preflights, and the owner setup steps. (Currently documents the frozen app's deploy path; the Capacitor build's release pipeline is `web/capacitor.config.ts`'s `ios.buildOptions` + `npx cap build ios` — see `./web.md`.) |
@@ -128,7 +128,7 @@ Plaid access token — connect-only (no transaction sync yet). See `docs/supabas
    `npm test`, and reconcile `PARITY.md` if the change touches a documented capability. There is no
    second implementation to mirror anymore.
 9. **If adding a feature**: follow the Spec Kit flow (`specify → plan → tasks → implement`) into a
-   new numbered `specs/NNN-…/` directory; existing specs `001`–`021` show the shape.
+   new numbered `specs/NNN-…/` directory; existing specs `001`–`024` show the shape.
 10. **Then** open the subsystem doc (Section 3) for the area you're working in.
 
 ## 5. Cross-cutting concerns
@@ -136,7 +136,9 @@ Plaid access token — connect-only (no transaction sync yet). See `docs/supabas
 - **One live backend.** Both live surfaces (web + the Capacitor iOS shell, since they're the same
   build) and the CLI read/write the same hosted Supabase project (`brujhxmtzfgowimprueo`): `users`,
   `households`, `household_members`, `household_people`, `transactions` + `transaction_shares`,
-  `cards`, `budgets`, `properties` (+ `mortgage_info` / `lease_info` / `units`), `rental_payments`.
+  `cards`, `budgets`, `properties` (+ `mortgage_info` / `lease_info` / `units`), `rental_payments`,
+  plus the newer `entitlements` (spec 018) and `linked_institutions` / `linked_accounts`
+  (+ secret-holding `linked_institution_secrets` / `plaid_link_sessions`, spec 024) tables.
   Schema lives only in `supabase/migrations/`; web/CLI types must match its columns exactly. (The
   frozen native app's DTO `CodingKeys` also matched this schema as of when it was retired, but is
   no longer kept in sync.)

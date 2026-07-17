@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { useApp } from '@/lib/store'
 import { paletteFor } from '@/lib/categories'
+import { useFocusTrap } from '@/lib/useFocusTrap'
 import type { User } from '@/lib/types'
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
@@ -117,7 +118,7 @@ export function IconButton({
         disabled && 'opacity-40 hover:bg-transparent',
         className
       )}
-      style={{ background: 'rgba(0,0,0,0.04)' }}
+      style={{ background: 'var(--chip-bg)' }}
     >
       {children}
     </button>
@@ -136,7 +137,7 @@ export function Segmented<T extends string>({
   return (
     <div
       className="flex gap-1 rounded-[10px] p-1"
-      style={{ background: 'rgba(0,0,0,0.05)' }}
+      style={{ background: 'var(--chip-bg)' }}
     >
       {options.map((o) => {
         const active = o.value === value
@@ -175,6 +176,11 @@ export function Modal({
   right?: ReactNode
 }) {
   const { t } = useApp()
+  // Trap focus inside the sheet and restore it on close, and expose dialog
+  // semantics — parity with the desktop WebModal/Drawer, which the mobile Modal
+  // (AddCardModal, TransactionDetailModal) previously lacked, so Tab escaped
+  // behind the scrim and screen readers were never told a dialog opened.
+  const trapRef = useFocusTrap<HTMLDivElement>(open)
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => {
@@ -193,7 +199,14 @@ export function Modal({
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden="true" />
-      <div className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-bg sm:rounded-3xl">
+      <div
+        ref={trapRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-bg sm:rounded-3xl"
+      >
         <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
           <div className="min-w-[60px] text-left text-[15px] text-accent">
             {left ?? (

@@ -54,7 +54,7 @@ supabase/
 
 ## 4. Architecture
 
-### 4.1 Current schema (net effect of all 9 migrations)
+### 4.1 Current schema (net effect of all 10 migrations)
 
 **Enums**
 - `role`: `owner | member` (`admin` intentionally deferred — see initial migration header)
@@ -168,6 +168,14 @@ household's linked institutions. **No transaction/balance sync** — that is a f
   `get_institution_secret`, `delete_institution_secret`) with EXECUTE granted to
   `service_role` alone — the `vault` schema is not exposed over PostgREST, and no client
   role can touch a bank credential even with a leaked anon key.
+- **Atomic persistence**: a **fourth** `SECURITY DEFINER`, `service_role`-only RPC —
+  `complete_plaid_link(session_id, provider_item_id, provider_institution_id,
+  institution_name, access_token, accounts jsonb)` — upserts the institution
+  (`on conflict (provider, provider_item_id)`), stores the Vault secret, upserts
+  `linked_accounts`, and flips the session to `completed`, **all in one transaction**, so a
+  mid-persist crash can never leave a member-visible half-linked institution. `plaid-exchange`
+  calls it once the public token is exchanged; the `/item/remove` compensation (below) covers
+  failures *before* this RPC runs.
 - **Explicit table grants**: newer Supabase stacks no longer auto-grant DML on new public
   tables to client/service roles (verified on the local PG17 stack); the migration grants
   exactly what each role needs, so it behaves identically on old and new ACL regimes.
@@ -177,8 +185,9 @@ household's linked institutions. **No transaction/balance sync** — that is a f
   - `plaid-link-token` — `{mode: embedded|hosted|probe}` → creates a `plaid_link_sessions`
     row + Plaid link token (`probe` answers `{configured:true}` without touching Plaid —
     the feature-dark check).
-  - `plaid-exchange` — completes a session idempotently; hosted sessions resolve their
-    public token via `/link/token/get`; **compensating** on any post-exchange failure
+  - `plaid-exchange` — completes a session idempotently via the atomic
+    `complete_plaid_link` RPC (above); hosted sessions resolve their public token via
+    `/link/token/get`; **compensating** on any post-exchange failure before that RPC
     (best-effort `/item/remove` + row/secret cleanup — an orphaned Item would permanently
     burn one of the Trial plan's 10 slots).
   - `plaid-disconnect` — revoke at Plaid FIRST (`ITEM_NOT_FOUND` counts as revoked), then
@@ -257,7 +266,7 @@ The service-role key bypasses RLS — it is only for the CLI's `--admin` mode an
 ## 8. Gotchas
 
 - **New enum values must be an isolated, "not referenced in the same migration" change.** `ALTER TYPE ... ADD VALUE` can't run in an explicit transaction, and a value added in a migration can't be *used* by later statements in that same migration. Both `20260522170000` and `20260618120000` document this pattern (the 012 backfill deliberately only uses pre-existing values).
-- **`config.toml` declares `seed.sql` but no seed file exists.** `[db.seed]` lists `./seed.sql`, but there is no `supabase/seed.sql` in the repo — `supabase db reset` gives you migrations only, with **no data**. Local sign-ins start from an empty database.
+- **`config.toml` declares `seed.sql`, which exists but is intentionally empty.** `[db.seed]` (`enabled = true`) lists `./seed.sql`; `supabase/seed.sql` is a committed placeholder with only a comment — no `INSERT`s — so `supabase db reset` gives you migrations only, with **no data**, and local sign-ins start from an empty database. Add fixtures there if a future workflow needs deterministic local data.
 - **The live DB may be ahead of / behind the migrations dir.** A prior session found `platform_locks` had *not* been pushed to the hosted project (REST 404) even though the migration exists; conversely the auth session timebox (`timebox = "720h"`, feature 010's 30-day cap) must also be enabled on the hosted project (Dashboard → Auth → Sessions, or `supabase config push`) — the config.toml comment at the `[auth.sessions]` section calls this out explicitly. Don't assume config.toml == production.
 - **`household_owner_spend` was redefined with a different return type** (`user_id` → `person_id`). Any consumer or doc referencing the 20260611 signature is stale; 20260616 is authoritative.
 - **Shares-sum invariant lives in the clients.** Nothing in SQL forces `sum(transaction_shares.amount_cents) = transactions.amount_cents`. Writes that bypass the apps' atomic parent+shares logic (e.g. raw SQL, the CLI's non-compensating path noted in `PARITY.md`) can silently break dashboards.

@@ -131,6 +131,25 @@ describe('invoice.paid', () => {
     }
     expect(translateStripeEvent(stripeEvent('invoice.paid', other), config).plan ?? null).toBeNull()
   })
+
+  it('plan follows the MAX-period line only — independent of line order (no price bleed)', () => {
+    // A proration/adjustment line can be the max-period line yet carry no
+    // extractable price, while an earlier lower-period line does. The plan must
+    // come from the winning max line, not leak from the lower line — otherwise the
+    // same invoice yields a different plan depending purely on array order.
+    const lower = { period: { start: 1, end: PERIOD_END - 100 }, price: { id: 'price_m' } }
+    const maxNoPrice = { period: { start: 1, end: PERIOD_END } }
+    const forward = { ...invoice, lines: { data: [lower, maxNoPrice] } }
+    const reversed = { ...invoice, lines: { data: [maxNoPrice, lower] } }
+    const planForward = translateStripeEvent(stripeEvent('invoice.paid', forward), config).plan ?? null
+    const planReversed = translateStripeEvent(stripeEvent('invoice.paid', reversed), config).plan ?? null
+    expect(planForward).toBe(planReversed)
+    expect(planForward).toBeNull()
+    // periodEndsAt still tracks the max line regardless.
+    expect(translateStripeEvent(stripeEvent('invoice.paid', forward), config).periodEndsAt).toBe(
+      PERIOD_END_ISO,
+    )
+  })
 })
 
 describe('invoice.payment_failed', () => {

@@ -9,6 +9,7 @@
 // 'abandoned' so clients reset calmly, and answer exchange_failed.
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import { errorResponse, json, preflight, requiredEnv } from '../_shared/http.ts'
+import { decideCompletionAfterRpcError, postCommitAction } from './completion.ts'
 import {
   createPlaidClient,
   parseAccountsResponse,
@@ -241,7 +242,32 @@ Deno.serve(async (req) => {
       account_subtype: a.accountSubtype,
     })),
   })
-  if (rpcError || typeof institutionId !== 'string') return await failTerminally()
+  if (rpcError || typeof institutionId !== 'string') {
+    // The RPC may have COMMITTED with only its response lost (see completion.ts).
+    // Re-read the session; the atomic flip to 'completed' is the true commit
+    // signal, so we only compensate (revoke + abandon) when it's confirmed absent.
+    const { data: recheck } = (await service
+      .from('plaid_link_sessions')
+      .select('status, institution_id')
+      .eq('id', session.id)
+      .maybeSingle()) as { data: Pick<SessionRow, 'status' | 'institution_id'> | null }
+    const decision = decideCompletionAfterRpcError({
+      status: recheck?.status ?? null,
+      institutionId: recheck?.institution_id ?? null,
+    })
+    // Build the payload only when the commit is confirmed, then let
+    // postCommitAction() pick the terminal action. A confirmed commit NEVER
+    // compensates — even when the payload read blips (null) — so failTerminally()
+    // can't revoke the token the RPC just stored (see completion.ts).
+    const payload =
+      decision.outcome === 'success'
+        ? await institutionPayload(service, decision.institutionId)
+        : null
+    const action = postCommitAction(decision, payload !== null)
+    if (action === 'success' && payload) return json(200, payload)
+    if (action === 'compensate') return await failTerminally()
+    return errorResponse('exchange_failed')
+  }
 
   const payload = await institutionPayload(service, institutionId)
   return payload ? json(200, payload) : errorResponse('exchange_failed')

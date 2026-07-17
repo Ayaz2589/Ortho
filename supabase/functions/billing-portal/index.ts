@@ -28,11 +28,15 @@ Deno.serve(async (req) => {
   if (!user) return errorResponse('unauthenticated')
 
   const service = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
-  const { data: row } = await service
+  const { data: row, error: readError } = await service
     .from('entitlements')
     .select('stripe_customer_id')
     .eq('user_id', user.id)
     .maybeSingle()
+  // A read ERROR is an infrastructure failure, not a missing customer: surface a
+  // retryable provider_error rather than telling a paying user they have no
+  // billing account (409) on a transient DB blip (full-review finding).
+  if (readError) return errorResponse('provider_error')
   if (!row?.stripe_customer_id) return errorResponse('no_billing_account')
 
   try {

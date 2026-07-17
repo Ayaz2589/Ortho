@@ -72,7 +72,7 @@ export function MonthPicker({
           'min-w-[124px] rounded-lg px-3 py-2.5 text-sm font-normal tabular-nums transition-colors',
           selectedMonth ? 'text-text' : 'text-text-2'
         )}
-        style={{ background: 'rgba(0,0,0,0.05)' }}
+        style={{ background: 'var(--chip-bg)' }}
       >
         {label}
       </button>

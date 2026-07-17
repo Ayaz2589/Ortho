@@ -165,6 +165,20 @@ describe('parseScan', () => {
       expect(candidate.guesses.has('currency')).toBe(true)
       expect(candidate.date).toEqual({ year: 2026, month: 1, day: 7 })
     })
+
+    it('carries a ৳-marked (BDT) total instead of defaulting it to USD', () => {
+      // The taka sign was recognized by detectCurrency/looksLikeMoney but omitted
+      // from the money-token regexes, so a ৳ total was extracted WITHOUT its
+      // symbol and mis-read as USD. It should carry through as bdt like EUR does.
+      const doc = docFromLines(['DHAKA STORE', '01/07/2026', 'TOTAL  ৳ 500.00'])
+      const result = parseScan(doc, baseContext())
+      expect(result.kind).toBe('receipt')
+      if (result.kind !== 'receipt') throw new Error('expected receipt')
+      const { candidate } = result
+      expect(candidate.currency).toBe('bdt')
+      expect(candidate.amountCents).toBe(50000)
+      expect(candidate.guesses.has('currency')).toBe(true)
+    })
   })
 
   // Integration coverage for the scanInference.ts wiring (the "SCOPED

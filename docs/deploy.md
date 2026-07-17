@@ -1,5 +1,16 @@
 # Deploying Ortho-iOS to TestFlight
 
+> ⚠️ **This lane ships the FROZEN native app, not the current app.**
+> `ios-deploy.yml` archives `iOS/Ortho-iOS.xcodeproj` (scheme `Ortho-iOS`) — the
+> historical SwiftUI implementation retired in spec 021. The app Ortho actually
+> ships today is the `web/` Next.js bundle wrapped by **Capacitor**
+> (`web/capacitor.config.ts`, appId `AyazUddin.Ortho-iOS`, project
+> `web/ios/App/App.xcodeproj`, scheme `App`; build-verified by
+> `.github/workflows/capacitor-ios-ci.yml`). This deploy workflow has **not** been
+> migrated to the Capacitor project — running it uploads the frozen native app.
+> Migrate the archive step (or add a new lane targeting `web/ios/App/`) before
+> using this to ship current features.
+
 `.github/workflows/ios-deploy.yml` archives the app on a macOS runner, signs it
 with your Apple distribution credentials, and uploads the build to TestFlight.
 It runs **only on manual trigger** and fails fast — before any macOS minute is
@@ -62,5 +73,7 @@ GH_TOKEN=placeholder gh run watch --exit-status
   secrets from fork PRs).
 - The distribution cert lives in a throwaway keychain on the runner; the `.p12`
   file is deleted right after import.
-- CI (`ios-ci.yml`) stays **secretless** — it builds with placeholder Supabase
-  values; only this deploy workflow touches real ones.
+- The frozen-app smoke workflow (`ios-ci.yml`, now manual-trigger / build-only)
+  stays **secretless** — it builds with placeholder Supabase values; only this
+  deploy workflow touches real ones. (The live CI loop is
+  `capacitor-ios-ci.yml` + `web-ci.yml`, also secretless.)

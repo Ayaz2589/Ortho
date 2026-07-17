@@ -114,7 +114,7 @@ export default function HousingPage() {
                 onClick={openPicker}
                 disabled={!currentHousehold}
                 className="mt-1 rounded-full px-5 py-2.5 text-[15px] font-normal text-accent disabled:opacity-40"
-                style={{ background: 'rgba(0,0,0,0.05)' }}
+                style={{ background: 'var(--chip-bg)' }}
               >
                 {t('Add property')}
               </button>

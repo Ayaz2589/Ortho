@@ -114,7 +114,7 @@ export function HousingSnapshotCard() {
                 <div className="flex items-center gap-3.5 py-2.5">
                   <div
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]"
-                    style={{ background: 'rgba(0,0,0,0.05)' }}
+                    style={{ background: 'var(--chip-bg)' }}
                   >
                     <Icon size={16} className="text-text-2" />
                   </div>
