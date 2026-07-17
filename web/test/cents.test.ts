@@ -38,6 +38,13 @@ describe('centsFromDollars', () => {
       expect(Number.isInteger(centsFromDollars(d))).toBe(true)
     }
   })
+  it('rejects a non-finite dollars input (honors the constructor contract)', () => {
+    // A bare `as Cents` cast would mint NaN/Infinity as a "valid" Cents; the
+    // constructor must reject them like toCents/assertCents do.
+    expect(() => centsFromDollars(NaN)).toThrow()
+    expect(() => centsFromDollars(Infinity)).toThrow()
+    expect(() => centsFromDollars(-Infinity)).toThrow()
+  })
 })
 
 describe('isCents / assertCents', () => {

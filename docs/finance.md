@@ -478,8 +478,9 @@ Locked by `insights.json` (all 8 rules).
 
 Not an engine, but the taxonomy the engines and UI share:
 
-- **`CATEGORIES`** — per-category `{ label, icon, tint }`. 11 pickable spend
-  categories plus `transfer`. Tints are RGB values ported from iOS.
+- **`CATEGORIES`** — per-category `{ label, icon, tint }`. The 11 pickable
+  categories (10 spend categories + `income`) plus `transfer`. Tints are RGB
+  values ported from iOS.
 - **`SPEND_CATEGORIES`** — the spend categories (excludes `income` and
   `transfer`), in enum order.
 - **`SEVERITY_ORDER`** / **`severityColor`** — maps insight severity to sort rank

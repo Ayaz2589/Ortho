@@ -43,5 +43,10 @@ export function toCents(n: number): Cents {
  * every tie). `$12.99 → 1299`, `-$0.005 → -1`.
  */
 export function centsFromDollars(dollars: number): Cents {
-  return roundHalfAwayFromZero(dollars * 100) as Cents
+  // Route the rounded result through assertCents so a non-finite dollars input
+  // (NaN / ±Infinity) is rejected at runtime like the other constructors,
+  // rather than minting an invalid Cents through a bare `as Cents` cast. Every
+  // finite dollars value rounds to an integer, so assertCents is a pass-through
+  // on the valid path (behavior unchanged for real amounts).
+  return assertCents(roundHalfAwayFromZero(dollars * 100))
 }
