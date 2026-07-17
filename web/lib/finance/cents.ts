@@ -26,10 +26,10 @@ export function isCents(n: number): n is Cents {
  * a non-integer, NaN, or Infinity — the cases a silent `number` would let slip.
  */
 export function assertCents(n: number): Cents {
-  if (!Number.isInteger(n)) {
+  if (!isCents(n)) {
     throw new RangeError(`Expected whole USD cents (a finite integer), received ${n}`)
   }
-  return n as Cents
+  return n
 }
 
 /** Construct `Cents` from a value already in cents, validating it is an integer. */
