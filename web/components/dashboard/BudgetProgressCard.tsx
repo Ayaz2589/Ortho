@@ -77,7 +77,7 @@ export function BudgetProgressCard({
               </div>
               <div
                 className="h-1.5 w-full overflow-hidden rounded-full"
-                style={{ background: 'rgba(0,0,0,0.05)' }}
+                style={{ background: 'var(--chip-bg)' }}
               >
                 <div
                   className="h-full rounded-full"

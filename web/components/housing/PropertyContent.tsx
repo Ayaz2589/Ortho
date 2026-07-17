@@ -78,7 +78,7 @@ export function PropertyContent({ property }: { property: Property }) {
               type="button"
               onClick={() => setConfirming(false)}
               className="flex-1 rounded-full py-3 text-[15px] font-normal text-text-2"
-              style={{ background: 'rgba(0,0,0,0.05)' }}
+              style={{ background: 'var(--chip-bg)' }}
             >
               {t('Cancel')}
             </button>

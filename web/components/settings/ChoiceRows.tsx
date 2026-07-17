@@ -27,7 +27,7 @@ export function ChoiceRow({
     >
       <span
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-text-2"
-        style={{ background: 'rgba(0,0,0,0.05)' }}
+        style={{ background: 'var(--chip-bg)' }}
       >
         {icon}
       </span>

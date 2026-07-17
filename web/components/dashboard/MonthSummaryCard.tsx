@@ -90,7 +90,7 @@ export function MonthSummaryCard({
         {isThisMonth && (
           <div
             className="mt-1.5 h-1 w-full overflow-hidden rounded-full"
-            style={{ background: 'rgba(0,0,0,0.05)' }}
+            style={{ background: 'var(--chip-bg)' }}
           >
             <div
               className="h-full rounded-full"

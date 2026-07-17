@@ -393,7 +393,7 @@ export function AddPropertyModal({
               >
                 <span
                   className="flex h-8 w-8 items-center justify-center rounded-full"
-                  style={{ background: 'rgba(0,0,0,0.05)' }}
+                  style={{ background: 'var(--chip-bg)' }}
                 >
                   <Plus size={14} strokeWidth={2.5} />
                 </span>

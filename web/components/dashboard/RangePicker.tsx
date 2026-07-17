@@ -18,7 +18,7 @@ export function RangePicker({
   return (
     <div
       className="flex gap-1 rounded-[10px] p-1"
-      style={{ background: 'rgba(0,0,0,0.05)' }}
+      style={{ background: 'var(--chip-bg)' }}
     >
       {options.map((o) => {
         const active = o === value

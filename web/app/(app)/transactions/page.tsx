@@ -149,7 +149,7 @@ export default function TransactionsPage() {
               type="button"
               onClick={openAdd}
               className="mt-2 rounded-full px-5 py-2.5 text-[15px] font-normal text-accent"
-              style={{ background: 'rgba(0,0,0,0.05)' }}
+              style={{ background: 'var(--chip-bg)' }}
             >
               {t('Add transaction')}
             </button>
@@ -165,7 +165,7 @@ export default function TransactionsPage() {
               type="button"
               onClick={f.clearAll}
               className="mt-2 rounded-full px-5 py-2.5 text-[15px] font-normal text-accent"
-              style={{ background: 'rgba(0,0,0,0.05)' }}
+              style={{ background: 'var(--chip-bg)' }}
             >
               {t('Clear filters')}
             </button>

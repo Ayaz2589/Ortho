@@ -208,7 +208,15 @@ export function LinkedBanks() {
                 </span>
                 <span className="ml-auto shrink-0">
                   {confirming === inst.id ? (
-                    <span className="flex items-center gap-2">
+                    // role=group + label so the confirm prompt is announced, and
+                    // autoFocus on the confirm action so activating "Disconnect"
+                    // (which unmounts the trigger) moves focus here instead of
+                    // dropping it to <body> and silently for assistive tech.
+                    <span
+                      className="flex items-center gap-2"
+                      role="group"
+                      aria-label={t('Disconnect this bank?')}
+                    >
                       <span className="text-[13px] text-text-2">{t('Disconnect this bank?')}</span>
                       <button
                         type="button"
@@ -219,6 +227,7 @@ export function LinkedBanks() {
                       </button>
                       <button
                         type="button"
+                        autoFocus
                         onClick={() => void disconnect(inst.id)}
                         disabled={busy}
                         className="min-h-11 px-2 text-[15px] font-normal text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-60"
