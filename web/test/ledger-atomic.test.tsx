@@ -81,6 +81,41 @@ describe('addTransaction — atomic RPC path', () => {
     expect(h.mock!.callsFor('transactions').some((c) => c.op === 'insert')).toBe(false)
   })
 
+  // ── Payload shape: the store must send exactly the RPC contract's p_tx / p_shares,
+  //    leaking no domain-only fields and materializing shares that sum to the amount.
+  it('sends a well-formed p_tx / p_shares payload (no owner_ids/shares leak; shares reconcile)', async () => {
+    await renderStore()
+    const tx = makeTx({ id: 'tx-shape', merchant: 'Bistro', amount_cents: 450, owner_ids: ['u-me', 'u-jordan'], household_id: 'hh-1', created_by: 'u-me' })
+    await act(async () => { api.addTransaction(tx) })
+
+    await waitFor(() => expect(h.mock!.rpcInvocations.some((c) => c.name === 'upsert_transaction')).toBe(true))
+    const call = h.mock!.rpcInvocations.find((c) => c.name === 'upsert_transaction')!
+    const { p_tx, p_shares } = call.params as {
+      p_tx: Record<string, unknown>
+      p_shares: Array<{ person_id: string; amount_cents: number }>
+    }
+
+    // p_tx is exactly the transactions column shape — no owner_ids / shares / scope.
+    expect(p_tx).toEqual({
+      id: 'tx-shape',
+      household_id: 'hh-1',
+      merchant: 'Bistro',
+      category: 'groceries',
+      kind: 'expense',
+      amount_cents: 450,
+      source: 'Checking',
+      date: '2026-06-12T12:00:00.000Z',
+      created_by: 'u-me',
+      paid_by: null, // payer-less row writes null (settle-up contract)
+    })
+    expect('owner_ids' in p_tx).toBe(false)
+    expect('shares' in p_tx).toBe(false)
+
+    // p_shares: one row per owner, summing to amount_cents (the DB sum invariant).
+    expect(p_shares.map((s) => s.person_id)).toEqual(['u-me', 'u-jordan'])
+    expect(p_shares.reduce((n, s) => n + s.amount_cents, 0)).toBe(450)
+  })
+
   // ── T007: sum-mismatch error rolls back ───────────────────────────────────
 
   it('rolls back optimistic state when RPC returns SHARES_MISMATCH', async () => {

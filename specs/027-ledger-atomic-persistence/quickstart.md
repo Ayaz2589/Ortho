@@ -29,11 +29,26 @@ supabase db execute --sql "select proname from pg_proc where proname = 'upsert_t
 cd web && npm test
 ```
 
-All existing parity suites must remain green. The new `ledger-atomic.test.ts` suite:
-- Calls `upsert_transaction` with a valid tx+shares → asserts both rows exist
-- Calls with sum-mismatched shares → asserts DB returns check_violation, no rows written
-- Calls with empty shares array → asserts DB returns check_violation, no rows written
-- Calls `upsert_transaction` again with the same id (update path) → asserts rows replaced atomically
+All existing parity suites must remain green. The new `ledger-atomic.test.tsx`
+suite runs against a **mocked** Supabase client (no DB), so it covers the caller
+side only:
+- `addTransaction`/`updateTransaction` call `upsert_transaction` (not a direct
+  table write) with a well-formed `p_tx`/`p_shares` payload (no domain-only
+  fields leak; shares sum to the amount)
+- an RPC error (SHARES_MISMATCH / NO_SHARES) rolls back the optimistic row
+- the CLI `persist()` calls the same RPC and throws (stops) on the first error
+
+The DB-side behavior the mock can't reach — EXECUTE grants, the auth guard, the
+sum/empty/null-shares validation, cross-household protection — is covered by a
+SQL regression test run against the live local Postgres:
+
+```bash
+# find the db container: docker ps --format '{{.Names}}' | grep supabase_db
+docker exec -i -e PGPASSWORD=postgres <supabase_db_container> \
+  psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+  < supabase/tests/upsert_transaction_authz.sql
+# Expected: "ALL 15 scenarios PASSED" and exit 0 (non-zero if any regressed).
+```
 
 ---
 

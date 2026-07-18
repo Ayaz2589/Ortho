@@ -69,7 +69,16 @@ web/scripts/import/db/
 └── persist.ts           # persist() — replace two-step write
 
 web/test/
-└── ledger-atomic.test.ts   # new integration/unit tests for the RPC path
+└── ledger-atomic.test.tsx  # store/CLI unit tests (mock Supabase) — assert the
+                            # RPC is called with the right p_tx/p_shares payload
+                            # and that optimistic state rolls back on RPC error
+
+supabase/tests/
+└── upsert_transaction_authz.sql  # SQL authorization+validation regression run
+                            # against the live local Postgres (the layer the
+                            # mock-based vitest suites cannot reach): anon is
+                            # denied, sum/empty/null shares rejected, cross-
+                            # household overwrite blocked, service-role import ok
 ```
 
 **Structure Decision**: Entirely additive. One migration, two changed callers, one new test file.
