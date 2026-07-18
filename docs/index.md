@@ -89,7 +89,7 @@ Plaid access token — connect-only (no transaction sync yet). See `docs/supabas
 
 | Doc | Read this when… |
 |---|---|
-| [./web.md](./web.md) | …working on the Next.js app (the canonical implementation, both delivery targets): `lib/store.tsx`, responsive/desktop compositions, `globals.css` tokens, Vitest suite, the client-side auth gate, the Capacitor iOS shell (`web/ios/App/`, native plugins, the Scan plugin), the import CLI internals. |
+| [./web.md](./web.md) | …working on the Next.js app (the canonical implementation, both delivery targets): `lib/store.tsx`, responsive/desktop compositions, `globals.css` tokens, Vitest suite, the client-side auth gate, the Capacitor iOS shell (`web/ios/App/`, native plugins, the Scan plugin), the import CLI internals, the deterministic coverage-corpus generator + dev seeder (`web/test/corpus/`, spec 026). |
 | [./ios.md](./ios.md) | …doing archaeology on the **frozen** native SwiftUI app (emergency rollback, or porting its original scan-pipeline Swift source into the Capacitor plugin). Not how iOS ships today. |
 | [./supabase.md](./supabase.md) | …changing the schema, enums, RLS policies, RPCs, or the billing/Plaid edge functions (`supabase/functions/`); understanding migrations, `config.toml`, or the local stack. |
 | [./shared.md](./shared.md) | …touching any regression-vectored finance logic: how the vectors are generated, asserted, and their determinism conventions. |

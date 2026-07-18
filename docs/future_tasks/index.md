@@ -81,7 +81,7 @@ spec 024 (see §1.1).
 > pre-commercial track** from the 2026-07-17 readiness review — decided work, not
 > candidates. It runs on **two clocks**: integrity/correctness items are
 > research-independent (do now); product-shape items wait for research.
-- [§9.1 Seed-data harness + edge-case coverage corpus](./9.1-seed-data-harness-coverage.md) — 🔴 · **Feature 1, spec next** · doubles as the §9.4 verification harness
+- [§9.1 Seed-data harness + edge-case coverage corpus](./9.1-seed-data-harness-coverage.md) — 🔴 · ✅ **shipped (spec 026)** · doubles as the §9.4 verification harness (reproduces A2 + A4)
 - [§9.2 Realistic demo / onboarding seed profiles](./9.2-realistic-seed-profiles.md) — 🟡 · Feature 2, held for research
 - [§9.3 Ledger integrity — atomic split persistence](./9.3-ledger-atomic-persistence.md) — 🔴 · the one commercial **blocker**
 - [§9.4 Finance-model correctness & honest labels](./9.4-finance-model-correctness.md) — 🔴/🟡 · verify+fix timezone & CLI-split, extend oracle, relabel

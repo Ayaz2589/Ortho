@@ -198,6 +198,28 @@ A **Developer** section on the Settings page (`components/settings/flags-section
 ### Pure finance core (regression-vector-locked)
 `lib/finance/{money,currency,mortgage,insights}.ts`, `lib/splits.ts`, `lib/balances.ts`, `lib/transactionFilters.ts`, `lib/scan/*` (spec 021), and `components/dashboard/range.ts` are pure TypeScript pinned by fixtures in `shared/test-vectors/`. `npm run gen:vectors` (`scripts/gen-vectors.ts`) regenerates `shared/test-vectors/*.json` from these TS implementations; the web `*.parity.test.ts` suites assert against the same files — now an ordinary single-implementation regression/snapshot check (spec 021 retired the cross-language lock against the frozen native app; see root `PARITY.md`). Key invariants: integer USD cents everywhere, `orderedOwnerIds` canonicalizes the deterministic leftover cent, half-open `[start, end)` month windows. Since spec 013, `generateInsights` takes a trailing `locale` parameter (threaded from the store's `localeForLanguage` value; vectors stay language-neutral at the default `en-US`), and the recurring insight's 3-merchant preview is vector-locked via `Insight.preview_merchants` — amount descending, case-insensitive name tie-break, casing from the newest transaction. `lib/types.ts` also exports `PICKABLE_CATEGORIES` (transfer is deliberately unpickable) with `TransactionCategory` derived from it.
 
+### Coverage corpus + dev seeding (spec 026)
+`test/corpus/` is a **pure, deterministic seed-data generator** (not shipped in the
+bundle — kept out of `lib/` on purpose). `generateCorpus(seed)` emits ~230 labelled
+household scenarios spanning every branch of the finance model — joint/separate
+finances, all split methods + leftover-cent cases, USD/EUR/JPY/BDT display lenses,
+month-boundary/leap dates, refunds, sparse/dense months, mortgages/leases (incl. a
+paid-off residual) + multifamily occupancy, budget bands, recurring merchants — and
+reconciling per-owner shares computed **only** via `lib/splits.ts` (no forked math).
+Two consumers: an in-memory vitest fixture, and `npm run seed:corpus`, a guarded
+local/dev-DB seeder (refuses any non-local Supabase target — see
+`scripts/seed-corpus.ts`). The committed regression artifact is a **manifest**
+(`test/corpus/__snapshots__/corpus.snapshot.json`: per-scenario dimensions + row
+counts + SHA-256, plus a whole-corpus hash); `npm run gen:corpus` regenerates it.
+Two scenarios are built to reproduce open finance-model defects so their fixes
+(§9.4) have before/after locks: **A4** (`order-mismatch-a4` — `sort_order` ≠ lexical
+id makes the leftover cent land on a different member for imported vs app splits;
+`splits-divergence.test.ts`) and **A2** (`tz-boundary-a2` — non-noon-UTC boundary
+rows misbucket in `generateInsights` west of UTC; `insights-timezone.tz.test.ts`,
+run **only** under `npm run test:tz` / `vitest.tz.config.ts` at `TZ=America/New_York`,
+since the default suite pins `TZ=UTC` and hides it). Research feeding the later
+realistic-profiles layer (§9.2) lives in `docs/research/finance-habits-budgeting-apps.md`.
+
 ### Responsive behavior
 Three tiers, one source of truth (`lib/useMediaQuery.ts`):
 - **< 640px (mobile)**: bottom `TabBar` (`sm:hidden`), single-column stacks, bottom padding `pb-24` clears the bar.
