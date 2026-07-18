@@ -1,0 +1,5732 @@
+{
+  "corpusHash": "e5e34d9f26c222cdf8ab1c48832b3dd73a935b41d3a30339cdd4447b5acee78f",
+  "scenarioCount": 231,
+  "scenarios": [
+    {
+      "dimensions": [
+        "budget-near",
+        "budget-over",
+        "budget-under",
+        "currency-usd",
+        "household-joint",
+        "month-dense",
+        "recurring-merchant",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "3abcdfcdfdd94d006296f7f9bc3ca11fe79f7cb9cac2797280b20f94c0bff134",
+      "label": "joint-even-usd",
+      "rows": {
+        "budgets": 3,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 98,
+        "transactions": 62,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "49459a356dea3991a87b049a428765ec3799b714c92e64b7a1e99d59ccbbaea7",
+      "label": "separate-eur",
+      "rows": {
+        "budgets": 0,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 9,
+        "transactions": 9,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "leftover-cent",
+        "split-percent",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "6ecd9d6cf06a27ed87cedae90f333362d99ccc2fdf66781ebdf3a2d92e62c58e",
+      "label": "percent-value-usd",
+      "rows": {
+        "budgets": 0,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 2,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "007b49fef960d081618302d698217719bb057bcfd4701f113bcb205b51a181cd",
+      "label": "currency-usd",
+      "rows": {
+        "budgets": 0,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 9,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "82c7f8a986a4cc8a76d48d56454945bc4c84a489a33f5aef1f7815fe604747c2",
+      "label": "currency-eur",
+      "rows": {
+        "budgets": 0,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 13,
+        "transactions": 9,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "891dce493b0bacbb2de45ea1b5d068a19be1b10b29c268894f000817d76d773b",
+      "label": "currency-jpy",
+      "rows": {
+        "budgets": 0,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 15,
+        "transactions": 9,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "11ac6deb60bedabe61039b6d0747bb16bb43ae25b0bc19aa1d85ebf166300450",
+      "label": "currency-bdt",
+      "rows": {
+        "budgets": 0,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 14,
+        "transactions": 9,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-boundary-first",
+        "month-boundary-last",
+        "month-feb-leap",
+        "month-feb-nonleap",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "231bb5a2f4ea272113a790242d0b2ad5848d6079bf359af64652e1488eaab898",
+      "label": "feb-boundaries",
+      "rows": {
+        "budgets": 0,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 12,
+        "transactions": 6,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "refund-credit",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "0001d283124fbceaf380ba157e09cb982b1bdd223876023b0bf4eada68ae33c9",
+      "label": "refunds-credits",
+      "rows": {
+        "budgets": 0,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 3,
+        "transactions": 2,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "property-lease",
+        "property-mortgage"
+      ],
+      "displayCurrency": "usd",
+      "hash": "f640595218451db968e6e7d9f286a73b1f4bdce3aad2f3d3a9d706b99b871804",
+      "label": "housing-mortgage-lease",
+      "rows": {
+        "budgets": 0,
+        "cards": 2,
+        "leases": 1,
+        "members": 2,
+        "mortgages": 1,
+        "people": 2,
+        "properties": 2,
+        "rental_payments": 2,
+        "transaction_shares": 0,
+        "transactions": 0,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "mortgage-paid-off"
+      ],
+      "displayCurrency": "usd",
+      "hash": "21eb761649cb2a26a6c9c842aa945caacebc33d5ef91eb1a2a4ea900ce67d5b0",
+      "label": "mortgage-paid-off",
+      "rows": {
+        "budgets": 0,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 1,
+        "people": 2,
+        "properties": 1,
+        "rental_payments": 0,
+        "transaction_shares": 0,
+        "transactions": 0,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "multifamily-occupancy"
+      ],
+      "displayCurrency": "usd",
+      "hash": "c30f72ac2746d41c80f7ce7c0f00c160404dc64b47e885560eafdcdb16f5fa7d",
+      "label": "multifamily-occupancy",
+      "rows": {
+        "budgets": 0,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 1,
+        "rental_payments": 1,
+        "transaction_shares": 0,
+        "transactions": 0,
+        "units": 3,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "leftover-cent",
+        "order-mismatch",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "132bcd398a0694ac6dbdaf8e48cbb8d0e927f79d49d5747e699e317a0f1a8e51",
+      "label": "order-mismatch-a4",
+      "rows": {
+        "budgets": 0,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 2,
+        "transactions": 1,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-boundary-first",
+        "month-boundary-last",
+        "split-even",
+        "tz-boundary-non-noon"
+      ],
+      "displayCurrency": "usd",
+      "hash": "cd7ceb7b80e7914e531db83292ace266e32ca53ffd758b986e07351699055df2",
+      "label": "tz-boundary-a2",
+      "rows": {
+        "budgets": 0,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 6,
+        "transactions": 3,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "budget-over",
+        "currency-usd",
+        "household-joint",
+        "month-dense",
+        "recurring-merchant",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "04360d3edbd4374665e4889390ca351f1472b75ad0a1b070f141be579b98a1a3",
+      "label": "subscription-creep",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 15,
+        "transactions": 10,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "77723ca80ea3ad829b8aa2d5f739e286b6f0e2d9e815f19046d8fa852b7701fe",
+      "label": "fam-usd-even-sparse-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "da44ee3976e5399bb3ace1a1a1b8361ddaae4d1a6e8b9b07676953cdfeb6c547",
+      "label": "fam-usd-even-sparse-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "3d4ac258160b1c9e75e15d63f102b4cdf8f90ca436283fb6cdf5d76bcae146de",
+      "label": "fam-usd-even-sparse-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "1581a49bd740cfcb5e6154e592d3f35c7f8a565227b88a2f5dbbf4566dae5756",
+      "label": "fam-usd-even-sparse-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "1dd73a8d736da6474b3371899a836a62c7ac3b14ec211fb0c262ece122377154",
+      "label": "fam-usd-even-sparse-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "b9cfdc41b47071a6f0c1292894109473af2127e2d9680bcafc4449ee12905f61",
+      "label": "fam-usd-even-sparse-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "e74252a0f785ba388b3bde9683c45ed5ee99a9de466203cc2bb34c38d262e99a",
+      "label": "fam-usd-even-normal-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "dbf5a74a550a7c4a17117f6514edd3863731bed1f1ec688e4a4f5555e299156e",
+      "label": "fam-usd-even-normal-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "f94a9a2ef9b72d1020b02685e915589243f4ceb336e598b05ee918b065206202",
+      "label": "fam-usd-even-normal-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "5c54c6119eb93053dc101d719c377b3c30dc23b25a0e5e86b2cb104067fb03be",
+      "label": "fam-usd-even-normal-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "75eac2e97e53fa2247346415f0d119d6cccefd7bfe388555b1146d876a724891",
+      "label": "fam-usd-even-normal-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "23074fed7e2d2a1b1ba1435a2d4d0d3f4615eb69a5cb77024144801c8ec9fd76",
+      "label": "fam-usd-even-normal-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "52acbcf5c003363008451231e31e08656ac446dc79f9064f89e9f54c6906339a",
+      "label": "fam-usd-even-dense-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "dcba364b111527cbb0cf5dd4518c60a14858810d5d847ee25f2e8ebb59e7e1e5",
+      "label": "fam-usd-even-dense-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "4cc1da6fab70b46f8f8b3869b6d00610036fdd6bbedce28d3dd441967e52016c",
+      "label": "fam-usd-even-dense-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "aa95981f6cdfe1f4678b31508e9a657262f3e95487637c8563b03b5c43db513b",
+      "label": "fam-usd-even-dense-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "8eaaa4700ef6ea67ac9b4aaa1acead3f1f364c5e7884f7f02174900da5d59130",
+      "label": "fam-usd-even-dense-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "usd",
+      "hash": "c78a434dbd911392244642bddd9320db6d68907ead818203fbb22fe555c5b6b4",
+      "label": "fam-usd-even-dense-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "c05086cbe70632111d4a941e2f76b5a4263ee11568d0a4163cd2e5bb6b0c266a",
+      "label": "fam-usd-percent-sparse-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "bad273af8ac6007091b86d2b59b8b1e32d5fee1e9f6cb949ab6a48d95cc391b4",
+      "label": "fam-usd-percent-sparse-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "6d3ef0d262d23ab194dcdcf2722fe68c91f34f24d989c647a4f9ab799d396b62",
+      "label": "fam-usd-percent-sparse-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "8f696f39f38af0e3078abcc6d729fcfd2f84c9a115dda5a79ed08ac081c033c8",
+      "label": "fam-usd-percent-sparse-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "ab52e5e0c0d6239a81175600a3535f80bcc276d1860c36b24790f46b367301a8",
+      "label": "fam-usd-percent-sparse-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "a66e8599bd878757cbf6c68d6f71214e613ce8428dc5fd8a0802f536ea6eff60",
+      "label": "fam-usd-percent-sparse-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "bb72637aad2a224f199674ed313d5e76fe4a695ee9d420f7198120095688e210",
+      "label": "fam-usd-percent-normal-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "cab077e04b680bcec3bece407df9edef9e1623dc94468bc23dc22478dd9807a9",
+      "label": "fam-usd-percent-normal-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "ed825393e104d247e599cc598259ed73f024e665c324a4cdef838b9f9825a92e",
+      "label": "fam-usd-percent-normal-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "c96b5099c2b5164eebb77d8181a7b10654cd31f7d74df97686240d0caa2f943d",
+      "label": "fam-usd-percent-normal-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "2a02673528e5c558228e884c62ed79cb39fc950cad8bc9d58bf6bb7c4a7f5fcc",
+      "label": "fam-usd-percent-normal-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "3c38d826d544295e6abec52a2a576fd11c4384fd970f83c2eb0751ebdee00e17",
+      "label": "fam-usd-percent-normal-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "cbdbdc7e02cf80f821354236f91e0670a6104005812b50c8df36b8676b1f4e2e",
+      "label": "fam-usd-percent-dense-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "2d181ded2751e54ac9a6ce04201a7d42101c25575eb00c6f7a6c9e76733d75ed",
+      "label": "fam-usd-percent-dense-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "fa5b2eff186e57a3c73d7a1baa73a87b31b74cf0d2d4c61aa2de19dd9dfe569c",
+      "label": "fam-usd-percent-dense-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "a6377162d0bd09194052cccac50bf52b17e2d03862dc6d499ae14b20cfb86388",
+      "label": "fam-usd-percent-dense-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "45649e70ea593aedeb604295607361c2cf83e52829bbb1e0732f5f327725425e",
+      "label": "fam-usd-percent-dense-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "usd",
+      "hash": "cee7dab848f0d0dca3cc0fc8bb491031c11644aa63b1cc1603b706b55425c165",
+      "label": "fam-usd-percent-dense-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "53afaa40d30dc1d21137e5f5d574dcba9ace8685cf57f4d035c5b40b43c5d90d",
+      "label": "fam-usd-value-sparse-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "ba5efd964f32306e8843f884e716ce6de4ba50c539b3d0a858d7df58f4b79996",
+      "label": "fam-usd-value-sparse-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "927da1c3f63e0c77bc7ad52a882c5df03cd75dd50fa6efb818eaceda57fc7a24",
+      "label": "fam-usd-value-sparse-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "25d658a8ca7bc151bc3ce5f943d2acb9a530e7cdfc14e3e04ee0a1980e61d062",
+      "label": "fam-usd-value-sparse-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "e28868443108c73fa4e1827bb67ff86874401acf518ea1c3d70376fa6bd2fdbe",
+      "label": "fam-usd-value-sparse-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "329cc67742c3da2bc4d22dadcaffa1e71753959ff8fa896b31c379fb5fa4a1f6",
+      "label": "fam-usd-value-sparse-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "e58309668cd065558eb242b665985049c7b5c7001643129ef49172e29faffa0b",
+      "label": "fam-usd-value-normal-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "59559b854491feaf41829fd6870ba73d5e6c6bb796af0f84b206a122c32dd1b9",
+      "label": "fam-usd-value-normal-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "17a28df9ed4fd870ecae9568fd5f5fc3e4ab760739a1608b5db85608837cdd4f",
+      "label": "fam-usd-value-normal-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "f4a9ed9ac0e7e0af74ca43187924941daebed166a6e663dd4a1e50c28bd646e2",
+      "label": "fam-usd-value-normal-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "6dd6bf79c435647cee27d249642ccb8cc8b9efb6fac103d5bac509726051a627",
+      "label": "fam-usd-value-normal-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "b50c388cf05225f36a7088b075cdfe3e257c65a83d8674a3588f2d3f6cecaaa7",
+      "label": "fam-usd-value-normal-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "8f8c477ba36b621aaed91b0abdb2b730ec74108998b9d3030edad499511ec909",
+      "label": "fam-usd-value-dense-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "dd351fecac948f8d3a93d4b34346809f07859c5987d0c0690b4c37afc6975223",
+      "label": "fam-usd-value-dense-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-joint",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "d0f0806893739bb8aeaa18a5cc486ebfa232e92b678169272e76ab1c64de9e78",
+      "label": "fam-usd-value-dense-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "9c0f146d5d09e30a1edb1e877e2633168be0cef9608ea1937a1010477cd4d9c3",
+      "label": "fam-usd-value-dense-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "af8af7cf042c60c6f6a8299f3df83b122f8b2fc62d71ca686832d4cdb8123254",
+      "label": "fam-usd-value-dense-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-usd",
+        "household-separate",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "usd",
+      "hash": "173afb3030e183a486251785c484412e018f7de76a835273d07b599d5ec55945",
+      "label": "fam-usd-value-dense-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "3ab1a0ddcb9b222ffd6c827f5af8ca3e7f0aba53a83ef8b17fd03b1d73d2c9de",
+      "label": "fam-eur-even-sparse-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "9c78e3dc53644e7aa6c69dae840bec433d4f9fc3003be0ad061b26c5e40ad360",
+      "label": "fam-eur-even-sparse-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "94440b8a42a65e2a236e11aadced852a1dc9c69165a26058da3d44579991c181",
+      "label": "fam-eur-even-sparse-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "ab439c268a6d0ee1903c78db030d3f053c98af59323f733055a3c4a781433b10",
+      "label": "fam-eur-even-sparse-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "2f3b321eac7acf83e0d51d3fae539f32adb99b2f0e0c589c52f20f3d5a93ef8c",
+      "label": "fam-eur-even-sparse-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "5804c87eee9f43cb8d78326829b9be5d0d63f642c9af3bb5f4fac51bce3ae02e",
+      "label": "fam-eur-even-sparse-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "7146f8d4070d63805e0cd3c497301289af09c2a0f7f08a4716c858b5672b618b",
+      "label": "fam-eur-even-normal-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "9c225c78a1d109ea586dbf72f259c5e0cffe184151527f6703e0dd1986574206",
+      "label": "fam-eur-even-normal-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "94a81a0cad5abccdd8448fd400956cc5be1298a35924f34df9e14ccfe4baa7e9",
+      "label": "fam-eur-even-normal-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "e5933e5071ba3bb5793ccae81efe785d83874851955e1ced355151e3f719f33e",
+      "label": "fam-eur-even-normal-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "d6ebfa7ebf2dfa93aafe49f2dec7f0693b4cffc5a7c8156f9835505fc26c6ef6",
+      "label": "fam-eur-even-normal-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "be764a7e07a93800aac90d0dd581461ff30f421854c0f46f2e6b03ac770604a2",
+      "label": "fam-eur-even-normal-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "1aa41520fb398491633dd3cf32554504ccd69bbb0f049783512779e58d3b00d0",
+      "label": "fam-eur-even-dense-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "3952da44ec0d41fd1d4d99cc065fcc16ff3488be5a011fa5d01294b7e4902e63",
+      "label": "fam-eur-even-dense-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "9da3d065688b17cf996a4665d0562e689f975000acbc032c6b717567f5bc64b0",
+      "label": "fam-eur-even-dense-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "ac6fcf2a3c5feb216b403bef07ad12e5ff3ccd1a736e24c1d2fcb14fe2b84010",
+      "label": "fam-eur-even-dense-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "36aba13b0d181d26062e1c8965a33b6c3e6ccce40637da685c4df73b6090ce70",
+      "label": "fam-eur-even-dense-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "eur",
+      "hash": "b34cc941520ba7231d735946ab753054eb9cf3faa3834cc3ecae6249754576a2",
+      "label": "fam-eur-even-dense-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "3057ab982d28b901498718bda90bb3d86d104e47b8c02c29b92aa98d7d3a88d6",
+      "label": "fam-eur-percent-sparse-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "91c0112a1ea505ae923531e9509fe74fba95038f8c49ba03e42fe6339ee31a53",
+      "label": "fam-eur-percent-sparse-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "bad3a78d9d6feb66300c68986b98cb4717a7857b70192ef2125b219163d71b05",
+      "label": "fam-eur-percent-sparse-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "eda49e42298eab44205a09413f3bd82f325cef2483ba6305c6b39e8d81fd1178",
+      "label": "fam-eur-percent-sparse-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "5b8cdb9164bb91d0155c1ca04908f7d1e2365a62772cfefc11ea3e3f50fb5ed7",
+      "label": "fam-eur-percent-sparse-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "25a09224a4e79c174524205d18dbd6a6cab45e2729c562c0ef4d4d062256e3ae",
+      "label": "fam-eur-percent-sparse-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "6ff1e3c1f8cbc6551919a3cfc909d1d2b083db79590f6c5357e420fef93d095d",
+      "label": "fam-eur-percent-normal-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "f0d9a735e8b1bfb57a7c6554e78da24281d907225346b6b60ada85405a2ef7f5",
+      "label": "fam-eur-percent-normal-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "ddc829ec82fd025805841924e3f615390c3493aad30947aad2a045ebc8195d7d",
+      "label": "fam-eur-percent-normal-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "29a9544d65de2f58a4571cb80ad5ca6a0813ca33d871032d2f5d64aabd7632cf",
+      "label": "fam-eur-percent-normal-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "e012dd0167be01b1d7291ba8c384117eeffec56b4991df5464afca10b9212582",
+      "label": "fam-eur-percent-normal-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "5be903864ea87f92df2f83e3169043f4d2033ef764b1634e7d7ece280cd6edd9",
+      "label": "fam-eur-percent-normal-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "843b3b021dd95a914f730b177ab8c1320c3e0927d02e6b48eff8552dc81608a1",
+      "label": "fam-eur-percent-dense-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "a5fea143a461a79f80aea06ece9aecd9ecf61c0f101e102f43ebe74e83aee09f",
+      "label": "fam-eur-percent-dense-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "3b7a2b61639692f4bfc83caaeaf9676d3e88f2085547cc3052e35016e749af62",
+      "label": "fam-eur-percent-dense-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "5e9092a6fe04ab23847208032626dc713f118300446fa782d57f97d0af77c060",
+      "label": "fam-eur-percent-dense-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "90063a523ce4cc4bdffbc0dc38217e17bda8e57253b1ddefed4cf6f7a1236d73",
+      "label": "fam-eur-percent-dense-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "eur",
+      "hash": "402313752e78a13c7365fe74d072192ac9254266f8cdc4bb88200d38e7c7b1a6",
+      "label": "fam-eur-percent-dense-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "5e1dc2a5a710f4e2fffc8e22ad08097e029cc80d9dc2475ac04e7d8b535537a6",
+      "label": "fam-eur-value-sparse-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "99ef4d135ece93ae7019a9037051f19c9bc9adffbc508cda17367d2be9f32a8c",
+      "label": "fam-eur-value-sparse-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "16b30e5de78e2e0e94a7b93e04521e82e175e99e74fe28138ae8e614e466b087",
+      "label": "fam-eur-value-sparse-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "17138afd4c408405533ec95817e69808568bcc9875ee3da3a65fc5bdbaf6e201",
+      "label": "fam-eur-value-sparse-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "e9af22b10ab55e8a8e2c8e68a88580debcaef2253ada0fbf5a2dc90c4c04a650",
+      "label": "fam-eur-value-sparse-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "4694dd3f5903ed5192738564aace089b7c938fad5c9beaa1107e8ccb154dc2da",
+      "label": "fam-eur-value-sparse-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "9b8bd1f0de01514f0273cfe69a4774abf29c87e0170b81a29c461719c2439c0b",
+      "label": "fam-eur-value-normal-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "3b384f04a9132448fe3b7e45663b34e879dfba0890d51d57150f3835effe34a8",
+      "label": "fam-eur-value-normal-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "af2ff0c60e2c04cc24ec789f1951c32b5a9dca72a42bb7c2d7b74d6123bfec7f",
+      "label": "fam-eur-value-normal-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "e6b284b811691b04391788dbc77e274a819974767cfca3291205ca6e5a451dbc",
+      "label": "fam-eur-value-normal-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "6ea5aeb9feffcf9a18f05f4ddd8c020c689b28b6bb1563a2168f08f33fed1675",
+      "label": "fam-eur-value-normal-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "cf4755f153369a4df53bcf30e6e24c211310138034624594dbc1331aeda6a67e",
+      "label": "fam-eur-value-normal-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "441fea12a383dd77f6d09df6233d7748749bd663154ded8bd356c49468270f5c",
+      "label": "fam-eur-value-dense-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "798e6699547cb413cee06e2ad2da5ccb8a5486d834e1ceea0f01057c9ae73170",
+      "label": "fam-eur-value-dense-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-joint",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "165110d501b8ee09c4f71aa5760ca9a3150ad6230de18cce1ee0f2aa37350605",
+      "label": "fam-eur-value-dense-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "60a946a4c483307c7cfaf8c4c188880cf204c7311d4cf99139ef85d2636f0a30",
+      "label": "fam-eur-value-dense-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "2cc9840c9c99413807a9c975d4ea54bdc8927917350702e4c0426c0fdef75d25",
+      "label": "fam-eur-value-dense-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-eur",
+        "household-separate",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "eur",
+      "hash": "e95a28d1820e6eb6795aede32e1eb5843bcbeeb2a7e6b3bd9c0fe2dda6992493",
+      "label": "fam-eur-value-dense-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "44792f9763062833d0eebca9c76f5e2205b8f5c4bbdbb152aecc9acc9ddc9903",
+      "label": "fam-jpy-even-sparse-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "b9a7228f09f34ee6d5324440d7e0cbef690c69e43f32c8c0797801a85caf7cf3",
+      "label": "fam-jpy-even-sparse-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "aa4a5ebd7fc21c671680bf11a918a149ef3fbd36f2598397f80da8cead7ee965",
+      "label": "fam-jpy-even-sparse-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "ba17bfc79736e6d59ea08cc1cc1efe39725ca517e1da933066b8ba50426d877e",
+      "label": "fam-jpy-even-sparse-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "b91113b7895f63ba9e91391360a4ffa7ef8ac8c4c17b0c238bb05d5a567b43a2",
+      "label": "fam-jpy-even-sparse-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "20c900fdb2bc5fe08facfe31be8d8fbfc955850d7f8618ec4e677aaf50aa5528",
+      "label": "fam-jpy-even-sparse-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "55450d7c80f49d6521d23fe8dcb7948c0a0cd68f4b004a938ebf83819d07bde8",
+      "label": "fam-jpy-even-normal-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "3db4cd1e5a6d2657721dac4e9d5a4255389e329fd919639421842cdd9641be78",
+      "label": "fam-jpy-even-normal-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "fb090e5f91f1cbcfe3fed76625e97cf50b6bd81ee9e634c1a565b3b84189b2ac",
+      "label": "fam-jpy-even-normal-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "94937ac50263a855c38423bfab577ea14781e28199fda16313e911bfb92a4d69",
+      "label": "fam-jpy-even-normal-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "d2d2e300b1e9b4dad26e5086890729c941b6be41fa76f983da04838c00efbed6",
+      "label": "fam-jpy-even-normal-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "a18d0a66d0cdac86464310406dc26b1a1385001e09ffb0e6aed324787a604db9",
+      "label": "fam-jpy-even-normal-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "37c1c270a3306fec89223a1bec823fe7649411c647197a21dbdffe342eae8b28",
+      "label": "fam-jpy-even-dense-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "2a7943356e289ec1e9822d30a2da7e1e07d52058b57a0cdb12dea68be07a36c1",
+      "label": "fam-jpy-even-dense-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "7d5a4aa091416d2d5d52fba7b414729d1a29f3c69d140c18c0d241c449414c28",
+      "label": "fam-jpy-even-dense-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "f67cb18805d6720f60be1796b1fbc3d7835ae6f96db30fbcc167ca513829185d",
+      "label": "fam-jpy-even-dense-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "6d63a766534d59399067ef3bc52a23eaffda6d64f6378dda39015d659319ddbe",
+      "label": "fam-jpy-even-dense-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "a10363c8fda5c792e6094511839dd91234ea0f3dc5106bdeb714a167c2b0f241",
+      "label": "fam-jpy-even-dense-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "12b766c9ebd1425463d323b567a5449ac5f1cb41bbfb1de3457fadad34a5cd1d",
+      "label": "fam-jpy-percent-sparse-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "e8d81b94477038021233292eaf36b84b3cf5b526e523a7cb7e02633477ec71a4",
+      "label": "fam-jpy-percent-sparse-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "57a713ca657112cc0e00be1e32e47e28e25cc3dfcf5c34707eaf97570a515fd9",
+      "label": "fam-jpy-percent-sparse-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "a29efebe899be4436f64f372ec79b639898715ed4328074341ad3bc645bc0fa8",
+      "label": "fam-jpy-percent-sparse-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "968c73d065e0ad10a11a9f7e7a33db8d2f7a166cbea07d2a6d7de80e6f3cfad0",
+      "label": "fam-jpy-percent-sparse-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "f06d3cd9a4ec98de3965569d593fa5d58c5858da9f9a27a1b4a6c8083ad40abf",
+      "label": "fam-jpy-percent-sparse-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "762987f6be5e754d187c4338f2205c7d8af93a8b6d5576a1772abc392c9c5c77",
+      "label": "fam-jpy-percent-normal-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "6431029d9df413bbece3f493ccd9dc34cdc9717e70f4d6c6e92fa235acf4acc9",
+      "label": "fam-jpy-percent-normal-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "1a40b7b22e9635024cf02c3ce496fb19a36246de2e901c989d38ec319046d7cf",
+      "label": "fam-jpy-percent-normal-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "bda8d27d16c138e5dd173f33d2bec4d392faf0c1291083aba1620799262a3bc7",
+      "label": "fam-jpy-percent-normal-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "0f776808cfe284905afea6e0a334257d33586980fb5d663c1d379118f2b0a269",
+      "label": "fam-jpy-percent-normal-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "598f9f07cec33d51c16a3d779d5c7fa62f253082a4e61f623937faeb0ad47895",
+      "label": "fam-jpy-percent-normal-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "94ed8e397229183db9f8414b104746dc80223cdad3cec5951907df4ad135953d",
+      "label": "fam-jpy-percent-dense-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "a71d3e36e4f17ff39f56bbf802e82d7726feafd882ea9feceebb36b90c7958dc",
+      "label": "fam-jpy-percent-dense-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "5cc316e38a18a5171cdcb25362b2acbeba12db2419b75c6a5dee7b391c993a0f",
+      "label": "fam-jpy-percent-dense-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "7b479c904f815c6813f637aa3d942b42f4ea3983c2372a5678267f9b0b2f65c3",
+      "label": "fam-jpy-percent-dense-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "b57694769a357b83944ad2c07a2b350f36f83d9a9380c0ee7e6b2990ced682bd",
+      "label": "fam-jpy-percent-dense-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "356cf6d7c313f5af34566f4f1b3fef185eee88009f0653c94c2bc3621f6281fb",
+      "label": "fam-jpy-percent-dense-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "be7ec60ba7b657352bef83c79f1fcd1eb850a6810edeaea3f4fe0918bdb09b64",
+      "label": "fam-jpy-value-sparse-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "d1af77b84fca0d5fd5f6f022f8cc4b59f16ce096bb9804de26e00e32edb60c72",
+      "label": "fam-jpy-value-sparse-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "65c752667ed102ad72d62fb0e3f0d49a9df037b5e35b01aecd1f8c77af4a398e",
+      "label": "fam-jpy-value-sparse-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "6602c1c2e7ccd0da63ea3a7ee5f42d3af9ee16186e299954c64715535fb9971f",
+      "label": "fam-jpy-value-sparse-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "dbae46f88042382ae3d325eac6caa4a8084933a455d01a297fb72fc84c10333e",
+      "label": "fam-jpy-value-sparse-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "1a16eb3f77bd7c2dcabe6e89d423c628a2ad83fadba4194b02d4b046669541d0",
+      "label": "fam-jpy-value-sparse-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "8f445f7eb396f6f869ef33e3f561cd0b0953e82cdd199b8e913f3b8aa4549d0f",
+      "label": "fam-jpy-value-normal-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "74eded81636600818b582cb57630e12c71875af16a68250cb5e7ef773ba8ee0c",
+      "label": "fam-jpy-value-normal-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "fdc8d176b5fa16cdc5a4f328a63cd2f4d57aac3561c4d51447b11b4e7b653b9e",
+      "label": "fam-jpy-value-normal-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "44b5f9258277a4a4f298f7484378634c108191bc4e6dfce7ae8ebc4b6ed193e0",
+      "label": "fam-jpy-value-normal-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "bbaa99c9c929a7b660c36555b2de0a3c1470a1ae379339f1ed294a09dc5e0afe",
+      "label": "fam-jpy-value-normal-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "818f1e39069a683a6e0b35e458e32d8af6a2cccf53ca057226b202e5a29e56ae",
+      "label": "fam-jpy-value-normal-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "90f8adfe46ce346848dfa92dfe42e879d1fba7083b79428ca02179dfe270b61b",
+      "label": "fam-jpy-value-dense-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "904c1b7c86213f10ccc8ead01f7d61159021f0a2bf671ae0cb06fa54c7c46650",
+      "label": "fam-jpy-value-dense-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-joint",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "eb4aba55ba97faec0bf7894c74e30e1c27e6be2be94fbb5d28452d9ffd2b5a07",
+      "label": "fam-jpy-value-dense-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "a15170671af53e247eb51c5e5bcf049a65faf993e3be35203e1b9116918c8bd0",
+      "label": "fam-jpy-value-dense-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "fce0fafaf2fc0d9f8d6d52fdfe8cd14d13be68583824b9cc79eec85defe04dae",
+      "label": "fam-jpy-value-dense-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-jpy",
+        "household-separate",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "jpy",
+      "hash": "7a1b392b089ea473beed1143ee790a07ea9ef8cd837d0171ef8711bf3e531723",
+      "label": "fam-jpy-value-dense-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "0933162058b76a526d998ff50b9aaf987a8c1e5d78c1bd920e0decb569f06910",
+      "label": "fam-bdt-even-sparse-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "d173cf2e33beebcb4cddb00fdae5b21bc4014a59a89d585a7d65a5268f5015a7",
+      "label": "fam-bdt-even-sparse-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "510609fb64f5c3dff2c41aae4b7b29129902f85a481a9b01e5d3a401580ce284",
+      "label": "fam-bdt-even-sparse-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "46b81a07cb39aa5fb616e4abd0642c44aa79b657bf7f367071780aaa0cf9ac35",
+      "label": "fam-bdt-even-sparse-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "9800db9ef7b716a9788693445d4760d5bc936c3a2d04ea65f43b3b70a4e411b4",
+      "label": "fam-bdt-even-sparse-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-sparse",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "5484dd1fdaa4d31b4a18331c6e084f1f8f98db7ce3c413eae0b3e8f404e328b2",
+      "label": "fam-bdt-even-sparse-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "abbba3dcd807d0bc16d1a80eed9964a1eaf7de21f8f0cf31aa1696fc6b4b834c",
+      "label": "fam-bdt-even-normal-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "92f987f0cf270bd6c201ee2107417e1e7a7e7b88735000f79b75fe2ab24bd280",
+      "label": "fam-bdt-even-normal-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "6de1605d4500a3a3e7f7edd9e442bf689f0b15a8be036b001d1017a1d5bc4910",
+      "label": "fam-bdt-even-normal-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "cf8743f4e2bb4003c40621360643e73f02ac2ad460dcf9aac4a9c9d0284ec5c9",
+      "label": "fam-bdt-even-normal-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "4707f69acb9491a6df1a7b11fe0ea990ed699a31f6cefe63fa22d46b33a18fde",
+      "label": "fam-bdt-even-normal-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "c2faf73fcd53393c466e4b5a1c0dc2a0e5700e71de329f5118f5e9cf828caa0a",
+      "label": "fam-bdt-even-normal-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "3d486142ca911b9c0da36fed8257d671ed7b93f385d39ff46ec6f1f0eab0cf13",
+      "label": "fam-bdt-even-dense-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "9c112d1b0bc6c7a9c4318ccb813094b5f0e95a97e8952f6ac29d1e41ef47e488",
+      "label": "fam-bdt-even-dense-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "756e2f8d3801da88abba8cbd5f1f4bdc71fa38c49d6632639b5bb4b2f34c0423",
+      "label": "fam-bdt-even-dense-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "c69651fda37eb462f016da1a575db5772c0050814f55c45deb23a162b5bc053b",
+      "label": "fam-bdt-even-dense-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "f425a4df7c4bb923e0b87bc0c6b7d1390af9d4821dd48fe17e4a14748cbba5ad",
+      "label": "fam-bdt-even-dense-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-dense",
+        "split-even"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "8f42dd5bf9a7cc232c0925d354ad6f256ff1fabae963720d5ae200421456c8d8",
+      "label": "fam-bdt-even-dense-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "b0d92b593c1c11bf2a49dc37080dcbee5b9f44a3593767a744a50087a400c2a5",
+      "label": "fam-bdt-percent-sparse-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "772e6a48120feea6c5471e34e4c0c39cb81612379c3cb23335807329e8699491",
+      "label": "fam-bdt-percent-sparse-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "d07740253368c908ad28872ea88524d04fa7ebb04008063104e295488bdb1f7e",
+      "label": "fam-bdt-percent-sparse-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "f9f9979b8ef29096e2234c6bbfd8673d2e196aa3db919a82687704c10cfecca4",
+      "label": "fam-bdt-percent-sparse-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "2b2e71b69ba7a469048ddc22f6874262d2d9e6f8fef815384dd4caf399b3b42d",
+      "label": "fam-bdt-percent-sparse-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-sparse",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "9aa95f2d36d81148a8d475519e05697f4b4473f2cb2afa01f486c7f8c8032556",
+      "label": "fam-bdt-percent-sparse-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "ebc3a6d35b2293c5ae51ff1517c15bd92cac776aa9bdbb8486ba21f70642eee3",
+      "label": "fam-bdt-percent-normal-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "dd8fcdb8cbe136f37a0cc1b4999ad71f806950755b1aad2ca1174eeee9305991",
+      "label": "fam-bdt-percent-normal-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "8aca0e798634e9a9eec9531196b3cff1ce7e08611ad0c9a63ae4bb4157d2e9ad",
+      "label": "fam-bdt-percent-normal-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "4cfbeaba39270cb76cf44f8471587eafe6a5263ac7172eef9f0bcd4d8cbbcf81",
+      "label": "fam-bdt-percent-normal-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "a5708d82b1ac1b69c34cb623e050deb3613b4dc7055eb7ebdbe2c69159480a9c",
+      "label": "fam-bdt-percent-normal-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "7ea33a18435bad13e298c2049d6beb16a19e56a0e3eb229abbbbb62c68ca5d88",
+      "label": "fam-bdt-percent-normal-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "639d76be704900e7f64842fc1f4d7da4cef194119122520f20938ea6534f4437",
+      "label": "fam-bdt-percent-dense-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "b4212d1248ebafc805bba56c940fc3baaad90f7512ff60a26d3af35ca3822d74",
+      "label": "fam-bdt-percent-dense-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "e2ad1b469e84ada1922612a71b8d50d45da91ac07611c2edad6e9ca4befa9981",
+      "label": "fam-bdt-percent-dense-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "060374917091a141ce26554acc0a2cd67206267b9a88d32b79fc406efc95ad68",
+      "label": "fam-bdt-percent-dense-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "301031469ef13c7f2828d5529b14999ad31d42ebdda38248cd3caf8aab317095",
+      "label": "fam-bdt-percent-dense-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-dense",
+        "split-percent"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "4fd6c4d56761bae2d5094cd0df4b223a021114ca34c7ac12f1162ed901b4f89f",
+      "label": "fam-bdt-percent-dense-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "1a3da268b4e29f01e1f799aeb61e7cdc951de85463bb397978db41287055619a",
+      "label": "fam-bdt-value-sparse-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "f4b480d7f65df8aeddc4d5b84c62f170d2a374cccce78b5f32dfb49fbd029be7",
+      "label": "fam-bdt-value-sparse-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "6ac2e57e3cf15e57aea5167e14210b8f1db494e75b0edfb24ddc397ed42a8edc",
+      "label": "fam-bdt-value-sparse-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 8,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "0c60a2e09b14e8afb57a8a9acd782536fdb0a11d3d36c2e425cfa0ebd57df10a",
+      "label": "fam-bdt-value-sparse-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "65b7f8c52734292d29e92bf93f8d559f36f6af2f6fbf8ef924b58acfe7c86174",
+      "label": "fam-bdt-value-sparse-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-sparse",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "37b812d1e2c6dc30937ddbb9e4102f2c5b5edc02f82aea9fa03fdc328de4524d",
+      "label": "fam-bdt-value-sparse-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 4,
+        "transactions": 4,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "bd37861424ee432dc9201ab07c121950bc6294d46e3c25bf66308b2caeec1f15",
+      "label": "fam-bdt-value-normal-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "7188c4ad2f0b096aac38cb95e9cc373996bc51954af7d03eaa1fc63d2e96d0df",
+      "label": "fam-bdt-value-normal-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "f394a4c606da694f000b9e140aaf4b3cc009e3e39f59af4daec80718dd5e3920",
+      "label": "fam-bdt-value-normal-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 32,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "99f84190cb71097860d11e91d67f846128c3387d2e9d9e9e19cd930e82f46991",
+      "label": "fam-bdt-value-normal-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "55b2c74d8279db68d6e3eae581b7402c1e67da4c03e3ef89c2539fe59bc46684",
+      "label": "fam-bdt-value-normal-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "51259a8aa3c312e0b9e02a713bce0da034bd0d37143e60560be98eac948a1d10",
+      "label": "fam-bdt-value-normal-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 16,
+        "transactions": 16,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "5fdf7581dcc7b81850a24068ccfda4eca6e29e48a13a676be64dbcb48e04dfb7",
+      "label": "fam-bdt-value-dense-joint-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "8712a2ce970db15816d6dd04e27e946ed031ee52c8dfbaac38886c8dc02862aa",
+      "label": "fam-bdt-value-dense-joint-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-joint",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "837b7172b8731d1940ad8bed7209ec43f6ef7160d66d4349ece7a809f6bf2fd0",
+      "label": "fam-bdt-value-dense-joint-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 108,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "df1a3ae60f187993b06c3b9af2d146d68fdfccd0cf366645af51ee11400176ae",
+      "label": "fam-bdt-value-dense-sep-0",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "ecea84b225bcdc3a7c0dc219ac02c8f141981e57d35466966f1b2b86262d520e",
+      "label": "fam-bdt-value-dense-sep-1",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    },
+    {
+      "dimensions": [
+        "currency-bdt",
+        "household-separate",
+        "month-dense",
+        "split-value"
+      ],
+      "displayCurrency": "bdt",
+      "hash": "dbb50053ecca99c625c4a59c1092c498bc826eb75422b240045a801c0fe3aaf6",
+      "label": "fam-bdt-value-dense-sep-2",
+      "rows": {
+        "budgets": 1,
+        "cards": 2,
+        "leases": 0,
+        "members": 2,
+        "mortgages": 0,
+        "people": 2,
+        "properties": 0,
+        "rental_payments": 0,
+        "transaction_shares": 54,
+        "transactions": 54,
+        "units": 0,
+        "users": 2
+      }
+    }
+  ],
+  "seed": 8230,
+  "totals": {
+    "budgets": 220,
+    "cards": 462,
+    "leases": 1,
+    "members": 462,
+    "mortgages": 2,
+    "people": 462,
+    "properties": 4,
+    "rental_payments": 3,
+    "transaction_shares": 8199,
+    "transactions": 5459,
+    "units": 3,
+    "users": 462
+  },
+  "version": 1
+}

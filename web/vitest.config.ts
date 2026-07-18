@@ -17,6 +17,10 @@ export default defineConfig({
     // jsdom per-file with `// @vitest-environment jsdom`.
     environment: 'node',
     include: ['test/**/*.test.ts', 'test/**/*.test.tsx'],
+    // Timezone-reproduction suites (spec 026, A2) must run under a non-UTC zone;
+    // they live in *.tz.test.ts and are executed only by vitest.tz.config.ts.
+    // Exclude them here so the default TZ=UTC run never picks them up.
+    exclude: ['**/node_modules/**', '**/*.tz.test.ts'],
     setupFiles: ['./test/setup.ts'],
     // Parallel jsdom worker startup races under load in this sandbox ("Timeout
     // waiting for worker to respond"). Running files sequentially uses a single
