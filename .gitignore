@@ -13,6 +13,13 @@ temp/
 # Local CI setup & usage guide — holds credential values for sandboxes. NEVER commit.
 /CI-SETUP.local.md
 
+# Host-side secrets for sandbox bootstrap (e.g. a GitHub token). NEVER commit — a
+# leaked push token compromises the repo. Keep host-side only; the tracked
+# `.secrets.example` is the placeholder template.
+/.secrets
+/.secrets.*
+!/.secrets.example
+
 # Pre-monorepo git histories — preserved locally, NOT tracked.
 # Recover with e.g.:  git --git-dir=.history-backup/ortho-web.git log
 .history-backup/
