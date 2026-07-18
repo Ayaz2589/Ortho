@@ -44,13 +44,18 @@ export function ScanFlow({
         </WebModal>
       )
 
-    case 'failed':
+    case 'failed': {
+      const unsupportedOnWeb = state.failureReason === 'unsupportedOnWeb'
       return (
         <WebModal title={t('Scan')} onClose={onClose} hideHeader>
           <div className="flex min-h-[420px] flex-col items-center justify-center gap-4 px-6 text-center">
-            <p className="text-[17px] font-normal text-text">{t("Couldn't read this")}</p>
+            <p className="text-[17px] font-normal text-text">
+              {unsupportedOnWeb ? t('Photo scanning is on iOS only') : t("Couldn't read this")}
+            </p>
             <p className="max-w-[280px] text-[14px] text-text-2">
-              {t('Try a clearer photo, or enter it manually.')}
+              {unsupportedOnWeb
+                ? t('On the web, import a PDF statement or enter it manually.')
+                : t('Try a clearer photo, or enter it manually.')}
             </p>
             <button
               type="button"
@@ -63,6 +68,7 @@ export function ScanFlow({
           </div>
         </WebModal>
       )
+    }
 
     case 'interstitial':
       return (

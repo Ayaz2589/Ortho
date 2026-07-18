@@ -507,9 +507,13 @@ vectors:
     dates via `parseLocalDate` (`web/lib/format.ts`). Plain `new Date('YYYY-MM-DD')`
     parses at UTC midnight and shifts a day west of UTC — every stored date column
     must go through `parseLocalDate`.
-  - **Filter windows** are **UTC half-open `[from, to)`** via `monthBounds`;
-    **insight** dates mirror `new Date('YYYY-MM-DD')` (UTC midnight) and sit
-    mid-month so timezone can't flip a month bucket.
+  - **Filter windows** are **UTC half-open `[from, to)`** via `monthBounds`.
+  - **Insight transaction dates:** app-generated rows store noon-UTC ISO timestamps
+    (safe for any TZ); imported/legacy rows may carry date-only `"YYYY-MM-DD"`
+    strings. `inInterval` (spec 027 / A2) detects date-only strings and parses them
+    via `parseLocalDate` (local midnight) so both sides of the boundary comparison
+    use the same local-calendar regime as `monthInterval`. Non-UTC tests live in
+    `web/test/insights-timezone.tz.test.ts` (run with `vitest.tz.config.ts`).
 - **The vector harness pins `TZ=UTC`** (`gen-vectors.ts` and `vitest.config.ts`)
   so generation and assertion agree regardless of the machine's zone. Keep this
   pin.
