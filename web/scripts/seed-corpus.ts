@@ -105,6 +105,11 @@ async function upsertAll(supabase: SupabaseClient, t: CorpusTables): Promise<voi
 async function main(): Promise<void> {
   loadEnv()
   const args = parseArgs(process.argv.slice(2))
+  if (args.seed !== undefined && !Number.isInteger(args.seed)) {
+    console.error('✗ Invalid --seed: expected an integer (e.g. --seed 42).')
+    process.exitCode = 1
+    return
+  }
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 
   const corpus = generateCorpus(args.seed)

@@ -15,6 +15,15 @@ describe('seed-corpus safe-target guard (spec 026, FR-009)', () => {
     expect(isLocalSupabaseUrl('not a url')).toBe(false)
   })
 
+  it('does not let an embedded-dot `.local` host masquerade as local', () => {
+    // A single-label mDNS name is local; a multi-label host that merely ENDS in
+    // `.local` (a remote could resolve it) must be refused.
+    expect(isLocalSupabaseUrl('https://x.supabase.co.local')).toBe(false)
+    expect(isLocalSupabaseUrl('https://attacker.com.local')).toBe(false)
+    expect(isLocalSupabaseUrl('http://db.supabase.local')).toBe(false)
+    expect(isLocalSupabaseUrl('http://supabase.local')).toBe(true)
+  })
+
   it('allows local targets unconditionally', () => {
     expect(checkSeedTarget({ url: 'http://localhost:54321', overrideFlag: false, allowRemoteEnv: false })).toEqual({
       ok: true,

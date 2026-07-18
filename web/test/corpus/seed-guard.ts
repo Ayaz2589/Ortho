@@ -14,9 +14,12 @@ export function isLocalSupabaseUrl(url: string): boolean {
   return (
     h === 'localhost' ||
     h === '127.0.0.1' ||
-    h === '::1' ||
+    // URL.hostname serializes the IPv6 loopback in brackets; bare `::1` never occurs.
     h === '[::1]' ||
-    h.endsWith('.local')
+    // mDNS/Bonjour single-label names only (e.g. `supabase.local`). Reject an
+    // embedded-dot host such as `x.supabase.co.local`, which a remote could
+    // resolve and which would otherwise bypass the guard entirely.
+    (h.endsWith('.local') && !h.slice(0, -'.local'.length).includes('.'))
   )
 }
 

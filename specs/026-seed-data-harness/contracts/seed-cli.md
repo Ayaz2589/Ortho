@@ -13,8 +13,9 @@ npm run seed:corpus [-- --seed <n>] [--dry-run] [--i-understand-this-is-not-loca
 1. Load env via the import CLI's `loadEnv()` (`.env.local`), read
    `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`.
 2. **Safe-target guard (FR-009)** — before any write:
-   - Allow if the URL host is `localhost`, `127.0.0.1`, `[::1]`, or ends in
-     `.local` (a local Supabase stack).
+   - Allow if the URL host is `localhost`, `127.0.0.1`, `[::1]`, or a
+     single-label `.local` mDNS name (e.g. `supabase.local`). A multi-label host
+     that merely ends in `.local` (e.g. `x.supabase.co.local`) is refused.
    - Otherwise refuse with a clear message, UNLESS **both**
      `--i-understand-this-is-not-local` is passed **and** `SEED_ALLOW_REMOTE=1`
      is set (loud double opt-in for a personal throwaway cloud project).
@@ -22,10 +23,14 @@ npm run seed:corpus [-- --seed <n>] [--dry-run] [--i-understand-this-is-not-loca
 3. Generate the corpus (`generateCorpus(seed)`), flatten (`toTables`).
 4. Insert in dependency order: users → households → household_people →
    household_members → cards → properties → mortgage_info → lease_info → units →
-   rental_payments → budgets → transactions (+ transaction_shares via the import
-   CLI's `persist`, inheriting its share-less-row compensation).
-5. **Idempotence (FR-008)**: corpus ids are stable; use upsert semantics
-   (`upsert`/`onConflict: id`) so re-running does not duplicate rows.
+   rental_payments → budgets → transactions → transaction_shares. Transactions
+   and shares reuse the import CLI's `txRecord`/`shareRows` column mappers (one
+   share row per owner); they are written through `upsert`, not the import
+   `persist()` (whose plain-insert + delete-parent rollback would break the
+   idempotent re-run this seeder targets).
+5. **Idempotence (FR-008)**: corpus ids are stable; every table is written with
+   upsert semantics (`upsert` / `onConflict` on the table's natural key) so
+   re-running does not duplicate rows.
 6. `--dry-run`: run the guard + generation + row counts and print a summary
    **without writing**.
 

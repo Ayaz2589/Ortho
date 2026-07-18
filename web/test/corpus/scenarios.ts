@@ -256,8 +256,11 @@ function jointEvenUsd(r: Prng): HouseholdScenario {
       intent: ['settle-up'],
     })
   )
-  // Budgets across the three bands within the current month.
-  // groceries: over; dining: near; coffee: under (relative to typical spend).
+  // Generous budgets: this household's seeded single-tx-per-category spend stays
+  // well inside every limit, so all three land in the UNDER band (the near/over
+  // bands are realized deterministically by the dedicated `budget-bands`
+  // scenario — coverage of a band must be exhibited by real spend, not asserted
+  // by a hand-written tag that can silently drift).
   s.budgets.push(
     buildBudget(`${base.label}-b-groceries`, base.hhId, 'groceries', 40000),
     buildBudget(`${base.label}-b-dining`, base.hhId, 'dining', 30000),
@@ -270,9 +273,7 @@ function jointEvenUsd(r: Prng): HouseholdScenario {
     'currency-usd',
     'month-dense',
     'recurring-merchant',
-    'budget-under',
-    'budget-near',
-    'budget-over'
+    'budget-under'
   )
   return s
 }
@@ -602,6 +603,43 @@ function tzBoundaryA2(r: Prng): HouseholdScenario {
   return s
 }
 
+function budgetBands(r: Prng): HouseholdScenario {
+  // Deterministic budget-band coverage (FR-004): one FIXED expense per category
+  // in the current month against a fixed limit, so each of under/near/over is
+  // realized by real spend regardless of the PRNG. insights.ts Rule 3 classifies
+  // spent/limit as >=1.0 over, >=0.85 near, <=0.5 (once the month is >=70%
+  // elapsed) under — see the realization guard in corpus.test.ts.
+  const base = baseHousehold('budget-bands', { currency: 'usd' })
+  const s = base.scenario
+  const cur = addMonths(EPOCH.year, EPOCH.month, 0)
+  const bands: Array<{ cat: TransactionCategory; spend: number; limit: number }> = [
+    { cat: 'groceries', spend: 30000, limit: 100000 }, // 0.30 → under
+    { cat: 'dining', spend: 8700, limit: 10000 }, //      0.87 → near
+    { cat: 'fuel', spend: 12000, limit: 10000 }, //       1.20 → over
+  ]
+  bands.forEach((b, i) => {
+    s.transactions.push(
+      buildTransaction({
+        id: `budget-bands-tx-${i}`,
+        householdId: base.hhId,
+        merchant: MERCHANTS[b.cat] ? r.pick(MERCHANTS[b.cat]) : b.cat,
+        category: b.cat,
+        kind: 'expense',
+        amountCents: b.spend,
+        source: 'Everyday Card',
+        date: isoAt(cur.year, cur.month1, 6, 12, 0),
+        createdBy: 'budget-bands-u-0',
+        owners: [base.p0, base.p1],
+        paidBy: base.p0,
+        intent: [],
+      })
+    )
+    s.budgets.push(buildBudget(`budget-bands-b-${b.cat}`, base.hhId, b.cat, b.limit))
+  })
+  addDim(s, 'household-joint', 'split-even', 'currency-usd', 'budget-under', 'budget-near', 'budget-over')
+  return s
+}
+
 function subscriptionCreep(r: Prng): HouseholdScenario {
   // 8–15 subscriptions/household, ~40% forgotten (research). A dense recurring set.
   const base = baseHousehold('subscription-creep', { currency: 'usd' })
@@ -647,6 +685,7 @@ function specialScenarios(root: Prng): HouseholdScenario[] {
     multifamily(root.sub('multifamily')),
     orderMismatchA4(root.sub('order-mismatch')),
     tzBoundaryA2(root.sub('tz-boundary')),
+    budgetBands(root.sub('budget-bands')),
     subscriptionCreep(root.sub('subscription-creep')),
   ]
 }
@@ -698,6 +737,7 @@ function familyScenario(
           date: isoAt(year, month1, r.range(2, 26), 12, 0),
           createdBy: `${label}-u-0`,
           owners,
+          split: splitInput,
           paidBy: owners.length === 2 ? (r.bool() ? base.p0 : base.p1) : owners[0],
           intent: density === 'sparse' ? ['sparse'] : density === 'dense' ? ['dense'] : [],
         })
@@ -713,7 +753,13 @@ function familyScenario(
   if (density === 'dense') addDim(s, 'month-dense')
   const cdim = CURRENCY_DIM[currency]
   if (cdim) addDim(s, cdim)
-  addDim(s, split === 'percent' ? 'split-percent' : split === 'value' ? 'split-value' : 'split-even')
+  // Derive the split dimension from what the transactions ACTUALLY realize — a
+  // separate/1-owner household always collapses to `even` regardless of the
+  // requested method — so the coverage tag can never drift from the rows.
+  const methods = new Set(s.transactions.map((t) => t.splitMethod))
+  if (methods.has('even')) addDim(s, 'split-even')
+  if (methods.has('percent')) addDim(s, 'split-percent')
+  if (methods.has('value')) addDim(s, 'split-value')
   return s
 }
 

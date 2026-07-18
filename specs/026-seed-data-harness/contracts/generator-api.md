@@ -1,6 +1,9 @@
 # Contract — Corpus Generator Public API
 
-Module: `web/test/corpus/index.ts` (pure; no I/O, no vitest, no app-bundle reach).
+Module: `web/test/corpus/index.ts` (a pure computation core plus the snapshot
+I/O helpers below; no vitest, no app-bundle reach). `generateCorpus`, `toTables`,
+`serializeCorpus`, and `serializeManifest` are pure; `writeSnapshot`/`readSnapshot`
+are the intentional `node:fs` boundary used by `gen:corpus` and the snapshot test.
 
 ## `generateCorpus(seed?: number): Corpus`
 - **Input**: optional integer `seed` (default a fixed constant, e.g. `0xORTHO`
@@ -22,9 +25,17 @@ Module: `web/test/corpus/index.ts` (pure; no I/O, no vitest, no app-bundle reach
 - Canonical, byte-stable string: recursively key-sorted, `JSON.stringify(_, null,
   2) + '\n'`. Equal `Corpus` ⇒ equal string (SC-001, FR-002).
 
+## `serializeManifest(corpus: Corpus): string`
+- Canonical, byte-stable serialization of the corpus **manifest** — per-scenario
+  label, display currency, dimensions, row counts, and a SHA-256 of the scenario,
+  plus a whole-corpus hash — **not** the full `serializeCorpus` output. The
+  committed snapshot is this manifest, so a generator change surfaces as a small,
+  reviewable diff instead of a 5k-line one.
+
 ## `writeSnapshot(corpus: Corpus, path?: string): void` / `readSnapshot(path?): string`
-- Snapshot IO for `gen:corpus` and the regression test. Default path:
-  `web/test/corpus/__snapshots__/corpus.snapshot.json`.
+- Snapshot I/O (`node:fs`) for `gen:corpus` and the regression test. `writeSnapshot`
+  persists `serializeManifest(corpus)`; the test asserts it equals `readSnapshot()`.
+  Default path: `web/test/corpus/__snapshots__/corpus.snapshot.json`.
 
 ## `coverageOf(corpus: Corpus): Record<Dimension, string[]>`
 - Maps each coverage dimension to the labels of scenarios covering it. Used by the

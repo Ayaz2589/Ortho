@@ -38,6 +38,22 @@ TypeScript implementations so the web and iOS suites stay in parity.
 cd web && npm run gen:vectors
 ```
 
+## Coverage corpus — `gen-corpus.ts` / `seed-corpus.ts`
+
+The deterministic edge-case coverage corpus (spec 026, §9.1). `gen-corpus.ts`
+regenerates the committed snapshot **manifest**; `seed-corpus.ts` populates a
+**local/dev** Supabase from the corpus (guarded — it refuses non-local targets
+unless a loud double opt-in is set).
+
+```bash
+cd web && npm run gen:corpus                       # rewrite the snapshot manifest
+cd web && npm run seed:corpus -- --dry-run         # planned per-table counts, no writes
+cd web && npm run seed:corpus                       # seed a local stack (idempotent)
+```
+
+👉 See [`docs/web.md`](../../docs/web.md) → "Coverage corpus + dev seeding
+(spec 026)" and [`specs/026-seed-data-harness/`](../../specs/026-seed-data-harness/).
+
 ## Notes
 
 - Tests run under the web vitest suite (`cd web && npm test`) and need **Node ≥ 20.19**

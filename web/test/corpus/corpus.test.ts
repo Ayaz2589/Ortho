@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { generateCorpus, toTables, DEFAULT_SEED } from './generate'
 import { serializeCorpus, serializeManifest, readSnapshot } from './serialize'
 import { DIMENSIONS, coverageOf, missingDimensions } from './coverage'
+import { EPOCH, addMonths } from './clock'
 import { toDisplayAmount } from '@/lib/finance/money'
 import { FALLBACK_RATE_FROM_USD } from '@/lib/finance/currency'
 import { generateInsights } from '@/lib/finance/insights'
@@ -127,6 +128,73 @@ describe('coverage corpus — A2 UTC control (spec US2 acceptance #2)', () => {
     )
     expect(inCurrentMonth).toBe(true)
   })
+})
+
+describe('coverage corpus — split-method tags are realized, not just declared', () => {
+  // Guards the §9.1 wiring where the parameterized family computed a percent/value
+  // split but never passed it to the builder, so ~150 scenarios were tagged
+  // split-percent/split-value while every transaction silently collapsed to even.
+  // The coverage tag is now derived from t.splitMethod, so a tag with no matching
+  // realized transaction is a bug this test catches.
+  const pairs = [
+    ['even', 'split-even'],
+    ['percent', 'split-percent'],
+    ['value', 'split-value'],
+  ] as const
+
+  it('every scenario tagged split-* contains a transaction actually using that method', () => {
+    for (const s of corpus.scenarios) {
+      const methods = new Set(s.transactions.map((t) => t.splitMethod))
+      for (const [method, dim] of pairs) {
+        if (s.dimensions.includes(dim)) {
+          expect(
+            methods.has(method),
+            `${s.label} tags ${dim} but realizes [${[...methods].join(', ')}]`
+          ).toBe(true)
+        }
+      }
+    }
+  })
+
+  it('percent and value splits appear at volume, not just in the one hand-authored scenario', () => {
+    let percent = 0
+    let value = 0
+    for (const s of corpus.scenarios)
+      for (const t of s.transactions) {
+        if (t.splitMethod === 'percent') percent++
+        if (t.splitMethod === 'value') value++
+      }
+    expect(percent).toBeGreaterThan(10)
+    expect(value).toBeGreaterThan(10)
+  })
+})
+
+describe('coverage corpus — budget-band tags are realized by real spend (SC-002 non-vacuous)', () => {
+  // "now" late in the corpus current month so the under-band progress gate
+  // (monthProgress >= 0.7) is satisfied; the default suite runs under UTC, where
+  // the engine's local month boundaries coincide with the corpus's noon-UTC dates.
+  const cur = addMonths(EPOCH.year, EPOCH.month, 0)
+  const now = new Date(Date.UTC(cur.year, cur.month1 - 1, 28, 12, 0, 0))
+  const bands = [
+    ['budget-under', 'budget-under-'],
+    ['budget-near', 'budget-near-'],
+    ['budget-over', 'budget-over-'],
+  ] as const
+
+  for (const [dim, idPrefix] of bands) {
+    it(`every scenario tagged ${dim} actually emits a ${dim} insight`, () => {
+      const carriers = corpus.scenarios.filter((s) => s.dimensions.includes(dim))
+      expect(carriers.length, `no scenario carries ${dim}`).toBeGreaterThan(0)
+      for (const s of carriers) {
+        const txs = s.transactions.map((t) => t.transaction)
+        const insights = generateInsights(txs, s.budgets, [], now, 100)
+        expect(
+          insights.some((i) => i.id.startsWith(idPrefix)),
+          `${s.label} tags ${dim} but no ${dim} insight was emitted`
+        ).toBe(true)
+      }
+    })
+  }
 })
 
 describe('coverage corpus — snapshot (FR-002)', () => {
