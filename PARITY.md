@@ -69,7 +69,7 @@ ever tracked between them, is in
 | Money / USD-cents invariant | ✅ | ✅ | `lib/finance/money.ts` + `currency.ts` → `currency.json` (+ display names/symbols) |
 | Currency conversion (display) | ✅ | — (USD-only) | same as above |
 | Splits & owner shares | ✅ | ✅ | `lib/splits.ts` → `transaction-splits.json` |
-| Canonical leftover-cent order | ✅ | ✅ | `orderedOwnerIds` |
+| Canonical leftover-cent order | ✅ | ✅ | `orderedOwnerIds` — leftover cent goes to canonically-first owner (ascending UUID string sort), a conscious documented policy (see comment in `lib/splits.ts` and `specs/027-finance-model-correctness/contracts/cli-ordering.md`). Verified 2026-07-18 (spec 027 / A4): CLI `toTransaction` calls `orderedOwnerIds` before `computeShares`; `sort_order` DB ordering does not affect the leftover cent. Test: `web/test/import/toTransaction.test.ts` "A4 — sort_order ≠ UUID order". |
 | Transaction + shares data contract | ✅ | ✅ | columns mirrored (incl. `paid_by`) |
 | Member reimbursement / settle-up balance | ✅ | — | `lib/balances.ts` → `member-balance.json` (+ `paid_by`, `transfer` kind) |
 | Atomic parent+shares write | ✅ (rollback) | ✅ (rollback) | client-side compensation on both; spec 023/B7 hardened web to **check** every compensating write and, if a rollback also fails, keep the row flagged + surface a "reload to reconcile" error rather than present a share-less row as consistent (an RPC would make it truly atomic — still tracked, out of scope) |
@@ -133,8 +133,7 @@ These shape which rows exist and what the app displays, but have no regression-v
 
 - **Dedupe** is `created_by`-scoped, not household-wide — a partner re-importing the same statement
   can double-write charges into the shared ledger.
-- **Reconciliation** (matching parsed totals to printed subtotals) and any migration backfill place
-  the leftover cent by `sort_order`, which can differ from runtime `computeShares` order.
+- **Reconciliation** (matching parsed totals to printed subtotals) verifies statement sums — not splits. The CLI's `toTransaction` engine canonicalizes owner order via `orderedOwnerIds` before `computeShares`, identical to the web app; `sort_order` does not affect leftover-cent placement. *(Verified spec 027 / A4, 2026-07-18.)*
 - **Exclusions, merchant cleanup, and the merchant→category heuristic** (`engine/categorize.ts`,
   profiles) decide row inclusion, merchant strings, and categories the app then reads.
 - **Admin first-name owner matching** and **Dec→Jan year inference** in date parsing are CLI-only

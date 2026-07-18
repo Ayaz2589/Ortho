@@ -1,9 +1,17 @@
 // Orchestration hook (spec 021, T053): capture -> parse -> the scanSession
-// reducer. Scoped to two capture sources for this pass:
-//   - camera: the custom Scan plugin's capture() (live-OCR-gated shutter,
-//     OCR already ran natively by the time it resolves)
-//   - file: @capawesome/capacitor-file-picker's pickFiles() (PDF statements)
-//     + the Scan plugin's extractPDF()
+// reducer. Two capture sources, each with a native and a web branch:
+//   - camera:
+//       native → the custom Scan plugin's capture() (live-OCR-gated shutter,
+//         OCR already ran natively by the time it resolves)
+//       web    → no browser OCR (no VisionKit), so it degrades honestly to the
+//         `unsupportedOnWeb` failure instead of dead-ending silently
+//         (fix/web-scan-fallback). See the OCR options note in the PR.
+//   - file (PDF statements):
+//       native → @capawesome/capacitor-file-picker's pickFiles() + the Scan
+//         plugin's extractPDF()
+//       web    → an <input type="file"> (webCapture.pickFile) + unpdf text
+//         extraction (webPdf.extractPdfToDocument); both feed the SAME
+//         scanParser pipeline, so candidates are identical across platforms.
 // Photo-library picking is NOT wired here — the plugin contract has no
 // extractImage() method for an arbitrary already-picked photo (only capture()
 // does live OCR); see contracts/scan-plugin-api.md. A documented follow-up,
@@ -11,17 +19,34 @@
 'use client'
 
 import { useCallback, useEffect, useReducer, useRef } from 'react'
-import type { PluginListenerHandle } from '@capacitor/core'
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core'
 import { useApp } from '@/lib/store'
 import { createScanSessionState, scanSessionReducer } from './scanSession'
+import { pickFile } from './webCapture'
 import type { ScanDocumentText, ScanDocumentTextPage } from './scanModels'
 
 // The scan pipeline is deferred (spec 022, US2): the heavy parser/heuristics/inference
-// graph, the native Scan plugin, and the file picker are dynamically imported inside the
-// capture callbacks so they load only when the user actually initiates a scan — not on
-// Transactions-route load. Only the lightweight session reducer stays eager (it is needed
-// to render). Vitest mocks (test/scan/useScanFlow.test.tsx) apply to these dynamic imports
-// by resolved path, so behavior is unchanged.
+// graph, the native Scan plugin, the file picker, and the unpdf PDF reader are dynamically
+// imported inside the capture callbacks so they load only when the user actually initiates a
+// scan — not on Transactions-route load. Only the lightweight session reducer and the tiny,
+// dependency-free web file-dialog helper stay eager (the latter must run inside the click
+// gesture, so it can't sit behind an await). Vitest mocks (test/scan/useScanFlow.test.tsx)
+// apply to these dynamic imports by resolved path, so behavior is unchanged.
+
+/** Log a genuine scan failure so it's visible in the console, but stay quiet on
+ *  an ordinary user cancellation. Before fix/web-scan-fallback every rejection —
+ *  including the web build's `UNIMPLEMENTED` plugin errors — was swallowed into
+ *  the same calm `{kind:'none'}` as an unreadable document, so real breakage was
+ *  invisible. This keeps the calm UI but makes the cause diagnosable. */
+function reportScanError(context: string, err: unknown): void {
+  if (isCancellation(err)) return
+  console.error(`[scan] ${context} failed:`, err)
+}
+
+function isCancellation(err: unknown): boolean {
+  const message = (err instanceof Error ? err.message : String(err ?? '')).toLowerCase()
+  return message.includes('cancel') || message.includes('dismiss')
+}
 
 export function useScanFlow() {
   const { transactions, currency } = useApp()
@@ -67,7 +92,7 @@ export function useScanFlow() {
     [processDocument]
   )
 
-  const startCameraCapture = useCallback(async () => {
+  const startNativeCameraCapture = useCallback(async () => {
     dispatch({ type: 'capture/start', source: 'camera' })
     pagesRef.current = []
     removePageListener() // drop any listener left over from a prior session
@@ -82,15 +107,50 @@ export function useScanFlow() {
       })
       const { page } = await ScanPlugin.capture()
       await accumulatePage(page)
-    } catch {
+    } catch (err) {
       // Cancellation or an unavailable camera — the calm failure phase, not
-      // a thrown error (the trigger UI stays usable; Retake tries again).
+      // a thrown error (the trigger UI stays usable; Retake tries again). A
+      // genuine failure is logged (never the same silent swallow as before).
       removePageListener()
+      reportScanError('camera capture', err)
       dispatch({ type: 'capture/parsed', result: { kind: 'none' }, document: null })
     }
   }, [accumulatePage, removePageListener])
 
-  const startFileImport = useCallback(async () => {
+  const startCameraCapture = useCallback(async () => {
+    if (!Capacitor.isNativePlatform()) {
+      // The browser has no on-device OCR (VisionKit is iOS-only), so a photo
+      // can't become parseable text here. Surface that honestly rather than
+      // opening a camera that dead-ends — the PDF import path still works, and
+      // adding heavy in-browser OCR is a deliberate future decision (see PR).
+      dispatch({ type: 'capture/unsupported' })
+      return
+    }
+    await startNativeCameraCapture()
+  }, [startNativeCameraCapture])
+
+  const startWebPdfImport = useCallback(async () => {
+    // pickFile() must .click() the <input> inside the originating user gesture,
+    // so it runs synchronously here BEFORE any await.
+    const file = await pickFile('application/pdf')
+    if (!file) {
+      // User dismissed the file dialog — back to idle, not a failure (no
+      // capture actually happened), matching the native picker-cancel branch.
+      dispatch({ type: 'reset' })
+      return
+    }
+    dispatch({ type: 'capture/start', source: 'file' })
+    try {
+      const { extractPdfToDocument } = await import('./webPdf')
+      const document = await extractPdfToDocument(file)
+      await processDocument(document)
+    } catch (err) {
+      reportScanError('web PDF import', err)
+      dispatch({ type: 'capture/parsed', result: { kind: 'none' }, document: null })
+    }
+  }, [processDocument])
+
+  const startNativeFileImport = useCallback(async () => {
     dispatch({ type: 'capture/start', source: 'file' })
     try {
       const [{ FilePicker }, { ScanPlugin }] = await Promise.all([
@@ -108,10 +168,19 @@ export function useScanFlow() {
       const fileUri = file.path.startsWith('file://') ? file.path : `file://${file.path}`
       const { pages } = await ScanPlugin.extractPDF({ fileUri })
       await processDocument({ pages })
-    } catch {
+    } catch (err) {
+      reportScanError('PDF import', err)
       dispatch({ type: 'capture/parsed', result: { kind: 'none' }, document: null })
     }
   }, [processDocument])
+
+  const startFileImport = useCallback(async () => {
+    if (!Capacitor.isNativePlatform()) {
+      await startWebPdfImport()
+      return
+    }
+    await startNativeFileImport()
+  }, [startWebPdfImport, startNativeFileImport])
 
   return { state, dispatch, startCameraCapture, startFileImport }
 }
