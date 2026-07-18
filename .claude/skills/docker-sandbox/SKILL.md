@@ -1,6 +1,6 @@
 ---
 name: docker-sandbox
-description: Start and manage Docker Sandboxes (the `sbx` CLI) for the Ortho repo — one isolated microVM per feature for parallel or overnight agent work. Covers sbx run/create/ls/stop/rm, running multiple named sandboxes for the SAME repo, clone vs branch vs direct mode, daemon/container isolation (nothing is shared between sandboxes), reaching shared services via host.docker.internal + network policy, Supabase in multi-sandbox setups, and git push/PR from a sandbox. Use when the user wants to spin up sandboxes, run agents in parallel, or set up an overnight multi-feature workflow.
+description: Start and manage Docker Sandboxes (the `sbx` CLI) for the Ortho repo — one isolated microVM per feature for parallel or overnight agent work. Covers sbx run/create/ls/stop/rm, running multiple named sandboxes for the SAME repo, clone vs branch vs direct mode, daemon/container isolation (nothing is shared between sandboxes), reaching shared services via host.docker.internal + network policy, Supabase in multi-sandbox setups, git push/PR from a sandbox, and bootstrapping a fresh sandbox so it has everything to get going (GitHub secret, Claude login, the gitignored web/.env.local, network policy). Use when the user wants to spin up sandboxes, run agents in parallel, set up an overnight multi-feature workflow, or asks whether a new sandbox has the credentials/keys it needs.
 user-invocable: true
 argument-hint: "[optional: feature name(s) to spin up sandboxes for, e.g. 'auth checkout analytics']"
 ---
@@ -125,6 +125,60 @@ out whatever ref the host had checked out; it does **not** auto-create a branch)
 
 One branch per sandbox keeps the PRs clean:
 `auth-feature → feat/auth`, `checkout-feature → feat/checkout`, etc.
+
+## Bootstrapping a fresh Ortho sandbox (make it productive)
+
+A fresh `--clone` or `--branch` sandbox has the tracked source but **not** the repo's
+gitignored secrets (`web/.env.local`, `CI-SETUP.local.md`, …), and its agent isn't
+logged in yet. So "does a new sandbox have everything to get going?" → **not
+automatically.** Run this checklist. Steps are tagged **[host]** (your host shell,
+via `sbx`) or **[in-sandbox]** (inside the sandbox).
+
+### One-time host setup — so every FUTURE sandbox inherits it
+```console
+# [host] GitHub push/PR for all future sandboxes (the proxy injects the creds, so
+#        `gh auth status` still shows "not logged in" inside — that's expected):
+$ sbx secret set -g github -t "$(gh auth token)"
+# [host] allow project domains the default "Balanced" policy may block — only if the
+#        agent reaches them (e.g. the hosted Supabase host, Plaid):
+$ sbx policy allow network -g <your-supabase-project-host>
+```
+Claude agent auth is **per sandbox**: run `/login` inside each, or store an API key
+as a secret so the `claude` agent starts authenticated.
+
+### Per-sandbox bootstrap — the gitignored bits git won't clone
+```console
+# [in-sandbox] install deps
+$ cd web && npm ci
+
+# [in-sandbox] recreate web/.env.local — it's GITIGNORED, so it is NOT in a clone or
+#   a fresh worktree. Two ways:
+#   A) isolated LOCAL stack (best for parallel DB work, e.g. §9.3 atomic persistence):
+$ supabase start          # Docker; prints the local URL + anon/service-role keys
+#      then write web/.env.local:
+#        NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+#        NEXT_PUBLIC_SUPABASE_ANON_KEY=<local anon key>
+#        SUPABASE_SERVICE_ROLE_KEY=<local service-role key>
+#   B) point at the shared hosted project (copy values from your host's
+#      web/.env.local or CI-SETUP.local.md) — see "Ortho note — Supabase" below for
+#      the concurrency tradeoffs (prefer a per-agent schema).
+
+# [in-sandbox] if the bootstrap doc was copied in, read it first — it has the local
+#   credentials + CI usage guide for a fresh sandbox:
+$ test -f CI-SETUP.local.md && echo "read CI-SETUP.local.md"
+```
+
+### Verify it's ready
+```console
+# [in-sandbox]
+$ cd web && npm test                  # suite runs (no network needed)
+$ git push -u origin <branch>         # succeeds via the injected GitHub creds
+$ npm run seed:corpus -- --dry-run    # spec-026 guard shows the local target
+```
+If `git push` prompts for a username, the github secret isn't set for this sandbox —
+run `sbx secret set <sandbox-name> github -t "$(gh auth token)"` on the host (the
+per-sandbox form takes effect immediately; the `-g` global form applies to newly
+created sandboxes).
 
 ## What is and isn't shared between sandboxes
 
