@@ -49,6 +49,13 @@ export type Disposition =
  *  a string `id` already — see scanModels.ts). */
 export type DispositionMap = Record<string, Disposition>
 
+/** Why a capture landed on the `failed` phase. `unreadable` is the ordinary
+ *  "nothing parseable" outcome (native + web); `unsupportedOnWeb` is the
+ *  honest web-only degrade for photo receipts, which need OCR the browser has
+ *  no equivalent of (fix/web-scan-fallback) — kept distinct so the UI can show
+ *  targeted copy instead of the generic "couldn't read this". */
+export type ScanFailureReason = 'unreadable' | 'unsupportedOnWeb'
+
 export interface ScanSessionState {
   phase: ScanSessionPhase
   /** Extracted text of the last capture — in-memory only, dies with the
@@ -64,6 +71,8 @@ export interface ScanSessionState {
   lastSource: ScanSource | null
   /** Interstitial toggle, default ON (FR-007). */
   skipDuplicates: boolean
+  /** Only meaningful while `phase === 'failed'`; see `ScanFailureReason`. */
+  failureReason: ScanFailureReason
 }
 
 export function createScanSessionState(): ScanSessionState {
@@ -77,12 +86,14 @@ export function createScanSessionState(): ScanSessionState {
     cursor: 0,
     lastSource: null,
     skipDuplicates: true,
+    failureReason: 'unreadable',
   }
 }
 
 export type ScanSessionAction =
   | { type: 'capture/start'; source: ScanSource }
   | { type: 'capture/parsed'; result: ScanParseResult; document?: ScanDocumentText | null }
+  | { type: 'capture/unsupported' }
   | { type: 'toggleSkipDuplicates'; value: boolean }
   | { type: 'review/start' }
   | { type: 'review/accept' }
@@ -98,6 +109,11 @@ export function scanSessionReducer(state: ScanSessionState, action: ScanSessionA
 
     case 'capture/parsed':
       return handleParseResult(state, action.result, action.document ?? null)
+
+    // Photo receipts on the web have no OCR (no VisionKit in the browser), so
+    // the web camera path degrades honestly instead of silently failing.
+    case 'capture/unsupported':
+      return { ...state, phase: 'failed', failureReason: 'unsupportedOnWeb', lastSource: 'camera' }
 
     case 'toggleSkipDuplicates': {
       const skipDuplicates = action.value
@@ -167,7 +183,7 @@ function handleParseResult(
 ): ScanSessionState {
   switch (result.kind) {
     case 'none':
-      return { ...state, lastDocument: document, phase: 'failed' }
+      return { ...state, lastDocument: document, phase: 'failed', failureReason: 'unreadable' }
 
     case 'receipt':
       return {

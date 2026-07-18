@@ -1,13 +1,23 @@
 // @vitest-environment jsdom
 //
 // spec 021 — the orchestration hook (T053) tying capture -> parse -> the
-// scanSession reducer together: camera capture via the custom Scan plugin,
-// PDF import via the file-picker plugin + Scan.extractPDF(). Scoped to these
-// two sources for this pass — photo-library picking has no extractImage()
-// method in the current plugin contract (a documented follow-up, not a
-// silent gap; see contracts/scan-plugin-api.md).
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+// scanSession reducer together. Two capture sources, each with a native and a
+// web branch (fix/web-scan-fallback):
+//   - camera:  native Scan.capture() | web honest degrade (no browser OCR)
+//   - file:    native FilePicker + Scan.extractPDF() | web <input> + unpdf
+// Photo-library picking has no extractImage() method in the current plugin
+// contract (a documented follow-up, not a silent gap; see
+// contracts/scan-plugin-api.md).
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
+
+// Platform switch — the hook branches on Capacitor.isNativePlatform(). Default
+// native; the web describe block flips it to false in beforeEach.
+const { isNativePlatform } = vi.hoisted(() => ({ isNativePlatform: vi.fn(() => true) }))
+vi.mock('@capacitor/core', () => ({
+  Capacitor: { isNativePlatform },
+  registerPlugin: vi.fn(),
+}))
 
 const { capture, extractPDF, onPageCaptured } = vi.hoisted(() => ({
   capture: vi.fn(),
@@ -19,6 +29,12 @@ vi.mock('@/lib/scan/scanPlugin', () => ({ ScanPlugin: { capture, extractPDF, onP
 const { pickFiles } = vi.hoisted(() => ({ pickFiles: vi.fn() }))
 vi.mock('@capawesome/capacitor-file-picker', () => ({ FilePicker: { pickFiles } }))
 
+// Web branch collaborators.
+const { pickFile } = vi.hoisted(() => ({ pickFile: vi.fn() }))
+vi.mock('@/lib/scan/webCapture', () => ({ pickFile }))
+const { extractPdfToDocument } = vi.hoisted(() => ({ extractPdfToDocument: vi.fn() }))
+vi.mock('@/lib/scan/webPdf', () => ({ extractPdfToDocument }))
+
 const store = {
   transactions: [] as unknown[],
   currency: 'usd' as string,
@@ -29,17 +45,22 @@ vi.mock('@/lib/store', () => ({
 
 import { useScanFlow } from '@/lib/scan/useScanFlow'
 
-describe('useScanFlow', () => {
-  beforeEach(() => {
-    capture.mockReset()
-    extractPDF.mockReset()
-    pickFiles.mockReset()
-    onPageCaptured.mockReset()
-    onPageCaptured.mockResolvedValue({ remove: vi.fn() })
-    store.transactions = []
-    store.currency = 'usd'
-  })
+const F = { x: 0, y: 0, width: 0, height: 0 }
 
+beforeEach(() => {
+  isNativePlatform.mockReturnValue(true)
+  capture.mockReset()
+  extractPDF.mockReset()
+  pickFiles.mockReset()
+  onPageCaptured.mockReset()
+  onPageCaptured.mockResolvedValue({ remove: vi.fn() })
+  pickFile.mockReset()
+  extractPdfToDocument.mockReset()
+  store.transactions = []
+  store.currency = 'usd'
+})
+
+describe('useScanFlow — native platform', () => {
   it('starts in idle', () => {
     const { result } = renderHook(() => useScanFlow())
     expect(result.current.state.phase).toBe('idle')
@@ -48,7 +69,7 @@ describe('useScanFlow', () => {
   it('camera capture of a receipt-shaped document parses to receiptPrefilled', async () => {
     capture.mockResolvedValue({
       imageUri: 'file:///tmp/x.jpg',
-      page: { lines: [{ text: 'CORNER PLACE', frame: { x: 0, y: 0, width: 0, height: 0 } }, { text: '07/01/2026', frame: { x: 0, y: 0, width: 0, height: 0 } }, { text: 'TOTAL  $12.00', frame: { x: 0, y: 0, width: 0, height: 0 } }], tables: [] },
+      page: { lines: [{ text: 'CORNER PLACE', frame: F }, { text: '07/01/2026', frame: F }, { text: 'TOTAL  $12.00', frame: F }], tables: [] },
     })
     const { result } = renderHook(() => useScanFlow())
 
@@ -61,9 +82,8 @@ describe('useScanFlow', () => {
   })
 
   it('retains every page of a multi-shot statement capture (B3)', async () => {
-    const f = { x: 0, y: 0, width: 0, height: 0 }
-    const page1 = { lines: [{ text: 'STATEMENT PERIOD 06/01/2026 - 06/30/2026', frame: f }, { text: '06/05  UBER TRIP  $18.50', frame: f }], tables: [] }
-    const page2 = { lines: [{ text: '06/08  BLUE BOTTLE  $6.25', frame: f }], tables: [] }
+    const page1 = { lines: [{ text: 'STATEMENT PERIOD 06/01/2026 - 06/30/2026', frame: F }, { text: '06/05  UBER TRIP  $18.50', frame: F }], tables: [] }
+    const page2 = { lines: [{ text: '06/08  BLUE BOTTLE  $6.25', frame: F }], tables: [] }
     capture.mockResolvedValue({ imageUri: 'file:///tmp/1.jpg', page: page1 })
     let pageHandler: ((data: { imageUri: string; page: typeof page1 }) => void) | undefined
     onPageCaptured.mockImplementation((h) => {
@@ -110,12 +130,13 @@ describe('useScanFlow', () => {
     })
 
     await waitFor(() => expect(result.current.state.phase).toBe('failed'))
+    expect(result.current.state.failureReason).toBe('unreadable')
   })
 
   it('file import extracts a PDF and parses it', async () => {
     pickFiles.mockResolvedValue({ files: [{ name: 'statement.pdf', mimeType: 'application/pdf', size: 100, path: '/tmp/statement.pdf' }] })
     extractPDF.mockResolvedValue({
-      pages: [{ lines: [{ text: 'STATEMENT PERIOD 06/01/2026 - 06/30/2026', frame: { x: 0, y: 0, width: 0, height: 0 } }, { text: '06/05  UBER TRIP  $18.50', frame: { x: 0, y: 0, width: 0, height: 0 } }], tables: [] }],
+      pages: [{ lines: [{ text: 'STATEMENT PERIOD 06/01/2026 - 06/30/2026', frame: F }, { text: '06/05  UBER TRIP  $18.50', frame: F }], tables: [] }],
     })
     const { result } = renderHook(() => useScanFlow())
 
@@ -149,5 +170,91 @@ describe('useScanFlow', () => {
 
     act(() => result.current.dispatch({ type: 'reset' }))
     expect(result.current.state.phase).toBe('idle')
+  })
+
+  it('does NOT use the web <input> path on native', async () => {
+    pickFiles.mockResolvedValue({ files: [] })
+    const { result } = renderHook(() => useScanFlow())
+    await act(async () => {
+      await result.current.startFileImport()
+    })
+    expect(pickFile).not.toHaveBeenCalled()
+    expect(pickFiles).toHaveBeenCalled()
+  })
+})
+
+describe('useScanFlow — web platform (fix/web-scan-fallback)', () => {
+  let errorSpy: ReturnType<typeof vi.spyOn>
+  beforeEach(() => {
+    isNativePlatform.mockReturnValue(false)
+    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+  afterEach(() => {
+    errorSpy.mockRestore()
+  })
+
+  it('camera capture degrades honestly (no browser OCR), never touching the native plugin', async () => {
+    const { result } = renderHook(() => useScanFlow())
+
+    await act(async () => {
+      await result.current.startCameraCapture()
+    })
+
+    expect(result.current.state.phase).toBe('failed')
+    expect(result.current.state.failureReason).toBe('unsupportedOnWeb')
+    expect(capture).not.toHaveBeenCalled()
+    expect(onPageCaptured).not.toHaveBeenCalled()
+  })
+
+  it('PDF import opens the <input>, extracts via unpdf, and parses a statement', async () => {
+    const file = new File(['%PDF'], 'statement.pdf', { type: 'application/pdf' })
+    pickFile.mockResolvedValue(file)
+    extractPdfToDocument.mockResolvedValue({
+      pages: [{ lines: [
+        { text: 'STATEMENT PERIOD 06/01/2026 - 06/30/2026', frame: F },
+        { text: '06/05  UBER TRIP  $18.50', frame: F },
+      ], tables: [] }],
+    })
+    const { result } = renderHook(() => useScanFlow())
+
+    await act(async () => {
+      await result.current.startFileImport()
+    })
+
+    expect(pickFile).toHaveBeenCalledWith('application/pdf')
+    expect(extractPdfToDocument).toHaveBeenCalledWith(file)
+    // Same parser as native — a one-row statement is still a statement.
+    await waitFor(() => expect(result.current.state.phase).toBe('interstitial'))
+    // Never reaches for the native plugins on web.
+    expect(extractPDF).not.toHaveBeenCalled()
+    expect(pickFiles).not.toHaveBeenCalled()
+  })
+
+  it('PDF import that the user cancels stays idle (no failure)', async () => {
+    pickFile.mockResolvedValue(null)
+    const { result } = renderHook(() => useScanFlow())
+
+    await act(async () => {
+      await result.current.startFileImport()
+    })
+
+    expect(extractPdfToDocument).not.toHaveBeenCalled()
+    expect(result.current.state.phase).toBe('idle')
+    expect(errorSpy).not.toHaveBeenCalled()
+  })
+
+  it('an unreadable (image-only) PDF surfaces the failed phase AND logs the cause', async () => {
+    pickFile.mockResolvedValue(new File(['%PDF'], 'scan.pdf', { type: 'application/pdf' }))
+    extractPdfToDocument.mockRejectedValue(new Error('UNPARSEABLE_PDF: no extractable text'))
+    const { result } = renderHook(() => useScanFlow())
+
+    await act(async () => {
+      await result.current.startFileImport()
+    })
+
+    await waitFor(() => expect(result.current.state.phase).toBe('failed'))
+    expect(result.current.state.failureReason).toBe('unreadable')
+    // The whole point of the fix: a real failure is no longer swallowed silently.
+    expect(errorSpy).toHaveBeenCalled()
   })
 })
