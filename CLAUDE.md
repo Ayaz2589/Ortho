@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/027-ledger-atomic-persistence/plan.md`
+`specs/027-multi-currency-strategy/plan.md`
 <!-- SPECKIT END -->
 
 ## Project documentation
