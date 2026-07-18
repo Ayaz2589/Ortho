@@ -3,7 +3,8 @@ import { computeShares, validateSplit, seedSplit, orderedOwnerIds, PERCENT_TOLER
 import { balanceBetween } from '@/lib/balances'
 import { toDisplayAmount, toUSDCents } from '@/lib/finance/money'
 import { CURRENCIES, FALLBACK_RATE_FROM_USD } from '@/lib/finance/currency'
-import type { Transaction } from '@/lib/types'
+import { generateInsights } from '@/lib/finance/insights'
+import type { Transaction, Budget } from '@/lib/types'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // spec 025 — US1 CORRECTNESS ORACLE (property / invariant tests)
@@ -113,5 +114,107 @@ describe('property — balanceBetween is antisymmetric', () => {
     // change the net owed between the two members.
     const withoutIncome = ledger.filter((r) => r.kind !== 'income')
     expect(balanceBetween('a', 'b', ledger)).toBe(balanceBetween('a', 'b', withoutIncome))
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// spec 027 — insights invariants
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SEVERITY_RANK: Record<string, number> = { critical: 0, warning: 1, info: 2, positive: 3 }
+
+const INSIGHT_ID_PATTERNS = [
+  /^top-category-/,
+  /^mom-/,
+  /^budget-(over|near|under)-/,
+  /^cashflow-/,
+  /^recurring-/,
+  /^outlier-/,
+  /^trend30-/,
+  /^mortgage-ratio-/,
+]
+
+let _txSeq = 0
+function makeTxForProperty(overrides: Partial<Transaction> = {}): Transaction {
+  return {
+    id: `tx-prop-${++_txSeq}`,
+    household_id: 'h',
+    merchant: 'TestMerchant',
+    category: 'dining',
+    kind: 'expense',
+    amount_cents: 5000,
+    source: 's',
+    date: '2026-06-15',
+    created_by: 'x',
+    created_at: '2026-06-15T12:00:00.000Z',
+    updated_at: '2026-06-15T12:00:00.000Z',
+    owner_ids: ['a'],
+    shares: { a: 5000 },
+    paid_by: 'a',
+    ...overrides,
+  }
+}
+
+describe('property — insights invariant 1: length ≤ limit', () => {
+  const tx = makeTxForProperty()
+  for (const limit of [1, 3, 5, 10, 20]) {
+    it(`limit=${limit}`, () => {
+      const now = new Date('2026-06-15T12:00:00.000Z')
+      const insights = generateInsights([tx], [], [], now, limit)
+      expect(insights.length).toBeLessThanOrEqual(limit)
+    })
+  }
+})
+
+describe('property — insights invariant 2: every id matches a documented pattern', () => {
+  it('all returned insight ids match one of the 8 documented patterns', () => {
+    const txs = [
+      makeTxForProperty({ amount_cents: 12000, category: 'dining' }),
+      makeTxForProperty({ amount_cents: 8000, category: 'groceries', date: '2026-05-15' }),
+      makeTxForProperty({ merchant: 'Netflix', amount_cents: 1799, date: '2026-05-10' }),
+      makeTxForProperty({ merchant: 'Netflix', amount_cents: 1799, date: '2026-04-10' }),
+      makeTxForProperty({ merchant: 'Netflix', amount_cents: 1799, date: '2026-06-10' }),
+    ]
+    const budget: Budget = { id: 'b1', household_id: 'h', category: 'dining', monthly_limit_cents: 10000 }
+    const now = new Date('2026-06-15T12:00:00.000Z')
+    const insights = generateInsights(txs, [budget], [], now, 20)
+    for (const insight of insights) {
+      const matchesAny = INSIGHT_ID_PATTERNS.some((p) => p.test(insight.id))
+      expect(matchesAny, `unexpected id "${insight.id}"`).toBe(true)
+    }
+  })
+})
+
+describe('property — insights invariant 3: magnitude_cents ≥ 0', () => {
+  it('no insight has a negative magnitude', () => {
+    const txs = [
+      makeTxForProperty({ amount_cents: 5000 }),
+      makeTxForProperty({ amount_cents: 100, date: '2026-05-15' }),
+    ]
+    const now = new Date('2026-06-15T12:00:00.000Z')
+    const insights = generateInsights(txs, [], [], now, 20)
+    for (const insight of insights) {
+      expect(insight.magnitude_cents).toBeGreaterThanOrEqual(0)
+    }
+  })
+})
+
+describe('property — insights invariant 4: sorted by severity (no lower rank precedes higher)', () => {
+  it('insights are in non-decreasing severity rank order', () => {
+    const txs = [
+      makeTxForProperty({ amount_cents: 15000, category: 'dining' }),
+      makeTxForProperty({ amount_cents: 3000, category: 'groceries', date: '2026-05-15' }),
+      makeTxForProperty({ merchant: 'Netflix', amount_cents: 1799, date: '2026-05-10' }),
+      makeTxForProperty({ merchant: 'Netflix', amount_cents: 1799, date: '2026-04-10' }),
+      makeTxForProperty({ merchant: 'Netflix', amount_cents: 1799, date: '2026-06-10' }),
+    ]
+    const budget: Budget = { id: 'b2', household_id: 'h', category: 'dining', monthly_limit_cents: 10000 }
+    const now = new Date('2026-06-15T12:00:00.000Z')
+    const insights = generateInsights(txs, [budget], [], now, 20)
+    for (let i = 1; i < insights.length; i++) {
+      const prev = SEVERITY_RANK[insights[i - 1].severity] ?? 99
+      const curr = SEVERITY_RANK[insights[i].severity] ?? 99
+      expect(prev, `insight[${i - 1}].severity "${insights[i - 1].severity}" ranked higher than insight[${i}].severity "${insights[i].severity}"`).toBeLessThanOrEqual(curr)
+    }
   })
 })
