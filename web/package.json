@@ -10,7 +10,10 @@
     "build": "next build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:tz": "vitest run -c vitest.tz.config.ts",
     "gen:vectors": "tsx scripts/gen-vectors.ts",
+    "gen:corpus": "tsx scripts/gen-corpus.ts",
+    "seed:corpus": "tsx scripts/seed-corpus.ts",
     "measure:bundle": "tsx scripts/measure-bundle.ts"
   },
   "dependencies": {
