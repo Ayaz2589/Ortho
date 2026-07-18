@@ -222,6 +222,39 @@ per-sandbox schema). Note the spec-026 seed CLI (`npm run seed:corpus`) **only
 writes to a local target** by design, so it's safe to run inside any sandbox
 pointed at that sandbox's own local stack.
 
+## Fix push once — the "can't push from a new sandbox" blocker
+
+A fresh sandbox can *read* a public repo anonymously but **can't `git push`** until a
+GitHub token secret is set for it — the #1 recurring blocker. The proxy injects the
+credential at the network layer once the secret exists (so `gh auth status` still
+shows "not logged in" inside — that's expected, not a failure).
+
+**Do it once, globally — every future sandbox inherits it (recommended):**
+```console
+# [host]
+$ sbx secret set -g github -t "$(gh auth token)"
+# …or the bundled helper (same thing, with a .secrets/gh fallback):
+$ ./.claude/skills/docker-sandbox/set-github-secret.sh -g
+```
+
+**Unblock a sandbox that's already running** (takes effect immediately, no restart):
+```console
+# [host]
+$ sbx secret set <sandbox-name> github -t "$(gh auth token)"
+$ ./.claude/skills/docker-sandbox/set-github-secret.sh <sandbox-name>   # same, via helper
+```
+
+**Optional host `.secrets` file** — for scripted/overnight fleets that don't want to
+call `gh` each time. Copy `.secrets.example` → `.secrets` (gitignored — **never
+commit**; a leaked push token compromises the repo) and set `GITHUB_TOKEN=`; the
+helper reads it. Two things to know:
+- It's **host-side only.** A gitignored file is **not** in a clone/branch sandbox
+  (same as `web/.env.local`), so a sandbox can't read `.secrets` itself — the host
+  sets the `sbx` secret from it, and only the proxy-injected credential reaches the
+  sandbox. (This is why the file can't be "read from inside the sandbox.")
+- Prefer the **global secret** above when you can — it's simpler and keeps no token
+  in the working tree.
+
 ## Git push / PR from a sandbox
 
 Pushing and opening PRs from a sandbox is the expected end of each feature. The
