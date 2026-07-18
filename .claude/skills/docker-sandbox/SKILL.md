@@ -154,14 +154,21 @@ The bundled script does the whole setup — deps + an **isolated local Supabase 
 so you never hand-copy them):
 
 ```console
-# [in-sandbox] from the repo root:
+# [in-sandbox] from the WRITABLE workspace clone (not /run/sandbox/source):
 $ ./.claude/skills/docker-sandbox/bootstrap-sandbox.sh feat/<your-branch>
-#   → git checkout -b feat/<your-branch>; (cd web && npm ci); supabase start;
-#     writes web/.env.local pointing at THIS sandbox's local DB. Nothing hosted is touched.
+#   → installs the Supabase CLI if missing; git checkout -b feat/<your-branch>;
+#     (cd web && npm ci); supabase start; writes web/.env.local pointing at THIS
+#     sandbox's local DB. Nothing hosted is touched.
 ```
-Omit the branch arg to bootstrap without switching branches. The script **refuses to
-run on the host** (unless `--force`) so it can't clobber your real `web/.env.local`,
-and it backs up any existing one before writing.
+It **self-installs the Supabase CLI** (the sandbox image ships Node + Docker but not
+`supabase`) to `~/.local/bin`. Omit the branch arg to skip branching. Guards: it
+**refuses to run on the read-only `/run/sandbox/source` mount** (run it from the
+writable clone — the dir you land in on `sbx run`), **refuses to run on the host**
+(unless `--force`) so it can't clobber your real `web/.env.local`, and backs up any
+existing one before writing.
+
+> If a sandbox was created **before** this script existed on `main`, its clone has the
+> old copy — refresh it first: `git fetch origin main && git checkout origin/main -- .claude/skills/docker-sandbox/bootstrap-sandbox.sh`.
 
 **Prefer the shared hosted project instead?** (concurrent agents then share one DB —
 see "Ortho note — Supabase" for the tradeoffs; prefer a per-agent schema): skip the
@@ -266,6 +273,46 @@ repo `CLAUDE.md` has the full guide — key points:
 - For a `--branch`-mode sandbox whose `origin` points at the local sandbox source,
   add the real GitHub remote before pushing — see `CLAUDE.md` "Pushing to GitHub and
   raising a PR from a `--branch` sandbox".
+
+## Gotchas & safe procedures (learned the hard way)
+
+These are the failure modes that actually bite when running this skill. Check them.
+
+**1. Two dirs inside a clone sandbox — one is READ-ONLY.**
+`/run/sandbox/source` is a **read-only** mount of your host repo (virtiofs `ro`). The
+sandbox's **writable private clone** is at the workspace path (mirrors the host path,
+e.g. `/Users/you/dev/Ortho` *inside the container*) — that's where you land on
+`sbx run`. **Always work in the writable clone.** Reading `/run/sandbox/source` shows
+the *host's* files (including a `web/.env.local` that isn't really in the clone) and
+writes there fail. The bootstrap script refuses to run on the RO mount for this reason.
+
+**2. `sbx ls` fails with "database already in use" / `ps`/`pgrep` say "operation not
+permitted".** That's **Claude Code's own Bash command-sandbox (seatbelt)** blocking the
+`sbx` daemon socket — not a real daemon conflict. `sbx` then tries to start a second
+daemon and collides on its DB lock. Fix: run the `sbx` command with the command
+sandbox **disabled** (re-run outside the restricted Bash). It's an environment quirk,
+not an `sbx` bug.
+
+**3. Check the name is free BEFORE `sbx create`.** `sbx ls` first. Creating with a name
+that already exists **re-attaches** to the existing sandbox instead of making a fresh
+one — easy to mistake for "it worked."
+
+**4. NEVER blind `sbx rm --force` a clone-mode sandbox.** Removal deletes its private
+clone and any unpushed commits. `--force` **skips the safety fetch**. Before removing:
+- Inspect the **writable clone** (not `/run/sandbox/source`) for unpushed work:
+  ```console
+  # [host] find the workspace path from `sbx ls`, then:
+  $ sbx exec <name> bash -lc 'cd <workspace-clone>; git status -sb; git log --oneline --branches --not --remotes'
+  ```
+- If there's anything, push it from inside first, or run the **preservation fetch**
+  `sbx rm` prints (it mirrors the sandbox's commits into `refs/sandboxes/<name>/*` on
+  your host). Only then `sbx rm <name>`.
+
+**5. The sandbox image has no `supabase` CLI** (only Node + Docker). The bootstrap
+script installs it automatically; if you set up by hand, `curl` the release binary
+(`supabase_linux_<arch>.tar.gz`) to `~/.local/bin`, or bake it into a
+[Docker Sandbox kit](https://docs.docker.com/ai/sandboxes/customize/kits/) so every
+sandbox has it preinstalled.
 
 ## Lifecycle & cleanup
 
