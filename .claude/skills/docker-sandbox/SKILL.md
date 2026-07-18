@@ -25,12 +25,39 @@ terminal** (macOS/Windows/Linux), plus the workflow and the gotchas. Present the
 commands in a copyable block and tell the user to run them on the host. Do not try
 to execute `sbx ...` from a Bash tool call inside the sandbox — it will fail.
 
+### Environment guard — do this FIRST, every invocation
+
+Before emitting anything, detect whether you are inside a sandbox:
+
+```bash
+command -v sbx >/dev/null 2>&1 && echo "sbx: present" || echo "sbx: ABSENT"
+echo "SANDBOX_VM_ID=${SANDBOX_VM_ID:-<unset>}"
+```
+
+- **Inside a sandbox** — `sbx` is **ABSENT**, or `SANDBOX_VM_ID` is set (e.g.
+  `claude-Ortho`). You are a passenger: **do NOT run any `sbx …` command.** Prepend
+  this banner, verbatim (substituting the real id), to every command block you emit:
+
+  > 🖥️ **Run these on your HOST terminal — not here.** This Claude Code session is
+  > inside sandbox `<SANDBOX_VM_ID>`, where `sbx` isn't installed, so it cannot
+  > create sandboxes (and would only spawn *sibling* VMs on the host, never a nested
+  > one). Copy the commands below into your host shell.
+
+- **On the host** — `sbx` is **present** and `SANDBOX_VM_ID` is unset. You *may* run
+  the commands directly, but creating/removing sandboxes is consequential: show the
+  block and get an explicit go-ahead first, and **never auto-run `sbx rm`**.
+
 (The one-time install is host-side too: `brew install docker/tap/sbx` on macOS,
 `winget install -h Docker.sbx` on Windows, the apt path on Ubuntu 24.04+, then
 `sbx login`. Pick the **Balanced** network policy at login.)
 
 ## When invoked
 
+0. **Guard: detect the environment (always first).** Run the check in "Environment
+   guard" above. If inside a sandbox (`sbx` absent / `SANDBOX_VM_ID` set), switch to
+   "emit for host" mode and **prepend the HOST-ONLY banner** to any command block —
+   do not execute `sbx`. If on the host, you may offer to run the commands after an
+   explicit go-ahead.
 1. If the user named one or more features (via arguments or the message), emit the
    ready-to-run block that creates **one clone-mode, uniquely-named sandbox per
    feature** for this repo (recipe below), then tell them to run it on the host.
