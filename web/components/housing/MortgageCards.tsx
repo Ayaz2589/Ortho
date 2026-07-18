@@ -12,6 +12,7 @@ import {
   maturityDate,
   yearsRemaining,
   upcomingAmortization,
+  PAID_OFF_THRESHOLD_CENTS,
 } from '@/lib/finance/mortgage'
 import type { MortgageInfo } from '@/lib/types'
 
@@ -121,14 +122,17 @@ export function MortgageDetails({ mortgage }: { mortgage: MortgageInfo }) {
 
 export function EquityProgress({ mortgage }: { mortgage: MortgageInfo }) {
   const { formatMoney, locale, t } = useApp()
-  const equity = currentEquityCents(
-    mortgage.purchase_price_cents,
+  const rawBalance = currentPrincipalBalanceCents(
     mortgage.original_loan_cents,
     mortgage.annual_interest_rate_percent,
     mortgage.loan_term_years,
     mortgage.closing_date
   )
-  const fraction = equityFraction(
+  // Clamp near-zero balance to 0 so floating-point rounding after the final
+  // payment doesn't show a spurious sub-$5 debt.
+  const balance = rawBalance <= PAID_OFF_THRESHOLD_CENTS ? 0 : rawBalance
+  const principalPaidDown = mortgage.original_loan_cents - balance
+  const fraction = balance === 0 ? 1 : equityFraction(
     mortgage.purchase_price_cents,
     mortgage.original_loan_cents,
     mortgage.annual_interest_rate_percent,
@@ -138,13 +142,13 @@ export function EquityProgress({ mortgage }: { mortgage: MortgageInfo }) {
   return (
     <Section>
       <div className="flex flex-col gap-2.5 p-5">
-        <Label>{t('Equity')}</Label>
+        <Label>{t('Principal paid down')}</Label>
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-[28px] font-light tracking-[-0.4px] tabular-nums text-text">
-            {formatMoney(equity)}
+            {formatMoney(principalPaidDown)}
           </span>
           <span className="shrink-0 text-[12px] text-text-3">
-            {t('of {0} · {1}', formatMoney(mortgage.purchase_price_cents), `${(fraction * 100).toFixed(1)}%`)}
+            {t('of {0} · {1}', formatMoney(mortgage.original_loan_cents), `${(fraction * 100).toFixed(1)}%`)}
           </span>
         </div>
         <div className="mt-0.5 h-1.5 overflow-hidden rounded-full" style={{ background: 'var(--chip-bg)' }}>
@@ -154,7 +158,7 @@ export function EquityProgress({ mortgage }: { mortgage: MortgageInfo }) {
           />
         </div>
         <p className="text-[13px] text-text-2">
-          {t('Built since closing · {0}', monthYear(parseLocalDate(mortgage.closing_date), locale))}
+          {t('Since closing · {0}', monthYear(parseLocalDate(mortgage.closing_date), locale))}
         </p>
       </div>
     </Section>
