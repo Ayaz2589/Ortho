@@ -140,13 +140,12 @@ describe('store (AppStateProvider)', () => {
     await act(async () => { api.addTransaction(tx) })
     await waitFor(() => expect(api.transactions).toHaveLength(startLen + 1))
     expect(api.transactions[0].id).toBe('tx-new') // prepended
-    expect(h.mock!.callsFor('transactions').some((c) => c.op === 'insert')).toBe(true)
+    expect(h.mock!.rpcCalls).toContain('upsert_transaction') // atomic RPC, not direct insert
 
     const edited = { ...tx, merchant: 'Stumptown' }
     await act(async () => { api.updateTransaction(edited) })
     await waitFor(() => expect(api.transactions.find((t) => t.id === 'tx-new')?.merchant).toBe('Stumptown'))
     expect(api.transactions).toHaveLength(startLen + 1) // no row added/removed
-    expect(h.mock!.callsFor('transactions').some((c) => c.op === 'update')).toBe(true)
 
     await act(async () => { api.deleteTransaction('tx-new') })
     await waitFor(() => expect(api.transactions.find((t) => t.id === 'tx-new')).toBeUndefined())
@@ -168,47 +167,21 @@ describe('store (AppStateProvider)', () => {
     await waitFor(() => expect(notification).toHaveBeenCalledWith({ type: 'WARNING' }))
   })
 
-  it('addTransaction rolls back the parent when the shares write fails (no share-less row)', async () => {
-    // Force the transaction_shares insert to fail (e.g. an RLS denial). The
-    // transaction+shares write must be atomic: no parent may survive without
-    // its shares (it would rehydrate as a single-owner "creator owns all").
-    h.mock = makeSupabaseMock({ ...dataset(), insertErrors: { transaction_shares: 'shares RLS denied' } })
+  it('addTransaction rolls back optimistic state when the RPC fails (no share-less row possible)', async () => {
+    // Simulate the RPC rejecting the write (e.g. SHARES_MISMATCH or network error).
+    // The atomic RPC guarantees no partial state — the optimistic row is simply removed.
+    h.mock = makeSupabaseMock({ ...dataset(), rpcErrors: { upsert_transaction: new Error('SHARES_MISMATCH') } })
     await renderStore()
     const startLen = api.transactions.length
 
     const tx = makeTx({ id: 'tx-fail', merchant: 'Bistro', amount_cents: 1000, owner_ids: ['u-me', 'u-jordan'], household_id: 'hh-1' })
     await act(async () => { api.addTransaction(tx) })
 
-    // The optimistic row is rolled back and an error is surfaced.
     await waitFor(() => expect(api.error).not.toBeNull())
     expect(api.transactions.find((t) => t.id === 'tx-fail')).toBeUndefined()
     expect(api.transactions).toHaveLength(startLen)
-    // The parent was deleted so no share-less transaction remains.
-    expect(h.mock!.callsFor('transactions').some((c) => c.op === 'delete')).toBe(true)
-  })
-
-  it('addTransaction keeps the row + flags an error when the shares write AND the rollback delete both fail (B7)', async () => {
-    // Double failure: the transaction_shares insert fails AND the compensating
-    // parent delete also fails, so the parent survives in the DB with no shares.
-    // The app must NOT silently drop it from local state as if the rollback
-    // succeeded (that hides an orphaned "creator owns all" row) — it keeps the
-    // row visible and surfaces the error (spec 023 B7).
-    h.mock = makeSupabaseMock({
-      ...dataset(),
-      insertErrors: { transaction_shares: 'shares RLS denied' },
-      deleteErrors: { transactions: 'delete blocked' },
-    })
-    await renderStore()
-    const startLen = api.transactions.length
-
-    const tx = makeTx({ id: 'tx-orphan', merchant: 'Bistro', amount_cents: 1000, owner_ids: ['u-me', 'u-jordan'], household_id: 'hh-1' })
-    await act(async () => { api.addTransaction(tx) })
-
-    await waitFor(() => expect(api.error).not.toBeNull())
-    // Not silently dropped — the failed rollback leaves the row flagged, not
-    // presented as a clean revert.
-    expect(api.transactions.find((t) => t.id === 'tx-orphan')).toBeDefined()
-    expect(api.transactions).toHaveLength(startLen + 1)
+    // No compensating delete needed — the RPC is atomic.
+    expect(h.mock!.callsFor('transactions').some((c) => c.op === 'delete')).toBe(false)
   })
 
   it('spentBy returns each person\'s exact cents share, reconciling to the total', async () => {

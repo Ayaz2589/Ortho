@@ -836,25 +836,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }
 
   // ---- mutations (optimistic) ----
-  /** Replace a transaction's owner-share rows. Returns whether the write fully
-   *  succeeded so callers can keep the parent + shares atomic (a partial failure
-   *  must never leave a share-less parent — see `addTransaction`/`updateTransaction`). */
-  const writeShares = async (tx: Transaction): Promise<{ ok: boolean; error?: string }> => {
-    const { error: delErr } = await supabase.from('transaction_shares').delete().eq('transaction_id', tx.id)
-    if (delErr) return { ok: false, error: delErr.message }
-    const shares = effectiveShares(tx)
-    const rows = tx.owner_ids.map((pid) => ({
-      transaction_id: tx.id,
-      person_id: pid,
-      amount_cents: shares[pid] ?? 0,
-    }))
-    if (rows.length) {
-      const { error: insErr } = await supabase.from('transaction_shares').insert(rows)
-      if (insErr) return { ok: false, error: insErr.message }
-    }
-    return { ok: true }
-  }
-
   const txRecord = (tx: Transaction) => ({
     id: tx.id,
     household_id: tx.household_id,
@@ -868,66 +849,38 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     paid_by: tx.paid_by ?? null,
   })
 
+  /** Per-owner share rows for the upsert_transaction RPC p_shares parameter. */
+  const shareRows = (tx: Transaction) => {
+    const shares = effectiveShares(tx)
+    return tx.owner_ids.map((pid) => ({ person_id: pid, amount_cents: shares[pid] ?? 0 }))
+  }
+
   const addTransaction = (tx: Transaction) => {
     setTransactions((prev) => [tx, ...prev])
     hapticConfirm() // spec 021, FR-012 — optimistic, so it fires immediately on tap
     ;(async () => {
-      const { error: e } = await supabase.from('transactions').insert(txRecord(tx))
+      const { error: e } = await supabase.rpc('upsert_transaction', {
+        p_tx: txRecord(tx),
+        p_shares: shareRows(tx),
+      })
       if (e) {
         setTransactions((prev) => prev.filter((t) => t.id !== tx.id))
         setError(e.message)
-        return
-      }
-      const res = await writeShares(tx)
-      if (!res.ok) {
-        // Shares failed to write — roll back the parent so no share-less
-        // transaction survives (it would rehydrate as "creator owns all").
-        // Matches iOS's all-or-nothing write.
-        const { error: delErr } = await supabase.from('transactions').delete().eq('id', tx.id)
-        if (delErr) {
-          // The compensating rollback ALSO failed: the parent is still in the DB
-          // with no shares. Keep the row in local state (don't hide an orphaned
-          // row) and surface the failure so it isn't presented as a clean
-          // rollback — it stays flagged until the next successful loadAll (B7).
-          setError(`This transaction may not have saved correctly (${res.error ?? delErr.message}). Reload to reconcile.`)
-        } else {
-          setTransactions((prev) => prev.filter((t) => t.id !== tx.id))
-          setError(res.error ?? 'Could not save who this transaction is split between.')
-        }
       }
     })()
   }
 
   const updateTransaction = (tx: Transaction) => {
-    let prevTx: Transaction | undefined
-    setTransactions((prev) => {
-      prevTx = prev.find((t) => t.id === tx.id)
-      return prev.map((t) => (t.id === tx.id ? tx : t))
-    })
+    const prevTx = transactions.find((t) => t.id === tx.id)
+    setTransactions((prev) => prev.map((t) => (t.id === tx.id ? tx : t)))
     ;(async () => {
-      const { error: e } = await supabase.from('transactions').update(txRecord(tx)).eq('id', tx.id)
+      const { error: e } = await supabase.rpc('upsert_transaction', {
+        p_tx: txRecord(tx),
+        p_shares: shareRows(tx),
+      })
       if (e) {
         if (prevTx) setTransactions((prev) => prev.map((t) => (t.id === tx.id ? prevTx! : t)))
         setError(e.message)
-        return
-      }
-      const res = await writeShares(tx)
-      if (!res.ok) {
-        // Shares failed to write — restore the prior transaction locally and
-        // re-write its shares so the row never ends up share-less (atomic with iOS).
-        if (prevTx) {
-          setTransactions((prev) => prev.map((t) => (t.id === tx.id ? prevTx! : t)))
-          const { error: upErr } = await supabase.from('transactions').update(txRecord(prevTx)).eq('id', tx.id)
-          const restore = upErr ? { ok: false as const } : await writeShares(prevTx)
-          if (upErr || !restore.ok) {
-            // The compensating restore ALSO failed: the DB row may be inconsistent
-            // with the reverted local state. Flag it so it isn't presented as a
-            // clean revert — reconciles on the next successful loadAll (B7).
-            setError('This transaction may not have saved correctly. Reload to reconcile.')
-            return
-          }
-        }
-        setError(res.error ?? 'Could not save who this transaction is split between.')
       }
     })()
   }

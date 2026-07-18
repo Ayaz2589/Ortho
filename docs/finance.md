@@ -641,7 +641,7 @@ Two gaps:
   RPC**: web does client-side compensating rollback, the CLI does not, and a
   share-less row is reachable (see `PARITY.md`). For financial data, "we roll back
   in the client if the second write fails" silently corrupts on the unhappy path.
-  — ⏳ open (needs a migration).
+  — ✅ **Done (spec 027).**
 *Fix (two independently shippable pieces):* (a) a branded `Cents` type at the
 finance-layer boundary; (b) move the sum invariant into the database (a
 `CHECK`/trigger, or an atomic parent+shares RPC).
@@ -651,8 +651,12 @@ validated constructors (`toCents`, `centsFromDollars`) and guards
 additive: existing call sites are untouched (no ripple), while a new path that
 *requires* `Cents` rejects a plain-`number` dollars value at compile time and a
 non-integer at runtime. Wholesale adoption across the layer is deferred.
-*Deferred (b):* the database guarantee needs a Supabase migration and live-DB
-verification — a separate PR.
+*Done (b):* `supabase/migrations/20260718120000_upsert_transaction_atomic.sql` —
+`upsert_transaction(p_tx jsonb, p_shares jsonb)` PL/pgSQL RPC (`security definer`)
+validates `sum(shares.amount_cents) = amount_cents` and commits transaction + shares
+atomically. Both `addTransaction`/`updateTransaction` in `web/lib/store.tsx` and the
+CLI `persist()` in `web/scripts/import/db/persist.ts` now call this RPC exclusively;
+client-side compensating rollback is gone.
 
 ### H4 — The date model is a three-regime split-brain
 Filter windows are UTC half-open `[from, to)`; housing date-only values are
