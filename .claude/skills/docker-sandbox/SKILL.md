@@ -146,27 +146,27 @@ $ sbx policy allow network -g <your-supabase-project-host>
 Claude agent auth is **per sandbox**: run `/login` inside each, or store an API key
 as a secret so the `claude` agent starts authenticated.
 
-### Per-sandbox bootstrap — the gitignored bits git won't clone
+### Per-sandbox bootstrap — one command (the gitignored bits git won't clone)
+
+A fresh clone/branch sandbox has the source but not `web/.env.local` (gitignored).
+The bundled script does the whole setup — deps + an **isolated local Supabase stack**
++ writing `web/.env.local` from it (keys auto-extracted via `supabase status -o env`,
+so you never hand-copy them):
+
 ```console
-# [in-sandbox] install deps
-$ cd web && npm ci
-
-# [in-sandbox] recreate web/.env.local — it's GITIGNORED, so it is NOT in a clone or
-#   a fresh worktree. Two ways:
-#   A) isolated LOCAL stack (best for parallel DB work, e.g. §9.3 atomic persistence):
-$ supabase start          # Docker; prints the local URL + anon/service-role keys
-#      then write web/.env.local:
-#        NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-#        NEXT_PUBLIC_SUPABASE_ANON_KEY=<local anon key>
-#        SUPABASE_SERVICE_ROLE_KEY=<local service-role key>
-#   B) point at the shared hosted project (copy values from your host's
-#      web/.env.local or CI-SETUP.local.md) — see "Ortho note — Supabase" below for
-#      the concurrency tradeoffs (prefer a per-agent schema).
-
-# [in-sandbox] if the bootstrap doc was copied in, read it first — it has the local
-#   credentials + CI usage guide for a fresh sandbox:
-$ test -f CI-SETUP.local.md && echo "read CI-SETUP.local.md"
+# [in-sandbox] from the repo root:
+$ ./.claude/skills/docker-sandbox/bootstrap-sandbox.sh feat/<your-branch>
+#   → git checkout -b feat/<your-branch>; (cd web && npm ci); supabase start;
+#     writes web/.env.local pointing at THIS sandbox's local DB. Nothing hosted is touched.
 ```
+Omit the branch arg to bootstrap without switching branches. The script **refuses to
+run on the host** (unless `--force`) so it can't clobber your real `web/.env.local`,
+and it backs up any existing one before writing.
+
+**Prefer the shared hosted project instead?** (concurrent agents then share one DB —
+see "Ortho note — Supabase" for the tradeoffs; prefer a per-agent schema): skip the
+script and set `web/.env.local` to the hosted URL + keys from your host's
+`web/.env.local` or `CI-SETUP.local.md`.
 
 ### Verify it's ready
 ```console
