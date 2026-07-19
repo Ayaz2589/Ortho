@@ -153,7 +153,7 @@ plan.md, research.md, data-model.md, quickstart.md, tasks.md, contracts/, checkl
   pre-rename dev server — stop it and restart from `web/`).
 - Root `CLAUDE.md` points at the current plan and the session-continuity rule; update it (and
   `feature.json`) when a new feature starts. `PARITY.md` is the cross-surface parity ledger;
-  `FUTURE-TASKS.md` is a redirect stub to `docs/future_tasks/`.
+  the feature backlog lives in `docs/future_tasks/`.
 
 ## 8. Quick start
 
