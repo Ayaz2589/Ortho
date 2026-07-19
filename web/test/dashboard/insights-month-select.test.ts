@@ -11,7 +11,7 @@ import type { Budget } from '@/lib/types'
 // (its rule needs monthProgress >= 0.7, impossible at the pinned ~0.48).
 describe('B2: month-scoped budget insights use real elapsed time', () => {
   const today = new Date('2026-06-20T12:00:00.000Z')
-  const budgets: Budget[] = [{ id: 'b1', household_id: 'hh-1', category: 'groceries', monthly_limit_cents: 10000 }]
+  const budgets: Budget[] = [{ id: 'b1', household_id: 'hh-1', category: 'groceries', monthly_limit_cents: 10000, budget_type: 'fixed', rollover_cap_cents: null }]
   const txs = [makeTx({ id: 't1', category: 'groceries', kind: 'expense', amount_cents: 4000, date: '2026-03-10T12:00:00.000Z' })]
 
   it('DEFECT: the old mid-month (15th) reference suppresses under-budget for a finished month', () => {
@@ -59,7 +59,7 @@ describe('B2 timezone regression: completed-month reference is local-calendar st
 
   // `now` is in July, so '2026-03' takes the completed-past-month branch.
   const now = new Date('2026-07-20T00:00:00.000Z')
-  const budgets: Budget[] = [{ id: 'b1', household_id: 'hh-1', category: 'groceries', monthly_limit_cents: 10000 }]
+  const budgets: Budget[] = [{ id: 'b1', household_id: 'hh-1', category: 'groceries', monthly_limit_cents: 10000, budget_type: 'fixed', rollover_cap_cents: null }]
   const txs = [makeTx({ id: 't1', category: 'groceries', kind: 'expense', amount_cents: 4000, date: '2026-03-10T12:00:00.000Z' })]
 
   it('reads as the selected month (March, its last day) through the LOCAL getters insights uses', () => {

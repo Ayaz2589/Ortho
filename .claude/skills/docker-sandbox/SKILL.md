@@ -61,6 +61,9 @@ echo "SANDBOX_VM_ID=${SANDBOX_VM_ID:-<unset>}"
 1. If the user named one or more features (via arguments or the message), emit the
    ready-to-run block that creates **one clone-mode, uniquely-named sandbox per
    feature** for this repo (recipe below), then tell them to run it on the host.
+   For each feature, also produce a **per-feature handoff** (enter + bootstrap +
+   paste-ready agent prompt) using the **Feature handoff template** below — every
+   prompt carries the required **Spec Kit + fully-TDD** workflow contract.
 2. If they just want "a sandbox," give the single-sandbox command.
 3. If they're asking a conceptual question (can I run several? do they share
    containers? how do I reconnect?), answer from the "Facts" section below.
@@ -117,14 +120,106 @@ $ sbx run --name auth-feature
 
 Or create-and-enter in one step: `sbx run --clone claude --name auth-feature .`
 
-**Inside each sandbox**, tell the agent to branch before editing (clone mode checks
-out whatever ref the host had checked out; it does **not** auto-create a branch):
+**Inside each sandbox** the agent must branch before editing (clone mode checks out
+whatever ref the host had checked out; it does **not** auto-create a branch). Don't
+hand it a bare "implement X" line — use the **Feature handoff template** below, which
+carries the required **Spec Kit + fully-TDD** workflow contract. One branch per
+sandbox keeps PRs clean: `auth-feature → feat/auth`, `checkout-feature → feat/checkout`.
 
-> Create and switch to branch `feat/auth`, then implement the auth feature. Commit
-> and push to your branch and open a PR before this sandbox is removed.
+### Record it in the registry
+Keep `docs/sandbox/sandbox-history.md` current — the project's list of active +
+killed sandboxes, and the branch↔`sbx`-name map the **kill-sandbox** skill relies on.
+On **create**, append an **Active** row (sandbox, branch, feature, mode, created =
+`date +%F`, last seen = running). To tear one down by branch and record it, use
+`/kill-sandbox <branch>` (removes the sandbox after a safety check for unpushed work,
+then moves the row to **Killed**). Both skills reconcile the file against `sbx ls`
+every run so it self-heals — write-through on create just keeps the
+branch/feature/created columns accurate, which reconcile can't infer.
 
-One branch per sandbox keeps the PRs clean:
-`auth-feature → feat/auth`, `checkout-feature → feat/checkout`, etc.
+## Feature handoff template (Spec Kit + fully TDD)
+
+Once a feature sandbox exists, hand the user **one block per sandbox** to paste
+straight into their host terminal and the in-sandbox agent. A bare "implement X"
+prompt is not enough — it drops the workflow the repo requires. Every block has the
+same required parts, in this order — do not omit any:
+
+1. **Enter + bootstrap** — the two commands (host `sbx run`, then in-sandbox
+   bootstrap on the branch).
+2. **A paste-ready agent prompt** containing, in order:
+   a. the branch line ("You're on branch `feat/<name>` …"),
+   b. the **Workflow (required)** contract — Spec Kit flow **and** fully TDD (verbatim below),
+   c. the feature body (what to build; the tables/RPCs/UI to touch; any "reuse existing X" notes),
+   d. the `docs/*.md` to read first,
+   e. the closing line — commit, push to the branch, open a PR; work only in the
+      writable clone (not `/run/sandbox/source`); push before the sandbox is removed.
+
+The **Workflow (required)** contract is non-negotiable and identical in every prompt:
+
+> **Workflow (required):** Promote this backlog item into a real spec via the **Spec
+> Kit flow** — `/speckit-specify → /speckit-plan → /speckit-tasks → /speckit-implement`
+> into a new numbered `specs/NNN-…/` dir, and reconcile `PARITY.md` + docs. Work
+> **fully TDD**: for every unit, write a **failing test first (RED)**, implement to
+> green (GREEN), then refactor — never write implementation code before a failing
+> test exists. For any pure-math piece, write the **golden vectors first** and lock them.
+
+### Fill-in template
+
+```console
+# [host]
+$ sbx run --name <sandbox>
+# [in-sandbox]
+$ ./.claude/skills/docker-sandbox/bootstrap-sandbox.sh feat/<branch>
+```
+> You're on branch `feat/<branch>` in the Ortho web app.
+>
+> **Workflow (required):** …[the contract above, verbatim]…
+>
+> **Feature — <§X.Y / short title>** (`docs/…`): <what to build; tables/RPCs/UI to
+> touch; any "reuse existing X" notes>.
+>
+> Read <the relevant `docs/*.md`> first. When done, commit, push to `feat/<branch>`,
+> and open a PR. Work only in the writable clone (not `/run/sandbox/source`), and
+> push before this sandbox is ever removed.
+
+### Worked example — `reports-mvp` (§5.1)
+
+```console
+# [host]
+$ sbx run --name reports-mvp
+# [in-sandbox]
+$ ./.claude/skills/docker-sandbox/bootstrap-sandbox.sh feat/reports-mvp
+```
+> You're on branch `feat/reports-mvp` in the Ortho web app.
+>
+> **Workflow (required):** Promote this backlog item into a real spec via the Spec Kit
+> flow — `/speckit-specify → /speckit-plan → /speckit-tasks → /speckit-implement` into
+> a new numbered `specs/NNN-…/` dir, and reconcile `PARITY.md` + docs. Work **fully
+> TDD**: for every unit, write a **failing test first (RED)**, implement to green
+> (GREEN), then refactor — never write implementation code before a failing test exists.
+>
+> **Feature — a minimal slice of §5.1** (`docs/future_tasks/5.1-advanced-reports.md`):
+> the aggregate RPCs in `web/lib/api/aggregates.ts` (`fetchOwnerSpend`,
+> `fetchCategoryTotals`, `fetchMonthSummary`, `fetchDailyExpense`) are already built
+> and unit-tested but imported by **no app code**. Wire them into **1–2 calm report
+> views** (savings-rate-over-time + a category deep-dive) with a month/date-range
+> scope. **No new DB migration** — reuse the existing RPCs. Write the view/component
+> tests first (RED), then wire to green. Keep it calm (no chart-junk); follow the
+> dataviz guidance for any charts.
+>
+> Read `docs/index.md` and `docs/web.md` first. When done, commit, push to
+> `feat/reports-mvp`, and open a PR. Work only in the writable clone (not
+> `/run/sandbox/source`), and push before this sandbox is ever removed.
+
+### Parallel-collision caveat (fan-out of ≥2 features)
+
+Because every sandbox branches from the same `main`, parallel agents collide on two
+**monotonic counters** — flag this when handing off a batch:
+- **`specs/NNN-…/` dir numbers** — each `/speckit-specify` grabs the same next number.
+- **DB migration indexes** — each migration-adding feature grabs the same next index.
+
+Neither blocks parallel *building*; they collide at *merge*. Merge one branch at a
+time and **renumber** the `specs/NNN` dir + migration index on each later branch.
+Merge migration-free features (e.g. a pure-frontend one) first — least friction.
 
 ## Bootstrapping a fresh Ortho sandbox (make it productive)
 

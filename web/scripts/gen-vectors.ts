@@ -25,7 +25,9 @@ import { CURRENCIES, CURRENCY_NAMES, currencySymbol, FALLBACK_RATE_FROM_USD } fr
 import { availableMonths, availableRanges, monthReferenceDate, stepMonth } from '../components/dashboard/range'
 import { balanceBetween } from '../lib/balances'
 import { occupiedRentCents, netRentalCents, type RentUnit } from '../lib/finance/housing'
+import { computeRolloverLedger, type RolloverConfig } from '../lib/finance/budgets'
 import { rentDueDay, daysUntilNextRent, daysUntilEnd, isRenewalSoon } from '../components/housing/lease'
+import { goalProgress, goalPacing } from '../lib/finance/goals'
 import type { Transaction, Budget, Property, LeaseInfo } from '../lib/types'
 
 // The vectors must be identical no matter where they are generated: pin the
@@ -95,7 +97,8 @@ const mortgage = MORTGAGE_INPUTS.map((i) => {
 
 const tx = (o: Partial<Transaction>): Transaction =>
   ({ owner_ids: [], shares: {}, household_id: 'h', source: '', created_by: 'u', created_at: '', updated_at: '', ...o }) as Transaction
-const budget = (o: Partial<Budget>): Budget => ({ id: 'b', household_id: 'h', ...o }) as Budget
+const budget = (o: Partial<Budget>): Budget =>
+  ({ id: 'b', household_id: 'h', budget_type: 'fixed', rollover_cap_cents: null, ...o }) as Budget
 const property = (o: Partial<Property>): Property =>
   ({ id: 'p', household_id: 'h', kind: 'primary_home', address: '', nickname: '', ...o }) as Property
 
@@ -248,6 +251,34 @@ const SCENARIOS: InsightScenario[] = [
     referenceDate: '2026-06-15',
     transactions: [],
     budgets: [],
+    properties: [],
+  },
+  {
+    // Spec 027: a FLEX budget's carried surplus raises the effective limit, so
+    // the near/over classification is measured against base + carry, not base.
+    // May $50 spend on a $300 base → $250 surplus rolls into June; June effective
+    // is $550, and $480 spent lands in the "approaching" band ($70 of $550 left).
+    name: 'flex budget carried surplus raises the effective limit',
+    referenceDate: '2026-06-15',
+    transactions: [
+      tx({ kind: 'expense', category: 'dining', amount_cents: 5000, date: '2026-05-08', merchant: 'Bistro' }),
+      tx({ kind: 'expense', category: 'dining', amount_cents: 48000, date: '2026-06-09', merchant: 'Cafe' }),
+      tx({ kind: 'income', category: 'income', amount_cents: 100000, date: '2026-06-02', merchant: 'Payroll' }),
+    ],
+    budgets: [budget({ category: 'dining', monthly_limit_cents: 30000, budget_type: 'flex', created_at: '2026-05-01T12:00:00.000Z' })],
+    properties: [],
+  },
+  {
+    // Spec 027: a NON_MONTHLY sinking fund accrues its base each month; by June a
+    // $50/mo base since January is a $300 effective fund. A $400 June bill is
+    // then $100 "over" the $300 fund — not $350 over a naive $50 base.
+    name: 'non_monthly sinking fund effective limit on a periodic bill',
+    referenceDate: '2026-06-15',
+    transactions: [
+      tx({ kind: 'expense', category: 'dining', amount_cents: 40000, date: '2026-06-10', merchant: 'Caterer' }),
+      tx({ kind: 'income', category: 'income', amount_cents: 100000, date: '2026-06-02', merchant: 'Payroll' }),
+    ],
+    budgets: [budget({ category: 'dining', monthly_limit_cents: 5000, budget_type: 'non_monthly', created_at: '2026-01-01T12:00:00.000Z' })],
     properties: [],
   },
 ]
@@ -492,6 +523,57 @@ const lease = LEASE_CASES.map((c) => {
   }
 })
 
+// ── Savings-goal vectors (spec 027) ─────────────────────────────────────────
+// Locks the pure goal engine: `goalProgress` (saved/remaining/fraction/reached)
+// and `goalPacing` (steady-pace off-track assessment). Integer USD cents; the
+// reference "today" is injected. Display STRINGS (the off-track insight body) are
+// deliberately NOT vectored — only the numeric core + booleans, per shared.md.
+
+const GOAL_PROGRESS_CASES: Array<{ name: string; target: number; contributions: number[] }> = [
+  { name: 'empty — 0 of target', target: 200000, contributions: [] },
+  { name: 'single contribution — 25%', target: 200000, contributions: [50000] },
+  { name: 'multiple under target — 37.5%', target: 200000, contributions: [50000, 25000] },
+  { name: 'exactly reached', target: 300000, contributions: [300000] },
+  { name: 'over-funded — remaining floored, fraction capped', target: 300000, contributions: [200000, 200000] },
+  { name: 'debt-payoff — identical math', target: 300000, contributions: [100000, 100000, 100000] },
+  { name: 'non-positive target guard', target: 0, contributions: [100] },
+]
+
+const GOAL_PACING_CASES: Array<{
+  name: string
+  target: number
+  target_date: string | null
+  start: string
+  saved: number
+  now: string
+}> = [
+  { name: 'behind beyond tolerance', target: 1200000, target_date: '2027-01-01', start: '2026-01-01T00:00:00Z', saved: 100000, now: '2026-07-01T12:00:00Z' },
+  { name: 'on pace (saved >= expected)', target: 1200000, target_date: '2027-01-01', start: '2026-01-01T00:00:00Z', saved: 600000, now: '2026-07-01T12:00:00Z' },
+  { name: 'marginally behind within tolerance', target: 1000000, target_date: '2027-01-01', start: '2026-01-01T00:00:00Z', saved: 460000, now: '2026-07-01T12:00:00Z' },
+  { name: 'reached regardless of date', target: 300000, target_date: '2027-01-01', start: '2026-01-01T00:00:00Z', saved: 300000, now: '2026-07-01T12:00:00Z' },
+  { name: 'no target date — no pace', target: 200000, target_date: null, start: '2026-01-01T00:00:00Z', saved: 0, now: '2026-07-01T12:00:00Z' },
+  { name: 'past due and not reached', target: 200000, target_date: '2026-06-01', start: '2026-01-01T00:00:00Z', saved: 150000, now: '2026-07-01T12:00:00Z' },
+  { name: 'zero-span due-now not reached', target: 200000, target_date: '2026-06-01', start: '2026-06-01T00:00:00Z', saved: 50000, now: '2026-06-01T12:00:00Z' },
+]
+
+const goals = {
+  progress: GOAL_PROGRESS_CASES.map((c) => ({
+    input: { name: c.name, target_cents: c.target, contributions: c.contributions },
+    expected: goalProgress(c.target, c.contributions.map((amount_cents) => ({ amount_cents }))),
+  })),
+  pacing: GOAL_PACING_CASES.map((c) => ({
+    input: {
+      name: c.name,
+      target_cents: c.target,
+      target_date: c.target_date,
+      start: c.start,
+      saved_cents: c.saved,
+      now: c.now,
+    },
+    expected: goalPacing(c.target, c.target_date, c.start, c.saved, new Date(c.now)),
+  })),
+}
+
 // ── Dashboard month-scope vectors ───────────────────────────────────────────
 // Locks the NEW pure date logic behind the dashboard's specific-month picker so
 // iOS and web derive the same month list, reference date, and stepping. The
@@ -621,6 +703,77 @@ const housingNetRental = HOUSING_NET_RENTAL_INPUTS.map((i) => ({
   },
 }))
 
+// ── Budget rollover vectors ──────────────────────────────────────────────────
+// Pure carry recurrence for the three bucket types (lib/finance/budgets.ts).
+// Locked by budget-rollover.parity.test.ts. See
+// specs/027-budget-rollover/contracts/rollover-math.md.
+interface RolloverVectorInput {
+  name: string
+  config: RolloverConfig
+  monthlySpendCents: number[]
+}
+const ROLLOVER_INPUTS: RolloverVectorInput[] = [
+  {
+    name: 'fixed: resets each month (== pre-027 behavior)',
+    config: { type: 'fixed', baseLimitCents: 40000, rolloverCapCents: null },
+    monthlySpendCents: [30000, 50000, 20000],
+  },
+  {
+    name: 'flex: unused surplus accumulates forward',
+    config: { type: 'flex', baseLimitCents: 60000, rolloverCapCents: null },
+    monthlySpendCents: [50000, 40000, 55000],
+  },
+  {
+    name: 'flex: overspend is forgiven — no debt carries',
+    config: { type: 'flex', baseLimitCents: 60000, rolloverCapCents: null },
+    monthlySpendCents: [50000, 75000, 50000],
+  },
+  {
+    name: 'flex: accumulated carry is capped',
+    config: { type: 'flex', baseLimitCents: 60000, rolloverCapCents: 15000 },
+    monthlySpendCents: [40000, 40000, 40000],
+  },
+  {
+    name: 'flex: opening carry seeds the first month',
+    config: { type: 'flex', baseLimitCents: 60000, rolloverCapCents: null, openingCarryCents: 20000 },
+    monthlySpendCents: [10000],
+  },
+  {
+    name: 'non_monthly: sinking fund builds then a bill draws it negative',
+    config: { type: 'non_monthly', baseLimitCents: 5000, rolloverCapCents: null },
+    monthlySpendCents: [0, 0, 0, 0, 0, 60000],
+  },
+  {
+    name: 'non_monthly: negative fund recovers as base accrues',
+    config: { type: 'non_monthly', baseLimitCents: 5000, rolloverCapCents: null, openingCarryCents: -30000 },
+    monthlySpendCents: [0, 0],
+  },
+  {
+    name: 'zero base: flex stays flat',
+    config: { type: 'flex', baseLimitCents: 0, rolloverCapCents: null },
+    monthlySpendCents: [0, 0],
+  },
+  {
+    name: 'zero base: non_monthly can still go negative',
+    config: { type: 'non_monthly', baseLimitCents: 0, rolloverCapCents: null },
+    monthlySpendCents: [100],
+  },
+  {
+    name: 'boundary: single month, flex',
+    config: { type: 'flex', baseLimitCents: 30000, rolloverCapCents: null },
+    monthlySpendCents: [12345],
+  },
+  {
+    name: 'boundary: empty spend series',
+    config: { type: 'flex', baseLimitCents: 60000, rolloverCapCents: null },
+    monthlySpendCents: [],
+  },
+]
+const budgetRollover = ROLLOVER_INPUTS.map((i) => ({
+  input: i,
+  expected: computeRolloverLedger(i.config, i.monthlySpendCents),
+}))
+
 // ── Write ───────────────────────────────────────────────────────────────────
 
 mkdirSync(OUT, { recursive: true })
@@ -635,4 +788,6 @@ writeFileSync(resolve(OUT, 'member-balance.json'), JSON.stringify(memberBalance,
 writeFileSync(resolve(OUT, 'currency-names.json'), JSON.stringify(currencyNames, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'currency-symbols.json'), JSON.stringify(currencySymbols, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'lease.json'), JSON.stringify(lease, null, 2) + '\n')
-console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight + ${filters.cases.length} filter + ${splits.cases.length} split + ${splits.ownerOrdering.length} ownerOrdering + ${currency.toDisplay.length} currency + ${Object.keys(currencyNames).length} currency-names + ${Object.keys(currencySymbols).length} currency-symbols + ${lease.length} lease + ${dashboardMonthScope.availableMonths.length} availableMonths/${dashboardMonthScope.stepMonth.length} stepMonth + ${memberBalance.cases.length} member-balance vectors to ${OUT}`)
+writeFileSync(resolve(OUT, 'budget-rollover.json'), JSON.stringify(budgetRollover, null, 2) + '\n')
+writeFileSync(resolve(OUT, 'goals.json'), JSON.stringify(goals, null, 2) + '\n')
+console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight + ${filters.cases.length} filter + ${splits.cases.length} split + ${splits.ownerOrdering.length} ownerOrdering + ${currency.toDisplay.length} currency + ${Object.keys(currencyNames).length} currency-names + ${Object.keys(currencySymbols).length} currency-symbols + ${lease.length} lease + ${goals.progress.length} goal-progress/${goals.pacing.length} goal-pacing + ${dashboardMonthScope.availableMonths.length} availableMonths/${dashboardMonthScope.stepMonth.length} stepMonth + ${memberBalance.cases.length} member-balance + ${budgetRollover.length} budget-rollover vectors to ${OUT}`)

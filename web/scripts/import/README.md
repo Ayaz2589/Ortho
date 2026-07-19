@@ -82,10 +82,13 @@ make tx-rm   ID=<uuid> [DRY_RUN=1]
 - **tx-rm** — shows the row, `DRY_RUN=1` previews; otherwise `y/N` confirm; shares cascade.
 
 Listing is household-wide in sign-in mode (RLS still bounds you to your own
-household); `ADMIN=1` spans all households. Writes mirror the web store exactly
-— including its compensation: a failed shares write rolls back the parent
-(create) or restores the previous shares (edit), so a partial failure never
-leaves a row that rehydrates as "creator owns all" (spec 013).
+household); `ADMIN=1` spans all households. Writes mirror the web store exactly:
+both go through the atomic `upsert_transaction` RPC (spec 027), which commits the
+transaction row and its shares together — or neither — and rejects any payload
+whose shares don't sum to the amount, so a partial write can never leave a
+share-less row that rehydrates as "creator owns all" (spec 013). On error the
+import throws immediately and stops; rows written before the failure stay
+committed, and re-running safely re-upserts them (the RPC is idempotent by id).
 See [spec 005](../../../specs/005-transaction-crud-cli/) and its [`contracts/cli.md`](../../../specs/005-transaction-crud-cli/contracts/cli.md).
 
 ## Layout

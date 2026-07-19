@@ -72,9 +72,18 @@ export function buildBudget(
   id: string,
   householdId: string,
   category: TransactionCategory,
-  monthlyLimitCents: number
+  monthlyLimitCents: number,
+  budgetType: Budget['budget_type'] = 'fixed',
+  rolloverCapCents: number | null = null
 ): Budget {
-  return { id, household_id: householdId, category, monthly_limit_cents: monthlyLimitCents }
+  return {
+    id,
+    household_id: householdId,
+    category,
+    monthly_limit_cents: monthlyLimitCents,
+    budget_type: budgetType,
+    rollover_cap_cents: rolloverCapCents,
+  }
 }
 
 export interface TxSpec {

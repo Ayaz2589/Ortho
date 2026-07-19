@@ -60,78 +60,33 @@ describe('shareRows', () => {
 })
 
 describe('persist', () => {
-  it('inserts each transaction and its materialized shares through the client', async () => {
-    const inserts: Array<{ table: string; payload: unknown }> = []
+  it('calls upsert_transaction RPC for each transaction and returns the count', async () => {
+    const rpcCalls: string[] = []
     const fake = {
-      from: (table: string) => ({
-        insert: (payload: unknown) => {
-          inserts.push({ table, payload })
-          return Promise.resolve({ error: null })
-        },
-      }),
+      rpc: (name: string) => {
+        rpcCalls.push(name)
+        return Promise.resolve({ error: null })
+      },
     } as never
 
     const n = await persist(fake, [single, multi])
     expect(n).toBe(2)
-    expect(inserts.filter((i) => i.table === 'transactions')).toHaveLength(2)
-    // One transaction_shares insert per transaction (each a row array).
-    expect(inserts.filter((i) => i.table === 'transaction_shares')).toHaveLength(2)
+    expect(rpcCalls).toEqual(['upsert_transaction', 'upsert_transaction'])
   })
 
-  it('throws (and stops) when an insert errors', async () => {
+  it('throws UPSERT_TX (and stops) when the RPC errors', async () => {
+    let calls = 0
     const fake = {
-      from: () => ({ insert: () => Promise.resolve({ error: { message: 'boom' } }) }),
+      rpc: () => {
+        calls++
+        return Promise.resolve({ error: { message: 'SHARES_MISMATCH' } })
+      },
     } as never
-    await expect(persist(fake, [single])).rejects.toThrow(/INSERT_TX/)
+    await expect(persist(fake, [single, multi])).rejects.toThrow(/UPSERT_TX/)
+    expect(calls).toBe(1) // stops after first failure
   })
 })
 
-// --- Spec 013 US5/A2: compensating writes — no share-less parent may persist. ---
-
-type QCall = [string, ...unknown[]]
-/** FIFO mock: each awaited query consumes the next queued result. */
-function mockQueue(results: Array<{ data: unknown; error: unknown }>) {
-  const calls: QCall[] = []
-  let i = 0
-  const builder: Record<string, unknown> = {}
-  for (const m of ['select', 'eq', 'in', 'gte', 'lt', 'order', 'limit', 'update', 'delete', 'insert']) {
-    builder[m] = (...args: unknown[]) => {
-      calls.push([m, ...args])
-      return builder
-    }
-  }
-  builder.then = (res: (r: unknown) => unknown, rej?: (e: unknown) => unknown) =>
-    Promise.resolve(results[i++] ?? { data: null, error: null }).then(res, rej)
-  const supabase = {
-    from: (t: string) => {
-      calls.push(['from', t])
-      return builder
-    },
-  } as never
-  return { supabase, calls }
-}
-
-const ok = { data: null, error: null }
-const boom = { data: null, error: { message: 'boom' } }
-
-describe('persist — compensation on shares failure (013/US5)', () => {
-  it('deletes the just-inserted parent when the shares insert fails, then throws', async () => {
-    // insert tx OK → insert shares FAILS → compensating delete OK
-    const { supabase, calls } = mockQueue([ok, boom, ok])
-    await expect(persist(supabase, [multi])).rejects.toThrow(/INSERT_SHARES.*rolled back/)
-    expect(calls).toContainEqual(['delete'])
-    expect(calls).toContainEqual(['eq', 'id', 't2'])
-  })
-  it('reports BOTH failures (and the orphan id) when the compensating delete also fails', async () => {
-    const { supabase } = mockQueue([ok, boom, boom])
-    await expect(persist(supabase, [multi])).rejects.toThrow(/ROLLBACK_FAILED.*t2/)
-  })
-  it('a clean batch still writes parent + shares with no delete', async () => {
-    const { supabase, calls } = mockQueue([ok, ok])
-    await expect(persist(supabase, [multi])).resolves.toBe(1)
-    expect(calls.find((c) => c[0] === 'delete')).toBeUndefined()
-  })
-})
 
 // --- Spec 020: paid_by must survive the import so settle-up counts CLI rows. ---
 describe('paid_by → settle-up correctness', () => {

@@ -472,6 +472,34 @@ Notable details:
 
 Locked by `insights.json` (all 8 rules).
 
+The sort/limit is the exported `compareInsights` (spec 027) — extracted verbatim from the former
+inline sort (no behavior change) so the goal off-track insights merge into the same ordering.
+
+---
+
+## 10.5 Savings & debt-payoff goals (`finance/goals.ts`)
+
+Pure engine behind the Goals surface (spec 027). Integer USD cents; the reference "today" is
+injected; pinned by `goals.json`. Progress is **contribution-driven** (bank balances aren't
+synced — spec 024 is connect-only). Savings and debt-payoff share one model.
+
+- **`goalProgress(targetCents, contributions)`** → `{ saved, target, remaining, fraction, reached }`.
+  `saved` is the exact integer sum; `remaining = max(0, target − saved)`; `fraction = clamp(saved/target, 0, 1)`
+  (0 for a non-positive target); `reached = target > 0 && saved ≥ target`. Never negative remaining,
+  never fraction > 1.
+- **`goalPacing(targetCents, targetDate, startISO, saved, now)`** → the steady-pace assessment.
+  `expected = round(target × clamp(elapsed/span, 0, 1))` over calendar-day indices built from **local**
+  getters (the insights.ts timezone rule); `span` is start (`created_at`) → `target_date`.
+  `off_track` = not reached AND (past the date, OR behind `expected` by ≥ `offTrackToleranceFraction`
+  of the target). `suggested_monthly = ceil(remaining / monthsLeft)` (= remaining when past due).
+  Thresholds live in `goals-thresholds.ts` (the spec-025 `INSIGHT_THRESHOLDS` idiom).
+- **`goalOffTrackInsight` / `goalInsights`** produce ordinary `Insight` objects (id
+  `goal-offtrack-<id>`, severity **`warning`** → sand `--accent`, never red; magnitude = shortfall)
+  so they render in the existing Insights card. Kept a **separate** engine + vector file so
+  `insights.json` stays byte-stable; the dashboard consumers merge via `compareInsights`.
+
+Locked by `goals.json` (`progress` + `pacing` cases).
+
 ---
 
 ## 11. Category & severity metadata (`categories.ts`)
@@ -507,9 +535,13 @@ vectors:
     dates via `parseLocalDate` (`web/lib/format.ts`). Plain `new Date('YYYY-MM-DD')`
     parses at UTC midnight and shifts a day west of UTC — every stored date column
     must go through `parseLocalDate`.
-  - **Filter windows** are **UTC half-open `[from, to)`** via `monthBounds`;
-    **insight** dates mirror `new Date('YYYY-MM-DD')` (UTC midnight) and sit
-    mid-month so timezone can't flip a month bucket.
+  - **Filter windows** are **UTC half-open `[from, to)`** via `monthBounds`.
+  - **Insight transaction dates:** app-generated rows store noon-UTC ISO timestamps
+    (safe for any TZ); imported/legacy rows may carry date-only `"YYYY-MM-DD"`
+    strings. `inInterval` (spec 027 / A2) detects date-only strings and parses them
+    via `parseLocalDate` (local midnight) so both sides of the boundary comparison
+    use the same local-calendar regime as `monthInterval`. Non-UTC tests live in
+    `web/test/insights-timezone.tz.test.ts` (run with `vitest.tz.config.ts`).
 - **The vector harness pins `TZ=UTC`** (`gen-vectors.ts` and `vitest.config.ts`)
   so generation and assertion agree regardless of the machine's zone. Keep this
   pin.
@@ -637,7 +669,7 @@ Two gaps:
   RPC**: web does client-side compensating rollback, the CLI does not, and a
   share-less row is reachable (see `PARITY.md`). For financial data, "we roll back
   in the client if the second write fails" silently corrupts on the unhappy path.
-  — ⏳ open (needs a migration).
+  — ✅ **Done (spec 027).**
 *Fix (two independently shippable pieces):* (a) a branded `Cents` type at the
 finance-layer boundary; (b) move the sum invariant into the database (a
 `CHECK`/trigger, or an atomic parent+shares RPC).
@@ -647,8 +679,12 @@ validated constructors (`toCents`, `centsFromDollars`) and guards
 additive: existing call sites are untouched (no ripple), while a new path that
 *requires* `Cents` rejects a plain-`number` dollars value at compile time and a
 non-integer at runtime. Wholesale adoption across the layer is deferred.
-*Deferred (b):* the database guarantee needs a Supabase migration and live-DB
-verification — a separate PR.
+*Done (b):* `supabase/migrations/20260718120000_upsert_transaction_atomic.sql` —
+`upsert_transaction(p_tx jsonb, p_shares jsonb)` PL/pgSQL RPC (`security definer`)
+validates `sum(shares.amount_cents) = amount_cents` and commits transaction + shares
+atomically. Both `addTransaction`/`updateTransaction` in `web/lib/store.tsx` and the
+CLI `persist()` in `web/scripts/import/db/persist.ts` now call this RPC exclusively;
+client-side compensating rollback is gone.
 
 ### H4 — The date model is a three-regime split-brain
 Filter windows are UTC half-open `[from, to)`; housing date-only values are

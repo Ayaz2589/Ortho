@@ -50,7 +50,9 @@ supabase/
     ├── 20260707120000_unit_occupied.sql                     # spec 020: explicit units.occupied column
     ├── 20260716130000_subscription_entitlements.sql         # spec 018: entitlements, billing_events, ensure_entitlement()
     ├── 20260717120000_plaid_connect.sql                     # spec 024: linked banks + first Vault use (§4.6)
-    └── 20260718120000_transaction_tags.sql                  # spec 027: tags + transaction_tags join + transactions.notes
+    ├── 20260718120000_savings_goals.sql                     # spec 027: goals + goal_contributions (member RLS)
+    ├── 20260718120000_transaction_tags.sql                  # spec 027: tags + transaction_tags join + transactions.notes
+    └── 20260719120000_budget_rollover.sql                   # spec 027: budgets.budget_type enum + rollover_cap_cents
 ```
 
 ## 4. Architecture
@@ -77,7 +79,7 @@ supabase/
 - `transaction_shares` — `(transaction_id, person_id)` PK + `amount_cents`. Authoritative **cents per person**, materialized on every save and summing to the transaction amount (the sum invariant is enforced client-side, not in SQL — noted in the initial migration). Originally `(transaction_id, user_id, percent)`; migrated to cents/person in 20260616 with a rounding-reconciliation step that assigns leftover cents to the lowest-`sort_order` person.
 - `tags` (spec 027) — the per-household free-form label roster: `id`, `household_id` → `households`, `name` (1–50 chars, trimmed), `created_at`. Unique per household by `lower(btrim(name))` (case-insensitive dedup). Member read/write (cards/budgets RLS pattern).
 - `transaction_tags` (spec 027) — many-to-many join `(transaction_id, tag_id)` PK (a set). RLS piggybacks on the parent transaction's visibility/writability (the `transaction_shares` pattern). Tags are orthogonal to `category` and carry **no** sum invariant.
-- `budgets` — one row per `(household_id, category)` (UNIQUE), `monthly_limit_cents`.
+- `budgets` — one row per `(household_id, category)` (UNIQUE), `monthly_limit_cents`. Spec 027 adds `budget_type` (enum `fixed`|`flex`|`non_monthly`, default `fixed`) and a flex-only nullable `rollover_cap_cents`; the rollover carry itself is derived client-side from the ledger, never stored.
 - `cards` — named payment sources per household.
 
 **Housing**
@@ -123,6 +125,7 @@ Date ranges are **half-open** (`date >= p_start AND date < p_end`), matching the
 | `20260707120000_unit_occupied.sql` | 020-drift-reconciliation | explicit `units.occupied` boolean (completes 019 US5) |
 | `20260716130000_subscription_entitlements.sql` | 018-subscription-system | `entitlement_status`/`billing_plan` enums; `entitlements` + `billing_events` tables; service-role-only write posture; `ensure_entitlement()` |
 | `20260717120000_plaid_connect.sql` | 024-plaid-connect | `linked_provider`/`linked_institution_status`/`link_session_status` enums; `linked_institutions` + `linked_accounts` (member select, service-role writes); zero-policy `linked_institution_secrets` + `plaid_link_sessions`; first Supabase Vault use via 3 service-role-only wrapper RPCs; **explicit table grants** (newer stacks no longer auto-grant DML on public tables) |
+| `20260718120000_savings_goals.sql` | 027-savings-goals | `goal_kind` enum (`savings`/`debt_payoff`); `goals` (member RLS, the budgets posture) + `goal_contributions` (parent-`EXISTS` RLS, the `transaction_shares` posture); optional context association (linked account **or** category, mutually exclusive check); explicit `authenticated` grants. Member-managed (no secret) — deliberately NOT the service-role-only posture. |
 | `20260718120000_transaction_tags.sql` | 027-transaction-tags | `transactions.notes` (nullable); `tags` roster (unique per household by `lower(btrim(name))`) + `transaction_tags` join (set); member RLS (cards pattern for `tags`, transaction_shares pattern for the join); explicit `authenticated`/`service_role` grants |
 
 The 20260616 migration is **forward-only and destructive** (drops columns/constraints/policies with data backfill in between) — read it before writing any migration that touches `transactions` or `transaction_shares`.
@@ -204,6 +207,30 @@ household's linked institutions. **No transaction/balance sync** — that is a f
 ```bash
 supabase db push
 supabase functions deploy plaid-link-token plaid-exchange plaid-disconnect
+```
+
+### 4.7 Spec 027 — savings & debt-payoff goals
+
+Named household goals (migration `20260718120000_savings_goals.sql`; contracts in
+`specs/027-savings-goals/contracts/`). Member-managed household data (no secret), so it takes the
+**budgets posture**, not the service-role-only entitlements/Plaid one:
+
+- **`goal_kind` enum** (`savings | debt_payoff`) — one progress model; kind is only framing.
+- **`goals`** — `household_id`, `name`, `kind`, `target_cents bigint > 0`, optional `target_date`,
+  optional context association (`linked_account_id` → `linked_accounts` **or** `linked_category`,
+  a check enforcing at most one), `created_by`, timestamps (`touch_updated_at` trigger). Member
+  RLS via `is_household_member`.
+- **`goal_contributions`** — child of `goals` (`on delete cascade`): `amount_cents bigint > 0`,
+  `date`, `note`, `created_by`. A goal's progress is the **client-computed sum** of its
+  contributions (the DB stores, `web/lib/finance/goals.ts` derives — the shares-sum convention).
+  RLS piggybacks on the parent goal's household via an `EXISTS` subquery (the `transaction_shares`
+  pattern). No balance/transaction sync — the optional linked account is context only (spec 024 is
+  connect-only).
+- **Explicit `authenticated` grants** on both tables (the spec-024 ACL rule). The store loads them
+  in the `loadAll` fan-out and fails **open** on a missing table (deploy-before-migrate).
+
+```bash
+supabase db push   # apply the migration; no edge functions for this feature
 ```
 
 ## 5. Key files

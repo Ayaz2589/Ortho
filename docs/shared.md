@@ -11,7 +11,7 @@
 
 ## 1. Purpose
 
-`shared/` is the smallest subsystem in the Ortho monorepo. It contains exactly one thing: **`shared/test-vectors/`**, a set of eleven JSON files of canonical input→output cases for the pure finance logic in `web/lib/*` / `web/components/dashboard/range.ts` — now the **only** implementation of that logic (previously mirrored in Swift; see the spec-021 banner above). The web Vitest suite asserts against these exact files on every change, so a behavior change is caught in CI before it ships, even without a second language to diff against. This is the mechanism that started as cross-language parity (originating in `specs/002-logic-dedup`; see `PARITY.md` §"How parity is enforced") and is now a regression lock.
+`shared/` is the smallest subsystem in the Ortho monorepo. It contains exactly one thing: **`shared/test-vectors/`**, a set of twelve JSON files (eleven + `goals.json`, spec 027) of canonical input→output cases for the pure finance logic in `web/lib/*` / `web/components/dashboard/range.ts` — now the **only** implementation of that logic (previously mirrored in Swift; see the spec-021 banner above). The web Vitest suite asserts against these exact files on every change, so a behavior change is caught in CI before it ships, even without a second language to diff against. This is the mechanism that started as cross-language parity (originating in `specs/002-logic-dedup`; see `PARITY.md` §"How parity is enforced") and is now a regression lock.
 
 What is **not** in `shared/`:
 
@@ -55,9 +55,18 @@ shared/
     ├── housing-net-rental.json      # (113 ln) occupiedRentCents/netRentalCents (lib/finance/housing.ts):
     │                                #   occupied-only unit rent − mortgage payment; the single figure the
     │                                #   Dashboard summary and property-detail Net balance both show (spec 019)
-    └── lease.json                   # (122 ln) rentDueDay/daysUntilNextRent/daysUntilEnd/isRenewalSoon
-                                     #   (components/housing/lease.ts) with an injected asOf (spec 020)
+    ├── lease.json                   # (122 ln) rentDueDay/daysUntilNextRent/daysUntilEnd/isRenewalSoon
+    │                                #   (components/housing/lease.ts) with an injected asOf (spec 020)
+    ├── goals.json                   # savings-goal engine (lib/finance/goals.ts): goalProgress +
+    │                                #   goalPacing (off-track), injected `now` (spec 027)
+    └── budget-rollover.json         # computeRolloverLedger (lib/finance/budgets.ts): fixed/flex/
+                                     #   non_monthly carry recurrence in integer cents (spec 027)
 ```
+
+> **spec 027 (2026-07-19):** `budget-rollover.json` is the **twelfth** vector file
+> — the fixed/flex/non_monthly budget carry math. Added the going-forward way
+> (§8): one section in `gen-vectors.ts` + one `budget-rollover.parity.test.ts`,
+> no pbxproj/Swift wiring. Where this doc says "eleven files", read "twelve".
 
 Note: `shared/test-vectors/README.md` now documents all eleven files (its "Files (11)" section, refreshed in feature 020), though it still frames them as a cross-language contract — read it alongside this doc's spec-021 banner. `gen-vectors.ts` and `PARITY.md` remain the most current per-case references.
 

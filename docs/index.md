@@ -8,7 +8,8 @@ directory. Read this page first, then jump to the doc for whatever you're touchi
 
 Ortho is a calm, money-first **household budgeting app** for two people sharing one household:
 shared and personal money, transaction splits between household members (including device-only
-"local users"), member reimbursement / settle-up balances, budgets, insights, and housing
+"local users"), member reimbursement / settle-up balances, budgets, savings/debt-payoff goals
+(spec 027), insights, and housing
 (mortgage / lease / rental) tracking. It ships as a Next.js web app — the **single canonical
 implementation** — over a shared Supabase (Postgres) backend, delivered on two targets: an
 ordinary responsive web app, and, wrapped natively via **Capacitor**, the iOS app. A deterministic
@@ -60,7 +61,7 @@ Two live surfaces, one backend:
 **web is the single canonical implementation; the Capacitor iOS shell and the responsive web app
 are that same implementation, delivered per canvas — never a redesign, never a second
 implementation.** The finance logic (money/currency, splits, balances, filters, insights,
-mortgage, dashboard month scope, and — since spec 021 — the on-device scan parser) is pure
+mortgage, dashboard month scope, budget rollover (spec 027), and — since spec 021 — the on-device scan parser) is pure
 TypeScript in `web/lib/*` (+ `web/components/dashboard/range.ts`), pinned by **regression
 vectors** in `shared/test-vectors/`: `npm run gen:vectors` generates them from the TS engines, and
 the web Vitest suite asserts them, catching accidental behavior changes before they ship — no

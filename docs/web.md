@@ -66,6 +66,7 @@ web/
 │       ├── transactions/page.tsx, transactions/new/page.tsx, transactions/edit/page.tsx  # spec 025: mobile new/edit as pages
 │       ├── housing/page.tsx, housing/new/page.tsx, housing/edit/page.tsx                 # spec 025: mobile new/edit as pages
 │       ├── budgets/page.tsx
+│       ├── goals/page.tsx        # spec 027: savings/debt-payoff goals (secondary route from Settings)
 │       ├── settings/page.tsx, settings/household/page.tsx, settings/linked-banks/page.tsx  # linked-banks: spec 024
 │       └── plaid-oauth/page.tsx  # spec 024: web bank-OAuth return route (re-inits Link w/ stored token)
 ├── capacitor.config.ts         # spec 021: appId (reused native-app bundle id), webDir 'out', ios/plugins config
@@ -85,6 +86,7 @@ web/
 │   ├── housing/                # PropertyCard/Content, Mortgage/Rental/Multifamily cards; PropertyForm (shared body) +
 │   │                           #   AddPropertyModal (desktop Drawer wrapper) + PropertyFormPageClient/PropertyKindChoices (mobile page, spec 025) + lease.ts/rate.ts/kinds.ts
 │   ├── budgets/BudgetDrawer.tsx
+│   ├── goals/                  # spec 027: GoalCard (calm progress view) + GoalForm + ContributionForm
 │   ├── Paywall.tsx             # spec 018: blocking gate content (plans, check again, quiet sign-out)
 │   ├── PlaidHandBack.tsx       # spec 024: renders nothing; completes hosted sessions on hand-back/foreground
 │   ├── settings/               # rows, ChoiceRows, HouseholdDrawer, AddCardModal, appearance.ts (THEME_VARS +
@@ -110,10 +112,11 @@ web/
 │   ├── share.ts                # spec 021: native share-sheet wrapper (falls back to Web Share API on web)
 │   ├── scan/                   # spec 021: ported scan business logic (was iOS-only Swift) — scanModels.ts,
 │   │                           #   scanHeuristics.ts, scanParser.ts, scanInference.ts, scanSession.ts
-│   ├── api/aggregates.ts       # wrappers over Postgres aggregate RPCs (ADDITIVE — not yet wired)
+│   ├── api/aggregates.ts       # wrappers over Postgres aggregate RPCs (wired by Reports, spec 027; owner/daily still unwired)
 │   ├── flags.ts, test-build.ts # spec 015 test-build feature flags (localStorage-gated, dead-code-eliminated in prod)
 │   ├── testdata/               # spec 015 in-memory seeded Supabase client (test-data mode: seed.ts, memory-client.ts)
-│   ├── finance/                # pure engines: money.ts, currency.ts, mortgage.ts, insights.ts, housing.ts
+│   ├── finance/                # pure engines: money.ts, currency.ts, mortgage.ts, insights.ts, housing.ts,
+│   │                           #   goals.ts (+ goals-thresholds.ts) — spec 027 goal progress + off-track pacing
 │   ├── splits.ts               # split math + orderedOwnerIds (canonical leftover-cent order)
 │   ├── balances.ts             # member settle-up balance
 │   ├── transactionFilters.ts   # filter engine + monthBounds (tags dimension + notes/tag-name search, spec 027)
@@ -194,10 +197,25 @@ A **Developer** section on the Settings page (`components/settings/flags-section
 - **Mutations are optimistic with rollback**: state updates immediately, the Supabase write runs async, and failure restores the previous state and sets a banner `error`. Transaction writes are **atomic with shares**: if `transaction_shares` fails after the parent insert/update, the parent is deleted/restored so a share-less row never survives (matches iOS's all-or-nothing write; see `writeShares`, `addTransaction`, `updateTransaction`).
 - **FX**: `refreshRates()` fetches `https://www.floatrates.com/daily/usd.json` and caches in localStorage (`fxRates` / `fxRatesFetchedAt`, refreshed after 24h). On fetch failure it KEEPS the last cached live rates at any age (mirrors iOS; since 2026-07-02) and surfaces a freshness caption in Settings; the hardcoded `FALLBACK_RATE_FROM_USD` (`lib/finance/currency.ts`) applies only when no cache has ever existed. `formatMoney` converts USD cents → display currency with the active locale.
 - **Preferences in localStorage**: `currency`, `language`, `appearance`, `dashboardRange` (+ FX cache). All are adopted *after mount* so SSR and first client paint agree — no hydration mismatch.
-- `lib/api/aggregates.ts` wraps the shared Postgres aggregate RPCs (`household_owner_spend` etc., defined in `supabase/migrations/20260611120000_aggregates.sql`). It is **additive and deliberately not wired** — dashboard widgets still compute locally; the file documents the per-widget cut-over plan. Spec 023 re-assessed and **kept it documented-unwired** (wiring it standalone is a net perf loss: it swaps in-memory loops for network round-trips and breaks offline; it only pays off paired with `loadAll` windowing, a future feature).
+- `lib/api/aggregates.ts` wraps the shared Postgres aggregate RPCs (`household_owner_spend` etc., defined in `supabase/migrations/20260611120000_aggregates.sql`). Dashboard **widgets** still compute locally — wiring the RPCs into them is a net perf loss (network round-trips replacing in-memory loops the client already holds after `loadAll()`; breaks offline), the stance spec 023/D15 documented. **Spec 027 wired it for the first time** in the *new* Reports surface (`lib/useReportsData.ts` → `fetchMonthSummary`/`fetchCategoryTotals`), which is exactly the documented cut-over case: a surface aggregating over a user-chosen window (up to 12 months, fetched on demand only when Reports is open) that the client does not already hold pre-summarized — distinct from re-fetching data the widgets already have. `fetchDailyExpense`/`fetchOwnerSpend` remain unwired (and `fetchOwnerSpend`'s `person_id` type still mismatches the RPC's `user_id` column — see PARITY.md).
 
 ### Pure finance core (regression-vector-locked)
-`lib/finance/{money,currency,mortgage,insights}.ts`, `lib/splits.ts`, `lib/balances.ts`, `lib/transactionFilters.ts`, `lib/scan/*` (spec 021), and `components/dashboard/range.ts` are pure TypeScript pinned by fixtures in `shared/test-vectors/`. `npm run gen:vectors` (`scripts/gen-vectors.ts`) regenerates `shared/test-vectors/*.json` from these TS implementations; the web `*.parity.test.ts` suites assert against the same files — now an ordinary single-implementation regression/snapshot check (spec 021 retired the cross-language lock against the frozen native app; see root `PARITY.md`). Key invariants: integer USD cents everywhere, `orderedOwnerIds` canonicalizes the deterministic leftover cent, half-open `[start, end)` month windows. Since spec 013, `generateInsights` takes a trailing `locale` parameter (threaded from the store's `localeForLanguage` value; vectors stay language-neutral at the default `en-US`), and the recurring insight's 3-merchant preview is vector-locked via `Insight.preview_merchants` — amount descending, case-insensitive name tie-break, casing from the newest transaction. `lib/types.ts` also exports `PICKABLE_CATEGORIES` (transfer is deliberately unpickable) with `TransactionCategory` derived from it.
+`lib/finance/{money,currency,mortgage,insights,budgets}.ts`, `lib/splits.ts`, `lib/balances.ts`, `lib/transactionFilters.ts`, `lib/scan/*` (spec 021), and `components/dashboard/range.ts` are pure TypeScript pinned by fixtures in `shared/test-vectors/`. **`lib/finance/budgets.ts` (spec 027)** is the newest engine: `computeRolloverLedger` runs the fixed/flex/non_monthly carry recurrence (vectored by `budget-rollover.json`), and the thin `budgetStatusForMonth` adapter derives a budget's effective limit + remaining from the transaction ledger (carry is never stored). It feeds both `BudgetProgressCard` (per-bucket remaining) and `insights.ts` Rule 3 (which now measures spend against the effective limit — byte-identical for the `fixed` default). `npm run gen:vectors` (`scripts/gen-vectors.ts`) regenerates `shared/test-vectors/*.json` from these TS implementations; the web `*.parity.test.ts` suites assert against the same files — now an ordinary single-implementation regression/snapshot check (spec 021 retired the cross-language lock against the frozen native app; see root `PARITY.md`). Key invariants: integer USD cents everywhere, `orderedOwnerIds` canonicalizes the deterministic leftover cent, half-open `[start, end)` month windows. Since spec 013, `generateInsights` takes a trailing `locale` parameter (threaded from the store's `localeForLanguage` value; vectors stay language-neutral at the default `en-US`), and the recurring insight's 3-merchant preview is vector-locked via `Insight.preview_merchants` — amount descending, case-insensitive name tie-break, casing from the newest transaction. `lib/types.ts` also exports `PICKABLE_CATEGORIES` (transfer is deliberately unpickable) with `TransactionCategory` derived from it.
+
+### Savings & debt-payoff goals (spec 027)
+A secondary planning surface reached from **Settings → Goals** (`app/(app)/goals/page.tsx`, a
+`ReadingColumn` list — the budgets precedent; no separate `*Desktop` composition). A member creates
+a goal (name, kind, target cents, optional target date, optional context association) and records
+**contributions**; `components/goals/GoalCard.tsx` is the calm progress view (money headline,
+accessible `role="progressbar"`, remaining/reached, and a pace line for dated goals that is the sand
+`--accent` when behind — **never red**). All math is the pure, vectored engine `lib/finance/goals.ts`
+(`goalProgress` / `goalPacing` / `goalOffTrackInsight` / `goalInsights`, pinned by
+`shared/test-vectors/goals.json`). The **off-track insight** is a separate engine (keeps
+`insights.json` byte-stable) whose `Insight` output merges into the two existing insight consumers
+(`InsightsCardStack`, `DashboardDesktop`) via the exported `compareInsights`. `goals` +
+`goal_contributions` load in the `loadAll` fan-out (fail-open on a missing table) and mutate
+optimistically-with-rollback like budgets. Progress is contribution-driven — bank balances aren't
+synced (spec 024 is connect-only), so a linked account is context only.
 
 ### Coverage corpus + dev seeding (spec 026)
 `test/corpus/` is a **pure, deterministic seed-data generator** (not shipped in the
@@ -266,7 +284,7 @@ Measure with `npm run measure:bundle` (`scripts/measure-bundle.ts`): it derives 
 17. `web/vitest.config.ts` — test envs, coverage scope + thresholds.
 18. `web/scripts/import/README.md` — the CLI's full contract (flags, exit codes, adding a bank).
 19. `web/components/settings/appearance.ts` — `THEME_VARS`, single source for boot + live theme toggle.
-20. `web/lib/api/aggregates.ts` — the not-yet-wired RPC layer and its cut-over plan.
+20. `web/lib/api/aggregates.ts` — the aggregate-RPC layer (wired since spec 027 by the Reports surface via `web/lib/useReportsData.ts`; `fetchDailyExpense`/`fetchOwnerSpend` still unwired).
 
 ## 6. Build / run / test
 
@@ -376,7 +394,7 @@ shared `validateSplit`.
 - **Node >= 20.19 required** (vitest 4 uses `require(ESM)`); `package.json` engines enforce it.
 - **Vitest runs files sequentially** (`fileParallelism: false`) because parallel jsdom worker startup races in sandboxes; don't "optimize" this away.
 - **Coverage is scoped**, not global: only the pure `lib/` business logic and `scripts/import/**` are measured, with thresholds (90/90/80/90 overall; slightly lower for `scripts/import/**`). View components are behaviorally tested, not line-covered.
-- **`lib/api/aggregates.ts` is not wired** — widgets still aggregate client-side; the RPCs exist in `supabase/migrations/20260611120000_aggregates.sql`.
+- **`lib/api/aggregates.ts` — dashboard *widgets* still aggregate client-side** (wiring them is a perf loss, spec 023/D15); the RPCs exist in `supabase/migrations/20260611120000_aggregates.sql`. Since **spec 027** the *Reports* surface (`lib/useReportsData.ts`) is the one live consumer — `fetchMonthSummary`/`fetchCategoryTotals` only. `fetchOwnerSpend`/`fetchDailyExpense` stay unwired.
 - **If you change any regression-vectored engine**, regenerate vectors (`npm run gen:vectors`) and commit the diff — the web CI drift check fails otherwise. There is no longer a second (Swift) consumer to keep in sync.
 - **Dates fed to the finance engines must be built on the LOCAL calendar.** `insights.ts` (and the budget/insight cards) derive the month from *local* getters (`now.getFullYear()/getMonth()/getDate()`), so any reference date must be constructed in local time — `new Date(y, m - 1, d, 12)`, never a `…T12:00:00.000Z` UTC instant. A noon-UTC last-day instant reads as the 1st of the *next* month at UTC+12 and further east (NZ/Fiji), silently re-scoping the whole month (spec 023 fixed this in `monthInsightReference`; the same rule governs housing dates via `parseLocalDate`). The vitest worker pins `TZ=UTC`, so these never surface in CI — test an eastern zone explicitly (see `test/dashboard/insights-month-select.test.ts`).
 - **localStorage keys** the app depends on: `currency`, `language`, `appearance`, `dashboardRange`, `fxRates`/`fxRatesFetchedAt`, `ortho.flags`, legacy `localUsers` (folded into `household_people` on first boot, then removed).

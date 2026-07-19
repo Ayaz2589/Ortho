@@ -1,7 +1,9 @@
-import type { Transaction, Budget, Property, Insight, TransactionCategory } from '../types'
+import type { Transaction, Budget, Property, Insight, TransactionCategory, InsightSeverity } from '../types'
 import { CATEGORIES } from '../categories'
 import { monthlyPaymentCents } from './mortgage'
+import { budgetStatusForMonth } from './budgets'
 import { INSIGHT_THRESHOLDS as T } from './insights-thresholds'
+import { parseLocalDate } from '../format'
 
 // Insights mirror the iOS InsightEngine. Money is rendered in USD with 2
 // decimals here (the engine is currency-agnostic; display conversion happens
@@ -29,7 +31,13 @@ function monthInterval(d: Date): [Date, Date] {
 }
 
 function inInterval(date: string, start: Date, end: Date): boolean {
-  const t = new Date(date).getTime()
+  // Date-only strings ("YYYY-MM-DD") parse as UTC midnight with `new Date()`,
+  // but monthInterval() builds local-calendar [mStart, mEnd) boundaries. A
+  // boundary-dated row (e.g. June 1 date-only) parses as UTC midnight, which
+  // falls *before* local midnight June 1 for users west of UTC, silently
+  // landing the row in the previous month. Parse date-only strings as local
+  // midnight (same regime as monthInterval) to keep both sides consistent.
+  const t = date.includes('T') ? new Date(date).getTime() : parseLocalDate(date).getTime()
   return t >= start.getTime() && t < end.getTime()
 }
 
@@ -132,38 +140,45 @@ export function generateInsights(
   }
 
   // --- Rule 3: Budget status ---
+  // Rollover-aware (spec 027): compare spend against the EFFECTIVE limit
+  // (base + carried surplus/shortfall), so the insight can't contradict the
+  // dashboard card. For `fixed` budgets the effective limit equals the base and
+  // carriedIn is 0, so this is byte-identical to the pre-027 behavior.
   for (const b of budgets) {
     if (b.monthly_limit_cents <= 0) continue
-    const spent = monthByCat.get(b.category) ?? 0
-    const fraction = spent / b.monthly_limit_cents
+    const status = budgetStatusForMonth(b, transactions, now)
+    const limit = status.effectiveLimitCents
+    const spent = status.spentCents
+    if (limit <= 0) continue
+    const fraction = spent / limit
     if (fraction >= T.budgetOverFraction) {
-      const over = spent - b.monthly_limit_cents
+      const over = spent - limit
       out.push({
         id: `budget-over-${b.category}-${monthTag(now)}`,
         title: tr('Over budget on {0}', tr(catLabel(b.category))),
-        body: tr("You're {0} over your {1} limit with {2} days left.", usd(over), usd(b.monthly_limit_cents), daysLeft),
+        body: tr("You're {0} over your {1} limit with {2} days left.", usd(over), usd(limit), daysLeft),
         severity: 'critical',
         icon: 'alert',
         category: b.category,
         magnitude_cents: over,
       })
     } else if (fraction >= T.budgetNearFraction) {
-      const remaining = b.monthly_limit_cents - spent
+      const remaining = limit - spent
       out.push({
         id: `budget-near-${b.category}-${monthTag(now)}`,
         title: tr('Approaching {0} limit', tr(catLabel(b.category))),
-        body: tr('{0} left of {1} with {2} days to go.', usd(remaining), usd(b.monthly_limit_cents), daysLeft),
+        body: tr('{0} left of {1} with {2} days to go.', usd(remaining), usd(limit), daysLeft),
         severity: 'warning',
         icon: 'gauge',
         category: b.category,
         magnitude_cents: spent,
       })
     } else if (fraction <= T.budgetUnderFraction && monthProgress >= T.budgetUnderProgress) {
-      const remaining = b.monthly_limit_cents - spent
+      const remaining = limit - spent
       out.push({
         id: `budget-under-${b.category}-${monthTag(now)}`,
         title: tr('Under budget on {0}', tr(catLabel(b.category))),
-        body: tr('{0} of {1} still available with {2} days left.', usd(remaining), usd(b.monthly_limit_cents), daysLeft),
+        body: tr('{0} of {1} still available with {2} days left.', usd(remaining), usd(limit), daysLeft),
         severity: 'positive',
         icon: 'check',
         category: b.category,
@@ -361,10 +376,24 @@ export function generateInsights(
   }
 
   // Sort by severity asc (critical first), tie-break magnitude desc.
-  const order = { critical: 0, warning: 1, info: 2, positive: 3 }
-  out.sort((a, b) => {
-    if (order[a.severity] !== order[b.severity]) return order[a.severity] - order[b.severity]
-    return b.magnitude_cents - a.magnitude_cents
-  })
+  out.sort(compareInsights)
   return out.slice(0, limit)
+}
+
+/** Severity ordering for the insight list: critical first, then warning, info,
+ *  positive; ties broken by magnitude descending. Exported (spec 027) so the
+ *  goal off-track insights (`lib/finance/goals.ts`) merge into the same ordering
+ *  as the base rules in the dashboard consumers. Extracted verbatim from the
+ *  former inline sort — no behavior change to `generateInsights`/`insights.json`. */
+const SEVERITY_ORDER: Record<InsightSeverity, number> = {
+  critical: 0,
+  warning: 1,
+  info: 2,
+  positive: 3,
+}
+export function compareInsights(a: Insight, b: Insight): number {
+  if (SEVERITY_ORDER[a.severity] !== SEVERITY_ORDER[b.severity]) {
+    return SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]
+  }
+  return b.magnitude_cents - a.magnitude_cents
 }

@@ -7,18 +7,23 @@ import type { TransactionCategory } from '@/lib/types'
  * One SQL definition serves both web and iOS,
  * so the dashboard rollups are no longer duplicated per-client.
  *
- * ADDITIVE / not yet wired: the dashboard widgets still compute these locally so
- * the app keeps working before the migration is applied.
+ * The dashboard WIDGETS still compute these locally. spec 023 (D15): wiring the
+ * RPCs into the widgets is a net performance LOSS — they'd add network round-trips
+ * (refetched on every range/month change) to replace in-memory loops the client
+ * already holds after loadAll(), and would break offline. That stays the stance;
+ * do not wire the widgets for perf alone (only worthwhile PAIRED WITH loadAll()
+ * windowing, a future feature, when the client no longer holds full history).
  *
- * spec 023 (D15): DELIBERATELY LEFT UNWIRED. Wiring these RPCs is a net
- * performance LOSS as things stand — they'd add network round-trips (refetched on
- * every range/month change) to replace in-memory loops the client already holds
- * after loadAll(), and would break offline. This module is kept (0 bundle cost —
- * tree-shaken while unreferenced) as the documented cut-over path, which only
- * becomes worthwhile PAIRED WITH loadAll() windowing (a future feature, when the
- * client no longer holds full history). Do not wire it for perf alone.
+ * WIRED SINCE spec 027 by the Reports surface — the first live consumer, via
+ * lib/useReportsData.ts — which is the documented cut-over case, NOT a per-widget
+ * cut-over: a *new* surface aggregating over a user-chosen window (up to 12 months,
+ * fetched on demand only when Reports is open) the client does not already hold
+ * pre-summarized. Reports uses fetchMonthSummary + fetchCategoryTotals only.
  *
- * Cut-over (per widget, once windowing + the migration are live):
+ * Still unwired: fetchOwnerSpend, fetchDailyExpense. NOTE fetchOwnerSpend types its
+ * rows as `person_id`, but the RPC returns a `user_id` column — a latent mismatch
+ * to fix before it is wired (see PARITY.md). Cut-over map for the widgets, once
+ * loadAll() windowing + the migration are live:
  *   - PerOwnerBreakdownCard:  spentBy(...) per person  → fetchOwnerSpend()
  *   - SpendByCategoryCard:    category sums            → fetchCategoryTotals()
  *   - MonthSummaryCard:       income/expense/net       → fetchMonthSummary()

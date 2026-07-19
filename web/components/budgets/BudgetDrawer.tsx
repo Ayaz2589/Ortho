@@ -8,7 +8,7 @@ import { MoneyInput, parseMoney } from '@/components/inputs'
 import { fractionDigits } from '@/lib/finance/currency'
 import { CATEGORIES } from '@/lib/categories'
 import { Drawer, DrawerHeader } from '@/components/web/Drawer'
-import type { Budget, TransactionCategory } from '@/lib/types'
+import type { Budget, BudgetType, TransactionCategory } from '@/lib/types'
 
 function centsToDisplay(cents: number, currency: ReturnType<typeof useApp>['currency'], rate: number): string {
   const digits = fractionDigits(currency)
@@ -16,9 +16,17 @@ function centsToDisplay(cents: number, currency: ReturnType<typeof useApp>['curr
   return ((cents / 100) * rate).toFixed(digits)
 }
 
+// The three bucket types, with a one-line description each (spec 027).
+const TYPE_OPTIONS: { value: BudgetType; label: string; blurb: string }[] = [
+  { value: 'fixed', label: 'Fixed', blurb: 'Resets every month.' },
+  { value: 'flex', label: 'Flex', blurb: 'Unused budget rolls forward.' },
+  { value: 'non_monthly', label: 'Non-monthly', blurb: 'A fund for irregular costs.' },
+]
+
 /**
- * Budget detail/edit in the shared slide-out drawer (replaces the old centered
- * modal). `category` drives open state; null = closed.
+ * Budget detail/edit in the shared slide-out drawer. `category` drives open
+ * state; null = closed. Spec 027 adds a bucket-type selector and, for Flex, an
+ * optional rollover cap.
  */
 export function BudgetDrawer({
   category,
@@ -30,17 +38,27 @@ export function BudgetDrawer({
   const { currency, rate, currentHousehold, budgets, addOrUpdateBudget, deleteBudget, t } = useApp()
   const existing = category ? budgets.find((b) => b.category === category) ?? null : null
   const [amount, setAmount] = useState('')
+  const [type, setType] = useState<BudgetType>('fixed')
+  const [cap, setCap] = useState('')
   const [confirmRemove, setConfirmRemove] = useState(false)
 
   useEffect(() => {
     if (!category) return
     setConfirmRemove(false)
     setAmount(existing ? centsToDisplay(existing.monthly_limit_cents, currency, rate(currency)) : '')
+    setType(existing?.budget_type ?? 'fixed')
+    setCap(
+      existing?.budget_type === 'flex' && existing.rollover_cap_cents != null
+        ? centsToDisplay(existing.rollover_cap_cents, currency, rate(currency))
+        : '',
+    )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, currency])
 
   const parsed = parseMoney(amount, currency, rate(currency))
   const canSave = parsed != null && parsed >= 0
+  // Cap is optional; a blank value means uncapped.
+  const parsedCap = cap.trim() === '' ? null : parseMoney(cap, currency, rate(currency))
 
   const handleSave = () => {
     if (parsed == null || parsed < 0 || !currentHousehold || !category) return
@@ -49,6 +67,9 @@ export function BudgetDrawer({
       household_id: currentHousehold.id,
       category,
       monthly_limit_cents: parsed,
+      budget_type: type,
+      // Cap is flex-only; the other types always store null.
+      rollover_cap_cents: type === 'flex' ? (parsedCap != null && parsedCap >= 0 ? parsedCap : null) : null,
     }
     addOrUpdateBudget(budget)
     onClose()
@@ -98,11 +119,60 @@ export function BudgetDrawer({
           </FieldRow>
         </FormGroup>
 
+        {/* Bucket type selector (spec 027) */}
+        <div className="pt-5" role="radiogroup" aria-label={t('Budget type')}>
+          <div className="px-1 pb-2 text-[13px] font-normal text-text-3">{t('Budget type')}</div>
+          <div className="flex flex-col gap-2">
+            {TYPE_OPTIONS.map((opt) => {
+              const selected = type === opt.value
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  aria-pressed={selected}
+                  onClick={() => setType(opt.value)}
+                  className="flex items-center justify-between rounded-2xl bg-surface px-4 py-3 text-left"
+                  style={{
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                    outline: selected ? '1.5px solid var(--accent)' : 'none',
+                    outlineOffset: -1.5,
+                  }}
+                >
+                  <span className="flex flex-col">
+                    <span className="text-[15px] text-text">{t(opt.label)}</span>
+                    <span className="text-[13px] text-text-3">{t(opt.blurb)}</span>
+                  </span>
+                  {selected && (
+                    <span className="h-2 w-2 rounded-full" style={{ background: 'var(--accent)' }} aria-hidden />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Flex-only rollover cap */}
+        {type === 'flex' && (
+          <div className="mt-4">
+            <FormGroup>
+              <FieldRow label={t('Rollover cap')}>
+                <MoneyInput value={cap} onChange={setCap} placeholder={t('Uncapped')} />
+              </FieldRow>
+            </FormGroup>
+          </div>
+        )}
+
         <p className="px-1 pt-3 text-[13px] leading-relaxed text-text-3">
-          {t(
-            'Spending in {0} is tracked from the 1st of each calendar month. Insights compare actual spend against this limit.',
-            meta ? t(meta.label) : ''
-          )}
+          {type === 'fixed'
+            ? t(
+                'Spending in {0} is tracked from the 1st of each calendar month. Insights compare actual spend against this limit.',
+                meta ? t(meta.label) : '',
+              )
+            : type === 'flex'
+              ? t('Unused {0} budget rolls into next month (an overspend is forgiven). Set a cap to limit how much accumulates.', meta ? t(meta.label) : '')
+              : t('{0} accumulates every month like a fund for irregular costs; both surplus and shortfall carry forward.', meta ? t(meta.label) : '')}
         </p>
 
         {existing &&
