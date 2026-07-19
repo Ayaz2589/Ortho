@@ -78,7 +78,7 @@ spec 024 (see §1.1).
 - [§8.2 Push notifications](./8.2-push-notifications.md) — 🟡
 
 ### 9. Commercial readiness (pre-launch hardening + seed data) 🔴
-> Unlike §§0–8 (the Monarch-inspired *idea pool*), this is the **prioritized
+> Unlike §§1–8 (the Monarch-inspired *idea pool*), this is the **prioritized
 > pre-commercial track** from the 2026-07-17 readiness review — decided work, not
 > candidates. It runs on **two clocks**: integrity/correctness items are
 > research-independent (do now); product-shape items wait for research.
