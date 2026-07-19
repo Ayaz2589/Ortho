@@ -67,7 +67,7 @@ Overview|Reports mode, and Budgets/Goals live under Settings → Planning, not e
 | [./ios.md](./ios.md) | …doing archaeology on the frozen SwiftUI app, porting its Swift scan source, or **shipping to TestFlight** (`ios-deploy.yml` — warning: it archives the FROZEN app onto the live listing's bundle id). Not how iOS ships today — that's [./web.md](./web.md). |
 | [../README.md](../README.md) | …first contact: product framing, repo layout, getting-started commands per surface. |
 | [../PARITY.md](../PARITY.md) | …changing any shared capability: the audited web-vs-CLI matrix and divergences. |
-| [../FUTURE-TASKS.md](../FUTURE-TASKS.md) | (redirect stub) → [./future_tasks/index.md](./future_tasks/index.md) — the idea pool (one file per §N.M item) + the §9 commercial-readiness track with statuses. |
+| [./future_tasks/index.md](./future_tasks/index.md) | …browsing the backlog: the idea pool (one file per §N.M item) + the §9 commercial-readiness track with statuses. |
 | [./archive/PARITY-2026-07-08.md](./archive/PARITY-2026-07-08.md) | …needing pre-021 web-vs-iOS parity history. |
 | [./research/finance-habits-budgeting-apps.md](./research/finance-habits-budgeting-apps.md) | …making seed/corpus data realistic: sourced numbers on real household money behavior. |
 | [./sandbox/sandbox-history.md](./sandbox/sandbox-history.md) | …managing `sbx` Docker Sandboxes (host-local registry; see the `docker-sandbox` / `kill-sandbox` skills). |
