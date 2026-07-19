@@ -392,6 +392,14 @@ const catalog: Record<string, string> = {
   "Bank disconnected.": "ব্যাংকের সংযোগ বিচ্ছিন্ন হয়েছে।",
   "Disconnecting didn’t go through. Try again.": "সংযোগ বিচ্ছিন্ন করা যায়নি। আবার চেষ্টা করুন।",
   "Connected by {0} · {1}": "{0} যুক্ত করেছেন · {1}",
+  // spec 027 — reports
+  "Overview": "সারসংক্ষেপ",
+  "Reports": "রিপোর্ট",
+  "Dashboard view": "ড্যাশবোর্ড ভিউ",
+  "Savings rate": "সঞ্চয়ের হার",
+  "Spending by category": "বিভাগ অনুযায়ী খরচ",
+  "No income or spending in this period yet.": "এই সময়ে এখনও কোনও আয় বা খরচ নেই।",
+  "Couldn’t load reports.": "রিপোর্ট লোড করা যায়নি।",
 }
 
 export default catalog

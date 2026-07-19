@@ -392,6 +392,14 @@ const catalog: Record<string, string> = {
   "Bank disconnected.": "Banco desconectado.",
   "Disconnecting didn’t go through. Try again.": "La desconexión no se completó. Inténtalo de nuevo.",
   "Connected by {0} · {1}": "Conectado por {0} · {1}",
+  // spec 027 — reports
+  "Overview": "Resumen",
+  "Reports": "Informes",
+  "Dashboard view": "Vista del panel",
+  "Savings rate": "Tasa de ahorro",
+  "Spending by category": "Gastos por categoría",
+  "No income or spending in this period yet.": "Aún no hay ingresos ni gastos en este período.",
+  "Couldn’t load reports.": "No se pudieron cargar los informes.",
 }
 
 export default catalog

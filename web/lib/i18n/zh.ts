@@ -392,6 +392,14 @@ const catalog: Record<string, string> = {
   "Bank disconnected.": "已断开银行连接。",
   "Disconnecting didn’t go through. Try again.": "未能断开连接。请重试。",
   "Connected by {0} · {1}": "由 {0} 关联 · {1}",
+  // spec 027 — reports
+  "Overview": "概览",
+  "Reports": "报告",
+  "Dashboard view": "仪表板视图",
+  "Savings rate": "储蓄率",
+  "Spending by category": "按类别支出",
+  "No income or spending in this period yet.": "此期间还没有收入或支出。",
+  "Couldn’t load reports.": "无法加载报告。",
 }
 
 export default catalog

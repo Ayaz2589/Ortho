@@ -392,6 +392,14 @@ const catalog: Record<string, string> = {
   "Bank disconnected.": "은행 연결이 해제되었습니다.",
   "Disconnecting didn’t go through. Try again.": "연결 해제가 완료되지 않았습니다. 다시 시도해 주세요.",
   "Connected by {0} · {1}": "{0}님이 연결 · {1}",
+  // spec 027 — reports
+  "Overview": "개요",
+  "Reports": "리포트",
+  "Dashboard view": "대시보드 보기",
+  "Savings rate": "저축률",
+  "Spending by category": "카테고리별 지출",
+  "No income or spending in this period yet.": "이 기간에 아직 수입이나 지출이 없습니다.",
+  "Couldn’t load reports.": "리포트를 불러오지 못했습니다.",
 }
 
 export default catalog
