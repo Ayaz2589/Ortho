@@ -2,9 +2,10 @@
 
 A living backlog of **candidate features and platform changes** we may build over
 time. Most entries are inspired by [Monarch Money](https://www.monarch.com/)'s
-2026 feature set (a comprehensive net-worth/aggregation app). The one platform
-consolidation (Capacitor, §0.1) has since **shipped as spec 021** — kept below as
-a completed record. Everything else here is uncommitted — the idea pool — **except
+2026 feature set (a comprehensive net-worth/aggregation app). Fully shipped items
+move to [`./archive/`](./archive/README.md) as completed records — see the
+[Shipped (archived)](#shipped-archived) list below. Everything still here is
+uncommitted — the idea pool — **except
 §9 (commercial readiness)**, the prioritized pre-launch track from the 2026-07-17
 readiness review (decided work, not candidates).
 
@@ -46,9 +47,6 @@ spec 024 (see §1.1).
 
 ## Backlog by section
 
-### 0. Platform & architecture
-- [§0.1 Wrap the web app with Capacitor; retire the native Swift app](./0.1-capacitor-consolidation.md) — 🔴 · ✅ **shipped (spec 021)**
-
 ### 1. Aggregation & accounts
 - [§1.1 Automatic account aggregation (bank/card/loan/investment sync)](./1.1-automatic-account-aggregation.md) — 🟡 ⚠️ · connect half shipped (spec 024)
 - [§1.2 Manual accounts / balances as first-class objects](./1.2-manual-accounts.md) — 🟡
@@ -58,14 +56,12 @@ spec 024 (see §1.1).
 - [§2.2 Investment / portfolio tracking](./2.2-investment-portfolio-tracking.md) — ⚪
 
 ### 3. Planning & goals
-- [§3.1 Savings / debt-payoff goals](./3.1-savings-debt-payoff-goals.md) — 🟡 · ✅ **shipped (spec 027)**
 - [§3.2 Cash-flow forecasting / long-range planning](./3.2-cash-flow-forecasting.md) — ⚪
 
 ### 4. Money management
 - [§4.1 Flexible budgeting ("Flex" buckets, rollover, forecasting)](./4.1-flexible-budgeting.md) — 🟡 · **rollover slice shipped (spec 027)**; bucket grouping + forecasting open
 - [§4.2 Subscription / bill manager](./4.2-subscription-bill-manager.md) — 🟡
 - [§4.3 Transaction rules & bulk editing engine](./4.3-transaction-rules.md) — 🟡
-- [§4.4 Transaction tags & richer notes](./4.4-transaction-tags-notes.md) — ✅ delivered (`specs/027-transaction-tags/`)
 
 ### 5. Intelligence & reporting
 - [§5.1 Advanced reports (Sankey cash-flow, savings rate, custom charts)](./5.1-advanced-reports.md) — ⚪ · **savings-rate + category deep-dive shipped (spec 027)**; Sankey/custom charts open
@@ -82,24 +78,30 @@ spec 024 (see §1.1).
 - [§8.2 Push notifications](./8.2-push-notifications.md) — 🟡
 
 ### 9. Commercial readiness (pre-launch hardening + seed data) 🔴
-> Unlike §§0–8 (the Monarch-inspired *idea pool*), this is the **prioritized
+> Unlike §§1–8 (the Monarch-inspired *idea pool*), this is the **prioritized
 > pre-commercial track** from the 2026-07-17 readiness review — decided work, not
 > candidates. It runs on **two clocks**: integrity/correctness items are
 > research-independent (do now); product-shape items wait for research.
 > **Status (2026-07-19):** the research-independent track is **done** — §9.1
 > shipped (spec 026), §9.3 + §9.4 shipped and the §9.5 decision made (the spec
-> 027 wave). Only §9.2 (research-gated) remains open.
-- [§9.1 Seed-data harness + edge-case coverage corpus](./9.1-seed-data-harness-coverage.md) — 🔴 · ✅ **shipped (spec 026)** · doubles as the §9.4 verification harness (reproduces A2 + A4)
+> 027 wave); those four are archived below. Only §9.2 (research-gated) remains open.
 - [§9.2 Realistic demo / onboarding seed profiles](./9.2-realistic-seed-profiles.md) — 🟡 · Feature 2, held for research
-- [§9.3 Ledger integrity — atomic split persistence](./9.3-ledger-atomic-persistence.md) — 🔴 · ✅ **shipped (spec 027)** — `upsert_transaction` RPC; the former "one commercial blocker" is closed
-- [§9.4 Finance-model correctness & honest labels](./9.4-finance-model-correctness.md) — 🔴/🟡 · ✅ **done (spec 027)** — A2 fixed, A4 verified no-divergence, oracle extended, labels relabeled
-- [§9.5 Multi-currency accounting strategy](./9.5-multi-currency-strategy.md) — 🟡 · ✅ **decision made (spec 027)**: launch US/USD-only, native-currency ledger deferred
 
 ### Deep dives
 - [**Plaid feature opportunities**](./plaid-feature-opportunities.md) — what the
   shipped Plaid Connect foundation (spec 024) unlocks: transaction sync, balances,
   recurring streams, liabilities/mortgage seeding, categorization, and more, each
   mapped to Ortho infrastructure and priced by re-link cost.
+
+### Shipped (archived)
+Completed records live in [`./archive/`](./archive/README.md):
+- [§0.1 Capacitor consolidation; retire the native Swift app](./archive/0.1-capacitor-consolidation.md) — ✅ spec 021
+- [§3.1 Savings / debt-payoff goals](./archive/3.1-savings-debt-payoff-goals.md) — ✅ spec 027
+- [§4.4 Transaction tags & richer notes](./archive/4.4-transaction-tags-notes.md) — ✅ spec 027
+- [§9.1 Seed-data harness + edge-case coverage corpus](./archive/9.1-seed-data-harness-coverage.md) — ✅ spec 026 · doubles as the §9.4 verification harness
+- [§9.3 Ledger integrity — atomic split persistence](./archive/9.3-ledger-atomic-persistence.md) — ✅ spec 027 · `upsert_transaction` RPC; the former "one commercial blocker" is closed
+- [§9.4 Finance-model correctness & honest labels](./archive/9.4-finance-model-correctness.md) — ✅ spec 027 · A2 fixed, A4 verified no-divergence
+- [§9.5 Multi-currency accounting strategy](./archive/9.5-multi-currency-strategy.md) — ✅ spec 027 · decision: launch US/USD-only, native-currency ledger deferred
 
 ---
 
