@@ -1,5 +1,5 @@
 # iOS deploy — archives Ortho-iOS, signs it, and uploads to TestFlight.
-# Manual-trigger only (workflow_dispatch); owner setup guide: docs/deploy.md.
+# Manual-trigger only (workflow_dispatch); owner setup guide: docs/ios.md §6.
 # The fast `preflight` job names EVERY missing secret before any macOS minute
 # is spent (spec 013 US7 / SC-007). This repo is public: secrets are never
 # echoed, and the deploy job is gated off fork-originated events.
@@ -36,7 +36,7 @@ jobs:
           done
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "::error::Missing ${#missing[@]} required repo secret(s): ${missing[*]}"
-            echo "Configure them per docs/deploy.md (Settings → Secrets and variables → Actions)."
+            echo "Configure them per docs/ios.md §6 (Settings → Secrets and variables → Actions)."
             exit 1
           fi
           echo "All deploy secrets present."

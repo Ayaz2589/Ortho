@@ -546,7 +546,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // spec 021: on the Capacitor iOS build, `onAuthStateChange` above only
   // reacts to SIGNED_OUT, not proactive idle-tab revalidation (a documented
   // gap vs. the native app's app-lifetime authStateChanges subscription —
-  // docs/parity-audit-2026-07-02.md). Foregrounding the app re-checks the
+  // see docs/archive/PARITY-2026-07-08.md). Foregrounding the app re-checks the
   // session, closing that gap for the Capacitor build specifically; this is a
   // no-op on desktop/mobile web (@capacitor/app's listener never fires there).
   useEffect(() => {
