@@ -2,8 +2,12 @@
 // Pure functions over untrusted JSON: parsers return null on malformed input
 // rather than throwing — the edge functions translate null into the contract
 // error codes. Nothing here performs I/O (see plaidClient.ts).
+//
+// @deprecated (spec 028) — Plaid is CONTAINED, not removed. SimpleFIN (src/simplefin.ts)
+// is the go-forward provider; this module is kept fully wired as a rollback path. Do
+// not extend it. The plaid-* edge functions still import this via the src/index barrel.
 import type { PlaidResult } from './plaidClient.ts'
-import type { LinkMode, NormalizedAccount } from './types.ts'
+import type { LinkMode, NormalizedAccount } from '../types.ts'
 
 /** Where Plaid Hosted Link hands the user back to the iOS shell. A custom
  *  scheme needs no Plaid Dashboard registration (research.md D3). */

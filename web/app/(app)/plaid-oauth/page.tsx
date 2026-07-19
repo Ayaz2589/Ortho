@@ -11,6 +11,10 @@
  * banks (the new bank is in the refreshed list); a FAILED exchange stays here
  * with one calm line and the way back — the member who just typed their bank
  * credentials must never land on an unchanged page with zero explanation.
+ *
+ * @deprecated (spec 028) — part of the CONTAINED Plaid path. The route stays in
+ * place (moving it would change the Plaid-Dashboard-registered redirect URI);
+ * SimpleFIN needs no OAuth return route (token-paste flow). Kept wired for rollback.
  */
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -25,7 +29,7 @@ import {
   type PendingLinkSession,
 } from '@/lib/plaidLinkSession'
 
-const EmbeddedPlaidLink = dynamic(() => import('@/components/settings/EmbeddedPlaidLink'), {
+const EmbeddedPlaidLink = dynamic(() => import('@/components/settings/deprecated/EmbeddedPlaidLink'), {
   ssr: false,
 })
 

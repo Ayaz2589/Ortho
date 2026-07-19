@@ -7,11 +7,15 @@ export type {
   LinkMode,
   NormalizedAccount,
 } from './types.ts'
+// Plaid provider — @deprecated (spec 028): contained under ./deprecated/, kept
+// fully wired as a rollback path. Re-exported here so the plaid-* edge functions
+// and web client keep importing the barrel unchanged. SimpleFIN is the go-forward
+// provider (see the SimpleFIN exports below).
 export {
   createPlaidClient,
   PLAID_API_VERSION,
   PLAID_BASE_URLS,
-} from './plaidClient.ts'
+} from './deprecated/plaidClient.ts'
 export {
   buildLinkTokenRequest,
   HOSTED_COMPLETION_REDIRECT_URI,
@@ -22,14 +26,14 @@ export {
   parseHostedSessionResult,
   parseInstitutionResponse,
   parseLinkTokenResponse,
-} from './plaid.ts'
+} from './deprecated/plaid.ts'
 export type {
   ItemRemoveOutcome,
   LinkTokenRequestOptions,
   ParsedAccounts,
   ParsedExchange,
   ParsedLinkToken,
-} from './plaid.ts'
+} from './deprecated/plaid.ts'
 export type {
   FetchLike,
   PlaidClient,
@@ -37,4 +41,4 @@ export type {
   PlaidEnv,
   PlaidFailure,
   PlaidResult,
-} from './plaidClient.ts'
+} from './deprecated/plaidClient.ts'

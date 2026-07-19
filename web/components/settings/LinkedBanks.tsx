@@ -28,7 +28,8 @@ import {
 import { mediumDate } from '@/lib/format'
 import type { LinkedAccount } from '@/lib/types'
 
-const EmbeddedPlaidLink = dynamic(() => import('./EmbeddedPlaidLink'), { ssr: false })
+// @deprecated (spec 028) Plaid runner — contained under ./deprecated/, kept wired.
+const EmbeddedPlaidLink = dynamic(() => import('./deprecated/EmbeddedPlaidLink'), { ssr: false })
 
 type Availability = 'checking' | 'available' | 'unconfigured' | 'no-household'
 type ActiveSession = { sessionId: string; linkToken: string }

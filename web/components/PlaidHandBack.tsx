@@ -4,6 +4,10 @@
  * spec 024 (US2/FR-004) — completes a pending HOSTED Plaid Link session on the
  * Capacitor iOS shell. Mounted once in the (app) shell; renders nothing.
  *
+ * @deprecated (spec 028) — part of the CONTAINED Plaid path. SimpleFIN uses a
+ * token-paste flow with no hosted hand-back, so this is Plaid-only. Kept mounted
+ * and wired as a rollback path; safe no-op when there is no pending Plaid session.
+ *
  * Three triggers, one idempotent server exchange
  * (contracts/link-session-lifecycle.md):
  *  - mount            — cold-start recovery (the browser return relaunched us)

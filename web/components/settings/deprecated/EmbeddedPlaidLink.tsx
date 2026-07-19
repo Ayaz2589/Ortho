@@ -6,6 +6,10 @@
  * host usePlaidLink and auto-open once the CDN script is ready. Loaded via
  * next/dynamic so react-plaid-link (and Plaid's cdn script loader) never
  * enters the initial bundle for members who don't open Linked banks.
+ *
+ * @deprecated (spec 028) — Plaid is CONTAINED, not removed. SimpleFIN
+ * (SimpleFinConnect.tsx) is the go-forward connect method; this Plaid runner is
+ * kept fully wired as a rollback path.
  */
 import { useEffect } from 'react'
 import { usePlaidLink } from 'react-plaid-link'
