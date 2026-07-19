@@ -22,7 +22,13 @@
 > shares now commit through the single `upsert_transaction` RPC on **both** surfaces (matrix row
 > below), replacing the client-side compensation this file previously tracked as "out of scope".
 > Reports, the remaining spec-027 surface, is web-only and deliberately unvectored — see
-> "Surface-specific by design". Earlier: **spec 024 (Plaid Connect — connect-only bank
+> "Surface-specific by design". **Spec 028 (SimpleFIN bank-sync)** adds a web/edge-only
+> transaction-sync path: SimpleFIN money normalization (signed decimal string → non-negative
+> USD cents + `transaction_kind`, dedupe, deterministic ledger id) lives in
+> `services/aggregation/src/normalize.ts`, is pinned by that package's Vitest suite, and writes
+> through the **same** `upsert_transaction` RPC the CLI uses — the CLI has no SimpleFIN path, so
+> it introduces no new cross-surface parity-matrix row. It also contains (does not remove) the
+> Plaid provider under `deprecated/`. Earlier: **spec 024 (Plaid Connect — connect-only bank
 > linking)** adds a web-only bank-connection capability with no vectored money/date logic, so it
 > introduces no new parity-matrix row; spec 018 (billing/entitlements) is likewise accounted for. The deepest
 > structural reconciliation remains **spec 021 (Capacitor iOS consolidation)** — the native SwiftUI app
