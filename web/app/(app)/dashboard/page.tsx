@@ -1,10 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import dynamic from 'next/dynamic'
 import { PageHeader } from '@/components/ui'
 import { useApp } from '@/lib/store'
 import { useIsExpanded } from '@/lib/useMediaQuery'
 import { useDashboardScope } from '@/lib/useDashboardRange'
+import { ModeSwitch, type DashboardMode } from '@/components/dashboard/ModeSwitch'
+import { ReportsView } from '@/components/dashboard/ReportsView'
 import { RangePicker } from '@/components/dashboard/RangePicker'
 import { MonthPicker } from '@/components/dashboard/MonthPicker'
 import { MonthSummaryCard } from '@/components/dashboard/MonthSummaryCard'
@@ -32,15 +35,33 @@ export default function DashboardPage() {
   // desktop layouts share the same relative range AND the same (transient)
   // selected month, and a resize across the breakpoint preserves the selection.
   const scope = useDashboardScope()
+  // Reports is a MODE within Dashboard (spec 027), not a new route/destination —
+  // the four destinations are preserved. State lives here so it survives
+  // Overview↔Reports toggles while the page stays mounted.
+  const [mode, setMode] = useState<DashboardMode>('overview')
+  const modeSwitch = <ModeSwitch mode={mode} onChange={setMode} />
+
+  // Reports mode: the calm reports surface in place of the overview content
+  // (shared by mobile and desktop; ReportsView caps/centres its own width).
+  if (mode === 'reports') {
+    return (
+      <div className="mx-auto w-full max-w-[640px]">
+        <PageHeader title={t('Dashboard')} />
+        <div className="mb-4">{modeSwitch}</div>
+        <ReportsView />
+      </div>
+    )
+  }
 
   // Desktop (≥1024px): the 12-column grid composition.
-  if (isExpanded) return <DashboardDesktop scope={scope} />
+  if (isExpanded) return <DashboardDesktop scope={scope} modeSwitch={modeSwitch} />
 
   // Mobile / medium: single-column stack.
   const monthLabel = scope.isSpecificMonth ? scope.periodLabel : undefined
   return (
     <div className="mx-auto w-full max-w-[640px]">
       <PageHeader title={t('Dashboard')} />
+      <div className="mb-4">{modeSwitch}</div>
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           {scope.rangeOptions.length > 1 && (

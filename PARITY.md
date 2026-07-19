@@ -166,6 +166,18 @@ These shape which rows exist and what the app displays, but have no regression-v
   conversion, and Plaid **bank-account connection** (connect-only, spec 024 — `web/lib/aggregation.ts`
   over the `plaid-link-token` / `plaid-exchange` / `plaid-disconnect` edge functions; no transaction
   or money engine, hence no vector row). The CLI has no bank-linking path.
+- **web only — Reports (spec 027).** A calm "Reports" mode inside the Dashboard page (segmented
+  Overview | Reports; not a new route or a fifth destination) with a savings-rate-over-time view and
+  a category deep-dive over a chosen range. It is the **first product consumer of the aggregate RPC
+  wrappers** in `web/lib/api/aggregates.ts` (`household_month_summary`, `household_category_totals`,
+  fetched on demand only when Reports is open) — the documented cut-over case spec 023/D15 left open
+  (a new surface over a user-chosen window, not the per-widget wiring that would be a perf loss). The
+  savings-rate math (`web/lib/reports/savings.ts`) and category ranking (`web/lib/reports/categories.ts`)
+  are pure and unit-tested but deliberately **not golden vectors** (report-only ratio/share math, like
+  `entitlements.ts`), so no vector row. **Known divergence (unfixed):** `aggregates.ts`'s
+  `fetchOwnerSpend`/`OwnerSpendRow.person_id` does not match the `household_owner_spend` RPC's returned
+  `user_id` column; Reports avoids that wrapper (it needs only month-summary + category-totals), so the
+  mismatch is documented here for a future targeted fix, not exercised by this feature.
 - **CLI only:** bank detection + per-bank PDF/CSV parsers (`profiles/*`), statement reconciliation,
   dedupe, merchant→category heuristics, exclusions, and `--admin` service-role mode.
 - **On-device receipt & bank-statement scanning** — a native Capacitor plugin

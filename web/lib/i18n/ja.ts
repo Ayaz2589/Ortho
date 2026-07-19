@@ -393,6 +393,14 @@ const catalog: Record<string, string> = {
   "Bank disconnected.": "銀行の連携を解除しました。",
   "Disconnecting didn’t go through. Try again.": "連携の解除が完了しませんでした。もう一度お試しください。",
   "Connected by {0} · {1}": "{0} が連携 · {1}",
+  // spec 027 — reports
+  "Overview": "概要",
+  "Reports": "レポート",
+  "Dashboard view": "ダッシュボード表示",
+  "Savings rate": "貯蓄率",
+  "Spending by category": "カテゴリ別支出",
+  "No income or spending in this period yet.": "この期間の収入も支出もまだありません。",
+  "Couldn’t load reports.": "レポートを読み込めませんでした。",
 }
 
 export default catalog

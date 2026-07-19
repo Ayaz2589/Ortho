@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useApp } from '@/lib/store'
 import type { DashboardScope } from '@/lib/useDashboardRange'
@@ -70,7 +70,14 @@ const inRange = (iso: string, s: Date, e: Date) => {
   return t >= s.getTime() && t < e.getTime()
 }
 
-export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
+export function DashboardDesktop({
+  scope,
+  modeSwitch,
+}: {
+  scope: DashboardScope
+  /** Overview | Reports toggle rendered by the Dashboard page (spec 027). */
+  modeSwitch?: ReactNode
+}) {
   const { transactions, properties, budgets, formatMoney, locale, t } = useApp()
   const {
     now,
@@ -166,6 +173,7 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
         title={t('Dashboard')}
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {modeSwitch}
             {rangeOptions.length > 1 && (
               <Seg size="sm" value={activeRange} onChange={setRange} options={rangeOptions} />
             )}
