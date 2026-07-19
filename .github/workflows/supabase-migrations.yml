@@ -98,10 +98,10 @@ jobs:
       && github.repository == 'Ayaz2589/Ortho'
       && vars.SUPABASE_PROJECT_REF != ''
     runs-on: ubuntu-latest
-    # Optional manual-approval gate before any prod write — add required
-    # reviewers to this Environment in repo Settings, or leave it ungated for
-    # fully-automatic apply.
-    environment: production
+    # No `environment:` here on purpose — it would collide with Vercel's existing
+    # "Production" environment. To add a manual-approval gate before prod writes,
+    # create a DEDICATED environment (e.g. `supabase-migrations`) with required
+    # reviewers and set `environment: supabase-migrations`.
     steps:
       - uses: actions/checkout@v4
 
