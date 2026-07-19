@@ -92,9 +92,13 @@ jobs:
     # can't read the secrets anyway).
     # `vars` (unlike `secrets`) are allowed in job `if:`, so until you set the
     # project-ref variable this job SKIPS cleanly instead of failing red.
+    # Runs on a merge to main OR a manual "Run workflow" (the latter lets you
+    # test the wiring / apply pending migrations on demand).
     if: >-
-      github.event_name == 'push'
-      && github.ref == 'refs/heads/main'
+      (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        || github.event_name == 'workflow_dispatch'
+      )
       && github.repository == 'Ayaz2589/Ortho'
       && vars.SUPABASE_PROJECT_REF != ''
     runs-on: ubuntu-latest
