@@ -1,7 +1,9 @@
 <!-- SPECKIT START -->
-No feature is currently in flight. The most recent wave (spec 027, shipped 2026-07-19) lives in
-`specs/027-*/`; each shipped spec keeps its `plan.md` for reference. When a new feature starts via
-the Spec Kit flow, this block will point at its plan.
+Active feature: **spec 028 — SimpleFIN bank-sync (connect + transaction sync)**. Plan:
+`specs/028-simplefin-sync/plan.md` (spec/research/data-model/contracts/quickstart alongside it).
+Adds SimpleFIN as a second provider behind the `linked_provider` seam; contains (does not remove)
+the shipped Plaid integration under `deprecated/` namespaces. The prior wave (spec 027, shipped
+2026-07-19) lives in `specs/027-*/`; each shipped spec keeps its `plan.md` for reference.
 <!-- SPECKIT END -->
 
 ## Project documentation
