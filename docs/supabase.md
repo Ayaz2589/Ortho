@@ -113,6 +113,15 @@ Date ranges are **half-open** (`date >= p_start AND date < p_end`), matching the
 
 ### 4.4 Migration history as feature history
 
+> **Migrations auto-apply on merge to `main`** via
+> [`.github/workflows/supabase-migrations.yml`](../.github/workflows/supabase-migrations.yml)
+> (the deploy-before-migrate guard added after the 2026-07-19 `transactions.notes`
+> outage, when prod had drifted 8 migrations behind the deployed code). The same
+> workflow's `validate` job rejects duplicate migration versions on every PR. It
+> needs three repo settings — secrets `SUPABASE_ACCESS_TOKEN` + `SUPABASE_DB_PASSWORD`
+> and variable `SUPABASE_PROJECT_REF` — documented in the workflow header. Until
+> those are set, keep applying migrations by hand (`supabase db push`).
+
 | Migration | Feature | What it did |
 |---|---|---|
 | `20260521120000_initial_schema.sql` | v1 | Enums, 12 tables, indexes, `touch_updated_at` trigger, RLS everywhere, `accept_invite`, pgcrypto |

@@ -1,0 +1,126 @@
+# Supabase migrations — the deploy-before-migrate guard.
+#
+# WHY THIS EXISTS: on 2026-07-19 prod went down with "column transactions.notes
+# does not exist" — Vercel had shipped `main` to production while the prod
+# database silently sat EIGHT migrations behind (migrations were applied by hand,
+# and got forgotten). This workflow makes migrations part of the merge, not a
+# manual afterthought:
+#
+#   • validate — on every PR + push: rejects duplicate migration versions and
+#     malformed filenames (a duplicate version collides in supabase's
+#     schema_migrations tracking; that exact bug — three files at 20260718120000 —
+#     shipped this week and this check would have caught it).
+#   • migrate  — on push to main only: applies pending migrations to prod via
+#     `supabase db push`, so the schema lands with the code instead of after it.
+#
+# ── ONE-TIME SETUP (repo Settings) ──────────────────────────────────────────
+#   Secrets (Settings → Secrets and variables → Actions → Secrets):
+#     SUPABASE_ACCESS_TOKEN  — https://supabase.com/dashboard/account/tokens
+#     SUPABASE_DB_PASSWORD   — Project Settings → Database → Database password
+#   Variables (…→ Variables):
+#     SUPABASE_PROJECT_REF   — brujhxmtzfgowimprueo  (not secret; it's in the
+#                              public client URL — a Variable, not a Secret)
+#   Optional prod-write approval gate: create an Environment named `production`
+#   (Settings → Environments) with required reviewers. Leave it ungated for
+#   fully-automatic apply.
+#
+# ── RESIDUAL RACE (known, acceptable for now) ───────────────────────────────
+#   Vercel auto-deploys `main` in parallel with this job, so there's a brief
+#   window where new code could hit the old schema. This is already a massive
+#   improvement (migrations apply automatically within ~a minute, never
+#   forgotten). To close the window entirely, either (a) sequence the Vercel
+#   deploy AFTER this job via a deploy hook, or (b) make the app's reads tolerate
+#   a not-yet-migrated column the way they already tolerate missing tables.
+
+name: Supabase migrations
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+      - ".github/workflows/supabase-migrations.yml"
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - ".github/workflows/supabase-migrations.yml"
+  workflow_dispatch:
+
+concurrency:
+  # Never cancel a mid-flight prod migration.
+  group: supabase-migrations-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate migration files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reject bad filenames + duplicate versions
+        run: |
+          set -euo pipefail
+          cd supabase/migrations
+          shopt -s nullglob
+          fail=0
+
+          # 1. Every migration must be <14-digit-version>_<name>.sql
+          for f in *.sql; do
+            if [[ ! "$f" =~ ^[0-9]{14}_.+\.sql$ ]]; then
+              echo "::error file=supabase/migrations/$f::Bad migration filename — must be <14-digit-version>_<name>.sql"
+              fail=1
+            fi
+          done
+
+          # 2. No two migrations may share a version prefix (would collide in
+          #    supabase_migrations.schema_migrations and get skipped/errored).
+          dupes="$(for f in *.sql; do echo "${f%%_*}"; done | sort | uniq -d)"
+          if [ -n "$dupes" ]; then
+            echo "::error::Duplicate migration version(s) — renumber so each is unique:"
+            echo "$dupes"
+            fail=1
+          fi
+
+          if [ "$fail" -eq 0 ]; then echo "Migrations OK: $(ls -1 *.sql | wc -l | tr -d ' ') files, all uniquely versioned."; fi
+          exit "$fail"
+
+  migrate:
+    name: Apply migrations to prod
+    needs: validate
+    # push to main on the canonical repo only — never on PRs or forks (which
+    # can't read the secrets anyway).
+    if: >-
+      github.event_name == 'push'
+      && github.ref == 'refs/heads/main'
+      && github.repository == 'Ayaz2589/Ortho'
+    runs-on: ubuntu-latest
+    # Optional manual-approval gate before any prod write — add required
+    # reviewers to this Environment in repo Settings, or leave it ungated for
+    # fully-automatic apply.
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: "2.109.1"
+
+      - name: Link to prod and push pending migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_PROJECT_REF:-}" ]; then
+            echo "::error::SUPABASE_PROJECT_REF variable is not set (repo Settings → Variables)."
+            exit 1
+          fi
+          supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          echo "── migration status before push ──"
+          supabase migration list || true
+          echo "── applying ──"
+          supabase db push
+          echo "── migration status after push ──"
+          supabase migration list
