@@ -20,11 +20,13 @@ import {
   completeLinkSession,
   createLinkSession,
   disconnectInstitution,
+  syncInstitution,
 } from '@/lib/aggregation'
 import {
   clearPendingLinkSession,
   savePendingLinkSession,
 } from '@/lib/plaidLinkSession'
+import { SimpleFinConnect } from '@/components/settings/SimpleFinConnect'
 import { mediumDate } from '@/lib/format'
 import type { LinkedAccount } from '@/lib/types'
 
@@ -130,11 +132,11 @@ export function LinkedBanks() {
     clearPendingLinkSession()
   }
 
-  async function disconnect(institutionId: string) {
+  async function disconnect(institutionId: string, provider: string) {
     setConfirming(null)
     setBusy(true)
     setNotice(null)
-    const res = await disconnectInstitution(institutionId)
+    const res = await disconnectInstitution(institutionId, provider)
     setBusy(false)
     if (res.ok) {
       setNotice(t('Bank disconnected.'))
@@ -144,6 +146,26 @@ export function LinkedBanks() {
       setNotice(noticeFor('provider_unreachable'))
     } else {
       setNotice(t('Disconnecting didn’t go through. Try again.'))
+    }
+  }
+
+  /** SimpleFIN manual refresh (spec 028, US2). Rate-limited server-side: a
+   *  `rate_limited` code is a calm "just updated" line, never an error. */
+  async function refresh(institutionId: string) {
+    setBusy(true)
+    setNotice(null)
+    const res = await syncInstitution(institutionId, { manual: true })
+    setBusy(false)
+    if (res.ok) {
+      const n = res.value.imported + res.value.updated
+      setNotice(n > 0 ? t('Updated {0} transactions.', n) : t('Already up to date.'))
+      void refreshLinkedBanks()
+    } else if (res.code === 'rate_limited') {
+      setNotice(t('Just updated — try again in a little while.'))
+    } else if (res.code === 'provider_unreachable') {
+      setNotice(noticeFor('provider_unreachable'))
+    } else {
+      setNotice(t('Updating transactions didn’t finish. Try again.'))
     }
   }
 
@@ -165,10 +187,14 @@ export function LinkedBanks() {
         <span id="linked-banks-label">{t('Linked banks')}</span>
       </SectionLabel>
 
+      {/* SimpleFIN is the primary/recommended connect method (spec 028, US1/FR-017). */}
+      <SimpleFinConnect />
+
       <SectionCard>
-        {/* Disclosure before anything else (FR-002): what leaves the device,
-            what never does, and that linking is optional. */}
+        {/* Plaid is CONTAINED (spec 028): a de-emphasized secondary option kept as a
+            rollback path. Disclosure before anything else (FR-002). */}
         <p className="px-4 pb-1 pt-3 text-[13px] leading-relaxed text-text-3">
+          {t('Or connect with Plaid instead.')}{' '}
           {t(
             'Bank sign-in happens with Plaid, a bank-connection service. Ortho never sees your bank username or password — it only receives account names, types, and last-4 digits. You can disconnect at any time, and adding transactions yourself or importing statements always stays available.'
           )}
@@ -229,7 +255,7 @@ export function LinkedBanks() {
                       <button
                         type="button"
                         autoFocus
-                        onClick={() => void disconnect(inst.id)}
+                        onClick={() => void disconnect(inst.id, inst.provider)}
                         disabled={busy}
                         className="min-h-11 px-2 text-[15px] font-normal text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-60"
                       >
@@ -237,14 +263,26 @@ export function LinkedBanks() {
                       </button>
                     </span>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => setConfirming(inst.id)}
-                      disabled={busy}
-                      className="min-h-11 px-2 text-[15px] font-normal text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-60"
-                    >
-                      {t('Disconnect')}
-                    </button>
+                    <span className="flex items-center gap-1">
+                      {inst.provider === 'simplefin' && (
+                        <button
+                          type="button"
+                          onClick={() => void refresh(inst.id)}
+                          disabled={busy}
+                          className="min-h-11 px-2 text-[15px] font-normal text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-60"
+                        >
+                          {t('Refresh now')}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setConfirming(inst.id)}
+                        disabled={busy}
+                        className="min-h-11 px-2 text-[15px] font-normal text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-60"
+                      >
+                        {t('Disconnect')}
+                      </button>
+                    </span>
                   )}
                 </span>
               </div>

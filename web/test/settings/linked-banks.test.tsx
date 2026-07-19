@@ -69,6 +69,9 @@ const INSTITUTION: LinkedInstitution = {
   created_at: '2026-07-10T00:00:00Z',
   updated_at: '2026-07-10T00:00:00Z',
   disconnected_at: null,
+  last_synced_at: null,
+  last_manual_refresh_at: null,
+  sync_cursor: null,
 }
 
 const ACCOUNT: LinkedAccount = {
@@ -80,6 +83,7 @@ const ACCOUNT: LinkedAccount = {
   mask: '0000',
   account_type: 'depository',
   account_subtype: 'checking',
+  currency: null,
   created_at: '2026-07-10T00:00:00Z',
 }
 
@@ -256,7 +260,7 @@ describe('US3 — disconnect (provider-first revoke, confirm step, calm failure)
     fireEvent.click(await screen.findByRole('button', { name: 'Disconnect' }))
     fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }))
     await waitFor(() =>
-      expect(aggregation.disconnectInstitution).toHaveBeenCalledWith('li-1')
+      expect(aggregation.disconnectInstitution).toHaveBeenCalledWith('li-1', 'plaid')
     )
     expect(store.refreshLinkedBanks).toHaveBeenCalled()
     expect(await screen.findByText('Bank disconnected.')).toBeInTheDocument()

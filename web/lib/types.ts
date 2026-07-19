@@ -225,11 +225,11 @@ export interface GoalContribution {
 
 /** Aggregation provider seam (spec 024): a second provider extends this union
  *  (plus the Postgres enum) without reshaping household data. */
-export type LinkedProvider = 'plaid'
+export type LinkedProvider = 'plaid' | 'simplefin'
 export type LinkedInstitutionStatus = 'active' | 'disconnected'
 
 /** One standing bank connection made through an aggregation provider
- *  (Supabase `linked_institutions`, spec 024). Display metadata only — the
+ *  (Supabase `linked_institutions`, spec 024 + 028). Display metadata only — the
  *  provider access credential lives server-side in Vault and has no client
  *  type on purpose. Clients read; only edge functions write. */
 export interface LinkedInstitution {
@@ -245,11 +245,15 @@ export interface LinkedInstitution {
   created_at: string
   updated_at: string
   disconnected_at: string | null
+  /** SimpleFIN sync state (spec 028); null for Plaid / never-synced. */
+  last_synced_at: string | null
+  last_manual_refresh_at: string | null
+  sync_cursor: string | null
 }
 
 /** One bank account revealed by a linked institution (Supabase
- *  `linked_accounts`, spec 024). Never balances, never transactions —
- *  connect-only scope. Type/subtype are Plaid vocabulary rendered verbatim. */
+ *  `linked_accounts`, spec 024 + 028). Never balances, never transactions in
+ *  connect scope. Type/subtype are provider vocabulary rendered verbatim. */
 export interface LinkedAccount {
   id: string
   institution_id: string
@@ -260,6 +264,8 @@ export interface LinkedAccount {
   mask: string | null
   account_type: string
   account_subtype: string | null
+  /** ISO-4217 currency the provider reports (spec 028); Plaid rows leave it null. */
+  currency: string | null
   created_at: string
 }
 
