@@ -472,6 +472,34 @@ Notable details:
 
 Locked by `insights.json` (all 8 rules).
 
+The sort/limit is the exported `compareInsights` (spec 027) — extracted verbatim from the former
+inline sort (no behavior change) so the goal off-track insights merge into the same ordering.
+
+---
+
+## 10.5 Savings & debt-payoff goals (`finance/goals.ts`)
+
+Pure engine behind the Goals surface (spec 027). Integer USD cents; the reference "today" is
+injected; pinned by `goals.json`. Progress is **contribution-driven** (bank balances aren't
+synced — spec 024 is connect-only). Savings and debt-payoff share one model.
+
+- **`goalProgress(targetCents, contributions)`** → `{ saved, target, remaining, fraction, reached }`.
+  `saved` is the exact integer sum; `remaining = max(0, target − saved)`; `fraction = clamp(saved/target, 0, 1)`
+  (0 for a non-positive target); `reached = target > 0 && saved ≥ target`. Never negative remaining,
+  never fraction > 1.
+- **`goalPacing(targetCents, targetDate, startISO, saved, now)`** → the steady-pace assessment.
+  `expected = round(target × clamp(elapsed/span, 0, 1))` over calendar-day indices built from **local**
+  getters (the insights.ts timezone rule); `span` is start (`created_at`) → `target_date`.
+  `off_track` = not reached AND (past the date, OR behind `expected` by ≥ `offTrackToleranceFraction`
+  of the target). `suggested_monthly = ceil(remaining / monthsLeft)` (= remaining when past due).
+  Thresholds live in `goals-thresholds.ts` (the spec-025 `INSIGHT_THRESHOLDS` idiom).
+- **`goalOffTrackInsight` / `goalInsights`** produce ordinary `Insight` objects (id
+  `goal-offtrack-<id>`, severity **`warning`** → sand `--accent`, never red; magnitude = shortfall)
+  so they render in the existing Insights card. Kept a **separate** engine + vector file so
+  `insights.json` stays byte-stable; the dashboard consumers merge via `compareInsights`.
+
+Locked by `goals.json` (`progress` + `pacing` cases).
+
 ---
 
 ## 11. Category & severity metadata (`categories.ts`)

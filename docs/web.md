@@ -66,6 +66,7 @@ web/
 │       ├── transactions/page.tsx, transactions/new/page.tsx, transactions/edit/page.tsx  # spec 025: mobile new/edit as pages
 │       ├── housing/page.tsx, housing/new/page.tsx, housing/edit/page.tsx                 # spec 025: mobile new/edit as pages
 │       ├── budgets/page.tsx
+│       ├── goals/page.tsx        # spec 027: savings/debt-payoff goals (secondary route from Settings)
 │       ├── settings/page.tsx, settings/household/page.tsx, settings/linked-banks/page.tsx  # linked-banks: spec 024
 │       └── plaid-oauth/page.tsx  # spec 024: web bank-OAuth return route (re-inits Link w/ stored token)
 ├── capacitor.config.ts         # spec 021: appId (reused native-app bundle id), webDir 'out', ios/plugins config
@@ -85,6 +86,7 @@ web/
 │   ├── housing/                # PropertyCard/Content, Mortgage/Rental/Multifamily cards; PropertyForm (shared body) +
 │   │                           #   AddPropertyModal (desktop Drawer wrapper) + PropertyFormPageClient/PropertyKindChoices (mobile page, spec 025) + lease.ts/rate.ts/kinds.ts
 │   ├── budgets/BudgetDrawer.tsx
+│   ├── goals/                  # spec 027: GoalCard (calm progress view) + GoalForm + ContributionForm
 │   ├── Paywall.tsx             # spec 018: blocking gate content (plans, check again, quiet sign-out)
 │   ├── PlaidHandBack.tsx       # spec 024: renders nothing; completes hosted sessions on hand-back/foreground
 │   ├── settings/               # rows, ChoiceRows, HouseholdDrawer, AddCardModal, appearance.ts (THEME_VARS +
@@ -112,7 +114,8 @@ web/
 │   ├── api/aggregates.ts       # wrappers over Postgres aggregate RPCs (wired by Reports, spec 027; owner/daily still unwired)
 │   ├── flags.ts, test-build.ts # spec 015 test-build feature flags (localStorage-gated, dead-code-eliminated in prod)
 │   ├── testdata/               # spec 015 in-memory seeded Supabase client (test-data mode: seed.ts, memory-client.ts)
-│   ├── finance/                # pure engines: money.ts, currency.ts, mortgage.ts, insights.ts, housing.ts
+│   ├── finance/                # pure engines: money.ts, currency.ts, mortgage.ts, insights.ts, housing.ts,
+│   │                           #   goals.ts (+ goals-thresholds.ts) — spec 027 goal progress + off-track pacing
 │   ├── splits.ts               # split math + orderedOwnerIds (canonical leftover-cent order)
 │   ├── balances.ts             # member settle-up balance
 │   ├── transactionFilters.ts   # filter engine + monthBounds
@@ -197,6 +200,21 @@ A **Developer** section on the Settings page (`components/settings/flags-section
 
 ### Pure finance core (regression-vector-locked)
 `lib/finance/{money,currency,mortgage,insights}.ts`, `lib/splits.ts`, `lib/balances.ts`, `lib/transactionFilters.ts`, `lib/scan/*` (spec 021), and `components/dashboard/range.ts` are pure TypeScript pinned by fixtures in `shared/test-vectors/`. `npm run gen:vectors` (`scripts/gen-vectors.ts`) regenerates `shared/test-vectors/*.json` from these TS implementations; the web `*.parity.test.ts` suites assert against the same files — now an ordinary single-implementation regression/snapshot check (spec 021 retired the cross-language lock against the frozen native app; see root `PARITY.md`). Key invariants: integer USD cents everywhere, `orderedOwnerIds` canonicalizes the deterministic leftover cent, half-open `[start, end)` month windows. Since spec 013, `generateInsights` takes a trailing `locale` parameter (threaded from the store's `localeForLanguage` value; vectors stay language-neutral at the default `en-US`), and the recurring insight's 3-merchant preview is vector-locked via `Insight.preview_merchants` — amount descending, case-insensitive name tie-break, casing from the newest transaction. `lib/types.ts` also exports `PICKABLE_CATEGORIES` (transfer is deliberately unpickable) with `TransactionCategory` derived from it.
+
+### Savings & debt-payoff goals (spec 027)
+A secondary planning surface reached from **Settings → Goals** (`app/(app)/goals/page.tsx`, a
+`ReadingColumn` list — the budgets precedent; no separate `*Desktop` composition). A member creates
+a goal (name, kind, target cents, optional target date, optional context association) and records
+**contributions**; `components/goals/GoalCard.tsx` is the calm progress view (money headline,
+accessible `role="progressbar"`, remaining/reached, and a pace line for dated goals that is the sand
+`--accent` when behind — **never red**). All math is the pure, vectored engine `lib/finance/goals.ts`
+(`goalProgress` / `goalPacing` / `goalOffTrackInsight` / `goalInsights`, pinned by
+`shared/test-vectors/goals.json`). The **off-track insight** is a separate engine (keeps
+`insights.json` byte-stable) whose `Insight` output merges into the two existing insight consumers
+(`InsightsCardStack`, `DashboardDesktop`) via the exported `compareInsights`. `goals` +
+`goal_contributions` load in the `loadAll` fan-out (fail-open on a missing table) and mutate
+optimistically-with-rollback like budgets. Progress is contribution-driven — bank balances aren't
+synced (spec 024 is connect-only), so a linked account is context only.
 
 ### Coverage corpus + dev seeding (spec 026)
 `test/corpus/` is a **pure, deterministic seed-data generator** (not shipped in the

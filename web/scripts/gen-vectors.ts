@@ -26,6 +26,7 @@ import { availableMonths, availableRanges, monthReferenceDate, stepMonth } from 
 import { balanceBetween } from '../lib/balances'
 import { occupiedRentCents, netRentalCents, type RentUnit } from '../lib/finance/housing'
 import { rentDueDay, daysUntilNextRent, daysUntilEnd, isRenewalSoon } from '../components/housing/lease'
+import { goalProgress, goalPacing } from '../lib/finance/goals'
 import type { Transaction, Budget, Property, LeaseInfo } from '../lib/types'
 
 // The vectors must be identical no matter where they are generated: pin the
@@ -483,6 +484,57 @@ const lease = LEASE_CASES.map((c) => {
   }
 })
 
+// ── Savings-goal vectors (spec 027) ─────────────────────────────────────────
+// Locks the pure goal engine: `goalProgress` (saved/remaining/fraction/reached)
+// and `goalPacing` (steady-pace off-track assessment). Integer USD cents; the
+// reference "today" is injected. Display STRINGS (the off-track insight body) are
+// deliberately NOT vectored — only the numeric core + booleans, per shared.md.
+
+const GOAL_PROGRESS_CASES: Array<{ name: string; target: number; contributions: number[] }> = [
+  { name: 'empty — 0 of target', target: 200000, contributions: [] },
+  { name: 'single contribution — 25%', target: 200000, contributions: [50000] },
+  { name: 'multiple under target — 37.5%', target: 200000, contributions: [50000, 25000] },
+  { name: 'exactly reached', target: 300000, contributions: [300000] },
+  { name: 'over-funded — remaining floored, fraction capped', target: 300000, contributions: [200000, 200000] },
+  { name: 'debt-payoff — identical math', target: 300000, contributions: [100000, 100000, 100000] },
+  { name: 'non-positive target guard', target: 0, contributions: [100] },
+]
+
+const GOAL_PACING_CASES: Array<{
+  name: string
+  target: number
+  target_date: string | null
+  start: string
+  saved: number
+  now: string
+}> = [
+  { name: 'behind beyond tolerance', target: 1200000, target_date: '2027-01-01', start: '2026-01-01T00:00:00Z', saved: 100000, now: '2026-07-01T12:00:00Z' },
+  { name: 'on pace (saved >= expected)', target: 1200000, target_date: '2027-01-01', start: '2026-01-01T00:00:00Z', saved: 600000, now: '2026-07-01T12:00:00Z' },
+  { name: 'marginally behind within tolerance', target: 1000000, target_date: '2027-01-01', start: '2026-01-01T00:00:00Z', saved: 460000, now: '2026-07-01T12:00:00Z' },
+  { name: 'reached regardless of date', target: 300000, target_date: '2027-01-01', start: '2026-01-01T00:00:00Z', saved: 300000, now: '2026-07-01T12:00:00Z' },
+  { name: 'no target date — no pace', target: 200000, target_date: null, start: '2026-01-01T00:00:00Z', saved: 0, now: '2026-07-01T12:00:00Z' },
+  { name: 'past due and not reached', target: 200000, target_date: '2026-06-01', start: '2026-01-01T00:00:00Z', saved: 150000, now: '2026-07-01T12:00:00Z' },
+  { name: 'zero-span due-now not reached', target: 200000, target_date: '2026-06-01', start: '2026-06-01T00:00:00Z', saved: 50000, now: '2026-06-01T12:00:00Z' },
+]
+
+const goals = {
+  progress: GOAL_PROGRESS_CASES.map((c) => ({
+    input: { name: c.name, target_cents: c.target, contributions: c.contributions },
+    expected: goalProgress(c.target, c.contributions.map((amount_cents) => ({ amount_cents }))),
+  })),
+  pacing: GOAL_PACING_CASES.map((c) => ({
+    input: {
+      name: c.name,
+      target_cents: c.target,
+      target_date: c.target_date,
+      start: c.start,
+      saved_cents: c.saved,
+      now: c.now,
+    },
+    expected: goalPacing(c.target, c.target_date, c.start, c.saved, new Date(c.now)),
+  })),
+}
+
 // ── Dashboard month-scope vectors ───────────────────────────────────────────
 // Locks the NEW pure date logic behind the dashboard's specific-month picker so
 // iOS and web derive the same month list, reference date, and stepping. The
@@ -626,4 +678,5 @@ writeFileSync(resolve(OUT, 'member-balance.json'), JSON.stringify(memberBalance,
 writeFileSync(resolve(OUT, 'currency-names.json'), JSON.stringify(currencyNames, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'currency-symbols.json'), JSON.stringify(currencySymbols, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'lease.json'), JSON.stringify(lease, null, 2) + '\n')
-console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight + ${filters.cases.length} filter + ${splits.cases.length} split + ${splits.ownerOrdering.length} ownerOrdering + ${currency.toDisplay.length} currency + ${Object.keys(currencyNames).length} currency-names + ${Object.keys(currencySymbols).length} currency-symbols + ${lease.length} lease + ${dashboardMonthScope.availableMonths.length} availableMonths/${dashboardMonthScope.stepMonth.length} stepMonth + ${memberBalance.cases.length} member-balance vectors to ${OUT}`)
+writeFileSync(resolve(OUT, 'goals.json'), JSON.stringify(goals, null, 2) + '\n')
+console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight + ${filters.cases.length} filter + ${splits.cases.length} split + ${splits.ownerOrdering.length} ownerOrdering + ${currency.toDisplay.length} currency + ${Object.keys(currencyNames).length} currency-names + ${Object.keys(currencySymbols).length} currency-symbols + ${lease.length} lease + ${goals.progress.length} goal-progress/${goals.pacing.length} goal-pacing + ${dashboardMonthScope.availableMonths.length} availableMonths/${dashboardMonthScope.stepMonth.length} stepMonth + ${memberBalance.cases.length} member-balance vectors to ${OUT}`)

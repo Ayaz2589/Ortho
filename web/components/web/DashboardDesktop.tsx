@@ -4,7 +4,8 @@ import { useMemo, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useApp } from '@/lib/store'
 import type { DashboardScope } from '@/lib/useDashboardRange'
-import { generateInsights } from '@/lib/finance/insights'
+import { generateInsights, compareInsights } from '@/lib/finance/insights'
+import { goalInsights, contributionsByGoal } from '@/lib/finance/goals'
 import {
   monthlyPaymentCents,
   currentPrincipalBalanceCents,
@@ -81,7 +82,7 @@ export function DashboardDesktop({
   /** Overview | Reports toggle rendered by the Dashboard page (spec 027). */
   modeSwitch?: ReactNode
 }) {
-  const { transactions, properties, budgets, formatMoney, locale, t } = useApp()
+  const { transactions, properties, budgets, goals, goalContributions, formatMoney, locale, t } = useApp()
   const {
     now,
     range: activeRange,
@@ -148,10 +149,13 @@ export function DashboardDesktop({
   // Housing summary
   const housing = useMemo(() => housingSummary(properties), [properties])
 
-  const insights = useMemo(
-    () => generateInsights(transactions, budgets, properties, referenceDate, 2, t, locale),
-    [transactions, budgets, properties, referenceDate, t, locale]
-  )
+  const insights = useMemo(() => {
+    // Spec 027: merge the goal off-track rule (separate engine) with the base
+    // rules, re-sort by the shared order, and take the desktop's top 2.
+    const base = generateInsights(transactions, budgets, properties, referenceDate, 2, t, locale)
+    const goalIns = goalInsights(goals, contributionsByGoal(goalContributions), referenceDate, t, locale)
+    return [...base, ...goalIns].sort(compareInsights).slice(0, 2)
+  }, [transactions, budgets, properties, goals, goalContributions, referenceDate, t, locale])
 
   const rangeLabel = periodLabel
 
