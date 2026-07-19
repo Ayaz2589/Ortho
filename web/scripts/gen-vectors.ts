@@ -269,22 +269,24 @@ const insights = SCENARIOS.map((s) => ({
 // ── Transaction filter vectors ──────────────────────────────────────────────
 
 const ftx = (o: Partial<Transaction>): Transaction =>
-  ({ id: '', household_id: '00000000-0000-0000-0000-000000000201', merchant: '', category: 'dining', kind: 'expense', amount_cents: 0, source: '', date: '2026-05-15T12:00:00.000Z', created_by: '00000000-0000-0000-0000-000000000999', created_at: '', updated_at: '', owner_ids: [], shares: {}, ...o }) as Transaction
+  ({ id: '', household_id: '00000000-0000-0000-0000-000000000201', merchant: '', category: 'dining', kind: 'expense', amount_cents: 0, source: '', date: '2026-05-15T12:00:00.000Z', created_by: '00000000-0000-0000-0000-000000000999', created_at: '', updated_at: '', owner_ids: [], shares: {}, tags: [], ...o }) as Transaction
 
-// UUID-form ids so the iOS suite can decode the vectors straight into `Transaction`
-// (its ids are UUIDs); the web compares strings, so it's agnostic.
+// UUID-form ids (a stable convention from when the vectors also fed the now-frozen
+// iOS decoder); the web compares strings, so the exact form is immaterial.
 const uid = (n: string) => `00000000-0000-0000-0000-${n.padStart(12, '0')}`
 const A = uid('1'), B = uid('2'), C = uid('3'), D = uid('4')
 const U1 = uid('101'), U2 = uid('102'), H1 = uid('201')
+// Tag ids (spec 027): T1=work, T2=vacation, T3=reimbursable.
+const T1 = uid('301'), T2 = uid('302'), T3 = uid('303')
 
-// A fixed, representative set spanning scopes/categories/kinds/sources/owners/dates.
+// A fixed, representative set spanning categories/kinds/sources/owners/dates/tags/notes.
 const FSET: Transaction[] = [
-  ftx({ id: A, merchant: 'Bistro', category: 'dining', kind: 'expense', source: 'Amex Gold', household_id: H1, owner_ids: [U1], date: '2026-05-04T12:00:00.000Z' }),
-  ftx({ id: B, merchant: 'Blue Bottle', category: 'coffee', kind: 'expense', source: 'TD Bank', household_id: H1, owner_ids: [U1], date: '2026-05-10T12:00:00.000Z' }),
+  ftx({ id: A, merchant: 'Bistro', category: 'dining', kind: 'expense', source: 'Amex Gold', household_id: H1, owner_ids: [U1], date: '2026-05-04T12:00:00.000Z', tags: [T1], notes: 'client dinner' }),
+  ftx({ id: B, merchant: 'Blue Bottle', category: 'coffee', kind: 'expense', source: 'TD Bank', household_id: H1, owner_ids: [U1], date: '2026-05-10T12:00:00.000Z', tags: [T2] }),
   ftx({ id: C, merchant: 'Payroll', category: 'income', kind: 'income', source: 'TD Bank', household_id: H1, owner_ids: [U2], date: '2026-06-01T12:00:00.000Z' }),
-  ftx({ id: D, merchant: 'Whole Foods', category: 'groceries', kind: 'expense', source: 'Chase', household_id: H1, owner_ids: [U1, U2], date: '2026-04-20T12:00:00.000Z' }),
+  ftx({ id: D, merchant: 'Whole Foods', category: 'groceries', kind: 'expense', source: 'Chase', household_id: H1, owner_ids: [U1, U2], date: '2026-04-20T12:00:00.000Z', tags: [T2, T3], notes: 'reimburse from vacation fund' }),
 ]
-const FCTX: FilterContext = { ownerNames: { [U1]: 'Ayaz', [U2]: 'Tasnuva' } }
+const FCTX: FilterContext = { ownerNames: { [U1]: 'Ayaz', [U2]: 'Tasnuva' }, tagNames: { [T1]: 'work', [T2]: 'vacation', [T3]: 'reimbursable' } }
 const may = monthBounds('2026-05')
 
 const FILTER_CASES: Array<{ name: string; transactions: Transaction[]; context: FilterContext; criteria: FilterCriteria }> = [
@@ -306,6 +308,13 @@ const FILTER_CASES: Array<{ name: string; transactions: Transaction[]; context: 
   { name: 'AND: kind expense ∧ source TD Bank', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), kind: 'expense', sources: ['TD Bank'] } },
   { name: 'AND: dining ∧ May', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), categories: ['dining'], dateFrom: may.dateFrom, dateTo: may.dateTo } },
   { name: 'absent source → empty', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), sources: ['Wells Fargo'] } },
+  // Tags dimension + notes/tag-name search (spec 027).
+  { name: 'tag single (OR)', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), tags: [T1] } },
+  { name: 'tag multi (OR)', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), tags: [T1, T3] } },
+  { name: 'AND: expense ∧ tag vacation', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), kind: 'expense', tags: [T2] } },
+  { name: 'absent tag → empty', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), tags: [uid('399')] } },
+  { name: 'search tag name', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), query: 'work' } },
+  { name: 'search notes', transactions: FSET, context: FCTX, criteria: { ...emptyCriteria(), query: 'reimburse' } },
 ]
 
 const filters = {

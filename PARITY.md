@@ -9,8 +9,13 @@
 > Capacitor iOS shell of the same codebase. The frozen native app's
 > [`ios-ci.yml`](.github/workflows/ios-ci.yml) is manual-trigger-only (see below).
 
-> **Last reconciled: 2026-07-17, spec 024 (Plaid Connect — connect-only bank linking).** Spec 024
-> adds a web-only bank-connection capability with no vectored money/date logic, so it introduces no
+> **Last reconciled: 2026-07-18, spec 027 (transaction tags & richer notes).** Spec 027 adds
+> household-scoped free-form tags (a `tags` table + `transaction_tags` join) orthogonal to category,
+> plus a nullable `transactions.notes` column, and wires a tag dimension + notes/tag-name search
+> into the pure `filterTransactions` engine (re-locked in `transaction-filters.json`). It is
+> additive: a transaction with no tags/notes behaves exactly as before, and the CLI stays untagged.
+> **Spec 024 (2026-07-17, Plaid Connect — connect-only bank linking)** before it: a web-only
+> bank-connection capability with no vectored money/date logic, so it introduces no
 > new parity-matrix row; spec 018 (billing/entitlements) is likewise accounted for. The deepest
 > structural reconciliation remains **spec 021 (Capacitor iOS consolidation)** — the native SwiftUI app
 > (`iOS/Ortho-iOS/`) is retired: frozen in the repository as an unmaintained historical reference,
@@ -70,13 +75,14 @@ ever tracked between them, is in
 | Currency conversion (display) | ✅ | — (USD-only) | same as above |
 | Splits & owner shares | ✅ | ✅ | `lib/splits.ts` → `transaction-splits.json` |
 | Canonical leftover-cent order | ✅ | ✅ | `orderedOwnerIds` |
-| Transaction + shares data contract | ✅ | ✅ | columns mirrored (incl. `paid_by`) |
+| Transaction + shares data contract | ✅ | ✅ | columns mirrored (incl. `paid_by`, `notes`) |
 | Member reimbursement / settle-up balance | ✅ | — | `lib/balances.ts` → `member-balance.json` (+ `paid_by`, `transfer` kind) |
 | Atomic parent+shares write | ✅ (rollback) | ✅ (rollback) | client-side compensation on both; spec 023/B7 hardened web to **check** every compensating write and, if a rollback also fails, keep the row flagged + surface a "reload to reconcile" error rather than present a share-less row as consistent (an RPC would make it truly atomic — still tracked, out of scope) |
 | Category / kind / source taxonomy | ✅ | ✅ | Postgres `transaction_category`/`transaction_kind` enums (+ `transfer`) / `lib/types.ts` |
 | Date storage & timezone | ✅ | ✅ | noon-UTC transaction timestamps; date-only columns = local calendar day |
 | Full-UI localization (6 languages) | ✅ | — (English) | `web/lib/i18n/*` |
 | Transaction filtering / listing | ✅ | ✅ | `lib/transactionFilters.ts` → `transaction-filters.json` (CLI runs the same function in-process) |
+| Transaction tags & notes (spec 027) | ✅ | — (untagged) | `tags` + `transaction_tags` tables / `transactions.notes`; tag dimension + notes/tag-name search vectored in `lib/transactionFilters.ts` → `transaction-filters.json`. The CLI neither sets nor filters by tags (imported rows are untagged; `emptyCriteria()` carries `tags: []`). |
 | Dashboard month selection | ✅ | — | `components/dashboard/range.ts` → `dashboard-month-scope.json` / `transaction-filters.json` |
 | Insights engine | ✅ | — | `insights.json` (8/8 rules) |
 | Mortgage / housing math | ✅ | — | `lib/finance/mortgage.ts` → `mortgage.json`; net rental `lib/finance/housing.ts` → `housing-net-rental.json`; lease date math → `lease.json` |
@@ -102,7 +108,10 @@ in CI before it ships, not a cross-language honesty check:
 - **Category / kind / source taxonomy** — `lib/types.ts` is the one source of truth; the CLI
   imports it.
 - **Transaction filters** — `filterTransactions` (`lib/transactionFilters.ts`), vectored; the CLI
-  runs the same function in-process.
+  runs the same function in-process. Since spec 027 the criteria include a `tags` dimension
+  (OR-within / AND-across, like sources/owners) and the free-text query also matches `notes` and
+  tag names (via `FilterContext.tagNames`); the CLI omits `tagNames` (no tag roster) so tag-name
+  search is a no-op there.
 - **Insights** — `generateInsights`, 8/8 rules vectored.
 - **Mortgage** — `lib/finance/mortgage.ts`, vectored.
 - **Housing net rental** — occupied-only unit rent − mortgage payment

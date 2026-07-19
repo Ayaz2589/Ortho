@@ -17,6 +17,10 @@ export interface OwnerOption {
   id: string
   name: string
 }
+export interface TagOption {
+  id: string
+  name: string
+}
 export interface MonthOption {
   /** "YYYY-MM" */
   value: string
@@ -27,7 +31,7 @@ export interface MonthOption {
 /** Single source of filter state + the filtered/derived data, shared by the
  *  compact page and the desktop view. The pure `filterTransactions` does the work. */
 export function useTransactionFilters() {
-  const { transactions, resolveUser, locale } = useApp()
+  const { transactions, tags = [], resolveUser, locale } = useApp()
   const [criteria, setCriteria] = useState<FilterCriteria>(emptyCriteria)
 
   const ownerNames = useMemo(() => {
@@ -36,7 +40,14 @@ export function useTransactionFilters() {
     return m
   }, [transactions, resolveUser])
 
-  const ctx: FilterContext = useMemo(() => ({ ownerNames }), [ownerNames])
+  // tagId → name, for search-by-tag-name (spec 027).
+  const tagNames = useMemo(() => {
+    const m: Record<string, string> = {}
+    for (const t of tags) m[t.id] = t.name
+    return m
+  }, [tags])
+
+  const ctx: FilterContext = useMemo(() => ({ ownerNames, tagNames }), [ownerNames, tagNames])
 
   const ownerOptions: OwnerOption[] = useMemo(() => {
     const ids = new Set<string>()
@@ -45,6 +56,16 @@ export function useTransactionFilters() {
   }, [transactions, ownerNames])
 
   const sourceOptions = useMemo(() => availableSources(transactions), [transactions])
+
+  // Tags present on the household's transactions (excludes orphan/absent tags,
+  // FR-010), resolved to names and alphabetized (spec 027).
+  const tagOptions: TagOption[] = useMemo(() => {
+    const present = new Set<string>()
+    for (const tx of transactions) for (const id of tx.tags ?? []) present.add(id)
+    return [...present]
+      .map((id) => ({ id, name: tagNames[id] ?? id }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [transactions, tagNames])
 
   const monthOptions: MonthOption[] = useMemo(() => {
     const set = new Set<string>()
@@ -65,7 +86,7 @@ export function useTransactionFilters() {
   const selectedMonth = criteria.dateFrom ? criteria.dateFrom.slice(0, 7) : null
 
   const patch = (p: Partial<FilterCriteria>) => setCriteria((c) => ({ ...c, ...p }))
-  const toggleIn = (key: 'categories' | 'sources' | 'owners', v: string) =>
+  const toggleIn = (key: 'categories' | 'sources' | 'owners' | 'tags', v: string) =>
     setCriteria((c) => {
       const arr = c[key] as string[]
       return { ...c, [key]: arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v] }
@@ -78,6 +99,7 @@ export function useTransactionFilters() {
     ctx,
     sourceOptions,
     ownerOptions,
+    tagOptions,
     monthOptions,
     selectedMonth,
     setQuery: (v: string) => patch({ query: v }),
@@ -85,6 +107,7 @@ export function useTransactionFilters() {
     toggleCategory: (c: TransactionCategory) => toggleIn('categories', c),
     toggleSource: (s: string) => toggleIn('sources', s),
     toggleOwner: (id: string) => toggleIn('owners', id),
+    toggleTag: (id: string) => toggleIn('tags', id),
     setMonth: (yyyymm: string | null) =>
       patch(yyyymm ? monthBounds(yyyymm) : { dateFrom: null, dateTo: null }),
     clearDate: () => patch({ dateFrom: null, dateTo: null }),

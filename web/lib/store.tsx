@@ -35,6 +35,7 @@ import type {
   Person,
   Household,
   Transaction,
+  Tag,
   Card,
   Property,
   MortgageInfo,
@@ -51,6 +52,8 @@ import type {
   PersonRow,
   TransactionRow,
   TransactionShareRow,
+  TagRow,
+  TransactionTagRow,
   CardRow,
   PropertyRow,
   MortgageInfoRow,
@@ -87,6 +90,8 @@ interface AppStateValue {
   people: Person[]
   householdMembers: User[]
   transactions: Transaction[]
+  /** Household free-form tag roster (spec 027). */
+  tags: Tag[]
   cards: Card[]
   properties: Property[]
   rentalPayments: RentalPayment[]
@@ -138,6 +143,10 @@ interface AppStateValue {
   addTransaction: (tx: Transaction) => void
   updateTransaction: (tx: Transaction) => void
   deleteTransaction: (id: string) => void
+  /** Resolve a tag name to a household tag id, reusing an existing tag on a
+   *  trimmed case-insensitive match or optimistically creating a new one (spec
+   *  027). Returns the tag so a caller can attach its id immediately. */
+  addTag: (name: string) => Tag
   addCard: (name: string) => void
   deleteCard: (id: string) => void
   addProperty: (p: Property) => void
@@ -220,7 +229,8 @@ function isKnownTransactionRow(r: TransactionRow): boolean {
 function rehydrateTransactions(
   rows: TransactionRow[],
   shares: TransactionShareRow[],
-  personForUser: (createdBy: string) => string
+  personForUser: (createdBy: string) => string,
+  tagsByTx?: Map<string, string[]>
 ): Transaction[] {
   const byTx = new Map<string, TransactionShareRow[]>()
   for (const s of shares) {
@@ -229,18 +239,30 @@ function rehydrateTransactions(
     byTx.set(s.transaction_id, arr)
   }
   return rows.filter(isKnownTransactionRow).map((r) => {
+    const tags = tagsByTx?.get(r.id) ?? []
     const sh = byTx.get(r.id) ?? []
     if (sh.length === 0) {
       // A transfer (reimbursement) is directional, not co-owned — never synthesize
       // creator-owns-all for it (that would misread it as an expense).
-      if (r.kind === 'transfer') return { ...r, owner_ids: [], shares: {} }
+      if (r.kind === 'transfer') return { ...r, owner_ids: [], shares: {}, tags }
       const pid = personForUser(r.created_by)
-      return { ...r, owner_ids: [pid], shares: { [pid]: r.amount_cents } }
+      return { ...r, owner_ids: [pid], shares: { [pid]: r.amount_cents }, tags }
     }
     const owner_ids = sh.map((s) => s.person_id)
     const sharesMap = sh.reduce<Record<string, number>>((m, s) => ((m[s.person_id] = s.amount_cents), m), {})
-    return { ...r, owner_ids, shares: sharesMap }
+    return { ...r, owner_ids, shares: sharesMap, tags }
   })
+}
+
+/** Group `transaction_tags` rows into a per-transaction id list (spec 027). */
+function tagsByTransaction(rows: TransactionTagRow[]): Map<string, string[]> {
+  const m = new Map<string, string[]>()
+  for (const r of rows) {
+    const arr = m.get(r.transaction_id) ?? []
+    arr.push(r.tag_id)
+    m.set(r.transaction_id, arr)
+  }
+  return m
 }
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
@@ -254,6 +276,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [people, setPeople] = useState<Person[]>([]) // all people, incl. removed
   const [household, setHousehold] = useState<Household | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [tags, setTags] = useState<Tag[]>([])
   const [cards, setCards] = useState<Card[]>([])
   const [properties, setProperties] = useState<Property[]>([])
   const [rentalPayments, setRentalPayments] = useState<RentalPayment[]>([])
@@ -484,6 +507,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setPeople([])
       setHousehold(null)
       setTransactions([])
+      setTags([])
       setCards([])
       setProperties([])
       setRentalPayments([])
@@ -593,6 +617,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       budgetsRes,
       linkedInstRes,
       linkedAcctRes,
+      tagsRes,
+      txTagsRes,
     ] = await Promise.all([
       // Column projection (US6/P5): the three highest-volume reads fetch only the
       // fields the app uses — never select('*'). Keep these lists in lockstep with
@@ -603,7 +629,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       supabase.from('household_people').select('*').eq('household_id', householdId).order('sort_order', { ascending: true }),
       supabase
         .from('transactions')
-        .select('id, household_id, merchant, category, kind, amount_cents, source, date, created_by, created_at, updated_at, paid_by')
+        .select('id, household_id, merchant, category, kind, amount_cents, source, date, created_by, created_at, updated_at, paid_by, notes')
         .order('date', { ascending: false }),
       supabase.from('transaction_shares').select('transaction_id, person_id, amount_cents'),
       supabase.from('cards').select('*').order('created_at', { ascending: true }),
@@ -617,6 +643,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       // so no explicit household filter is needed (and clients cannot write).
       supabase.from('linked_institutions').select('*').order('created_at', { ascending: true }),
       supabase.from('linked_accounts').select('*').order('created_at', { ascending: true }),
+      // Tags (spec 027): household roster + join. Fail-open on a missing table
+      // (deploy-before-migrate window) like linked banks — a new additive
+      // feature must never take the whole bootstrap down.
+      supabase.from('tags').select('*').eq('household_id', householdId).order('created_at', { ascending: true }),
+      supabase.from('transaction_tags').select('transaction_id, tag_id'),
     ])
 
     // A failed read must surface as an error, not render as a real-looking
@@ -631,7 +662,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // window. Any OTHER error stays fail-loud like every bootstrap read.
     const missingTable = (e: { code?: string } | null | undefined) =>
       e?.code === 'PGRST205' || e?.code === '42P01'
-    for (const res of [linkedInstRes, linkedAcctRes]) {
+    for (const res of [linkedInstRes, linkedAcctRes, tagsRes, txTagsRes]) {
       if (res.error && missingTable(res.error as { code?: string })) {
         res.data = []
         res.error = null
@@ -661,7 +692,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       peopleRows.find((p) => p.linked_user_id === createdBy)?.id ?? createdBy
     const txRows = (txRes.data ?? []) as TransactionRow[]
     const shareRows = (sharesRes.data ?? []) as TransactionShareRow[]
-    setTransactions(rehydrateTransactions(txRows, shareRows, personForUser))
+    const tagJoin = tagsByTransaction((txTagsRes.data ?? []) as TransactionTagRow[])
+    setTransactions(rehydrateTransactions(txRows, shareRows, personForUser, tagJoin))
+    setTags((tagsRes.data ?? []) as TagRow[])
     setCards((cardsRes.data ?? []) as CardRow[])
 
     // stitch properties
@@ -855,6 +888,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return { ok: true }
   }
 
+  /** Replace a transaction's tag attachments (spec 027). Unlike shares, tags
+   *  carry NO sum invariant, so a failure here surfaces an error but never rolls
+   *  back the parent transaction — an untagged-but-correct row is a safe partial
+   *  state that the next loadAll reconciles. */
+  const writeTags = async (tx: Transaction): Promise<{ ok: boolean; error?: string }> => {
+    const { error: delErr } = await supabase.from('transaction_tags').delete().eq('transaction_id', tx.id)
+    if (delErr) return { ok: false, error: delErr.message }
+    const rows = (tx.tags ?? []).map((tag_id) => ({ transaction_id: tx.id, tag_id }))
+    if (rows.length) {
+      const { error: insErr } = await supabase.from('transaction_tags').insert(rows)
+      if (insErr) return { ok: false, error: insErr.message }
+    }
+    return { ok: true }
+  }
+
   const txRecord = (tx: Transaction) => ({
     id: tx.id,
     household_id: tx.household_id,
@@ -866,7 +914,35 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     date: tx.date,
     created_by: tx.created_by,
     paid_by: tx.paid_by ?? null,
+    notes: tx.notes ?? null,
   })
+
+  /** Resolve a tag name to a household tag, reusing an existing one on a trimmed
+   *  case-insensitive match or optimistically creating (spec 027). The insert is
+   *  fire-and-forget with rollback-on-failure, matching the store's other
+   *  optimistic writes; the returned tag's id is usable immediately. */
+  const addTag = (name: string): Tag => {
+    const trimmed = name.trim()
+    const existing = tags.find((t) => t.name.trim().toLowerCase() === trimmed.toLowerCase())
+    if (existing) return existing
+    const tag: Tag = {
+      id: uuid(),
+      household_id: household?.id ?? '',
+      name: trimmed,
+      created_at: new Date().toISOString(),
+    }
+    setTags((prev) => [...prev, tag])
+    ;(async () => {
+      const { error: e } = await supabase
+        .from('tags')
+        .insert({ id: tag.id, household_id: tag.household_id, name: tag.name })
+      if (e) {
+        setTags((prev) => prev.filter((t) => t.id !== tag.id))
+        setError(e.message)
+      }
+    })()
+    return tag
+  }
 
   const addTransaction = (tx: Transaction) => {
     setTransactions((prev) => [tx, ...prev])
@@ -894,7 +970,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           setTransactions((prev) => prev.filter((t) => t.id !== tx.id))
           setError(res.error ?? 'Could not save who this transaction is split between.')
         }
+        return
       }
+      // Tags are independent metadata (no sum invariant): write after shares,
+      // and a failure surfaces without rolling back the saved transaction (spec 027).
+      const tagRes = await writeTags(tx)
+      if (!tagRes.ok) setError(tagRes.error ?? 'Could not save this transaction’s tags.')
     })()
   }
 
@@ -928,7 +1009,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           }
         }
         setError(res.error ?? 'Could not save who this transaction is split between.')
+        return
       }
+      // Tags are independent metadata (no sum invariant): a failure surfaces
+      // without rolling back the saved transaction (spec 027).
+      const tagRes = await writeTags(tx)
+      if (!tagRes.ok) setError(tagRes.error ?? 'Could not save this transaction’s tags.')
     })()
   }
 
@@ -1269,6 +1355,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     people: activePeople,
     householdMembers,
     transactions,
+    tags,
     cards,
     properties,
     rentalPayments,
@@ -1294,6 +1381,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     addTransaction,
     updateTransaction,
     deleteTransaction,
+    addTag,
     addCard,
     deleteCard,
     addProperty,

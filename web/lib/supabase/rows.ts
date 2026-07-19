@@ -47,12 +47,25 @@ export interface TransactionRow {
   created_at: string
   updated_at: string
   paid_by: string | null
+  notes: string | null
 }
 
 export interface TransactionShareRow {
   transaction_id: string
   person_id: string
   amount_cents: number
+}
+
+export interface TagRow {
+  id: string
+  household_id: string
+  name: string
+  created_at: string
+}
+
+export interface TransactionTagRow {
+  transaction_id: string
+  tag_id: string
 }
 
 export interface CardRow {

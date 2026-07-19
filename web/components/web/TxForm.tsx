@@ -12,6 +12,7 @@ import { computeShares, validateSplit, orderedOwnerIds, seedSplit, type SplitInp
 import type { Transaction, TransactionCategory, TransactionKind } from '@/lib/types'
 import type { ParsedCandidate } from '@/lib/scan/scanModels'
 import { Seg, CatTile, SourceDot } from './kit'
+import { TagEditor } from './TagEditor'
 
 const INCOME_SOURCES = ['ACH · Checking', 'ACH · Joint', 'Wire']
 
@@ -194,6 +195,9 @@ export function useTxForm({
   const [source, setSource] = useState(
     src?.source ?? (initialKind === 'income' ? INCOME_SOURCES[0] : expenseSources[0] ?? '')
   )
+  // Tags + notes (spec 027). Seed from the edit/copy source; both are optional.
+  const [tags, setTags] = useState<string[]>(src?.tags ?? [])
+  const [notes, setNotes] = useState(src?.notes ?? '')
   // Edit keeps the transaction's LOCAL calendar day; add/copy default to today.
   const [date, setDate] = useState(localDayString(editing ? new Date(editing.date) : new Date()))
 
@@ -356,6 +360,8 @@ export function useTxForm({
   function loadFrom(tx: Transaction) {
     setDir(tx.kind)
     setAmount(centsToDisplay(tx.amount_cents, r, fd))
+    setTags(tx.tags ?? [])
+    setNotes(tx.notes ?? '')
     if (tx.kind === 'transfer') {
       setTransferFrom(isMember(tx.paid_by) ? tx.paid_by : defaultOwner)
       setTransferTo(isMember(tx.owner_ids[0]) ? tx.owner_ids[0] : otherMember(defaultOwner))
@@ -411,6 +417,7 @@ export function useTxForm({
   function resetForAnother() {
     setMerchant('')
     setAmount('')
+    setNotes('') // notes are transaction-specific; tags stay (contextual, like source)
     if (direction === 'expense') setCategory('groceries')
     resetSplitsToEven()
   }
@@ -429,6 +436,9 @@ export function useTxForm({
       created_by: editing?.created_by ?? currentUserId,
       created_at: editing?.created_at ?? new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      // Tags + notes ride on every kind (spec 027). Empty note stored as null.
+      tags,
+      notes: notes.trim() || null,
     }
     let tx: Transaction
     if (isTransfer) {
@@ -481,6 +491,10 @@ export function useTxForm({
     setTransferTo,
     source,
     setSource,
+    tags,
+    setTags,
+    notes,
+    setNotes,
     date,
     setDate,
     isIncome,
@@ -717,6 +731,23 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
             <Row label={t('Date')}>
               <DatePicker value={form.date} onChange={form.setDate} ariaLabel={t('Transaction date')} />
             </Row>
+          </div>
+
+          {/* Tags + notes (spec 027) — orthogonal to category, additive metadata. */}
+          <div style={{ padding: '0 28px 4px', fontSize: 12.5, color: 'var(--text-3)' }}>{t('Tags')}</div>
+          <TagEditor value={form.tags} onChange={form.setTags} />
+          <div className="ow-card" style={{ margin: '0 20px 14px' }}>
+            <div style={{ padding: '13px 20px' }}>
+              <textarea
+                className="ow-row-input"
+                aria-label={t('Notes')}
+                value={form.notes}
+                onChange={(e) => form.setNotes(e.target.value)}
+                placeholder={t('Add a note (optional)')}
+                rows={2}
+                style={{ width: '100%', resize: 'vertical', textAlign: 'left', minHeight: 44 }}
+              />
+            </div>
           </div>
 
           <div style={{ padding: '2px 28px 16px', fontSize: 12.5, lineHeight: 1.45, color: 'var(--text-3)' }}>

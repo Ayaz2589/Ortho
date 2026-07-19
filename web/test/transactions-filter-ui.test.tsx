@@ -22,10 +22,16 @@ vi.mock('@/components/web/TransactionsDesktop', () => ({ TransactionsDesktop: ()
 
 const HOUSEHOLD = { id: 'h1', owner_id: 'u1', name: 'Home', created_at: '2026-01-01' }
 let TRANSACTIONS: Transaction[] = []
+// Spec 027: household tag roster (id → name).
+const TAGS = [
+  { id: 'tag-work', household_id: 'h1', name: 'work', created_at: '2026-01-01' },
+  { id: 'tag-vacay', household_id: 'h1', name: 'vacation', created_at: '2026-01-02' },
+]
 
 vi.mock('@/lib/store', () => ({
   useApp: () => ({
     transactions: TRANSACTIONS,
+    tags: TAGS,
     currentHousehold: HOUSEHOLD,
     resolveUser: (id: string) => ({ id, name: id === 'u1' ? 'Alex' : 'Sam', initial: 'X', color_key: 'sage' }),
     formatMoney: (c: number) => `$${(c / 100).toFixed(2)}`,
@@ -57,10 +63,10 @@ function tx(over: Partial<Transaction> & Pick<Transaction, 'id' | 'merchant' | '
 // current month (June) so the default-open accordion shows them without a filter
 // — letting "cleared" assertions see the full set. (The month dimension gets its
 // own multi-month fixture, asserted with a filter active so all months expand.)
-const DINING = tx({ id: 't1', merchant: 'Dining Out', category: 'dining', kind: 'expense', source: 'TD Bank', owner_ids: ['u1'], date: '2026-06-10T12:00:00' })
+const DINING = tx({ id: 't1', merchant: 'Dining Out', category: 'dining', kind: 'expense', source: 'TD Bank', owner_ids: ['u1'], date: '2026-06-10T12:00:00', tags: ['tag-work'] })
 const GROCERY = tx({ id: 't2', merchant: 'Grocery Run', category: 'groceries', kind: 'expense', source: 'Amex Gold', owner_ids: ['u2'], date: '2026-06-12T12:00:00' })
 const PAYCHECK = tx({ id: 't3', merchant: 'Paycheck', category: 'income', kind: 'income', source: 'TD Bank', owner_ids: ['u1'], date: '2026-06-01T12:00:00' })
-const GAS = tx({ id: 't4', merchant: 'Gas Stop', category: 'fuel', kind: 'expense', source: 'Chase', owner_ids: ['u2'], date: '2026-06-20T12:00:00' })
+const GAS = tx({ id: 't4', merchant: 'Gas Stop', category: 'fuel', kind: 'expense', source: 'Chase', owner_ids: ['u2'], date: '2026-06-20T12:00:00', tags: ['tag-vacay'] })
 
 const ALL = [DINING, GROCERY, PAYCHECK, GAS]
 const MERCHANTS = ALL.map((t) => t.merchant)
@@ -196,6 +202,33 @@ describe('transactions filter UI (compact)', () => {
 
     // Sam owns Grocery Run (expense) + Gas Stop (expense); both survive.
     expect(visibleMerchants().sort()).toEqual(['Gas Stop', 'Grocery Run'])
+  })
+
+  it('US1(027): the tag multi-select narrows to transactions carrying that tag', async () => {
+    const user = setup()
+    await openFilters(user)
+    await user.click(panelChip('vacation')) // only Gas Stop is tagged vacation
+
+    expect(visibleMerchants()).toEqual(['Gas Stop'])
+    expect(screen.getByRole('button', { name: /Filters \(1 active\)/ })).toBeInTheDocument()
+  })
+
+  it('US1(027): only tags present on transactions are offered, alphabetized', async () => {
+    const user = setup()
+    await openFilters(user)
+    // Both 'work' and 'vacation' are present; a third roster tag with no tx would not appear.
+    expect(panelChip('work')).toBeInTheDocument()
+    expect(panelChip('vacation')).toBeInTheDocument()
+  })
+
+  it('US1(027): an active tag chip removes just the tag dimension', async () => {
+    const user = setup()
+    await openFilters(user)
+    await user.click(panelChip('vacation'))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    await user.click(screen.getByRole('button', { name: 'Remove vacation filter' }))
+    expect(visibleMerchants().sort()).toEqual([...MERCHANTS].sort())
   })
 
   it('active filter chips remove a single dimension', async () => {

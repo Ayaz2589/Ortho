@@ -83,6 +83,19 @@ export function FilterPanel({ f }: { f: TxFilters }) {
         </section>
       )}
 
+      {f.tagOptions.length > 0 && (
+        <section className="flex flex-col gap-2.5">
+          <SectionLabel>{t('Tags')}</SectionLabel>
+          <div className="flex flex-wrap gap-2">
+            {f.tagOptions.map((tag) => (
+              <Chip key={tag.id} active={f.criteria.tags.includes(tag.id)} onClick={() => f.toggleTag(tag.id)} label={tag.name}>
+                {tag.name}
+              </Chip>
+            ))}
+          </div>
+        </section>
+      )}
+
       {f.ownerOptions.length > 1 && (
         <section className="flex flex-col gap-2.5">
           <SectionLabel>{t('Owner')}</SectionLabel>
