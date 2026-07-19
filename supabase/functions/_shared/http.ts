@@ -33,6 +33,10 @@ export type ErrorCode =
   | 'exchange_failed'
   | 'institution_not_found'
   | 'disconnect_failed'
+  // spec 028 (simplefin-* functions)
+  | 'claim_failed'
+  | 'rate_limited'
+  | 'sync_failed'
 
 const ERROR_STATUS: Record<ErrorCode, number> = {
   unauthenticated: 401,
@@ -49,6 +53,9 @@ const ERROR_STATUS: Record<ErrorCode, number> = {
   exchange_failed: 502,
   institution_not_found: 404,
   disconnect_failed: 502,
+  claim_failed: 502,
+  rate_limited: 429,
+  sync_failed: 502,
 }
 
 // Messages are safe, calm copy-source text; clients localize by `code`.
@@ -67,6 +74,9 @@ const ERROR_MESSAGE: Record<ErrorCode, string> = {
   exchange_failed: 'The connection could not be completed. Try again.',
   institution_not_found: 'That linked bank was not found.',
   disconnect_failed: 'Disconnecting did not go through. Try again.',
+  claim_failed: 'That setup token could not be used. Get a fresh one and try again.',
+  rate_limited: 'Just updated — try again in a little while.',
+  sync_failed: 'Updating transactions did not finish. Try again.',
 }
 
 export function errorResponse(code: ErrorCode): Response {

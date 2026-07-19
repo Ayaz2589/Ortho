@@ -107,7 +107,7 @@ describe('toUpsertPayload — ledger mapping + default split (research D6/D7)', 
     householdId: 'hh-1',
     createdBy: 'user-1',
     defaultPersonId: 'person-1',
-    defaultCategory: 'other',
+    defaultExpenseCategory: 'entertainment',
   }
   const txn: SimpleFinTransaction = {
     providerAccountId: 'acct-1',
@@ -126,7 +126,7 @@ describe('toUpsertPayload — ledger mapping + default split (research D6/D7)', 
     expect(p.tx).toMatchObject({
       household_id: 'hh-1',
       merchant: 'Cafe',
-      category: 'other',
+      category: 'entertainment',
       kind: 'expense',
       amount_cents: 3345,
       source: dedupeKey('acct-1', 't1'),
@@ -149,5 +149,10 @@ describe('toUpsertPayload — ledger mapping + default split (research D6/D7)', 
 
   it('falls back to a placeholder merchant when description is empty', () => {
     expect(toUpsertPayload({ ...txn, description: '' }, ctx).tx.merchant).toBe('Bank transaction')
+  })
+
+  it('maps income to the income category regardless of the expense default', () => {
+    const income: SimpleFinTransaction = { ...txn, kind: 'income', amountCents: 250000 }
+    expect(toUpsertPayload(income, ctx).tx.category).toBe('income')
   })
 })

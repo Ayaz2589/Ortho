@@ -160,8 +160,10 @@ export interface UpsertContext {
   createdBy: string
   /** household_people id that receives the default 100% split (research D7). */
   defaultPersonId: string
-  /** Default transaction_category enum value for synced rows. */
-  defaultCategory: string
+  /** transaction_category for unmatched EXPENSES. Mirrors the CLI import engine's
+   *  documented fallback ('entertainment'); income always maps to 'income'.
+   *  Richer merchant-rule categorization is a future enhancement (research D7). */
+  defaultExpenseCategory: string
 }
 
 export interface UpsertPayload {
@@ -190,7 +192,8 @@ export function toUpsertPayload(txn: SimpleFinTransaction, ctx: UpsertContext): 
       id: ledgerId(txn.providerAccountId, txn.providerTxnId),
       household_id: ctx.householdId,
       merchant: txn.description || 'Bank transaction',
-      category: ctx.defaultCategory,
+      // income → 'income'; unmatched expense → the import-engine fallback.
+      category: txn.kind === 'income' ? 'income' : ctx.defaultExpenseCategory,
       kind: txn.kind,
       amount_cents: txn.amountCents,
       source: dedupeKey(txn.providerAccountId, txn.providerTxnId),
