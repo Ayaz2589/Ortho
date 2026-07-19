@@ -70,6 +70,7 @@ Overview|Reports mode, and Budgets/Goals live under Settings → Planning, not e
 | [./future_tasks/index.md](./future_tasks/index.md) | …browsing the backlog: the idea pool (one file per §N.M item) + the §9 commercial-readiness track with statuses. |
 | [./archive/PARITY-2026-07-08.md](./archive/PARITY-2026-07-08.md) | …needing pre-021 web-vs-iOS parity history. |
 | [./research/finance-habits-budgeting-apps.md](./research/finance-habits-budgeting-apps.md) | …making seed/corpus data realistic: sourced numbers on real household money behavior. |
+| [./research/competetive-analysis/plaid-integration-competitive-analysis.md](./research/competetive-analysis/plaid-integration-competitive-analysis.md) | …planning how to evolve Plaid from connect-only (spec 024) to transaction sync: `/transactions/sync` + webhooks + billing models + re-auth, competitor stances, CFPB 1033. |
 | [./sandbox/sandbox-history.md](./sandbox/sandbox-history.md) | …managing `sbx` Docker Sandboxes (host-local registry; see the `docker-sandbox` / `kill-sandbox` skills). |
 
 ## 4. The golden path (fresh sandbox)
