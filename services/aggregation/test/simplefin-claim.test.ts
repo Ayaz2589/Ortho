@@ -2,6 +2,7 @@
 // display metadata. Mocked fetch (text + json) — no live Bridge account.
 import { describe, expect, it } from 'vitest'
 import {
+  base64Encode,
   createSimpleFinClient,
   institutionLabel,
   parseAccessUrl,
@@ -20,6 +21,13 @@ describe('parseAccessUrl — split credentials into base URL + Basic auth header
 
   it('returns null when there are no credentials', () => {
     expect(parseAccessUrl('https://bridge.simplefin.org/simplefin')).toBeNull()
+  })
+
+  it('handles a password that itself contains @ (splits on the last @)', () => {
+    const parsed = parseAccessUrl('https://demo:se@cret@bridge.simplefin.org/simplefin')
+    expect(parsed).not.toBeNull()
+    expect(parsed!.baseUrl).toBe('https://bridge.simplefin.org/simplefin')
+    expect(parsed!.authHeader).toBe(`Basic ${base64Encode('demo:se@cret')}`)
   })
 })
 

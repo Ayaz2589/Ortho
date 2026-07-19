@@ -24,7 +24,9 @@ export type SimpleFinResult<T> = { ok: true; data: T } | SimpleFinFailure
  *  malformed or carries no credentials. fetch() in browsers/Deno rejects userinfo
  *  in the URL, so credentials MUST move to the Authorization header. */
 export function parseAccessUrl(accessUrl: string): { baseUrl: string; authHeader: string } | null {
-  const m = /^(https?:\/\/)([^/@]+)@(.+)$/.exec(accessUrl.trim())
+  // Greedy userinfo `(.+)` splits on the LAST '@' so a Basic-Auth password may
+  // itself contain '@'; the host+path segment after it carries no '@'.
+  const m = /^(https?:\/\/)(.+)@([^@]+)$/.exec(accessUrl.trim())
   if (!m) return null
   const scheme = m[1]
   const userinfo = m[2]

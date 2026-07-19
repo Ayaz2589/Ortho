@@ -106,14 +106,26 @@ Deno.serve(async (req) => {
     defaultExpenseCategory: DEFAULT_EXPENSE_CATEGORY,
   }
 
-  const payloads = parsed.transactions.map((t) => toUpsertPayload(t, ctx))
+  // A pending transaction can arrive with no date (posted=0, no transacted_at).
+  // Fall back to sync time so it never lands on the 1970 epoch; when it later
+  // posts with a real date, the same deterministic ledger id updates it in place.
+  const nowSec = Math.floor(nowMs / 1000)
+  const payloads = parsed.transactions.map((t) =>
+    toUpsertPayload(t.postedAt > 0 ? t : { ...t, postedAt: nowSec }, ctx)
+  )
 
   // Split imported vs updated by checking which ledger ids already exist.
   let imported = 0
   let updated = 0
   if (payloads.length > 0) {
     const ids = payloads.map((p) => p.tx.id)
-    const { data: existing } = await service.from('transactions').select('id').in('id', ids)
+    // Scope by household — the ledger id is already household-namespaced, but keep
+    // the read inside the household boundary too (defense in depth).
+    const { data: existing } = await service
+      .from('transactions')
+      .select('id')
+      .eq('household_id', institution.household_id)
+      .in('id', ids)
     const existingIds = new Set((existing ?? []).map((r: { id: string }) => r.id))
     for (const p of payloads) {
       const { error: upsertError } = await service.rpc('upsert_transaction', {

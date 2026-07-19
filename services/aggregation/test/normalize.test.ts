@@ -103,15 +103,19 @@ describe('deriveProviderItemId', () => {
 describe('dedupe key + deterministic ledger id (research D6)', () => {
   it('keys on (account, txn) so cross-account id reuse does not collide', () => {
     expect(dedupeKey('acctA', 'txn1')).not.toBe(dedupeKey('acctB', 'txn1'))
-    expect(ledgerId('acctA', 'txn1')).not.toBe(ledgerId('acctB', 'txn1'))
+    expect(ledgerId('hh', 'acctA', 'txn1')).not.toBe(ledgerId('hh', 'acctB', 'txn1'))
+  })
+
+  it('is scoped by household so two households never collide on one ledger row', () => {
+    expect(ledgerId('hhA', 'acctA', 'txn1')).not.toBe(ledgerId('hhB', 'acctA', 'txn1'))
   })
 
   it('is stable across calls (idempotent re-sync)', () => {
-    expect(ledgerId('acctA', 'txn1')).toBe(ledgerId('acctA', 'txn1'))
+    expect(ledgerId('hh', 'acctA', 'txn1')).toBe(ledgerId('hh', 'acctA', 'txn1'))
   })
 
   it('formats as a canonical UUID', () => {
-    expect(ledgerId('acctA', 'txn1')).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
+    expect(ledgerId('hh', 'acctA', 'txn1')).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
   })
 
   it('hexToUuid pads and segments correctly', () => {

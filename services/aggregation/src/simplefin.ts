@@ -189,7 +189,7 @@ export interface UpsertPayload {
 export function toUpsertPayload(txn: SimpleFinTransaction, ctx: UpsertContext): UpsertPayload {
   return {
     tx: {
-      id: ledgerId(txn.providerAccountId, txn.providerTxnId),
+      id: ledgerId(ctx.householdId, txn.providerAccountId, txn.providerTxnId),
       household_id: ctx.householdId,
       merchant: txn.description || 'Bank transaction',
       // income → 'income'; unmatched expense → the import-engine fallback.

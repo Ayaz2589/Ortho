@@ -16,7 +16,7 @@
 -- for SimpleFIN the stored secret is the Access URL (with embedded Basic-Auth).
 --
 -- Idempotent column adds (add ... if not exists) per the repo migration
--- conventions. The 'simplefin' enum value is committed by 20260719120000.
+-- conventions. The 'simplefin' enum value is committed by 20260719130000.
 -- ============================================================================
 
 -- ── Sync state (research D5) ─────────────────────────────────────────────────

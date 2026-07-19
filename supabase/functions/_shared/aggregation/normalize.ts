@@ -76,9 +76,11 @@ export function hexToUuid(hex32: string): string {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
 }
 
-/** Deterministic ledger-row id for a synced transaction: same (account, txn) →
- *  same UUID across every sync, so `upsert_transaction`'s `on conflict (id)` makes
- *  re-syncs idempotent and pending→posted an in-place update (research D6). */
-export function ledgerId(providerAccountId: string, providerTxnId: string): string {
-  return hexToUuid(hash128Hex(dedupeKey(providerAccountId, providerTxnId)))
+/** Deterministic ledger-row id for a synced transaction: same (household, account,
+ *  txn) → same UUID across every sync, so `upsert_transaction`'s `on conflict (id)`
+ *  makes re-syncs idempotent and pending→posted an in-place update (research D6).
+ *  The household is part of the hash so two households whose banks happen to reuse
+ *  the same (account id, txn id) never collide on one ledger row. */
+export function ledgerId(householdId: string, providerAccountId: string, providerTxnId: string): string {
+  return hexToUuid(hash128Hex(`${householdId}:${dedupeKey(providerAccountId, providerTxnId)}`))
 }

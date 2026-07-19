@@ -122,7 +122,7 @@ describe('toUpsertPayload — ledger mapping + default split (research D6/D7)', 
 
   it('produces a deterministic id and a single full-amount share', () => {
     const p = toUpsertPayload(txn, ctx)
-    expect(p.tx.id).toBe(ledgerId('acct-1', 't1'))
+    expect(p.tx.id).toBe(ledgerId('hh-1', 'acct-1', 't1'))
     expect(p.tx).toMatchObject({
       household_id: 'hh-1',
       merchant: 'Cafe',
