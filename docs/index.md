@@ -71,6 +71,7 @@ Overview|Reports mode, and Budgets/Goals live under Settings → Planning, not e
 | [./archive/PARITY-2026-07-08.md](./archive/PARITY-2026-07-08.md) | …needing pre-021 web-vs-iOS parity history. |
 | [./research/finance-habits-budgeting-apps.md](./research/finance-habits-budgeting-apps.md) | …making seed/corpus data realistic: sourced numbers on real household money behavior. |
 | [./research/competetive-analysis/plaid-integration-competitive-analysis.md](./research/competetive-analysis/plaid-integration-competitive-analysis.md) | …planning how to evolve Plaid from connect-only (spec 024) to transaction sync: `/transactions/sync` + webhooks + billing models + re-auth, competitor stances, CFPB 1033. |
+| [./research/competetive-analysis/simplefin-developer-analysis.md](./research/competetive-analysis/simplefin-developer-analysis.md) | …evaluating SimpleFIN (Bridge) as a cheap/privacy-forward second bank-sync provider behind the `linked_provider` seam: token flow, the read-only `/accounts` API, decimal-string amounts, pull-only dedupe, and how it compares to Plaid. |
 | [./sandbox/sandbox-history.md](./sandbox/sandbox-history.md) | …managing `sbx` Docker Sandboxes (host-local registry; see the `docker-sandbox` / `kill-sandbox` skills). |
 
 ## 4. The golden path (fresh sandbox)
