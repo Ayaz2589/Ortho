@@ -27,7 +27,7 @@
 -- ============================================================================
 -- 1. transactions.notes (additive, nullable)
 -- ============================================================================
-alter table public.transactions add column notes text;
+alter table public.transactions add column if not exists notes text;
 
 -- ============================================================================
 -- 2. tags — the per-household label roster
