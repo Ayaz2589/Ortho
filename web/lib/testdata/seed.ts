@@ -127,8 +127,10 @@ export function buildSeedTables(): { authUser: typeof SEED_AUTH_USER; tables: Re
   ]
 
   const budgets = [
-    { id: 'testdata-budget-groceries', household_id: HH, category: 'groceries', monthly_limit_cents: 60000 },
-    { id: 'testdata-budget-dining', household_id: HH, category: 'dining', monthly_limit_cents: 25000 },
+    // groceries is a Flex bucket (spec 027) so test-data mode exercises rollover;
+    // dining stays Fixed. created_at anchors carry accrual a few months back.
+    { id: 'testdata-budget-groceries', household_id: HH, category: 'groceries', monthly_limit_cents: 60000, budget_type: 'flex', rollover_cap_cents: null, created_at: iso(120) },
+    { id: 'testdata-budget-dining', household_id: HH, category: 'dining', monthly_limit_cents: 25000, budget_type: 'fixed', rollover_cap_cents: null, created_at: iso(120) },
   ]
 
   return {

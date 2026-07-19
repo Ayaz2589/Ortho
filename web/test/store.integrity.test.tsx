@@ -290,7 +290,7 @@ describe('budget rollback', () => {
     await renderStore()
 
     act(() =>
-      api.addOrUpdateBudget({ id: 'b-new', household_id: 'hh-1', category: 'dining', monthly_limit_cents: 20_000 })
+      api.addOrUpdateBudget({ id: 'b-new', household_id: 'hh-1', category: 'dining', monthly_limit_cents: 20_000, budget_type: 'fixed', rollover_cap_cents: null })
     )
     await waitFor(() => expect(api.error).toMatch(/budget save failed/))
     expect(api.budgets.find((b) => b.category === 'dining')).toBeUndefined()

@@ -51,6 +51,8 @@
         {
           "id": "b",
           "household_id": "h",
+          "budget_type": "fixed",
+          "rollover_cap_cents": null,
           "category": "dining",
           "monthly_limit_cents": 30000
         }
@@ -187,6 +189,8 @@
         {
           "id": "b",
           "household_id": "h",
+          "budget_type": "fixed",
+          "rollover_cap_cents": null,
           "category": "dining",
           "monthly_limit_cents": 30000
         }
@@ -269,6 +273,8 @@
         {
           "id": "b",
           "household_id": "h",
+          "budget_type": "fixed",
+          "rollover_cap_cents": null,
           "category": "dining",
           "monthly_limit_cents": 30000
         }
@@ -914,5 +920,168 @@
       "properties": []
     },
     "expected": []
+  },
+  {
+    "input": {
+      "name": "flex budget carried surplus raises the effective limit",
+      "referenceDate": "2026-06-15",
+      "transactions": [
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "dining",
+          "amount_cents": 5000,
+          "date": "2026-05-08",
+          "merchant": "Bistro"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "dining",
+          "amount_cents": 48000,
+          "date": "2026-06-09",
+          "merchant": "Cafe"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "income",
+          "category": "income",
+          "amount_cents": 100000,
+          "date": "2026-06-02",
+          "merchant": "Payroll"
+        }
+      ],
+      "budgets": [
+        {
+          "id": "b",
+          "household_id": "h",
+          "budget_type": "flex",
+          "rollover_cap_cents": null,
+          "category": "dining",
+          "monthly_limit_cents": 30000,
+          "created_at": "2026-05-01T12:00:00.000Z"
+        }
+      ],
+      "properties": []
+    },
+    "expected": [
+      {
+        "id": "budget-near-dining-2026-06",
+        "severity": "warning",
+        "category": "dining",
+        "magnitude_cents": 48000,
+        "preview_merchants": []
+      },
+      {
+        "id": "mom-dining-2026-06",
+        "severity": "warning",
+        "category": "dining",
+        "magnitude_cents": 43000,
+        "preview_merchants": []
+      },
+      {
+        "id": "top-category-dining-2026-06",
+        "severity": "info",
+        "category": "dining",
+        "magnitude_cents": 48000,
+        "preview_merchants": []
+      },
+      {
+        "id": "cashflow-savings-2026-06",
+        "severity": "positive",
+        "category": null,
+        "magnitude_cents": 52000,
+        "preview_merchants": []
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "non_monthly sinking fund effective limit on a periodic bill",
+      "referenceDate": "2026-06-15",
+      "transactions": [
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "expense",
+          "category": "dining",
+          "amount_cents": 40000,
+          "date": "2026-06-10",
+          "merchant": "Caterer"
+        },
+        {
+          "owner_ids": [],
+          "shares": {},
+          "household_id": "h",
+          "source": "",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "kind": "income",
+          "category": "income",
+          "amount_cents": 100000,
+          "date": "2026-06-02",
+          "merchant": "Payroll"
+        }
+      ],
+      "budgets": [
+        {
+          "id": "b",
+          "household_id": "h",
+          "budget_type": "non_monthly",
+          "rollover_cap_cents": null,
+          "category": "dining",
+          "monthly_limit_cents": 5000,
+          "created_at": "2026-01-01T12:00:00.000Z"
+        }
+      ],
+      "properties": []
+    },
+    "expected": [
+      {
+        "id": "budget-over-dining-2026-06",
+        "severity": "critical",
+        "category": "dining",
+        "magnitude_cents": 10000,
+        "preview_merchants": []
+      },
+      {
+        "id": "top-category-dining-2026-06",
+        "severity": "info",
+        "category": "dining",
+        "magnitude_cents": 40000,
+        "preview_merchants": []
+      },
+      {
+        "id": "cashflow-savings-2026-06",
+        "severity": "positive",
+        "category": null,
+        "magnitude_cents": 60000,
+        "preview_merchants": []
+      }
+    ]
   }
 ]

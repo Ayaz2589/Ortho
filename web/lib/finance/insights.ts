@@ -1,6 +1,7 @@
 import type { Transaction, Budget, Property, Insight, TransactionCategory } from '../types'
 import { CATEGORIES } from '../categories'
 import { monthlyPaymentCents } from './mortgage'
+import { budgetStatusForMonth } from './budgets'
 import { INSIGHT_THRESHOLDS as T } from './insights-thresholds'
 
 // Insights mirror the iOS InsightEngine. Money is rendered in USD with 2
@@ -132,38 +133,45 @@ export function generateInsights(
   }
 
   // --- Rule 3: Budget status ---
+  // Rollover-aware (spec 027): compare spend against the EFFECTIVE limit
+  // (base + carried surplus/shortfall), so the insight can't contradict the
+  // dashboard card. For `fixed` budgets the effective limit equals the base and
+  // carriedIn is 0, so this is byte-identical to the pre-027 behavior.
   for (const b of budgets) {
     if (b.monthly_limit_cents <= 0) continue
-    const spent = monthByCat.get(b.category) ?? 0
-    const fraction = spent / b.monthly_limit_cents
+    const status = budgetStatusForMonth(b, transactions, now)
+    const limit = status.effectiveLimitCents
+    const spent = status.spentCents
+    if (limit <= 0) continue
+    const fraction = spent / limit
     if (fraction >= T.budgetOverFraction) {
-      const over = spent - b.monthly_limit_cents
+      const over = spent - limit
       out.push({
         id: `budget-over-${b.category}-${monthTag(now)}`,
         title: tr('Over budget on {0}', tr(catLabel(b.category))),
-        body: tr("You're {0} over your {1} limit with {2} days left.", usd(over), usd(b.monthly_limit_cents), daysLeft),
+        body: tr("You're {0} over your {1} limit with {2} days left.", usd(over), usd(limit), daysLeft),
         severity: 'critical',
         icon: 'alert',
         category: b.category,
         magnitude_cents: over,
       })
     } else if (fraction >= T.budgetNearFraction) {
-      const remaining = b.monthly_limit_cents - spent
+      const remaining = limit - spent
       out.push({
         id: `budget-near-${b.category}-${monthTag(now)}`,
         title: tr('Approaching {0} limit', tr(catLabel(b.category))),
-        body: tr('{0} left of {1} with {2} days to go.', usd(remaining), usd(b.monthly_limit_cents), daysLeft),
+        body: tr('{0} left of {1} with {2} days to go.', usd(remaining), usd(limit), daysLeft),
         severity: 'warning',
         icon: 'gauge',
         category: b.category,
         magnitude_cents: spent,
       })
     } else if (fraction <= T.budgetUnderFraction && monthProgress >= T.budgetUnderProgress) {
-      const remaining = b.monthly_limit_cents - spent
+      const remaining = limit - spent
       out.push({
         id: `budget-under-${b.category}-${monthTag(now)}`,
         title: tr('Under budget on {0}', tr(catLabel(b.category))),
-        body: tr('{0} of {1} still available with {2} days left.', usd(remaining), usd(b.monthly_limit_cents), daysLeft),
+        body: tr('{0} of {1} still available with {2} days left.', usd(remaining), usd(limit), daysLeft),
         severity: 'positive',
         icon: 'check',
         category: b.category,

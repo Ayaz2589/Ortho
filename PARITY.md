@@ -9,9 +9,12 @@
 > Capacitor iOS shell of the same codebase. The frozen native app's
 > [`ios-ci.yml`](.github/workflows/ios-ci.yml) is manual-trigger-only (see below).
 
-> **Last reconciled: 2026-07-17, spec 024 (Plaid Connect — connect-only bank linking).** Spec 024
-> adds a web-only bank-connection capability with no vectored money/date logic, so it introduces no
-> new parity-matrix row; spec 018 (billing/entitlements) is likewise accounted for. The deepest
+> **Last reconciled: 2026-07-19, spec 027 (Budget rollover & bucket types).** Spec 027 adds a new
+> vectored money engine (`lib/finance/budgets.ts` → `budget-rollover.json`) and a new parity-matrix
+> row; it also makes the budget insight (Rule 3) rollover-aware against the derived effective limit,
+> byte-identical for the `fixed` default. Earlier: **spec 024 (Plaid Connect — connect-only bank
+> linking)** adds a web-only bank-connection capability with no vectored money/date logic, so it
+> introduces no new parity-matrix row; spec 018 (billing/entitlements) is likewise accounted for. The deepest
 > structural reconciliation remains **spec 021 (Capacitor iOS consolidation)** — the native SwiftUI app
 > (`iOS/Ortho-iOS/`) is retired: frozen in the repository as an unmaintained historical reference,
 > no new feature work. iOS ships going forward from the **same** web/TypeScript codebase, wrapped
@@ -78,7 +81,8 @@ ever tracked between them, is in
 | Full-UI localization (6 languages) | ✅ | — (English) | `web/lib/i18n/*` |
 | Transaction filtering / listing | ✅ | ✅ | `lib/transactionFilters.ts` → `transaction-filters.json` (CLI runs the same function in-process) |
 | Dashboard month selection | ✅ | — | `components/dashboard/range.ts` → `dashboard-month-scope.json` / `transaction-filters.json` |
-| Insights engine | ✅ | — | `insights.json` (8/8 rules) |
+| Insights engine | ✅ | — | `insights.json` (8/8 rules; Rule 3 rollover-aware since spec 027) |
+| Budget rollover & bucket types | ✅ | — | `lib/finance/budgets.ts` → `budget-rollover.json` (spec 027 — fixed/flex/non_monthly carry; the derived effective limit also drives the budget insight) |
 | Mortgage / housing math | ✅ | — | `lib/finance/mortgage.ts` → `mortgage.json`; net rental `lib/finance/housing.ts` → `housing-net-rental.json`; lease date math → `lease.json` |
 | On-device receipt/statement scanning | ✅ (native Capacitor plugin) | — | `web/lib/scan/*` (parsing/heuristics, TS) + `web/ios/App/App/Plugins/Scan/` (capture/OCR/PDF, Swift) — see "Surface-specific" below |
 | Auth (email-OTP, 8-digit) | ✅ | ⚠️ | each calls the Supabase SDK; the CLI's OTP sign-in path differs by necessity (headless) |
@@ -103,7 +107,12 @@ in CI before it ships, not a cross-language honesty check:
   imports it.
 - **Transaction filters** — `filterTransactions` (`lib/transactionFilters.ts`), vectored; the CLI
   runs the same function in-process.
-- **Insights** — `generateInsights`, 8/8 rules vectored.
+- **Insights** — `generateInsights`, 8/8 rules vectored. Rule 3 (budget status)
+  compares spend against the rollover-aware **effective** limit (spec 027);
+  `fixed` budgets are byte-identical to the pre-027 output.
+- **Budget rollover** — `computeRolloverLedger` (`lib/finance/budgets.ts`),
+  vectored by `budget-rollover.json`: the fixed/flex/non_monthly carry recurrence
+  in integer cents. Carry is derived from the ledger, never stored.
 - **Mortgage** — `lib/finance/mortgage.ts`, vectored.
 - **Housing net rental** — occupied-only unit rent − mortgage payment
   (`lib/finance/housing.ts`), vectored by `housing-net-rental.json`.

@@ -147,11 +147,22 @@ export interface RentalPayment {
   created_at: string
 }
 
+/** How a budget behaves month to month (spec 027). `fixed` = reset monthly
+ *  (the pre-027 behavior and the migration default); `flex` = unused remainder
+ *  rolls forward, overspend forgiven; `non_monthly` = signed sinking fund. */
+export type BudgetType = 'fixed' | 'flex' | 'non_monthly'
+
 export interface Budget {
   id: string
   household_id: string
   category: TransactionCategory
+  /** Base monthly limit (integer USD cents). Rollover builds on top of this. */
   monthly_limit_cents: number
+  budget_type: BudgetType
+  /** Flex-only cap on accumulated carry (cents); null = uncapped. */
+  rollover_cap_cents: number | null
+  /** Carry anchor — the month carry begins accruing. Present from the DB row. */
+  created_at?: string
 }
 
 /** Aggregation provider seam (spec 024): a second provider extends this union
