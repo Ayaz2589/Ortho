@@ -9,9 +9,12 @@
 > Capacitor iOS shell of the same codebase. The frozen native app's
 > [`ios-ci.yml`](.github/workflows/ios-ci.yml) is manual-trigger-only (see below).
 
-> **Last reconciled: 2026-07-17, spec 024 (Plaid Connect — connect-only bank linking).** Spec 024
-> adds a web-only bank-connection capability with no vectored money/date logic, so it introduces no
-> new parity-matrix row; spec 018 (billing/entitlements) is likewise accounted for. The deepest
+> **Last reconciled: 2026-07-18, spec 027 (Savings & debt-payoff goals).** Spec 027 adds a web-only
+> planning surface with a new vectored money/date engine (`lib/finance/goals.ts` → `goals.json`) and
+> one off-track insight rule; it adds the "Savings / debt-payoff goals" matrix row below and a
+> regression-core bullet. The CLI has no goals path. Earlier: spec 024 (Plaid Connect — connect-only
+> bank linking) added a web-only bank-connection capability with no vectored money/date logic, so it
+> introduced no parity-matrix row; spec 018 (billing/entitlements) is likewise accounted for. The deepest
 > structural reconciliation remains **spec 021 (Capacitor iOS consolidation)** — the native SwiftUI app
 > (`iOS/Ortho-iOS/`) is retired: frozen in the repository as an unmaintained historical reference,
 > no new feature work. iOS ships going forward from the **same** web/TypeScript codebase, wrapped
@@ -79,6 +82,7 @@ ever tracked between them, is in
 | Transaction filtering / listing | ✅ | ✅ | `lib/transactionFilters.ts` → `transaction-filters.json` (CLI runs the same function in-process) |
 | Dashboard month selection | ✅ | — | `components/dashboard/range.ts` → `dashboard-month-scope.json` / `transaction-filters.json` |
 | Insights engine | ✅ | — | `insights.json` (8/8 rules) |
+| Savings / debt-payoff goals | ✅ | — | `lib/finance/goals.ts` → `goals.json` (progress + off-track pacing; spec 027) |
 | Mortgage / housing math | ✅ | — | `lib/finance/mortgage.ts` → `mortgage.json`; net rental `lib/finance/housing.ts` → `housing-net-rental.json`; lease date math → `lease.json` |
 | On-device receipt/statement scanning | ✅ (native Capacitor plugin) | — | `web/lib/scan/*` (parsing/heuristics, TS) + `web/ios/App/App/Plugins/Scan/` (capture/OCR/PDF, Swift) — see "Surface-specific" below |
 | Auth (email-OTP, 8-digit) | ✅ | ⚠️ | each calls the Supabase SDK; the CLI's OTP sign-in path differs by necessity (headless) |
@@ -110,6 +114,9 @@ in CI before it ships, not a cross-language honesty check:
 - **Dashboard month scope** — `availableMonths` / `monthReferenceDate` / `stepMonth`
   (`components/dashboard/range.ts`), vectored by `dashboard-month-scope.json`.
 - **Member balance** — `balanceBetween` (`lib/balances.ts`), vectored by `member-balance.json`.
+- **Savings goals** — `goalProgress` / `goalPacing` (`lib/finance/goals.ts`), vectored by `goals.json`
+  (spec 027). The off-track rule is a separate engine so `insights.json` stays byte-stable; its
+  `Insight` output merges into the dashboard consumers via the exported `compareInsights`.
 
 ## Known divergences (live — web vs. CLI)
 

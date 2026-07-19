@@ -1,4 +1,4 @@
-import type { Transaction, Budget, Property, Insight, TransactionCategory } from '../types'
+import type { Transaction, Budget, Property, Insight, TransactionCategory, InsightSeverity } from '../types'
 import { CATEGORIES } from '../categories'
 import { monthlyPaymentCents } from './mortgage'
 import { INSIGHT_THRESHOLDS as T } from './insights-thresholds'
@@ -361,10 +361,24 @@ export function generateInsights(
   }
 
   // Sort by severity asc (critical first), tie-break magnitude desc.
-  const order = { critical: 0, warning: 1, info: 2, positive: 3 }
-  out.sort((a, b) => {
-    if (order[a.severity] !== order[b.severity]) return order[a.severity] - order[b.severity]
-    return b.magnitude_cents - a.magnitude_cents
-  })
+  out.sort(compareInsights)
   return out.slice(0, limit)
+}
+
+/** Severity ordering for the insight list: critical first, then warning, info,
+ *  positive; ties broken by magnitude descending. Exported (spec 027) so the
+ *  goal off-track insights (`lib/finance/goals.ts`) merge into the same ordering
+ *  as the base rules in the dashboard consumers. Extracted verbatim from the
+ *  former inline sort — no behavior change to `generateInsights`/`insights.json`. */
+const SEVERITY_ORDER: Record<InsightSeverity, number> = {
+  critical: 0,
+  warning: 1,
+  info: 2,
+  positive: 3,
+}
+export function compareInsights(a: Insight, b: Insight): number {
+  if (SEVERITY_ORDER[a.severity] !== SEVERITY_ORDER[b.severity]) {
+    return SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]
+  }
+  return b.magnitude_cents - a.magnitude_cents
 }

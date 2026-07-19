@@ -5,7 +5,7 @@ the web (TypeScript) and iOS (Swift) clients. Both test suites assert against
 these exact files, so neither language can silently drift. This is the cheap,
 no-backend way to keep cross-language parity (see `specs/002-logic-dedup`).
 
-## Files (11)
+## Files (12)
 
 - `mortgage.json` — `MortgageInfo` / `lib/finance/mortgage.ts` cases: monthly
   payment, current balance, equity, equity fraction, maturity date, years
@@ -50,6 +50,10 @@ no-backend way to keep cross-language parity (see `specs/002-logic-dedup`).
 - `lease.json` — `components/housing/lease.ts` date math (spec 020):
   `rentDueDay`, `daysUntilNextRent` (incl. the due-day > month-length clamp),
   `daysUntilEnd`, `isRenewalSoon`, with an injected `asOf`.
+- `goals.json` — `lib/finance/goals.ts` savings-goal engine (spec 027):
+  `progress` (`goalProgress`: saved/remaining/fraction/reached) and `pacing`
+  (`goalPacing`: steady-pace expected/shortfall/suggested-monthly, off-track,
+  past-due), with an injected `now`.
 
 All money is USD cents. Dates are timezone-stable: mortgage dates parse as
 **local** calendar dates; insight transaction dates mirror JS `new Date('YYYY-MM-DD')`

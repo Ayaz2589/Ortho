@@ -53,7 +53,7 @@ spec 024 (see §1.1).
 - [§2.2 Investment / portfolio tracking](./2.2-investment-portfolio-tracking.md) — ⚪
 
 ### 3. Planning & goals
-- [§3.1 Savings / debt-payoff goals](./3.1-savings-debt-payoff-goals.md) — 🟡
+- [§3.1 Savings / debt-payoff goals](./3.1-savings-debt-payoff-goals.md) — 🟡 · ✅ **shipped (spec 027)**
 - [§3.2 Cash-flow forecasting / long-range planning](./3.2-cash-flow-forecasting.md) — ⚪
 
 ### 4. Money management

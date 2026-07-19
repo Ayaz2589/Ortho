@@ -66,6 +66,7 @@ export default function SettingsPage() {
   const {
     cards,
     budgets,
+    goals,
     linkedInstitutions,
     currentHousehold,
     currentUserEmail,
@@ -122,12 +123,17 @@ export default function SettingsPage() {
         </section>
 
         <section className="flex flex-col gap-2">
-          <SectionLabel>{t('Budgets')}</SectionLabel>
+          <SectionLabel>{t('Planning')}</SectionLabel>
           <SectionCard>
             <LinkRow
               href="/budgets"
               label={t('Budgets')}
               peek={budgets.length ? t('{0} set', budgets.length) : t('None set')}
+            />
+            <LinkRow
+              href="/goals"
+              label={t('Goals')}
+              peek={goals.length ? t('{0} set', goals.length) : t('None set')}
             />
           </SectionCard>
         </section>
