@@ -5,11 +5,11 @@ import { useApp } from '@/lib/store'
 import {
   monthlyPaymentCents,
   currentPrincipalBalanceCents,
-  currentEquityCents,
   equityFraction,
   maturityDate,
   yearsRemaining,
   upcomingAmortization,
+  PAID_OFF_THRESHOLD_CENTS,
 } from '@/lib/finance/mortgage'
 import { mediumDate, monthYear, parseLocalDate } from '@/lib/format'
 import { occupiedRentCents, netRentalCents, rentUnitsFrom, isUnitOccupied } from '@/lib/finance/housing'
@@ -145,16 +145,26 @@ function MortgageColumns({ property }: { property: Property }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {m && (
           <div className="ow-card" style={{ padding: 24 }}>
-            <CardLabel hint={t('of {0} · {1}', formatMoney(m.purchase_price_cents), `${(equityFraction(m.purchase_price_cents, m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date) * 100).toFixed(1)}%`)}>
-              {t('Equity')}
-            </CardLabel>
-            <div style={{ fontSize: 26, fontWeight: 300, letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums', marginBottom: 14 }}>
-              {formatMoney(currentEquityCents(m.purchase_price_cents, m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date))}
-            </div>
-            <div style={{ height: 8, borderRadius: 6, background: 'var(--surface-2)', overflow: 'hidden' }}>
-              <div style={{ width: `${equityFraction(m.purchase_price_cents, m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date) * 100}%`, height: '100%', background: 'var(--positive)' }} />
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 10 }}>{t('Built since closing · {0}', monthYear(parseLocalDate(m.closing_date), locale))}</div>
+            {(() => {
+              const rawBal = currentPrincipalBalanceCents(m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date)
+              const bal = rawBal <= PAID_OFF_THRESHOLD_CENTS ? 0 : rawBal
+              const paid = m.original_loan_cents - bal
+              const pct = bal === 0 ? 100 : equityFraction(m.purchase_price_cents, m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date) * 100
+              return (
+                <>
+                  <CardLabel hint={t('of {0} · {1}', formatMoney(m.original_loan_cents), `${pct.toFixed(1)}%`)}>
+                    {t('Principal paid down')}
+                  </CardLabel>
+                  <div style={{ fontSize: 26, fontWeight: 300, letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums', marginBottom: 14 }}>
+                    {formatMoney(paid)}
+                  </div>
+                  <div style={{ height: 8, borderRadius: 6, background: 'var(--surface-2)', overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: 'var(--positive)' }} />
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 10 }}>{t('Since closing · {0}', monthYear(parseLocalDate(m.closing_date), locale))}</div>
+                </>
+              )
+            })()}
           </div>
         )}
 

@@ -83,12 +83,29 @@ describe('scanSessionReducer — phase transitions', () => {
     expect(state.candidates).toEqual(rows)
   })
 
-  it('a none parse result moves parsing -> failed', () => {
+  it('a none parse result moves parsing -> failed with the unreadable reason', () => {
     const state = scanSessionReducer(createScanSessionState(), {
       type: 'capture/parsed',
       result: { kind: 'none' },
     })
     expect(state.phase).toBe('failed')
+    expect(state.failureReason).toBe('unreadable')
+  })
+
+  it('capture/unsupported fails with the web-only reason and pins the source to camera', () => {
+    // fix/web-scan-fallback: the web camera path has no browser OCR, so it
+    // degrades honestly instead of dead-ending as a generic "couldn't read".
+    const state = scanSessionReducer(createScanSessionState(), { type: 'capture/unsupported' })
+    expect(state.phase).toBe('failed')
+    expect(state.failureReason).toBe('unsupportedOnWeb')
+    expect(state.lastSource).toBe('camera')
+  })
+
+  it('reset clears an unsupportedOnWeb failure back to the default reason', () => {
+    let state = scanSessionReducer(createScanSessionState(), { type: 'capture/unsupported' })
+    state = scanSessionReducer(state, { type: 'reset' })
+    expect(state.phase).toBe('idle')
+    expect(state.failureReason).toBe('unreadable')
   })
 
   it('retake only resets phase to idle, leaving captured data alone', () => {

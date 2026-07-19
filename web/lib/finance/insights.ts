@@ -2,6 +2,7 @@ import type { Transaction, Budget, Property, Insight, TransactionCategory, Insig
 import { CATEGORIES } from '../categories'
 import { monthlyPaymentCents } from './mortgage'
 import { INSIGHT_THRESHOLDS as T } from './insights-thresholds'
+import { parseLocalDate } from '../format'
 
 // Insights mirror the iOS InsightEngine. Money is rendered in USD with 2
 // decimals here (the engine is currency-agnostic; display conversion happens
@@ -29,7 +30,13 @@ function monthInterval(d: Date): [Date, Date] {
 }
 
 function inInterval(date: string, start: Date, end: Date): boolean {
-  const t = new Date(date).getTime()
+  // Date-only strings ("YYYY-MM-DD") parse as UTC midnight with `new Date()`,
+  // but monthInterval() builds local-calendar [mStart, mEnd) boundaries. A
+  // boundary-dated row (e.g. June 1 date-only) parses as UTC midnight, which
+  // falls *before* local midnight June 1 for users west of UTC, silently
+  // landing the row in the previous month. Parse date-only strings as local
+  // midnight (same regime as monthInterval) to keep both sides consistent.
+  const t = date.includes('T') ? new Date(date).getTime() : parseLocalDate(date).getTime()
   return t >= start.getTime() && t < end.getTime()
 }
 

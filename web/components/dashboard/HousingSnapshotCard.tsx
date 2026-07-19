@@ -3,7 +3,7 @@
 import { House, Building2, KeyRound, type LucideIcon } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { Card, SectionLabel } from '@/components/ui'
-import { monthlyPaymentCents, currentEquityCents } from '@/lib/finance/mortgage'
+import { monthlyPaymentCents, currentPrincipalBalanceCents, PAID_OFF_THRESHOLD_CENTS } from '@/lib/finance/mortgage'
 import { netRentalCents, rentUnitsFrom } from '@/lib/finance/housing'
 import { daysUntilEnd } from '@/components/housing/lease'
 import type { Translate } from '@/lib/i18n'
@@ -19,16 +19,17 @@ function mortgagePayment(p: Property): number {
   )
 }
 
-function equity(p: Property): number {
+function principalPaidDown(p: Property): number {
   const m = p.mortgage
   if (!m) return 0
-  return currentEquityCents(
-    m.purchase_price_cents,
+  const rawBalance = currentPrincipalBalanceCents(
     m.original_loan_cents,
     m.annual_interest_rate_percent,
     m.loan_term_years,
     m.closing_date
   )
+  const balance = rawBalance <= PAID_OFF_THRESHOLD_CENTS ? 0 : rawBalance
+  return m.original_loan_cents - balance
 }
 
 function monthlyCost(p: Property): number {
@@ -54,7 +55,7 @@ export function HousingSnapshotCard() {
   const { properties, formatMoney, t } = useApp()
 
   const totalMonthlyCost = properties.reduce((s, p) => s + monthlyCost(p), 0)
-  const totalEquity = properties.reduce((s, p) => s + equity(p), 0)
+  const totalEquity = properties.reduce((s, p) => s + principalPaidDown(p), 0)
 
   const multifamilies = properties.filter((p) => p.kind === 'multifamily')
   // Occupied-only net (money actually collected), matching the property-detail
@@ -84,14 +85,14 @@ export function HousingSnapshotCard() {
           <div className="flex gap-6">
             <StatColumn label={t('Monthly cost')} value={formatMoney(totalMonthlyCost)} />
             <StatColumn
-              label={t('Equity built')}
+              label={t('Principal paid down')}
               value={formatMoney(totalEquity)}
               tint="var(--positive)"
             />
           </div>
           {netRentalIncome != null && (
             <div className="mt-0.5 flex items-center justify-between">
-              <span className="text-[13px] text-text-2">{t('Net rental income')}</span>
+              <span className="text-[13px] text-text-2">{t('Net rental (P&I only)')}</span>
               <span
                 className="text-[13px] font-normal tabular-nums"
                 style={{
@@ -144,7 +145,7 @@ export function HousingSnapshotCard() {
                   className="text-[13px] font-normal tabular-nums"
                   style={{ color: 'var(--positive)' }}
                 >
-                  {t('{0} equity', formatMoney(totalEquity))}
+                  {t('{0} paid down', formatMoney(totalEquity))}
                 </span>
               </>
             )}
@@ -172,11 +173,11 @@ export function subtitle(
 ): string {
   switch (p.kind) {
     case 'primary_home':
-      return `${t('Primary home')} · ${t('{0} equity', formatMoney(equity(p)))}`
+      return `${t('Primary home')} · ${t('{0} paid down', formatMoney(principalPaidDown(p)))}`
     case 'multifamily': {
       const n = (p.units ?? []).length
       const units = n === 1 ? t('1 unit') : t('{0} units', n)
-      return `${t('Multifamily')} · ${units} · ${t('{0} equity', formatMoney(equity(p)))}`
+      return `${t('Multifamily')} · ${units} · ${t('{0} paid down', formatMoney(principalPaidDown(p)))}`
     }
     case 'rental': {
       // Lease days-remaining, like iOS ("Rental · N days left"); plain

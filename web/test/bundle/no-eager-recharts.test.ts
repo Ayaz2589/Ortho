@@ -42,6 +42,7 @@ describe('recharts is never eagerly imported (spec 022 US1 guard)', () => {
     const leaves = [
       'components/dashboard/charts/CategoryPie.tsx',
       'components/dashboard/charts/DailyTrendChart.tsx',
+      'components/dashboard/charts/SavingsRateChart.tsx',
       'components/housing/charts/AmortizationChart.tsx',
     ]
     const importers = leaves.filter((rel) => {

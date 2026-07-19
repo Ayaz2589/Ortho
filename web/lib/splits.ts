@@ -53,6 +53,13 @@ export function computeShares(
   }
 
   // even or percent: floor each owner's target, then distribute the leftover.
+  //
+  // Leftover-cent fairness policy (spec 027 / B4): leftover cents are handed
+  // out one-per-owner in `owners` list order. Callers MUST pass `orderedOwnerIds`
+  // (ascending UUID sort) so the cent always lands on the same person regardless
+  // of insertion order, DB sort_order, or UI presentation order. This makes the
+  // result deterministic, reproducible across platforms (web/iOS/CLI), and audit-
+  // able: the lexically-first owner bears the leftover cent for even splits.
   let assigned = 0
   for (const id of owners) {
     const target =
