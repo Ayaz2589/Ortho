@@ -133,9 +133,82 @@ export function completeLinkSession(
 }
 
 /** Disconnect: the server revokes provider access FIRST, then marks the
- *  institution disconnected — a failure means nothing changed (FR-009). */
+ *  institution disconnected — a failure means nothing changed (FR-009).
+ *  Provider-aware (spec 028): SimpleFIN institutions route to simplefin-disconnect;
+ *  everything else keeps the Plaid path (the default, for existing links). */
 export function disconnectInstitution(
-  institutionId: string
+  institutionId: string,
+  provider?: string
 ): Promise<AggregationResult<{ institutionId: string; status: string }>> {
-  return invokeAggregation('plaid-disconnect', { institutionId })
+  const fn = provider === 'simplefin' ? 'simplefin-disconnect' : 'plaid-disconnect'
+  return invokeAggregation(fn, { institutionId })
+}
+
+// ── SimpleFIN (spec 028) — the go-forward provider ──
+
+export type SimpleFinAccountView = {
+  name: string
+  accountType: string
+  currency: string | null
+  mask: string | null
+}
+
+export type SimpleFinClaimOutcome = {
+  institutionId: string
+  institutionName: string
+  accounts: SimpleFinAccountView[]
+}
+
+export type SyncOutcome = {
+  institutionId: string
+  imported: number
+  updated: number
+  warnings: string[]
+}
+
+function isClaimOutcome(v: unknown): v is SimpleFinClaimOutcome {
+  const r = v as SimpleFinClaimOutcome | null
+  return (
+    typeof r === 'object' &&
+    r !== null &&
+    typeof r.institutionId === 'string' &&
+    typeof r.institutionName === 'string' &&
+    Array.isArray(r.accounts)
+  )
+}
+
+function isSyncOutcome(v: unknown): v is SyncOutcome {
+  const r = v as SyncOutcome | null
+  return (
+    typeof r === 'object' &&
+    r !== null &&
+    typeof r.institutionId === 'string' &&
+    typeof r.imported === 'number' &&
+    typeof r.updated === 'number'
+  )
+}
+
+/** Claim a SimpleFIN setup token: the server decodes it, POSTs the claim URL,
+ *  stores the Access URL in Vault, and records the institution + accounts. A
+ *  malformed 200 surfaces as a calm retryable failure, never a crash. */
+export function claimSimpleFinToken(
+  setupToken: string
+): Promise<AggregationResult<SimpleFinClaimOutcome>> {
+  return invokeAggregation<SimpleFinClaimOutcome>('simplefin-claim', { setupToken }).then((r) => {
+    if (!r.ok) return r
+    return isClaimOutcome(r.value) ? r : { ok: false, code: 'provider_error' }
+  })
+}
+
+/** Sync a SimpleFIN connection's transactions into the ledger. `manual` marks a
+ *  member-initiated refresh (rate-limited server-side → `rate_limited`). */
+export function syncInstitution(
+  institutionId: string,
+  opts?: { manual?: boolean }
+): Promise<AggregationResult<SyncOutcome>> {
+  const body = opts?.manual ? { institutionId, manual: true } : { institutionId }
+  return invokeAggregation<SyncOutcome>('simplefin-sync', body).then((r) => {
+    if (!r.ok) return r
+    return isSyncOutcome(r.value) ? r : { ok: false, code: 'provider_error' }
+  })
 }

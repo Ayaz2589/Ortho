@@ -163,7 +163,7 @@ export interface GoalContributionRow {
 export interface LinkedInstitutionRow {
   id: string
   household_id: string
-  provider: 'plaid'
+  provider: 'plaid' | 'simplefin'
   provider_item_id: string
   provider_institution_id: string | null
   institution_name: string
@@ -172,6 +172,9 @@ export interface LinkedInstitutionRow {
   created_at: string
   updated_at: string
   disconnected_at: string | null
+  last_synced_at: string | null
+  last_manual_refresh_at: string | null
+  sync_cursor: string | null
 }
 
 export interface LinkedAccountRow {
@@ -183,5 +186,6 @@ export interface LinkedAccountRow {
   mask: string | null
   account_type: string
   account_subtype: string | null
+  currency: string | null
   created_at: string
 }

@@ -26,8 +26,8 @@ Overview|Reports mode, and Budgets/Goals live under Settings → Planning, not e
 ```
                     ┌─────────────────────────────────────┐
                     │ supabase/ (ref brujhxmtzfgowimprueo) │
-                    │ 15 migrations · 25 tables · 11 enums │
-                    │ RLS everywhere · 11 RPCs · 7 edge fns│
+                    │ 17 migrations · 25 tables · 11 enums │
+                    │ RLS everywhere · 13 RPCs · 10 edge fns│
                     └───────▲────────────────────▲─────────┘
           8-digit email OTP │                    │ OTP, or service role (ADMIN=1)
         ┌───────────────────┴────────┐   ┌───────┴──────────────────┐
@@ -51,8 +51,9 @@ Overview|Reports mode, and Budgets/Goals live under Settings → Planning, not e
   balances, filters, month scoping, or status colors. Pre-021 web-vs-iOS history is archived at
   `docs/archive/PARITY-2026-07-08.md`.
 - **Server-side code** exists only as edge functions: `supabase/functions/` holds 4 billing
-  (spec 018) + 3 Plaid (spec 024) Deno functions, thin adapters over the runtime-agnostic cores
-  `services/billing/` and `services/aggregation/`, byte-copied into `functions/_shared/` by
+  (spec 018) + 3 Plaid (spec 024) + 3 SimpleFIN (spec 028) Deno functions, thin adapters over the
+  runtime-agnostic cores `services/billing/` and `services/aggregation/` (the latter's Plaid
+  modules now under `deprecated/`), byte-copied into `functions/_shared/` by
   `npm run sync:functions` and locked by a drift test in web CI. Never edit the copies.
 
 ## 3. Directory of docs
@@ -62,6 +63,7 @@ Overview|Reports mode, and Budgets/Goals live under Settings → Planning, not e
 | [./web.md](./web.md) | …working anywhere in `web/`: route tree, the `lib/store.tsx` data layer (incl. the atomic `upsert_transaction` write path), Supabase clients/auth gate, shell composition, design tokens, hooks, i18n, scan pipeline, Plaid client surface, the Capacitor iOS shell + `capacitor-ios-ci.yml`, bundle discipline, corpus/seed harness, Vitest suite, Vercel deploy. |
 | [./finance.md](./finance.md) | …touching pure money/date logic (`web/lib/finance/*`, `splits.ts`, `balances.ts`, `transactionFilters.ts`, `reports/*`, dashboard range, lease): every engine per-file, the USD-cents invariant, rounding/date regimes, all insight thresholds, the engine→vector map. |
 | [./supabase.md](./supabase.md) | …changing schema, migrations, RLS, RPCs, Vault, or edge functions; the local stack, `config.toml`, and the `supabase-migrations.yml` CI lane. |
+| [./simplefin.md](./simplefin.md) | …working on bank connections / transaction sync: the SimpleFIN provider (spec 028) — token-claim flow, the read-only `/accounts` sync loop, money normalization (sign→kind, cents, dedupe, deterministic ledger id), the aggregation core layout, and how Plaid is contained under `deprecated/`. |
 | [./shared.md](./shared.md) | …regenerating or adding regression vectors: the gen→assert loop, the web-ci vector-drift gate, determinism conventions, regeneration discipline (vector diffs ARE the behavior review). |
 | [./makefile.md](./makefile.md) | …running `make ingest` / `tx-*` / `repair-dates`: all 7 targets, ingest internals, CLI auth (`IMPORT_EMAIL` OTP vs `ADMIN=1`), the CLI-vs-web write-path split, plus the spec-kit and `.claude/` maps. |
 | [./ios.md](./ios.md) | …doing archaeology on the frozen SwiftUI app, porting its Swift scan source, or **shipping to TestFlight** (`ios-deploy.yml` — warning: it archives the FROZEN app onto the live listing's bundle id). Not how iOS ships today — that's [./web.md](./web.md). |

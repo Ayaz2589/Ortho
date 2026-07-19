@@ -2,6 +2,9 @@
 // construction: the core compiles with lib ES2022 and no environment types,
 // so fetch/Response are structural types injected by the host (Deno edge
 // function, operator script, or a test fake) — never globals.
+//
+// @deprecated (spec 028) — Plaid is CONTAINED, not removed. See
+// src/simplefinClient.ts for the go-forward provider. Kept wired as a rollback path.
 
 /** Only two Plaid environments exist (Development was decommissioned 2024). */
 export type PlaidEnv = 'sandbox' | 'production'

@@ -108,6 +108,7 @@ jobs:
           deno check
           plaid-exchange/index.ts stripe-webhook/index.ts
           plaid-link-token/index.ts plaid-disconnect/index.ts
+          simplefin-claim/index.ts simplefin-sync/index.ts simplefin-disconnect/index.ts
           billing-checkout/index.ts billing-portal/index.ts billing-plans/index.ts
       - name: Test edge-function logic
         run: deno test

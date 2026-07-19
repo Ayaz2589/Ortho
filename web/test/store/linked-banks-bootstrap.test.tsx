@@ -31,6 +31,9 @@ const INSTITUTION: LinkedInstitution = {
   created_at: '2026-07-16T00:00:00Z',
   updated_at: '2026-07-16T00:00:00Z',
   disconnected_at: null,
+  last_synced_at: null,
+  last_manual_refresh_at: null,
+  sync_cursor: null,
 }
 
 const ACCOUNT: LinkedAccount = {
@@ -42,6 +45,7 @@ const ACCOUNT: LinkedAccount = {
   mask: '0000',
   account_type: 'depository',
   account_subtype: 'checking',
+  currency: null,
   created_at: '2026-07-16T00:00:00Z',
 }
 

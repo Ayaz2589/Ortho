@@ -1,9 +1,15 @@
 // Provider-agnostic shapes for the aggregation core (spec 024, FR-010).
-// Everything Plaid-specific lives in plaid.ts / plaidClient.ts; a second
-// provider adds a module that ends in these same shapes.
+// Plaid-specific code lives in deprecated/plaid.ts; SimpleFIN (the go-forward
+// provider, spec 028) in simplefin.ts / simplefinClient.ts / normalize.ts.
+// Both providers end in these same shapes.
 
 /** Aggregation providers. Mirrors the Postgres `linked_provider` enum. */
-export type LinkedProvider = 'plaid'
+export type LinkedProvider = 'plaid' | 'simplefin'
+
+/** Mirrors the Postgres `transaction_kind` enum (direction of money). Ortho stores
+ *  amount_cents as non-negative; kind carries the sign. `transfer` is never inferred
+ *  from SimpleFIN data — sync classifies only income/expense (spec 028, research D4). */
+export type TransactionKind = 'income' | 'expense' | 'transfer'
 
 /** Mirrors the Postgres `linked_institution_status` enum. */
 export type LinkedInstitutionStatus = 'active' | 'disconnected'
@@ -29,6 +35,10 @@ export type AggregationErrorCode =
   | 'exchange_failed'
   | 'institution_not_found'
   | 'disconnect_failed'
+  // SimpleFIN (spec 028)
+  | 'claim_failed'
+  | 'rate_limited'
+  | 'sync_failed'
 
 /** A normalized account revealed at link time — display metadata only
  *  (connect-only scope: never balances, never transactions). */
@@ -39,4 +49,38 @@ export interface NormalizedAccount {
   mask: string | null
   accountType: string
   accountSubtype: string | null
+}
+
+/** SimpleFIN account display metadata parsed from GET /accounts (spec 028). Adds
+ *  `currency` to NormalizedAccount's display fields. */
+export interface SimpleFinAccountMeta {
+  providerAccountId: string
+  name: string
+  /** Org/bank name (SimpleFIN groups accounts under orgs). */
+  orgName: string | null
+  currency: string | null
+  mask: string | null
+  accountType: string
+}
+
+/** One normalized SimpleFIN transaction ready to map into an upsert_transaction
+ *  payload. `amountCents` is the absolute value; direction is in `kind`. */
+export interface SimpleFinTransaction {
+  providerAccountId: string
+  providerTxnId: string
+  amountCents: number
+  kind: TransactionKind
+  /** Unix epoch seconds of the posted (or transacted) time. */
+  postedAt: number
+  description: string
+  memo: string | null
+  pending: boolean
+}
+
+/** Result of parsing GET /accounts: normalized transactions + accounts + any
+ *  in-band provider warnings (SimpleFIN returns errors alongside data). */
+export interface ParsedSimpleFinAccounts {
+  accounts: SimpleFinAccountMeta[]
+  transactions: SimpleFinTransaction[]
+  warnings: string[]
 }
