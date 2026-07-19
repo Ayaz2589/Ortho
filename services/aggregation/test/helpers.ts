@@ -41,3 +41,34 @@ export function throwingFetch(): FetchLike {
 }
 
 export const CONFIG = { clientId: 'cid_test', secret: 'sec_test', env: 'sandbox' as const }
+
+// ── SimpleFIN fakes (spec 028) — GET (no body) + text/json responses ──
+import type { SimpleFinFetch } from '../src/index'
+
+export type RecordedSfinCall = { url: string; method: string; headers: Record<string, string> }
+
+export function fakeSfinFetch(
+  respond: (call: RecordedSfinCall) => { status: number; text?: string; json?: unknown; badJson?: boolean }
+): { fetch: SimpleFinFetch; calls: RecordedSfinCall[] } {
+  const calls: RecordedSfinCall[] = []
+  const fetch: SimpleFinFetch = async (url, init) => {
+    const call: RecordedSfinCall = { url, method: init.method, headers: init.headers }
+    calls.push(call)
+    const res = respond(call)
+    return {
+      status: res.status,
+      text: async () => res.text ?? '',
+      json: async () => {
+        if (res.badJson) throw new SyntaxError('bad json')
+        return res.json
+      },
+    }
+  }
+  return { fetch, calls }
+}
+
+export function throwingSfinFetch(): SimpleFinFetch {
+  return async () => {
+    throw new TypeError('network down')
+  }
+}
