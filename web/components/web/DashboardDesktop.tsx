@@ -7,7 +7,8 @@ import type { DashboardScope } from '@/lib/useDashboardRange'
 import { generateInsights } from '@/lib/finance/insights'
 import {
   monthlyPaymentCents,
-  currentEquityCents,
+  currentPrincipalBalanceCents,
+  PAID_OFF_THRESHOLD_CENTS,
 } from '@/lib/finance/mortgage'
 import { netRentalCents, rentUnitsFrom } from '@/lib/finance/housing'
 import { InsightsCardStack } from '@/components/dashboard/InsightsCardStack'
@@ -38,7 +39,9 @@ export function housingSummary(properties: Property[]) {
     const pay = m ? monthlyPaymentCents(m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years) : 0
     if (m) {
       cost += pay
-      equity += currentEquityCents(m.purchase_price_cents, m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date)
+      const rawBalance = currentPrincipalBalanceCents(m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date)
+      const balance = rawBalance <= PAID_OFF_THRESHOLD_CENTS ? 0 : rawBalance
+      equity += m.original_loan_cents - balance
     }
     if (p.kind === 'multifamily') {
       multi = true
@@ -235,13 +238,13 @@ export function DashboardDesktop({
                   <div style={{ fontSize: 22, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.4px' }}>{formatMoney(housing.cost)}</div>
                 </div>
                 <div>
-                  <div className="ow-cap">{t('Equity built')}</div>
+                  <div className="ow-cap">{t('Principal paid down')}</div>
                   <div style={{ fontSize: 22, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.4px' }}>{formatMoney(housing.equity)}</div>
                 </div>
               </div>
               {housing.multi && (
                 <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '0.5px solid var(--hairline)', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{t('Net rental income')}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{t('Net rental (P&I only)')}</span>
                   <span style={{ fontSize: 15, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: housing.netRental >= 0 ? 'var(--positive)' : 'var(--text)' }}>
                     {formatMoney(housing.netRental, { leadingPlus: housing.netRental > 0 })}
                   </span>
@@ -286,7 +289,7 @@ export function DashboardDesktop({
                   <>
                     <span style={{ fontSize: 13, color: 'var(--text-3)' }}>·</span>
                     <span style={{ fontSize: 13, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: 'var(--positive)' }}>
-                      {t('{0} equity', formatMoney(housing.equity))}
+                      {t('{0} paid down', formatMoney(housing.equity))}
                     </span>
                   </>
                 )}

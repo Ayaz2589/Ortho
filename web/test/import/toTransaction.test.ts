@@ -71,6 +71,35 @@ describe('toTransaction', () => {
     expect(Object.values(tx.shares).reduce((a, b) => a + b, 0)).toBe(8999)
   })
 
+  it('A4 — sort_order ≠ UUID order: leftover cent goes to lexically-first UUID, not sort-first member', () => {
+    // spec 027 / A4 verification. The CLI fetches household_people ordered by
+    // sort_order from the DB. If owner IDs were used in that order (sort_order
+    // order) instead of canonical (lexical UUID) order, the leftover cent would
+    // land on the WRONG person, diverging from how the web/app computes it.
+    //
+    // Scenario: two members where sort_order order ≠ lexical UUID order:
+    //   sortA: sort_order=0, but UUID "zz…" (lexically LAST)
+    //   sortB: sort_order=1, but UUID "aa…" (lexically FIRST)
+    //
+    // The CLI fetches them in sort_order order: [sortA.id, sortB.id].
+    // toTransaction must call orderedOwnerIds → [sortB.id, sortA.id] (lexical).
+    // Leftover cent of 101¢ even split goes to the lexically-first owner (sortB).
+    const sortA = 'zzzzzzzz-0000-0000-0000-000000000000' // sort_order=0, UUID last
+    const sortB = 'aaaaaaaa-0000-0000-0000-000000000000' // sort_order=1, UUID first
+
+    const tx = toTransaction(
+      { ...base, amountCents: 101, ownerIds: [sortA, sortB] }, // sort_order order
+      'TD Bank',
+      CTX,
+      'id-sort-order',
+      NOW
+    )
+    // Lexical order: sortB ("aa…") < sortA ("zz…") → leftover to sortB
+    expect(tx.shares[sortB]).toBe(51)
+    expect(tx.shares[sortA]).toBe(50)
+    expect(tx.shares[sortB] + tx.shares[sortA]).toBe(101)
+  })
+
   it('throws if there is no household', () => {
     expect(() =>
       toTransaction({ ...base, ownerIds: ['p1', 'p2'] }, 'TD Bank', { ...CTX, householdId: null }, 'id5', NOW)
