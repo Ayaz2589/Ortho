@@ -82,6 +82,13 @@ export interface Transaction {
   owner_ids: string[]
   /** Per-owner amount in cents; the values sum to `amount_cents`. */
   shares: Record<string, number>
+  /** Ids of the household `tags` attached to this transaction (spec 027).
+   *  Orthogonal to `category`. Optional so existing fixtures/importers need not
+   *  set it; `rehydrateTransactions` always materializes it to at least []. */
+  tags?: string[]
+  /** Free-form note (spec 027; Supabase `transactions.notes`). Distinct from
+   *  `source` (the card/account that paid). null/absent = no note. */
+  notes?: string | null
 }
 
 /** One owner's cents share of a transaction (Supabase `transaction_shares`). */
@@ -89,6 +96,15 @@ export interface TransactionShare {
   transaction_id: string
   person_id: string
   amount_cents: number
+}
+
+/** A free-form, household-scoped label (spec 027; Supabase `tags`). Orthogonal
+ *  to category; identity is its trimmed, case-insensitive name per household. */
+export interface Tag {
+  id: string
+  household_id: string
+  name: string
+  created_at: string
 }
 
 export interface Property {

@@ -60,7 +60,7 @@ spec 024 (see §1.1).
 - [§4.1 Flexible budgeting ("Flex" buckets, rollover, forecasting)](./4.1-flexible-budgeting.md) — 🟡
 - [§4.2 Subscription / bill manager](./4.2-subscription-bill-manager.md) — 🟡
 - [§4.3 Transaction rules & bulk editing engine](./4.3-transaction-rules.md) — 🟡
-- [§4.4 Transaction tags & richer notes](./4.4-transaction-tags-notes.md) — ⚪
+- [§4.4 Transaction tags & richer notes](./4.4-transaction-tags-notes.md) — ✅ delivered (`specs/027-transaction-tags/`)
 
 ### 5. Intelligence & reporting
 - [§5.1 Advanced reports (Sankey cash-flow, savings rate, custom charts)](./5.1-advanced-reports.md) — ⚪

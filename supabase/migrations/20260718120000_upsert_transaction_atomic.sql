@@ -130,7 +130,7 @@ begin
   -- from the DO UPDATE set so re-upserts cannot change ownership or creation time.
   insert into public.transactions (
     id, household_id, merchant, category, kind, amount_cents,
-    source, date, created_by, paid_by, updated_at
+    source, date, created_by, paid_by, notes, updated_at
   ) values (
     v_id,
     v_hh_id,
@@ -142,6 +142,7 @@ begin
     (p_tx->>'date')::timestamptz,
     v_created_by,
     nullif(p_tx->>'paid_by', '')::uuid,
+    p_tx->>'notes',
     now()
   )
   on conflict (id) do update set
@@ -152,6 +153,7 @@ begin
     source       = excluded.source,
     date         = excluded.date,
     paid_by      = excluded.paid_by,
+    notes        = excluded.notes,
     updated_at   = now();
 
   -- Replace share rows atomically (delete-then-insert within this function call;

@@ -36,6 +36,15 @@ const SET: Transaction[] = [
   tx({ id: 'd', merchant: 'Whole Foods', category: 'groceries', kind: 'expense', source: 'Chase', household_id: 'h1', owner_ids: ['u1', 'u2'], date: '2026-04-20T12:00:00.000Z' }),
 ]
 
+// Spec 027: tags (ids) + tagNames context + notes. t1=work, t2=vacation, t3=reimbursable.
+const TAG_CTX: FilterContext = { ownerNames: CTX.ownerNames, tagNames: { t1: 'work', t2: 'vacation', t3: 'reimbursable' } }
+const TAG_SET: Transaction[] = [
+  tx({ id: 'a', merchant: 'Bistro', category: 'dining', kind: 'expense', tags: ['t1'], notes: 'client dinner, split with Sam' }),
+  tx({ id: 'b', merchant: 'Blue Bottle', category: 'coffee', kind: 'expense', tags: ['t2'] }),
+  tx({ id: 'c', merchant: 'Payroll', category: 'income', kind: 'income', tags: [] }),
+  tx({ id: 'd', merchant: 'Whole Foods', category: 'groceries', kind: 'expense', tags: ['t2', 't3'], notes: 'reimburse from vacation fund' }),
+]
+
 describe('filterTransactions — dimensions', () => {
   it('emptyCriteria returns everything', () => {
     expect(ids(filterTransactions(SET, emptyCriteria(), CTX))).toEqual(['a', 'b', 'c', 'd'])
@@ -85,11 +94,51 @@ describe('filterTransactions — AND across dimensions', () => {
   })
 })
 
+describe('filterTransactions — tags dimension (spec 027)', () => {
+  it('empty tags criteria leaves the set unchanged', () => {
+    expect(ids(filterTransactions(TAG_SET, emptyCriteria(), TAG_CTX))).toEqual(['a', 'b', 'c', 'd'])
+  })
+  it('single tag selects transactions carrying it', () => {
+    expect(ids(filterTransactions(TAG_SET, { ...emptyCriteria(), tags: ['t1'] }, TAG_CTX))).toEqual(['a'])
+    expect(ids(filterTransactions(TAG_SET, { ...emptyCriteria(), tags: ['t2'] }, TAG_CTX))).toEqual(['b', 'd'])
+  })
+  it('multi tag is OR within the dimension', () => {
+    expect(ids(filterTransactions(TAG_SET, { ...emptyCriteria(), tags: ['t1', 't3'] }, TAG_CTX))).toEqual(['a', 'd'])
+  })
+  it('tag ANDs with other dimensions', () => {
+    expect(ids(filterTransactions(TAG_SET, { ...emptyCriteria(), kind: 'expense', tags: ['t2'] }, TAG_CTX))).toEqual(['b', 'd'])
+    expect(ids(filterTransactions(TAG_SET, { ...emptyCriteria(), categories: ['coffee'], tags: ['t2'] }, TAG_CTX))).toEqual(['b'])
+  })
+  it('selected-but-absent tag matches nothing (no throw)', () => {
+    expect(ids(filterTransactions(TAG_SET, { ...emptyCriteria(), tags: ['t9'] }, TAG_CTX))).toEqual([])
+  })
+  it('a tag-less transaction never matches a tag filter', () => {
+    expect(ids(filterTransactions(TAG_SET, { ...emptyCriteria(), tags: ['t1', 't2', 't3'] }, TAG_CTX))).toEqual(['a', 'b', 'd'])
+  })
+})
+
+describe('filterTransactions — notes & tag-name search (spec 027)', () => {
+  it('query matches notes text', () => {
+    expect(ids(filterTransactions(TAG_SET, { ...emptyCriteria(), query: 'reimburse' }, TAG_CTX))).toEqual(['d'])
+    expect(ids(filterTransactions(TAG_SET, { ...emptyCriteria(), query: 'sam' }, TAG_CTX))).toEqual(['a'])
+  })
+  it('query matches a tag name via tagNames', () => {
+    expect(ids(filterTransactions(TAG_SET, { ...emptyCriteria(), query: 'vacation' }, TAG_CTX))).toEqual(['b', 'd'])
+    expect(ids(filterTransactions(TAG_SET, { ...emptyCriteria(), query: 'work' }, TAG_CTX))).toEqual(['a'])
+  })
+  it('without tagNames, tag-name search contributes nothing (still matches merchant/notes)', () => {
+    // 'work' is only reachable via the t1 tag name; no merchant/notes contain it.
+    expect(ids(filterTransactions(TAG_SET, { ...emptyCriteria(), query: 'work' }, { ownerNames: {} }))).toEqual([])
+    expect(ids(filterTransactions(TAG_SET, { ...emptyCriteria(), query: 'payroll' }, { ownerNames: {} }))).toEqual(['c'])
+  })
+})
+
 describe('helpers', () => {
   it('activeFilterCount counts non-default dimensions', () => {
     expect(activeFilterCount(emptyCriteria())).toBe(0)
     expect(activeFilterCount({ ...emptyCriteria(), categories: ['dining'], kind: 'income', dateFrom: 'x' })).toBe(3)
     expect(activeFilterCount({ ...emptyCriteria(), query: '  ' })).toBe(0) // blank query is not active
+    expect(activeFilterCount({ ...emptyCriteria(), tags: ['t1'] })).toBe(1)
   })
   it('availableSources is distinct, non-empty, alphabetized', () => {
     expect(availableSources(SET)).toEqual(['Amex Gold', 'Chase', 'TD Bank'])

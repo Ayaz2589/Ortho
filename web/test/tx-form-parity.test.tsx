@@ -32,6 +32,8 @@ vi.mock('@/lib/store', () => ({
     householdMembers: [ALICE, BOB],
     addTransaction,
     updateTransaction,
+    tags: [],
+    addTag: (name: string) => ({ id: `tag-${name.trim().toLowerCase()}`, household_id: 'h1', name: name.trim(), created_at: '' }),
     formatMoney: (c: number) => `$${(c / 100).toFixed(2)}`,
     t: (k: string, ...a: Array<string | number>) => (a.length ? k.replace(/\{(\d+)\}/g, (m, i) => String(a[Number(i)] ?? m)) : k),
   }),
@@ -177,6 +179,38 @@ describe('edit-mode amount FX round-trip', () => {
     expect(h.getApi().submit()).toBe(true)
     const saved = updateTransaction.mock.calls[0][0] as Transaction
     expect(saved.amount_cents).toBe(2000)
+  })
+})
+
+describe('tags & notes (spec 027)', () => {
+  it('adds a tag via the editor and a note, saving both on submit (empty note → null)', async () => {
+    const h = setup()
+    await h.user.type(h.amount(), '10')
+    await h.user.type(h.merchant(), 'Airbnb')
+    await h.user.type(screen.getByLabelText('Add a tag'), 'vacation')
+    await h.user.keyboard('{Enter}')
+    await h.user.type(screen.getByLabelText('Notes'), 'weekend trip')
+    expect(h.getApi().submit()).toBe(true)
+    const saved = addTransaction.mock.calls[0][0] as Transaction
+    expect(saved.tags).toEqual(['tag-vacation'])
+    expect(saved.notes).toBe('weekend trip')
+  })
+
+  it('a whitespace-only note is stored as null', async () => {
+    const h = setup()
+    await h.user.type(h.amount(), '10')
+    await h.user.type(h.merchant(), 'Coffee')
+    await h.user.type(screen.getByLabelText('Notes'), '   ')
+    expect(h.getApi().submit()).toBe(true)
+    const saved = addTransaction.mock.calls[0][0] as Transaction
+    expect(saved.notes).toBeNull()
+  })
+
+  it('edit mode pre-fills existing tags and notes', () => {
+    const h = setup({ editing: tx({ tags: ['tag-work'], notes: 'client dinner' }) })
+    expect(h.getApi().tags).toEqual(['tag-work'])
+    expect(h.getApi().notes).toBe('client dinner')
+    expect((screen.getByLabelText('Notes') as HTMLTextAreaElement).value).toBe('client dinner')
   })
 })
 

@@ -107,6 +107,7 @@ describe('addTransaction — atomic RPC path', () => {
       date: '2026-06-12T12:00:00.000Z',
       created_by: 'u-me',
       paid_by: null, // payer-less row writes null (settle-up contract)
+      notes: null, // spec 027: the notes column threads through the atomic RPC payload
     })
     expect('owner_ids' in p_tx).toBe(false)
     expect('shares' in p_tx).toBe(false)

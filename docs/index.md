@@ -139,8 +139,9 @@ Plaid access token — connect-only (no transaction sync yet). See `docs/supabas
   build) and the CLI read/write the same hosted Supabase project (`brujhxmtzfgowimprueo`): `users`,
   `households`, `household_members`, `household_people`, `transactions` + `transaction_shares`,
   `cards`, `budgets`, `properties` (+ `mortgage_info` / `lease_info` / `units`), `rental_payments`,
-  plus the newer `entitlements` (spec 018) and `linked_institutions` / `linked_accounts`
-  (+ secret-holding `linked_institution_secrets` / `plaid_link_sessions`, spec 024) tables.
+  plus the newer `entitlements` (spec 018), `linked_institutions` / `linked_accounts`
+  (+ secret-holding `linked_institution_secrets` / `plaid_link_sessions`, spec 024), and
+  `tags` / `transaction_tags` (spec 027) tables.
   Schema lives only in `supabase/migrations/`; web/CLI types must match its columns exactly. (The
   frozen native app's DTO `CodingKeys` also matched this schema as of when it was retired, but is
   no longer kept in sync.)

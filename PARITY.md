@@ -9,12 +9,16 @@
 > Capacitor iOS shell of the same codebase. The frozen native app's
 > [`ios-ci.yml`](.github/workflows/ios-ci.yml) is manual-trigger-only (see below).
 
-> **Last reconciled: 2026-07-19, spec 027.** Spec 027 added several web-only surfaces with new
-> vectored money engines: **Budget rollover & bucket types** (`lib/finance/budgets.ts` →
+> **Last reconciled: 2026-07-19, spec 027.** Spec 027 added several web-only surfaces: new vectored
+> money engines — **Budget rollover & bucket types** (`lib/finance/budgets.ts` →
 > `budget-rollover.json`; also makes the budget insight Rule 3 rollover-aware against the derived
 > effective limit, byte-identical for the `fixed` default) and **Savings & debt-payoff goals**
-> (`lib/finance/goals.ts` → `goals.json` + one off-track insight rule). Each adds a parity-matrix
-> row below; the CLI has neither path. Earlier: **spec 024 (Plaid Connect — connect-only bank
+> (`lib/finance/goals.ts` → `goals.json` + one off-track insight rule) — plus **transaction tags &
+> richer notes** (a `tags` table + `transaction_tags` join orthogonal to category, a nullable
+> `transactions.notes` column, and a tag dimension + notes/tag-name search wired into the pure
+> `filterTransactions` engine, re-locked in `transaction-filters.json`; additive — an untagged
+> transaction behaves exactly as before, and the CLI stays untagged). Each adds a parity-matrix row
+> below; the CLI has none of these paths. Earlier: **spec 024 (Plaid Connect — connect-only bank
 > linking)** adds a web-only bank-connection capability with no vectored money/date logic, so it
 > introduces no new parity-matrix row; spec 018 (billing/entitlements) is likewise accounted for. The deepest
 > structural reconciliation remains **spec 021 (Capacitor iOS consolidation)** — the native SwiftUI app
@@ -75,13 +79,14 @@ ever tracked between them, is in
 | Currency conversion (display) | ✅ | — (USD-only) | same as above |
 | Splits & owner shares | ✅ | ✅ | `lib/splits.ts` → `transaction-splits.json` |
 | Canonical leftover-cent order | ✅ | ✅ | `orderedOwnerIds` — leftover cent goes to canonically-first owner (ascending UUID string sort), a conscious documented policy (see comment in `lib/splits.ts` and `specs/027-finance-model-correctness/contracts/cli-ordering.md`). Verified 2026-07-18 (spec 027 / A4): CLI `toTransaction` calls `orderedOwnerIds` before `computeShares`; `sort_order` DB ordering does not affect the leftover cent. Test: `web/test/import/toTransaction.test.ts` "A4 — sort_order ≠ UUID order". |
-| Transaction + shares data contract | ✅ | ✅ | columns mirrored (incl. `paid_by`) |
+| Transaction + shares data contract | ✅ | ✅ | columns mirrored (incl. `paid_by`, `notes`) |
 | Member reimbursement / settle-up balance | ✅ | — | `lib/balances.ts` → `member-balance.json` (+ `paid_by`, `transfer` kind) |
 | Atomic parent+shares write | ✅ (rollback) | ✅ (rollback) | client-side compensation on both; spec 023/B7 hardened web to **check** every compensating write and, if a rollback also fails, keep the row flagged + surface a "reload to reconcile" error rather than present a share-less row as consistent (an RPC would make it truly atomic — still tracked, out of scope) |
 | Category / kind / source taxonomy | ✅ | ✅ | Postgres `transaction_category`/`transaction_kind` enums (+ `transfer`) / `lib/types.ts` |
 | Date storage & timezone | ✅ | ✅ | noon-UTC transaction timestamps; date-only columns = local calendar day |
 | Full-UI localization (6 languages) | ✅ | — (English) | `web/lib/i18n/*` |
 | Transaction filtering / listing | ✅ | ✅ | `lib/transactionFilters.ts` → `transaction-filters.json` (CLI runs the same function in-process) |
+| Transaction tags & notes (spec 027) | ✅ | — (untagged) | `tags` + `transaction_tags` tables / `transactions.notes`; tag dimension + notes/tag-name search vectored in `lib/transactionFilters.ts` → `transaction-filters.json`. The CLI neither sets nor filters by tags (imported rows are untagged; `emptyCriteria()` carries `tags: []`). |
 | Dashboard month selection | ✅ | — | `components/dashboard/range.ts` → `dashboard-month-scope.json` / `transaction-filters.json` |
 | Insights engine | ✅ | — | `insights.json` (8/8 rules; Rule 3 rollover-aware since spec 027) |
 | Budget rollover & bucket types | ✅ | — | `lib/finance/budgets.ts` → `budget-rollover.json` (spec 027 — fixed/flex/non_monthly carry; the derived effective limit also drives the budget insight) |
@@ -109,7 +114,10 @@ in CI before it ships, not a cross-language honesty check:
 - **Category / kind / source taxonomy** — `lib/types.ts` is the one source of truth; the CLI
   imports it.
 - **Transaction filters** — `filterTransactions` (`lib/transactionFilters.ts`), vectored; the CLI
-  runs the same function in-process.
+  runs the same function in-process. Since spec 027 the criteria include a `tags` dimension
+  (OR-within / AND-across, like sources/owners) and the free-text query also matches `notes` and
+  tag names (via `FilterContext.tagNames`); the CLI omits `tagNames` (no tag roster) so tag-name
+  search is a no-op there.
 - **Insights** — `generateInsights`, 8/8 rules vectored. Rule 3 (budget status)
   compares spend against the rollover-aware **effective** limit (spec 027);
   `fixed` budgets are byte-identical to the pre-027 output.

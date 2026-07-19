@@ -11,9 +11,40 @@ import type { Transaction } from '@/lib/types'
 /** Read-only presentational detail for a transaction. Shared by the mobile
  *  modal and the desktop master–detail pane. */
 export function TransactionDetailBody({ tx }: { tx: Transaction }) {
-  const { formatMoney, resolveUser, locale, t } = useApp()
+  const { formatMoney, resolveUser, locale, t, tags: tagRoster = [] } = useApp()
   const isIncome = tx.kind === 'income'
   const isTransfer = tx.kind === 'transfer'
+  const tagName = (id: string) => tagRoster.find((tg) => tg.id === id)?.name ?? id
+  // Tags + notes (spec 027) — additive, shown only when present.
+  const tagsNotes = (
+    <>
+      {tx.tags && tx.tags.length > 0 && (
+        <FormGroup>
+          <FieldRow label={t('Tags')}>
+            <span className="flex flex-wrap justify-end gap-1.5">
+              {tx.tags.map((id) => (
+                <span
+                  key={id}
+                  className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[13px] text-text"
+                  style={{ background: 'var(--surface)', boxShadow: '0 0 0 0.5px var(--hairline)' }}
+                >
+                  {tagName(id)}
+                </span>
+              ))}
+            </span>
+          </FieldRow>
+        </FormGroup>
+      )}
+      {tx.notes && (
+        <FormGroup>
+          <div className="flex flex-col gap-1 px-4 py-3">
+            <span className="text-[13px] text-text-2">{t('Notes')}</span>
+            <span className="whitespace-pre-wrap text-[15px] font-normal text-text">{tx.notes}</span>
+          </div>
+        </FormGroup>
+      )}
+    </>
+  )
 
   // A reimbursement: directional From (paid_by/sender) → To (recipient). Neutral
   // amount (not spend/income), no category/split/source.
@@ -48,6 +79,7 @@ export function TransactionDetailBody({ tx }: { tx: Transaction }) {
             <span className="text-[15px] font-normal text-text">{mediumDate(new Date(tx.date), locale)}</span>
           </FieldRow>
         </FormGroup>
+        {tagsNotes}
       </div>
     )
   }
@@ -126,6 +158,7 @@ export function TransactionDetailBody({ tx }: { tx: Transaction }) {
           </span>
         </FieldRow>
       </FormGroup>
+      {tagsNotes}
     </div>
   )
 }

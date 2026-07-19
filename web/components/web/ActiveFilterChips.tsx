@@ -48,6 +48,9 @@ export function ActiveFilterChips({ f }: { f: TxFilters }) {
       {c.owners.map((id) => (
         <RemovableChip key={id} label={f.ownerOptions.find((o) => o.id === id)?.name ?? id} onRemove={() => f.toggleOwner(id)} />
       ))}
+      {c.tags.map((id) => (
+        <RemovableChip key={id} label={f.tagOptions.find((tg) => tg.id === id)?.name ?? id} onRemove={() => f.toggleTag(id)} />
+      ))}
       {(c.dateFrom || c.dateTo) && monthLabel && <RemovableChip label={monthLabel} onRemove={f.clearDate} />}
       <button
         type="button"
