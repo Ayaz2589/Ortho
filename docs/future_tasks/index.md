@@ -26,15 +26,20 @@ readiness review (decided work, not candidates).
 with a current Ortho principle (flag before building).
 
 **What we already have** (don't re-scope): shared+personal money, per-member
-transaction splits + settle-up/reimbursement balances, monthly category budgets,
-an 8-rule insights engine (incl. recurring-charge detection), a deep housing
-engine (mortgage amortization / equity, lease renewal & rent-due, multifamily
-units with occupancy + occupied-only net rental, rental-payment log),
-multi-currency (7 + live FX), on-device receipt/statement scanning, a
-deterministic bank-statement import CLI, month-scoped dashboard widgets,
-transaction filters/search, 6-language i18n; delivered as web (Next.js, the sole
-canonical implementation) + iOS (a Capacitor native shell over the same web bundle;
-the SwiftUI app is frozen reference). Connect-only Plaid bank linking shipped in
+transaction splits + settle-up/reimbursement balances (written atomically via
+the `upsert_transaction` RPC, spec 027), category budgets with rollover types
+(fixed / flex / non-monthly + flex cap, spec 027), savings & debt-payoff goals
+with contribution-driven progress (spec 027), transaction tags + notes (spec
+027), a 9-rule insights engine (incl. recurring-charge detection and goal
+off-track), a deep housing engine (mortgage amortization / principal paid down,
+lease renewal & rent-due, multifamily units with occupancy + occupied-only net
+rental, rental-payment log), multi-currency display (7 + live FX; storage is
+USD cents — see §9.5), on-device receipt/statement scanning, a deterministic
+bank-statement import CLI, month-scoped dashboard widgets plus a Reports mode
+(savings rate + category deep-dive, spec 027), transaction filters/search
+(incl. tags), 6-language i18n; delivered as web (Next.js, the sole canonical
+implementation) + iOS (a Capacitor native shell over the same web bundle; the
+SwiftUI app is frozen reference). Connect-only Plaid bank linking shipped in
 spec 024 (see §1.1).
 
 ---
@@ -57,13 +62,13 @@ spec 024 (see §1.1).
 - [§3.2 Cash-flow forecasting / long-range planning](./3.2-cash-flow-forecasting.md) — ⚪
 
 ### 4. Money management
-- [§4.1 Flexible budgeting ("Flex" buckets, rollover, forecasting)](./4.1-flexible-budgeting.md) — 🟡
+- [§4.1 Flexible budgeting ("Flex" buckets, rollover, forecasting)](./4.1-flexible-budgeting.md) — 🟡 · **rollover slice shipped (spec 027)**; bucket grouping + forecasting open
 - [§4.2 Subscription / bill manager](./4.2-subscription-bill-manager.md) — 🟡
 - [§4.3 Transaction rules & bulk editing engine](./4.3-transaction-rules.md) — 🟡
 - [§4.4 Transaction tags & richer notes](./4.4-transaction-tags-notes.md) — ✅ delivered (`specs/027-transaction-tags/`)
 
 ### 5. Intelligence & reporting
-- [§5.1 Advanced reports (Sankey cash-flow, savings rate, custom charts)](./5.1-advanced-reports.md) — ⚪
+- [§5.1 Advanced reports (Sankey cash-flow, savings rate, custom charts)](./5.1-advanced-reports.md) — ⚪ · **savings-rate + category deep-dive shipped (spec 027)**; Sankey/custom charts open
 - [§5.2 AI assistant + weekly spending recaps](./5.2-ai-assistant-recaps.md) — ⚪ ⚠️
 
 ### 6. Collaboration
@@ -81,11 +86,14 @@ spec 024 (see §1.1).
 > pre-commercial track** from the 2026-07-17 readiness review — decided work, not
 > candidates. It runs on **two clocks**: integrity/correctness items are
 > research-independent (do now); product-shape items wait for research.
+> **Status (2026-07-19):** the research-independent track is **done** — §9.1
+> shipped (spec 026), §9.3 + §9.4 shipped and the §9.5 decision made (the spec
+> 027 wave). Only §9.2 (research-gated) remains open.
 - [§9.1 Seed-data harness + edge-case coverage corpus](./9.1-seed-data-harness-coverage.md) — 🔴 · ✅ **shipped (spec 026)** · doubles as the §9.4 verification harness (reproduces A2 + A4)
 - [§9.2 Realistic demo / onboarding seed profiles](./9.2-realistic-seed-profiles.md) — 🟡 · Feature 2, held for research
-- [§9.3 Ledger integrity — atomic split persistence](./9.3-ledger-atomic-persistence.md) — 🔴 · the one commercial **blocker**
-- [§9.4 Finance-model correctness & honest labels](./9.4-finance-model-correctness.md) — 🔴/🟡 · verify+fix timezone & CLI-split, extend oracle, relabel
-- [§9.5 Multi-currency accounting strategy](./9.5-multi-currency-strategy.md) — 🟡 · a decision that gates the money layer
+- [§9.3 Ledger integrity — atomic split persistence](./9.3-ledger-atomic-persistence.md) — 🔴 · ✅ **shipped (spec 027)** — `upsert_transaction` RPC; the former "one commercial blocker" is closed
+- [§9.4 Finance-model correctness & honest labels](./9.4-finance-model-correctness.md) — 🔴/🟡 · ✅ **done (spec 027)** — A2 fixed, A4 verified no-divergence, oracle extended, labels relabeled
+- [§9.5 Multi-currency accounting strategy](./9.5-multi-currency-strategy.md) — 🟡 · ✅ **decision made (spec 027)**: launch US/USD-only, native-currency ledger deferred
 
 ### Deep dives
 - [**Plaid feature opportunities**](./plaid-feature-opportunities.md) — what the
@@ -97,23 +105,25 @@ spec 024 (see §1.1).
 
 ## Rough sequencing (subject to change)
 
-**§9 commercial readiness comes first** — it precedes the idea pool below (two clocks):
-- **0a.** **§9.3 atomic persistence** + **§9.4 verify** (timezone A2, CLI-split A4) — now, in parallel; research-independent.
-- **0b.** **§9.1 seed harness + coverage corpus** — now; it's also the harness that reproduces 0a's bugs, so verification falls out of the build.
-- **0c.** targeted finance-habits / budget-app research → then **§9.2 realistic profiles**.
-- **0d.** **§9.4 oracle + labels** and the **§9.5 currency decision** — validated against the §9.1 corpus.
+**§9 commercial readiness came first** — its research-independent track is complete:
+- **0a.** ~~**§9.3 atomic persistence** + **§9.4 verify** (timezone A2, CLI-split A4)~~ — ✅ **done (spec 027)**.
+- **0b.** ~~**§9.1 seed harness + coverage corpus**~~ — ✅ **done (spec 026)**; it reproduced 0a's A2 + A4 as intended.
+- **0c.** targeted finance-habits / budget-app research → then **§9.2 realistic profiles** — **the only §9 item still open**.
+- **0d.** ~~**§9.4 oracle + labels** and the **§9.5 currency decision**~~ — ✅ **done (spec 027)**; decision: launch US/USD-only.
 
 Then the idea pool:
 
 1. ~~**§0.1 Capacitor consolidation**~~ — ✅ **done (spec 021)**; it was the force
    multiplier that unblocked Android (§8.1) + push (§8.2) and removed the parity tax.
-2. **§1.2 manual accounts → §2.1 net worth** and **§3.1 goals** — high-value,
-   privacy-safe, self-contained.
-3. **§4.1 flexible budgeting (rollover)**, **§4.2 subscription manager**, **§4.3
-   rules** — extend money management we already do.
+2. **§1.2 manual accounts → §2.1 net worth** — high-value, privacy-safe,
+   self-contained. (~~§3.1 goals~~ — ✅ shipped, spec 027.)
+3. **§4.1 flexible budgeting** (rollover slice ✅ shipped, spec 027; bucket
+   grouping + forecasting open), **§4.2 subscription manager**, **§4.3 rules** —
+   extend money management we already do.
 4. **§7.1 property value / rental P&L** — deepen our strongest area.
 5. Later / thesis-dependent: **§1.1 aggregation** (⚠️ positioning), **§2.2
-   investments**, **§5.x reports/AI** (⚠️), **§6.1 collaboration** (⚠️).
+   investments**, **§5.x reports/AI** (⚠️; a first Reports slice already shipped
+   in spec 027 — see §5.1), **§6.1 collaboration** (⚠️).
 
 > The ⚠️ items are the ones that redefine what Ortho *is* (bank linking, LLM,
 > >2 people). Decide the product thesis before scoping those; the unmarked items

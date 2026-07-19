@@ -3,13 +3,19 @@
 A calm, money-first household budgeting app. Two people, one household, shared
 and personal money kept in order — on iOS and on the web.
 
-The **web codebase (`web/`) is the single canonical implementation of the
-product**, delivered on two targets: an ordinary responsive web app, and,
-wrapped natively via **Capacitor**, the iOS app. Both talk to the same
-Supabase backend. (Ortho previously shipped a second, independently-built
-native SwiftUI app as the canonical client — that app, `iOS/Ortho-iOS/`, is
-now **frozen**: an unmaintained historical reference and rollback path, kept
-in the repo but receiving no new work. See `docs/index.md` / `docs/ios.md`.)
+The **web codebase (`web/`) is the single canonical implementation**, delivered on
+two targets: a responsive web app and, wrapped via **Capacitor**, the iOS app
+(`web/ios/App/`). Both talk to the same Supabase backend. The earlier native
+SwiftUI app (`iOS/Ortho-iOS/`) is **frozen** since spec 021 — historical
+reference / rollback path only (see `docs/ios.md`).
+
+What the product does today: transactions with splits, tags, and notes;
+budgets with rollover bucket types (`fixed` / `flex` / `non_monthly`);
+savings and debt-payoff goals with pacing; a Dashboard with an
+**Overview | Reports** mode switch (savings rate + category deep-dive);
+housing (mortgage, rentals, multifamily occupancy); member settle-up;
+receipt/statement scan; connect-only Plaid bank linking; Stripe subscriptions
+with a paywall; 6 languages; 7 display currencies over a USD-cents ledger.
 
 ## What's inside
 
@@ -20,66 +26,73 @@ Ortho/
 │                 the canonical implementation; web/ios/App/ is its Capacitor iOS shell
 ├── iOS/          FROZEN SwiftUI app (Swift) — historical reference / rollback path only
 ├── shared/       Regression test vectors (finance logic pinning; formerly cross-language)
-├── supabase/     Postgres schema + migrations + edge functions (the shared backend)
+├── supabase/     Postgres schema + 15 migrations + edge functions (the shared backend)
 ├── services/     Node cores synced into edge functions: billing (Stripe, spec 018) + aggregation (Plaid, spec 024)
 ├── specs/        Spec-Driven Development artifacts (Spec Kit)
 └── .specify/     Spec Kit config + the project constitution
 ```
 
 **New here (human or agent)?** Read [`docs/index.md`](docs/index.md) first — it maps how the
-pieces fit together, then links to a deep-dive doc for each subsystem
-([web](docs/web.md) — the canonical implementation, both delivery targets ·
-[supabase](docs/supabase.md) · [shared](docs/shared.md) ·
-[tooling/Makefile](docs/makefile.md) · [ios](docs/ios.md) — the frozen native app).
+pieces fit, then links a deep-dive per subsystem
+([web](docs/web.md) · [finance engines](docs/finance.md) · [supabase](docs/supabase.md) ·
+[shared vectors](docs/shared.md) · [tooling/Makefile](docs/makefile.md) ·
+[ios](docs/ios.md) — Capacitor shell, TestFlight deploy, and the frozen native app).
 
 The four destinations on every canvas: **Dashboard**, **Transactions**, **Housing**,
-**Settings** (with Budgets and Insights surfaced within them).
+**Settings**. Budgets and Goals are reached from Settings → Planning; Reports is a
+mode inside Dashboard, not a fifth destination.
 
 ## Core ideas
 
 - **Money is the headline.** Calm over dense — no gradients, no saturated status
   colors, hairlines over borders. Meaning is carried by position and weight, not
-  color. Loss/cost is never red. The type is self-hosted **Lato** with a size-driven
-  weight model (large display = Light, body = Regular; no bold).
-- **All money is stored as USD cents** and converted to the user's display currency
-  at render time (live FX with sensible fallback rates).
-- **Shared vs personal scope.** Shared transactions belong to the household and split
-  between Ortho members; personal transactions are yours, and can be split with
-  *local users* — device-only people without an Ortho account.
-- **One implementation, pinned against regressions.** The finance engines
-  (mortgage, insights, money/date formatting) are pure TypeScript, asserted
-  against fixtures in `shared/test-vectors/` so a behavior change never ships
-  silently — this used to also lock a second (Swift) implementation in step;
-  now it's a single-implementation regression suite (see `PARITY.md`).
+  color. Loss/cost is never red. Self-hosted **Lato**, size-driven weight
+  (large display = Light, body = Regular; no bold).
+- **All money is stored as integer USD cents** and converted to the display
+  currency at render time (live FX with fallback rates).
+- **Derived, never stored.** Budget rollover carry, goal progress (sum of
+  contributions), and member balances are computed from history on every
+  render — there is no month-close job and no cached progress column.
+- **Shared vs personal scope.** Shared transactions split between Ortho members;
+  personal ones can split with *local users* — name-only people without an
+  Ortho account. Transaction + shares are written atomically via the
+  `upsert_transaction` Postgres RPC (spec 027).
+- **One implementation, pinned against regressions.** The pure-TS finance
+  engines (`web/lib/finance/`, splits, balances, filters, reports) are asserted
+  against 13 fixtures in `shared/test-vectors/`, so a behavior change never
+  ships silently (see `PARITY.md`).
 - **Right form factor per canvas.** Bottom tab bar on mobile / the Capacitor
-  iOS shell, left sidebar on desktop web; bottom sheets on iOS, a shared
-  right-side slide-out drawer on desktop web — one codebase, adapted per canvas.
+  shell, left sidebar on desktop (≥1024px); bottom sheets on mobile, a shared
+  right-side drawer on desktop — one codebase, adapted per canvas.
 
 The design system and product principles are governed by the **constitution** at
-[`.specify/memory/constitution.md`](.specify/memory/constitution.md). Detailed web/desktop
-guidance lives in the `ortho-web` skill.
+[`.specify/memory/constitution.md`](.specify/memory/constitution.md). Detailed
+web/desktop guidance lives in the `ortho-web` skill.
 
 ## Getting started
 
 ### Web (`web/`) — desktop/mobile browser
 
-Next.js App Router app. Requires Node and Supabase env vars
-(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`).
+Node 22 (`.nvmrc`). Requires Supabase env vars (`NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`).
 
 ```bash
 cd web
 npm install
 npm run dev        # http://localhost:3000
-npm test           # full test suite (Vitest + Testing Library)
-npm run test:coverage
+npm test           # full Vitest suite (node + jsdom/Testing Library)
+npm run test:tz    # timezone-shifted rerun of date-sensitive suites
 npx tsc --noEmit   # typecheck
 npm run build      # static export → web/out/ (output: 'export')
 ```
 
+Deterministic demo data: `npm run gen:corpus` builds the seedable coverage
+corpus, `npm run seed:corpus` loads it (spec 026).
+
 ### iOS — Capacitor shell of `web/` (`web/ios/App/`)
 
-The same codebase as above, statically exported and wrapped natively via Capacitor.
-Requires Xcode (macOS-only):
+Same codebase, statically exported and wrapped natively. Requires Xcode
+(macOS-only — Linux sandboxes cannot build iOS):
 
 ```bash
 cd web
@@ -89,58 +102,54 @@ npx cap open ios     # or: xcodebuild build -project ios/App/App.xcodeproj -sche
 
 **CI:** [`.github/workflows/capacitor-ios-ci.yml`](.github/workflows/capacitor-ios-ci.yml)
 build-verifies this on a macOS runner for any push/PR touching `web/**` — the iOS
-feedback loop for environments without Xcode (Linux dev sandboxes included).
+feedback loop for environments without Xcode. TestFlight deployment is covered in
+[`docs/ios.md`](docs/ios.md).
 
 ### The frozen native app (`iOS/`)
 
-Historical reference and rollback path only — receives no new work. If you ever need
-to compile it (e.g. an emergency rollback), open it in Xcode and run the `Ortho-iOS`
-scheme. **CI:** [`.github/workflows/ios-ci.yml`](.github/workflows/ios-ci.yml) is
-`workflow_dispatch`-only now — a manual "does it still compile" smoke check, not a
-required gate. Setup notes and sandbox usage live in the gitignored
-`CI-SETUP.local.md` at the repo root.
+No new work. [`.github/workflows/ios-ci.yml`](.github/workflows/ios-ci.yml) is
+`workflow_dispatch`-only — a manual "does it still compile" check. Local CI
+credentials/setup live in the gitignored `CI-SETUP.local.md` at the repo root.
 
 ### Backend (`supabase/`)
 
-Postgres schema and migrations for the shared backend (households, members,
-transactions + shares, cards, properties/mortgage/lease/units, rental payments,
-budgets, aggregate RPCs, billing/entitlements [spec 018], and linked bank
-institutions/accounts via Plaid connect [spec 024]). Deno **edge functions**
-under `supabase/functions/` (Stripe billing + Plaid connect) back the last two.
-Apply with the Supabase CLI.
+Postgres schema + migrations (households, members/people, transactions + shares
++ tags + notes, cards, properties/mortgage/lease/units, rental payments, budgets
+with rollover, goals + contributions, aggregate RPCs, `upsert_transaction`,
+billing/entitlements, Plaid-linked institutions/accounts). Deno **edge
+functions** under `supabase/functions/` (Stripe billing + Plaid connect). Apply
+with the Supabase CLI;
+[`.github/workflows/supabase-migrations.yml`](.github/workflows/supabase-migrations.yml)
+validates and auto-applies migrations in CI. Details: [`docs/supabase.md`](docs/supabase.md).
 
 ### Importing bank statements (`make ingest`)
 
-A deterministic (no-LLM) CLI parses a bank-statement **PDF** and writes
+A deterministic (no-LLM) CLI parses a bank-statement **PDF or CSV** and writes
 transactions into the shared database, identical to app-entered ones. Always
-preview first: `make ingest FILE=<statement.pdf> DRY_RUN=1`. It auto-detects the
-bank, reconciles each section against the statement's printed subtotals (and
-refuses to import on a mismatch), suggests categories, flags non-spending rows,
-and lets you assign owners/splits. The same CLI also offers transaction CRUD —
-`make tx-list / tx-add / tx-edit / tx-rm` — for managing transactions from the
-terminal. See [`web/scripts/import/README.md`](web/scripts/import/README.md),
-[`specs/004-bank-statement-import/`](specs/004-bank-statement-import/), and
-[`specs/005-transaction-crud-cli/`](specs/005-transaction-crud-cli/).
+preview first: `make ingest FILE=<statement.pdf|csv> DRY_RUN=1`. It auto-detects the
+bank, reconciles PDF sections against printed subtotals (refuses on mismatch),
+suggests categories, and lets you assign owners/splits. The same CLI offers
+transaction CRUD — `make tx-list / tx-add / tx-edit / tx-rm`. See
+[`web/scripts/import/README.md`](web/scripts/import/README.md) and
+[`docs/makefile.md`](docs/makefile.md).
 
 ## Testing
 
-- **Web:** Vitest runs pure-logic suites (node) and component/behavior suites (jsdom +
-  Testing Library) under one `npm test`, with v8 coverage on the `lib/` business logic.
-  The mortgage and insight engines are pinned by the shared regression vectors. This
-  is also the test suite for the Capacitor iOS shell's shared logic — there's one
-  codebase, one test suite.
-- **Regression vectors:** `shared/test-vectors/` pins the pure finance logic against
-  its own output — see [`shared/test-vectors/README.md`](shared/test-vectors/README.md)
-  and `docs/shared.md` (which notes this was originally a cross-language lock against
-  the now-frozen native app, kept on as an ordinary regression suite).
+- **Web:** Vitest runs pure-logic suites (node) and component suites (jsdom +
+  Testing Library) under one `npm test`, with v8 coverage on `lib/` business
+  logic. One codebase, one suite — this also tests the Capacitor iOS shell.
+- **Regression vectors:** 13 JSON fixtures in `shared/test-vectors/` pin the
+  finance engines (mortgage, insights, budget rollover, goals, splits, filters,
+  balances, and more); regenerate with `npm run gen:vectors`. See
+  [`shared/test-vectors/README.md`](shared/test-vectors/README.md) and
+  [`docs/shared.md`](docs/shared.md).
 
-New behavior is developed **test-first** (see constitution, Principle VI): money math
-and date logic are never shipped without coverage.
+New behavior is developed **test-first** (constitution, Principle VI): money
+math and date logic never ship without coverage.
 
 ## How work flows here
 
-Features move through Spec-Driven Development — `specify → plan → tasks → implement`,
-recorded under `specs/`. Verification favors typecheck + tests + visual review; a
-production build / dev server is never run while a shared dev server is up.
-
+Features move through Spec-Driven Development — `specify → plan → tasks →
+implement`, recorded under `specs/`. All seven spec-027 features are merged;
+nothing is currently in-flight. The backlog lives in `docs/future_tasks/`.
 Agent/contributor working notes live in [`CLAUDE.md`](CLAUDE.md).

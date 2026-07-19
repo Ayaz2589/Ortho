@@ -1,415 +1,402 @@
 # Ortho Web (`web/`)
 
-## 1. Purpose
+Read this when working anywhere in `web/` — it is THE canonical implementation (Next.js), shipping
+both delivery targets: responsive web (Vercel) and the iOS app (Capacitor shell at `web/ios/App/`).
+Finance-engine math lives in [./finance.md](./finance.md); schema/RLS in
+[./supabase.md](./supabase.md); vectors in [./shared.md](./shared.md); import CLI in
+[./makefile.md](./makefile.md); native plugin internals + TestFlight deploy in [./ios.md](./ios.md).
 
-`web/` is the **single canonical implementation of Ortho** (Next.js + React + TypeScript) — since
-spec 021 (2026-07-09), it ships on **two delivery targets from the same codebase**: an ordinary
-responsive web app (desktop + mobile browsers), and, statically exported and wrapped natively via
-**Capacitor**, the iOS app (`web/ios/App/` — see §4 "Capacitor iOS shell" below). The previously
-canonical native SwiftUI app (`iOS/Ortho-iOS/`, see [./ios.md](./ios.md)) is now **frozen** — a
-historical reference and rollback path, receiving no new work. There is no longer a second
-implementation to keep in lockstep with; the golden-vector system in `shared/test-vectors/` (see
-[./shared.md](./shared.md)) is kept as an ordinary single-implementation regression suite, not a
-cross-language lock (see root `PARITY.md`).
+## 1. Posture
 
-It is a household-finance app with four destinations on every canvas: **Dashboard**, **Transactions**, **Housing**, **Settings** (Budgets and Insights are surfaced within them). All money is stored as integer **USD cents** and converted to the display currency at render time.
+- Next.js **16.2.9**, React **19.2.4**, TypeScript, Tailwind v4. Fully client-side:
+  `next.config.ts` sets `output: 'export'` + `images.unoptimized: true` (spec 021). No Next server
+  at runtime, no middleware/`proxy.ts`, no API routes, no server components beyond the root layout.
+  Data access is direct Supabase from the browser; RLS enforces access.
+- **Next 16 has breaking changes vs training data** — per `web/AGENTS.md`, read
+  `web/node_modules/next/dist/docs/` before writing Next-specific code.
+- Node pinned by `.nvmrc` (22); engines `>=20.19.0 || >=22.12.0` (Vitest 4 needs `require(ESM)`).
+- Scripts: `dev`, `build`, `test`, `test:coverage`, `test:tz`, `gen:vectors`, `gen:corpus`,
+  `seed:corpus`, `measure:bundle`. `npm start` does not exist — serve `web/out/` statically.
+- Key deps: `@supabase/supabase-js` + `@supabase/ssr`, `recharts`, `react-plaid-link`,
+  `lucide-react`, Capacitor 8.4.1 + plugins (`app/haptics/keyboard/share/splash-screen/status-bar`,
+  `@aparajita/capacitor-{biometric-auth,secure-storage}`, `@capawesome/capacitor-file-picker`),
+  `unpdf` (dev, web PDF fallback), `tsx` (CLI + generators).
+- The package also hosts the deterministic bank-statement import + tx CRUD CLI
+  (`web/scripts/import/`), driven by the root Makefile — internals in [./makefile.md](./makefile.md).
 
-The package also hosts a deterministic (no-LLM) **bank-statement import + transaction CRUD CLI** (`web/scripts/import/`) that writes to the same database, driven by the root Makefile (see [./makefile.md](./makefile.md)).
-
-## 2. Stack & key dependencies
-
-From `web/package.json` (`ortho-web`, requires **Node >= 20.19.0 or >= 22.12.0**):
-
-| Dependency | Version | Role |
-|---|---|---|
-| `next` | **16.2.9** (pinned) | App Router; `output: 'export'` (static export, spec 021 — no server at runtime) |
-| `react` / `react-dom` | **19.2.4** (pinned) | UI |
-| `typescript` | ^5 | strict mode, `@/*` path alias to package root |
-| `tailwindcss` + `@tailwindcss/postcss` | ^4 | Tailwind v4 (CSS-first, `@config` bridge to `tailwind.config.ts`) |
-| `@supabase/supabase-js` | ^2.108.1 | data + auth client |
-| `@supabase/ssr` | ^0.12.0 | cookie-based session on desktop/mobile web (native uses Keychain instead — see below) |
-| `lucide-react` | ^1.17.0 | outlined monochrome icons (matches the frozen app's SF Symbols) |
-| `recharts` | ^3.8.1 | dashboard charts |
-| `react-plaid-link` | ^4.1.1 | spec 024: embedded Plaid Link on web (lazy-loaded via `next/dynamic` in `components/settings/EmbeddedPlaidLink.tsx`, so the Plaid script never enters the initial bundle) |
-| `clsx` + `tailwind-merge` | ^2.1.1 / ^3.6.0 | `cn()` helper in `web/lib/utils.ts` |
-| `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios` | ^8.4.1 | native iOS shell (spec 021); SPM package manager, not CocoaPods |
-| `@capacitor/{app,haptics,keyboard,share,splash-screen,status-bar}` | ^8.x | native-feel plugins — see §4 "Capacitor iOS shell" (camera is the custom Swift Scan plugin, not `@capacitor/camera`) |
-| `@capawesome/capacitor-file-picker` | ^8.0.3 | Files-app PDF picking (statement import) |
-| `@aparajita/capacitor-{biometric-auth,secure-storage}` | ^10.0.0 / ^8.0.0 | Face ID/Touch ID gate; Keychain-backed session storage |
-| `@capacitor/assets` | ^3.0.5 (dev) | app icon / splash-screen asset generation |
-| `vitest` + `@vitest/coverage-v8` | ^4.1.8 | tests (Vitest 4 needs Node >= 20.19 for `require(ESM)`) |
-| `@testing-library/react` / `jest-dom` / `user-event`, `jsdom` | — | component tests |
-| `tsx` | ^4.22.4 | runs the import CLI and `gen-vectors.ts` |
-| `unpdf`, `ws` | dev | PDF text extraction / Supabase realtime shim for the CLI |
-
-Desktop/mobile web is deployed on **Vercel** (project `ortho`), **auto-deployed from GitHub**: every
-push/merge to `main` → **production**, every other branch/PR → a **preview** URL. See §6 "Vercel
-deployment" for the one non-obvious setting (Root Directory = `web`). The Capacitor iOS shell ships
-via TestFlight/App Store from `web/ios/App/` (see `./deploy.md`).
-
-**Heads-up (from `web/AGENTS.md` / `web/CLAUDE.md`):** this Next.js version has breaking changes vs. older training data — consult the bundled guides in `web/node_modules/next/dist/docs/` before writing Next-specific code.
-
-## 3. Directory map
+## 2. Route tree (all `'use client'`)
 
 ```
-web/
-├── app/                        # Next.js App Router
-│   ├── layout.tsx              # root layout: self-hosted Lato, pre-paint appearance boot script, viewport-fit=cover
-│   ├── globals.css             # ALL design tokens (light/dark CSS vars) + ow-* desktop chrome + safe-area/native-feel rules
-│   ├── page.tsx                # "/" → 'use client' redirect to /dashboard (spec 021: was a Server Component redirect())
-│   ├── sign-in/page.tsx        # email-OTP sign-in (8-digit code, no password) + redirect-away-if-signed-in
-│   ├── fonts/                  # Lato-{Light,Regular,Bold,Black}.ttf — same files the frozen app bundled
-│   └── (app)/                  # authed route group
-│       ├── layout.tsx          # 'use client' shell: AppStateProvider + Sidebar + TabBar + paywall gate (spec 018);
-│       │                       #   SplashScreen.hide() after first paint; biometric lock overlay (spec 023)
-│       ├── dashboard/page.tsx  # branches mobile stack vs DashboardDesktop at ≥1024px
-│       ├── transactions/page.tsx, transactions/new/page.tsx, transactions/edit/page.tsx  # spec 025: mobile new/edit as pages
-│       ├── housing/page.tsx, housing/new/page.tsx, housing/edit/page.tsx                 # spec 025: mobile new/edit as pages
-│       ├── budgets/page.tsx
-│       ├── goals/page.tsx        # spec 027: savings/debt-payoff goals (secondary route from Settings)
-│       ├── settings/page.tsx, settings/household/page.tsx, settings/linked-banks/page.tsx  # linked-banks: spec 024
-│       └── plaid-oauth/page.tsx  # spec 024: web bank-OAuth return route (re-inits Link w/ stored token)
-├── capacitor.config.ts         # spec 021: appId (reused native-app bundle id), webDir 'out', ios/plugins config
-├── ios/App/                    # spec 021: the Capacitor-generated native iOS project (SPM, not CocoaPods)
-│   └── App/Plugins/Scan/       # custom Swift plugin — camera capture + Vision OCR + PDFKit + FoundationModels
-│                               #   refiner, ported from the frozen app's Services/Scan/* (see ./ios.md)
-├── components/
-│   ├── ui.tsx                  # primitives: Card, SectionLabel, Avatar, StackedAvatars, PageHeader, Modal…
-│   ├── inputs.tsx              # form inputs
-│   ├── layout.tsx              # ReadingColumn (560px centered column)
-│   ├── Sidebar.tsx             # desktop nav (icon rail @sm, full @lg) + household footer + sign-out
-│   ├── TabBar.tsx              # mobile bottom tab bar (sm:hidden, backdrop-blur, safe-area-inset-bottom padding)
-│   ├── dashboard/              # widget cards (MonthSummary, Insights, BudgetProgress, SpendByCategory,
-│   │                           #   PerOwnerBreakdown, TopMerchants, HousingSnapshot, DailySpendTrend,
-│   │                           #   MonthPicker, RangePicker) + range.ts (pure range math, regression-vector-locked)
-│   ├── transactions/           # TransactionRow, TransactionDetailModal/Body (mobile detail; Edit navigates — spec 025), BalanceSummary
-│   ├── housing/                # PropertyCard/Content, Mortgage/Rental/Multifamily cards; PropertyForm (shared body) +
-│   │                           #   AddPropertyModal (desktop Drawer wrapper) + PropertyFormPageClient/PropertyKindChoices (mobile page, spec 025) + lease.ts/rate.ts/kinds.ts
-│   ├── budgets/BudgetDrawer.tsx
-│   ├── goals/                  # spec 027: GoalCard (calm progress view) + GoalForm + ContributionForm
-│   ├── Paywall.tsx             # spec 018: blocking gate content (plans, check again, quiet sign-out)
-│   ├── PlaidHandBack.tsx       # spec 024: renders nothing; completes hosted sessions on hand-back/foreground
-│   ├── settings/               # rows, ChoiceRows, HouseholdDrawer, AddCardModal, appearance.ts (THEME_VARS +
-│   │                           #   native status-bar sync), SubscriptionSection.tsx (spec 018),
-│   │                           #   LinkedBanks.tsx + EmbeddedPlaidLink.tsx (spec 024)
-│   ├── scan/                   # spec 021: React port of the scan review flow (interstitial + summary),
-│   │                           #   driven by lib/scan/scanSession.ts
-│   └── web/                    # ≥1024px desktop chrome: DashboardDesktop, TransactionsDesktop,
-│                               #   HousingDesktop, Drawer (shared slide-out), WebModal, TxForm,
-│                               #   FilterPanel, ActiveFilterChips (both gained a Tags dimension, spec 027),
-│                               #   TagEditor (inline tag add/remove, spec 027), kit.tsx (WebPageHeader, Seg…);
-│                               #   TxFormPageClient + FormPageHeader (spec 025: mobile new/edit tx page chrome)
-├── lib/
-│   ├── store.tsx               # AppStateProvider — the entire client data layer (React context); client-side auth
-│   │                           #   gate (spec 021, replaces the deleted proxy.ts) + Capacitor appStateChange listener
-│   ├── entitlements.ts         # spec 018: hand-mirrored gate derivation (literal-vector-locked)
-│   ├── billing.ts              # spec 018: functions.invoke wrappers for the billing edge functions
-│   ├── aggregation.ts          # spec 024: functions.invoke wrappers for the plaid-* edge functions
-│   ├── plaidLinkSession.ts     # spec 024: pending Plaid link-session localStorage record + expiry
-│   ├── supabase/client.ts      # createBrowserClient — native-only Keychain storage adapter (spec 021)
-│   ├── auth/keychainStorage.ts # spec 021: Keychain-backed supabase-js auth.storage adapter (native only)
-│   ├── haptics.ts              # spec 021: native-aware haptic feedback (confirm/destructive), no-op on web
-│   ├── share.ts                # spec 021: native share-sheet wrapper (falls back to Web Share API on web)
-│   ├── scan/                   # spec 021: ported scan business logic (was iOS-only Swift) — scanModels.ts,
-│   │                           #   scanHeuristics.ts, scanParser.ts, scanInference.ts, scanSession.ts
-│   ├── api/aggregates.ts       # wrappers over Postgres aggregate RPCs (wired by Reports, spec 027; owner/daily still unwired)
-│   ├── flags.ts, test-build.ts # spec 015 test-build feature flags (localStorage-gated, dead-code-eliminated in prod)
-│   ├── testdata/               # spec 015 in-memory seeded Supabase client (test-data mode: seed.ts, memory-client.ts)
-│   ├── finance/                # pure engines: money.ts, currency.ts, mortgage.ts, insights.ts, housing.ts,
-│   │                           #   goals.ts (+ goals-thresholds.ts) — spec 027 goal progress + off-track pacing
-│   ├── splits.ts               # split math + orderedOwnerIds (canonical leftover-cent order)
-│   ├── balances.ts             # member settle-up balance
-│   ├── transactionFilters.ts   # filter engine + monthBounds (tags dimension + notes/tag-name search, spec 027)
-│   ├── format.ts               # date grouping, effectiveShares
-│   ├── categories.ts           # category metadata + paletteFor
-│   ├── types.ts                # domain types mirroring the Supabase schema; exports PICKABLE_CATEGORIES
-│   ├── language.ts             # language → BCP-47 locale (bn pinned to Latin digits)
-│   ├── i18n/                   # full-UI translation catalogs (bn/es/ja/zh/ko); store exposes t()
-│   ├── useMediaQuery.ts        # useIsExpanded() = (min-width: 1024px)
-│   ├── useDashboardRange.ts    # persisted range + transient month scope hook
-│   ├── useTransactionFilters.ts
-│   └── useFocusTrap.ts         # focus trap + restore for Drawer / WebModal (a11y)
-├── scripts/
-│   ├── gen-vectors.ts          # regenerates shared/test-vectors/*.json from the TS engines
-│   ├── import/                 # bank-statement import + tx CRUD CLI (engine/, profiles/, db/, cli.ts, tx.ts)
-│   ├── ops/                    # [OPERATOR-PENDING] live-deploy tools: billing-probe.ts, billing-smoke.ts (spec 018)
-│   └── maintenance/repair-legacy-dates.ts  # one-shot date repair (make repair-dates, dry-run by default)
-├── test/                       # Vitest files (unit, jsdom component, *.parity.test.ts,
-│   │                           #   i18n/ catalog + render-locale locks, import/ golden suites + fixtures/,
-│   │                           #   helpers/supabase-mock.ts)
-│   └── setup.ts                # jest-dom matchers + conditional RTL cleanup
-├── next.config.ts              # output: 'export' (static export, spec 021) + images.unoptimized
-├── tailwind.config.ts          # maps semantic color names → CSS variables
-├── vitest.config.ts            # node default env, fileParallelism:false, v8 coverage thresholds
-├── postcss.config.mjs          # @tailwindcss/postcss
-└── .env.local                  # NEXT_PUBLIC_SUPABASE_URL / _ANON_KEY / SUPABASE_SERVICE_ROLE_KEY
+web/app/
+  layout.tsx            fonts (self-hosted Lato ×4 via next/font/local), viewport-fit=cover,
+                        inline pre-paint APPEARANCE_BOOT script (theme + html.native, no flash)
+  page.tsx              client redirect → /dashboard
+  sign-in/page.tsx      8-digit email OTP (signInWithOtp → verifyOtp(type:'email')); bounces
+                        signed-in users to /dashboard on mount; builds its own t()
+  (app)/layout.tsx      AppStateProvider + Shell + biometric lock overlay + paywall gate
+  (app)/dashboard, transactions{,/new,/edit}, housing{,/new,/edit}, budgets, goals,
+        settings{,/household,/linked-banks}, plaid-oauth
 ```
 
-## 4. Architecture
+- **Four destinations only** (Dashboard/Transactions/Housing/Settings) — identical TABS arrays
+  duplicated in `components/Sidebar.tsx` and `components/TabBar.tsx`. `/budgets` and `/goals` are
+  reached from Settings › Planning, not tabs. `/plaid-oauth` is the web bank-OAuth return route.
+- **Reports (spec 027) is a Dashboard MODE, not a route** — `ModeSwitch` overview↔reports inside
+  `dashboard/page.tsx`; state lives in the page so it survives toggles.
 
-### Routing & auth
-- `app/page.tsx` is a `'use client'` component that redirects `/` → `/dashboard` on mount. All product pages live in the `(app)` route group; each page is a `'use client'` component.
-- **Auth gate (spec 021 — client-side, no server).** `web/proxy.ts` (Next 16's `middleware.ts` replacement) is **deleted**: it's unsupported under `output: 'export'` (Next's own docs mark Proxy `Static export = No`) and would never execute anyway. The same three checks now live client-side, reusing the ordinary browser Supabase client:
-  1. Signed-out → `/sign-in`: `lib/store.tsx`'s bootstrap (`runBootstrap()`) redirects on `!authUser`, short-circuited by the test-build `bypassAuth` flag.
-  2. Signed-in → `/dashboard` away from `/sign-in`: a mount-time check in `app/sign-in/page.tsx`.
-  3. Root `/`: the client-side redirect above.
+## 3. Data layer — `web/lib/store.tsx` (~1500 lines, the whole client data layer)
 
-  There is deliberately **no single-active-platform lock** — the Capacitor iOS shell and desktop/mobile web may be signed in simultaneously (feature 010); the 30-day cap is Supabase's session timebox. On the Capacitor build specifically, an `@capacitor/app` `appStateChange` listener (`lib/store.tsx`) also re-validates the session on foreground, closing a documented liveness gap (`docs/parity-audit-2026-07-02.md`) that the old per-navigation `proxy.ts` check used to paper over.
-- Sign-in (`app/sign-in/page.tsx`) is passwordless email OTP: `signInWithOtp` → `verifyOtp(type: 'email')` → `router.replace('/dashboard')`.
+Single `AppStateProvider`; two contexts (spec 023): `DataCtx` (changing data) + `ServicesCtx`
+(stable: `rate, formatMoney, t, resolveUser, ownersDisplay`). `useApp()` merges both;
+`useAppServices()` lets `React.memo`'d ledger rows skip re-renders on unrelated mutations.
 
-### Capacitor iOS shell (spec 021)
-- **Scaffold**: `web/capacitor.config.ts` (`appId` reuses the frozen app's bundle id `AyazUddin.Ortho-iOS` so TestFlight/App Store continuity is preserved; `webDir: 'out'`; Swift Package Manager, not CocoaPods) + `web/ios/App/` (Capacitor-generated Xcode project, structurally independent of the frozen `iOS/Ortho-iOS.xcodeproj`).
-- **Build loop**: `next build` (static export → `web/out/`) → `npx cap sync ios` (copies `out/` into `ios/App/App/public/`, resolves SPM deps) → `npx cap open ios` / `xcodebuild`. CI: `.github/workflows/capacitor-ios-ci.yml`.
-- **Session storage**: `lib/auth/keychainStorage.ts` — a Keychain-backed `supabase-js` `auth.storage` adapter, wired in only on `Capacitor.isNativePlatform()` (`lib/supabase/client.ts`); desktop/mobile web keeps the default `@supabase/ssr` cookie path unchanged.
-- **Native-feel plugins**: `@capacitor/status-bar` (text style driven live from `components/settings/appearance.ts`'s theme toggle), `@capacitor/keyboard` (`resize: 'body'`), `@capacitor/splash-screen` (`launchAutoHide: false`, hidden manually after first paint in `app/(app)/layout.tsx`), `@capacitor/haptics` (`lib/haptics.ts`, wired into transaction/property add-delete in `lib/store.tsx`), `@capacitor/share` (`lib/share.ts`), `@aparajita/capacitor-biometric-auth` (Face ID/Touch ID), `@capawesome/capacitor-file-picker` (Files-app PDF import for scanning).
-- **Scan plugin**: `web/ios/App/App/Plugins/Scan/` — a custom Swift Capacitor plugin (camera capture + Vision OCR + PDFKit + an optional FoundationModels refiner), the one piece of the scan pipeline with no browser equivalent. Its pure parsing/heuristics/categorization counterpart lives in `web/lib/scan/*` (ported from the frozen app's Swift, now regression-vector-tested like the rest of `web/lib/*`). See `./ios.md` for the original Swift source this plugin ports, and `specs/021-capacitor-ios-consolidation/contracts/scan-plugin-api.md` for the JS↔Swift contract.
-- **Native-feel CSS**: `app/globals.css` defines `--safe-top/-bottom/-left/-right` from `env(safe-area-inset-*)` (harmless 0 on desktop/mobile web), applied to the tab bar and app-shell content padding; disables iOS's long-press text-selection callout on the shell (re-enabled on inputs/`.ortho-selectable`); `touch-action: manipulation` on every tappable primitive.
+**Bootstrap** (`runBootstrap`): `auth.getUser()` → signed-out ⇒ `window.location.assign(signInHref())`
+(client-side auth gate — no server gate under static export; test builds with `bypassAuth` skip) →
+ensure `users` profile row (insert-if-absent, never upsert) → find-or-create household + membership
+(fail-loud via `orThrow` — a swallowed read error would create a duplicate household) → ensure
+account-holder Person row + one-time fold of legacy localStorage `localUsers` → `ensure_entitlement`
+RPC kicked off eagerly in parallel → `loadAll`.
 
-### Test-build feature flags (spec 015)
-A **Developer** section on the Settings page (`components/settings/flags-section.tsx`) exposes **Use test data** and **Bypass auth**, letting a tester run the app on a disposable in-memory dataset without touching the live shared backend.
-- **Gating:** `lib/test-build.ts` `isTestBuild()` (`NEXT_PUBLIC_VERCEL_ENV`/`NODE_ENV !== 'production'`) gates both the section and every flag-honoring branch, so they **dead-code-eliminate from the production bundle**. Flags persist via `lib/flags.ts` (`localStorage['ortho.flags']`, mirroring `appearance.ts`) and read all-off off a test build (FR-003). **Spec 021:** the `ortho_bypass_auth` cookie mirror is gone — now that the auth gate is client-side (`lib/store.tsx`), it reads `readFlags().bypassAuth` from `localStorage` directly.
-- **Isolation (the single seam):** when `isTestBuild() && effectiveUseTestData(readFlags())`, `lib/supabase/client.ts` returns an **in-memory seeded client** (`lib/testdata/memory-client.ts`, a productionized copy of `test/helpers/supabase-mock.ts`, seeded from `lib/testdata/seed.ts`) instead of `createBrowserClient`. Because the store funnels every read/write/auth call through that one handle, no live call is constructed — the store needs no changes; toggling a flag reloads to re-bootstrap from a clean seed.
-- **Auth bypass:** `lib/store.tsx`'s bootstrap skips the `/sign-in` redirect when `isTestBuild()` + the flag; the store boots from the seed client (its `getUser` returns a seed user; `onAuthStateChange` never fires `SIGNED_OUT`). The seed is Person-centric (owner_ids + shares + paid_by, budgets, rental, transfers). Tests: `test/{flags,settings,store}/*`. Outside the golden-vector harness (PARITY.md).
+**`loadAll`**: one `Promise.all` of **17 reads** (users, household_people, transactions,
+transaction_shares, cards, properties, mortgage_info, lease_info, units, rental_payments, budgets,
+goals, goal_contributions, linked_institutions, linked_accounts, tags, transaction_tags).
+- Column projection on the 3 high-volume reads (users/transactions/shares) — never `select('*')`
+  there. The test memory client ignores column lists, so a missing column only surfaces at runtime.
+- **Fail-loud vs fail-open**: the 11 core reads throw (error banner + `bootstrapFailed` ⇒ Retry);
+  the 6 newer reads (goals, goal_contributions, linked_*, tags, transaction_tags) treat
+  missing-table errors (`PGRST205`/`42P01`) as empty — the deploy-before-migrate window (Vercel
+  ships `main` before migrations apply). `ensure_entitlement` similarly fails OPEN on `PGRST202`
+  (missing RPC) with a null entitlement. **New additive tables must join the fail-open list** or
+  they take bootstrap down.
+- **Typed seam**: every read is asserted to a hand-written `*Row` type in `lib/supabase/rows.ts`
+  (17 row types; `supabase gen types` not runnable in sandboxes) then assigned to domain types
+  (`lib/types.ts`). Keep `rows.ts`, the projection lists, and `types.ts` in lockstep.
+- **Rehydration**: shares → `owner_ids` + per-person `shares` map. A shareless transfer gets EMPTY
+  owners (directional, never creator-owns-all); shareless non-transfer falls back to the creator at
+  full amount. Unknown kind/category rows are silently dropped (`isKnownTransactionRow`).
 
-### Subscription gate & billing (spec 018)
-- **`lib/entitlements.ts`** is the hand-mirrored client copy of the canonical `services/billing/src/derive.ts` : `deriveGateState(row, nowIso)` → `admin | trialing | active | grace | lapsed`, plus `daysRemaining`. Both copies are locked by the **identical literal vectors V01–V19 + sha256 digest** in `specs/018-subscription-system/contracts/entitlement-state.md` (asserted here by `test/entitlements.test.ts`) — amend the contract before touching semantics. Deliberately *not* a golden vector (no money/date engine).
-- **Bootstrap** issues the `ensure_entitlement()` RPC in parallel with `loadAll()` — it creates the 31-day trial row exactly once and doubles as the entitlement fetch. A failed entitlement read is a **load failure** (existing recovery path), never the paywall (FR-008). The store exposes `entitlement`, the memoized derived `gateState`, and `refreshEntitlement()` ("Check again" + the `?checkout=success` return path re-read).
-- **Shell gate** (`app/(app)/layout.tsx`): `gateState === 'lapsed'` renders `<Paywall/>` *instead of* children — every route, tab, and deep link lands there; a `null` gate (row not loaded) **never blocks** (FR-009, no paywall flash). `grace` keeps full access with a calm Settings notice. `Paywall.tsx` prices plans exclusively from `billing-plans` (calm "plans unavailable" state on failure), offers check-again and a quiet sign-out, and announces async status via `role="status"`/`aria-live`.
-- **Settings › Subscription** (`components/settings/SubscriptionSection.tsx`, mounted after Cards): per-state copy (trial days left, renews, ends-on, billing-issue notice, admin "no subscription needed"), Manage → Stripe Customer Portal, inline subscribe.
-- **`lib/billing.ts`** wraps `functions.invoke` for `billing-plans`/`billing-checkout`/`billing-portal` and maps failures to the contract's `{ error: { code } }` envelope — callers localize by `code`; checkout is never auto-retried (duplicate sessions). Plan prices render as USD `$X.XX` and deliberately skip the display-currency converter (the paywall shows exactly what Stripe will charge).
-- **Test infrastructure**: `test/helpers/supabase-mock.ts` gained a `functions.invoke` fake and RLS-faithful guards (client writes to `entitlements` rejected; `billing_events` invisible even to reads); `lib/testdata/memory-client.ts` resolves `ensure_entitlement` to a null row — null gate, no paywall — so test-data mode never gates and never talks to the live backend.
-- **i18n**: +29 keys in all five catalogs (27 initial + 2 from the T042 review pass). **Ops**: `scripts/ops/billing-probe.ts` (read-only deploy probe) and `scripts/ops/billing-smoke.ts` (guided test-mode checkout→webhook→flip) are `[OPERATOR-PENDING]` tools — runbook in `specs/018-subscription-system/quickstart.md`.
+**Writes** — all mutations: optimistic state update → async write → on error restore previous state
++ `setError` banner. Specifics:
+- **Transactions (spec 027 ledger-atomic, PR #26)**: `addTransaction`/`updateTransaction` call
+  `supabase.rpc('upsert_transaction', { p_tx, p_shares })` — parent + shares atomic server-side
+  (migration `20260718120002`). The old two-step client write is gone for transactions. Failure
+  rolls back the optimistic state.
+- **Tags are written after, non-atomically** (`writeTags`: delete-all-then-insert on
+  `transaction_tags`); a tag failure surfaces an error but never rolls back the saved transaction
+  (no sum invariant; next `loadAll` reconciles). `addTag` reuses case-insensitive-trimmed matches
+  and returns the tag synchronously for immediate attach.
+- **Properties remain two-step, non-atomic** (`writePropertySubtables`: delete mortgage/lease/units
+  then re-insert, each `orThrow`'d; caller rolls back optimistic state).
+- Budgets upsert on `(household_id, category)`; people soft-delete via `removed_at`;
+  `hapticConfirm`/`hapticDestructive` fire on tap, before server ack (by design, spec 021 FR-012).
 
-### Linked banks — Plaid Connect (spec 024)
-- **Scope**: connect + list + disconnect ONLY (no transactions/balances/owner assignment — future sync feature). Opt-in and disclosure-first; manual entry/import/scan stay first-class (`FUTURE-TASKS.md` §1.1).
-- **Settings › Linked banks** (`app/(app)/settings/linked-banks/page.tsx` → `components/settings/LinkedBanks.tsx`): disclosure copy, connect flow, active institutions with account name/mask/type, `Connected by {name} · {date}` attribution, inline-confirm disconnect. Dark until the operator configures Plaid — the page probes `plaid-link-token {mode:"probe"}` on mount (FR-012) and renders a calm "not available yet" line when `not_configured`.
-- **Two Link modes, one component**: web runs embedded Plaid Link (`react-plaid-link`, loaded via `next/dynamic` in `components/settings/EmbeddedPlaidLink.tsx` so Plaid's CDN loader stays out of the initial bundle); the Capacitor shell top-level-navigates to a **Hosted Link** URL (Plaid deprecates webview Link) and returns via `ortho://plaid-done`.
-- **`components/PlaidHandBack.tsx`** (mounted in the `(app)` shell, renders nothing): completes a pending hosted session on mount, on the `appUrlOpen` hand-back (routes to Linked banks), and on `appStateChange` foreground; `session_incomplete` waits silently, expiry clears calmly — the server exchange is idempotent, so double hand-backs are harmless. The `ortho` URL scheme lives in `web/ios/App/App/Info.plist` (`CFBundleURLTypes`, config only).
-- **`lib/aggregation.ts`** wraps `functions.invoke` for `plaid-link-token`/`plaid-exchange`/`plaid-disconnect` (billing.ts pattern; localize by `code`). **`lib/plaidLinkSession.ts`** holds the one pending-session localStorage record (session id + short-lived link token — never a public/access token); the web bank-OAuth detour returns to **`/plaid-oauth`**, which re-inits Link with the stored token + `receivedRedirectUri`.
-- **Store**: bootstrap fan-out also selects `linked_institutions`/`linked_accounts` (client read-only; RLS household-scoped) and exposes `refreshLinkedBanks()`.
-- **i18n**: +20 keys in all five catalogs. **Ops**: `scripts/ops/plaid-smoke.ts` — headless sandbox roundtrip (`/sandbox/public_token/create` → exchange → disconnect), `[OPERATOR-PENDING]`; runbook in `specs/024-plaid-connect/quickstart.md`.
+**Session lifecycle**: `onAuthStateChange` reacts only to `SIGNED_OUT` (clears all state incl.
+pending Plaid session, hard-navigates via `signInHref()`). On Capacitor, an `appStateChange`
+foreground listener re-validates with server-side `auth.getUser()` — signs out only on 401/403 or
+confirmed-missing user, never a transient network error — and quietly `refreshEntitlement()`s.
 
-### Data layer — one React context, optimistic writes
-`lib/store.tsx` (`AppStateProvider` / `useApp()`) is the whole client data layer, mirroring iOS `AppState`:
-- **Bootstrap** (once, in the `(app)` layout): `auth.getUser()` → upsert the `users` profile row → find-or-create `households` + `household_members` → ensure the account holder has a `household_people` row (and fold legacy device-only `localUsers` from localStorage) → `loadAll()`.
-- **`loadAll()`** issues 15 parallel Supabase selects: `users`, `household_people`, `transactions`, `transaction_shares`, `cards`, `properties`, `mortgage_info`, `lease_info`, `units`, `rental_payments`, `budgets`, `linked_institutions`, `linked_accounts` (added by spec 024), and `tags` + `transaction_tags` (added by spec 027) — the last four all **fail-open on PGRST205/42P01** for deploy-before-migrate; it then stitches properties with their mortgage/lease/units and **rehydrates** each transaction's `owner_ids` + per-person `shares` map from `transaction_shares` rows (a `transfer` with no shares gets `owner_ids: []`, never a synthesized owner) and its `tags` (ids) from `transaction_tags`. The three highest-volume reads (`users`/`transactions`/`transaction_shares`) are **column-projected** — explicit `select(<cols>)`, never `select('*')` (spec 023/US6; the `transactions` projection includes `notes` since spec 027). Every read is a **typed row → domain boundary**: the client is untyped (no `supabase gen types` in-sandbox), so each select is asserted to a hand-written schema-mirror `*Row` type in `lib/supabase/rows.ts` and assigned to domain-typed state — a renamed/removed column or changed enum then fails `tsc` at the load boundary instead of at runtime (spec 023/FR-018). Keep `rows.ts`, the projection column lists, and `lib/types.ts` in lockstep.
-- **Two internal contexts behind `useApp()`** (spec 023/US6/P4): a memoized, stable **services** context (`rate`, `formatMoney`, `t`, `resolveUser`, `ownersDisplay`) and a changing **data** context. `useApp()` re-merges both (unchanged public surface — no consumer import changes); the ledger rows subscribe to only the services surface via `useAppServices()` and are `React.memo`'d, so an unrelated mutation (adding a different transaction, a loading toggle) no longer re-renders every row. `formatMoney` still changes identity on currency/rate/locale, so amounts update on an FX refresh.
-- **Mutations are optimistic with rollback**: state updates immediately, the Supabase write runs async, and failure restores the previous state and sets a banner `error`. Transaction writes are **atomic with shares**: if `transaction_shares` fails after the parent insert/update, the parent is deleted/restored so a share-less row never survives (matches iOS's all-or-nothing write; see `writeShares`, `addTransaction`, `updateTransaction`).
-- **FX**: `refreshRates()` fetches `https://www.floatrates.com/daily/usd.json` and caches in localStorage (`fxRates` / `fxRatesFetchedAt`, refreshed after 24h). On fetch failure it KEEPS the last cached live rates at any age (mirrors iOS; since 2026-07-02) and surfaces a freshness caption in Settings; the hardcoded `FALLBACK_RATE_FROM_USD` (`lib/finance/currency.ts`) applies only when no cache has ever existed. `formatMoney` converts USD cents → display currency with the active locale.
-- **Preferences in localStorage**: `currency`, `language`, `appearance`, `dashboardRange` (+ FX cache). All are adopted *after mount* so SSR and first client paint agree — no hydration mismatch.
-- `lib/api/aggregates.ts` wraps the shared Postgres aggregate RPCs (`household_owner_spend` etc., defined in `supabase/migrations/20260611120000_aggregates.sql`). Dashboard **widgets** still compute locally — wiring the RPCs into them is a net perf loss (network round-trips replacing in-memory loops the client already holds after `loadAll()`; breaks offline), the stance spec 023/D15 documented. **Spec 027 wired it for the first time** in the *new* Reports surface (`lib/useReportsData.ts` → `fetchMonthSummary`/`fetchCategoryTotals`), which is exactly the documented cut-over case: a surface aggregating over a user-chosen window (up to 12 months, fetched on demand only when Reports is open) that the client does not already hold pre-summarized — distinct from re-fetching data the widgets already have. `fetchDailyExpense`/`fetchOwnerSpend` remain unwired (and `fetchOwnerSpend`'s `person_id` type still mismatches the RPC's `user_id` column — see PARITY.md).
+**FX**: floatrates.com daily USD json → localStorage cache (`fxRates`/`fxRatesFetchedAt`, 24h TTL);
+stale cache beats hardcoded `FALLBACK_RATE_FROM_USD`; failure keeps stale rates + `ratesError`. All
+amounts stored as **integer USD cents**; conversion is display-only.
 
-### Pure finance core (regression-vector-locked)
-`lib/finance/{money,currency,mortgage,insights,budgets}.ts`, `lib/splits.ts`, `lib/balances.ts`, `lib/transactionFilters.ts`, `lib/scan/*` (spec 021), and `components/dashboard/range.ts` are pure TypeScript pinned by fixtures in `shared/test-vectors/`. **`lib/finance/budgets.ts` (spec 027)** is the newest engine: `computeRolloverLedger` runs the fixed/flex/non_monthly carry recurrence (vectored by `budget-rollover.json`), and the thin `budgetStatusForMonth` adapter derives a budget's effective limit + remaining from the transaction ledger (carry is never stored). It feeds both `BudgetProgressCard` (per-bucket remaining) and `insights.ts` Rule 3 (which now measures spend against the effective limit — byte-identical for the `fixed` default). `npm run gen:vectors` (`scripts/gen-vectors.ts`) regenerates `shared/test-vectors/*.json` from these TS implementations; the web `*.parity.test.ts` suites assert against the same files — now an ordinary single-implementation regression/snapshot check (spec 021 retired the cross-language lock against the frozen native app; see root `PARITY.md`). Key invariants: integer USD cents everywhere, `orderedOwnerIds` canonicalizes the deterministic leftover cent, half-open `[start, end)` month windows. Since spec 013, `generateInsights` takes a trailing `locale` parameter (threaded from the store's `localeForLanguage` value; vectors stay language-neutral at the default `en-US`), and the recurring insight's 3-merchant preview is vector-locked via `Insight.preview_merchants` — amount descending, case-insensitive name tie-break, casing from the newest transaction. `lib/types.ts` also exports `PICKABLE_CATEGORIES` (transfer is deliberately unpickable) with `TransactionCategory` derived from it.
+**Timezone invariant**: transactions are stored at noon UTC; `monthlySpentBy` builds month windows
+on UTC midnights. But date-only strings (housing/insights) parse as LOCAL midnight
+(`parseLocalDate`) — mixing the two shifts boundary rows for UTC+12..+14 viewers. The `test:tz`
+suite (`*.tz.test.ts`, `TZ=America/New_York`) exists for this and is NOT run by any CI workflow.
 
-### Savings & debt-payoff goals (spec 027)
-A secondary planning surface reached from **Settings → Goals** (`app/(app)/goals/page.tsx`, a
-`ReadingColumn` list — the budgets precedent; no separate `*Desktop` composition). A member creates
-a goal (name, kind, target cents, optional target date, optional context association) and records
-**contributions**; `components/goals/GoalCard.tsx` is the calm progress view (money headline,
-accessible `role="progressbar"`, remaining/reached, and a pace line for dated goals that is the sand
-`--accent` when behind — **never red**). All math is the pure, vectored engine `lib/finance/goals.ts`
-(`goalProgress` / `goalPacing` / `goalOffTrackInsight` / `goalInsights`, pinned by
-`shared/test-vectors/goals.json`). The **off-track insight** is a separate engine (keeps
-`insights.json` byte-stable) whose `Insight` output merges into the two existing insight consumers
-(`InsightsCardStack`, `DashboardDesktop`) via the exported `compareInsights`. `goals` +
-`goal_contributions` load in the `loadAll` fan-out (fail-open on a missing table) and mutate
-optimistically-with-rollback like budgets. Progress is contribution-driven — bank balances aren't
-synced (spec 024 is connect-only), so a linked account is context only.
+## 4. Auth gate & Supabase clients — `web/lib/supabase/client.ts`
 
-### Coverage corpus + dev seeding (spec 026)
-`test/corpus/` is a **pure, deterministic seed-data generator** (not shipped in the
-bundle — kept out of `lib/` on purpose). `generateCorpus(seed)` emits ~230 labelled
-household scenarios spanning every branch of the finance model — joint/separate
-finances, all split methods + leftover-cent cases, USD/EUR/JPY/BDT display lenses,
-month-boundary/leap dates, refunds, sparse/dense months, mortgages/leases (incl. a
-paid-off residual) + multifamily occupancy, budget bands, recurring merchants — and
-reconciling per-owner shares computed **only** via `lib/splits.ts` (no forked math).
-Two consumers: an in-memory vitest fixture, and `npm run seed:corpus`, a guarded
-local/dev-DB seeder (refuses any non-local Supabase target — see
-`scripts/seed-corpus.ts`). The committed regression artifact is a **manifest**
-(`test/corpus/__snapshots__/corpus.snapshot.json`: per-scenario dimensions + row
-counts + SHA-256, plus a whole-corpus hash); `npm run gen:corpus` regenerates it.
-Two scenarios are built to reproduce open finance-model defects so their fixes
-(§9.4) have before/after locks: **A4** (`order-mismatch-a4` — `sort_order` ≠ lexical
-id makes the leftover cent land on a different member for imported vs app splits;
-`splits-divergence.test.ts`) and **A2** (`tz-boundary-a2` — non-noon-UTC boundary
-rows misbucket in `generateInsights` west of UTC; `insights-timezone.tz.test.ts`,
-run **only** under `npm run test:tz` / `vitest.tz.config.ts` at `TZ=America/New_York`,
-since the default suite pins `TZ=UTC` and hides it). Research feeding the later
-realistic-profiles layer (§9.2) lives in `docs/research/finance-habits-budgeting-apps.md`.
+Three-way `createClient()`:
+1. Test build + `useTestData`/`bypassAuth` → `createMemoryClient()` (DCE'd from prod bundles).
+2. `Capacitor.isNativePlatform()` → **raw `@supabase/supabase-js`** with `keychainStorageAdapter`
+   (`lib/auth/keychainStorage.ts` over `@aparajita/capacitor-secure-storage`; accessibility
+   `whenUnlockedThisDeviceOnly` on every write so delete+reinstall starts fresh; all failures
+   swallowed, never thrown into supabase-js). `flowType: 'pkce'`; `storageKey` deliberately
+   defaulted so the session key never diverges between targets. **Why raw**: `@supabase/ssr`
+   silently discards caller-provided `auth.storage` (verified in 0.12.0), and WKWebView cookies
+   evict — never route the native client through `@supabase/ssr`.
+3. Web → `@supabase/ssr` `createBrowserClient` cookie path.
 
-### Responsive behavior
-Three tiers, one source of truth (`lib/useMediaQuery.ts`):
-- **< 640px (mobile)**: bottom `TabBar` (`sm:hidden`), single-column stacks, bottom padding `pb-24` clears the bar.
-- **640–1023px (sm)**: `Sidebar` appears as a 72px icon rail; TabBar hides; `<main>` becomes the scroll container (`sm:h-screen sm:overflow-y-auto`).
-- **≥ 1024px (lg / "expanded")**: `useIsExpanded()` flips pages to the desktop compositions in `components/web/` — pages literally branch: `if (isExpanded) return <DashboardDesktop scope={scope} />` (see `app/(app)/dashboard/page.tsx`). Desktop uses a 12-column `ow-grid`, a ledger table + right-side detail **Drawer** (`components/web/Drawer.tsx`: portal to `<body>`, scrim, Escape/scrim-click close, scroll lock), and centered `WebModal`s. Scope/filter state is lifted into hooks (`useDashboardScope`, `useTransactionFilters`) so a window resize across the breakpoint preserves selection.
+Missing `NEXT_PUBLIC_SUPABASE_URL/ANON_KEY` fall back to placeholders, never throw (static-export
+prerender constructs the client at build time). `lib/nav.ts` `signInHref()` returns
+`/sign-in.html` on native (`/sign-in` on web) — Capacitor's SPA fallback serves root `index.html`
+for extensionless paths, which infinite-loops signed-out native launches.
 
-**Mobile new/edit are dedicated pages (spec 025).** On `< 1024px` the add/edit **transaction** and **property** flows are their own routes (`transactions/new`, `transactions/edit`, `housing/new`, `housing/edit`) rather than overlays; on `≥ 1024px` the desktop tray/drawer is unchanged. Because the app is `output:'export'` (no `[id]` dynamic routes for runtime UUIDs, no intercepting/parallel routes) and Capacitor serves the app root for extensionless deep-links, the routes are **static** and carry intent as query params read from `window.location` in a mount effect (the `plaid-oauth` precedent — the codebase has **zero** `useSearchParams()` uses, avoiding the static-export Suspense deopt): `edit?id=`, `new?copyFrom=` / `?from&to&amount` (settle-up) / `?kind=`. Each page self-guards — `router.replace()` to the list at desktop width or on an unresolvable id. The mobile list pages/`TransactionDetailModal` are already the non-expanded branch, so their triggers just `router.push`; the shared form logic (`useTxForm`/`TxFormBody`, and the extracted `PropertyForm` body used by both the desktop `AddPropertyModal` Drawer and the mobile `PropertyFormPageClient`) is unchanged. Guard: `test/web/form-factor-split.test.ts` also asserts the new pages never import a `*Desktop` composition.
+## 5. Shell composition — `(app)/layout.tsx`
 
-### Styling & design tokens
-- **`app/globals.css` is the single source of truth for tokens.** Semantic CSS variables (`--bg`, `--surface`, `--text/-2/-3`, `--accent`, `--positive`, `--destructive`, `--hairline`), the six household palettes (`peach/slate/sage/terracotta/mauve/sand` bg+fg), desktop handoff tokens (`--surface-2`, `--chip-bg`, `--chip-text`), fixed category tints (`--cat-*`), and motion/elevation tokens. Dark mode comes from `@media (prefers-color-scheme: dark)` plus `:root[data-appearance='light'|'dark']` override blocks for the Settings toggle.
-- **Forced appearance without flash**: `components/settings/appearance.ts` exports `THEME_VARS`; `app/layout.tsx` embeds it verbatim in an inline `APPEARANCE_BOOT` script that reads the `appearance` localStorage key and sets `data-appearance` + inline vars on `<html>` *during HTML parse* — theme is correct on the first frame.
-- **Tailwind v4** with `@config "../tailwind.config.ts"`; the config maps utility color names (`bg-surface`, `text-text-2`, `border-hairline`, `bg-sage-bg`…) onto the CSS variables. Desktop-only chrome uses handwritten `ow-*` classes in globals.css (`ow-card`, `ow-grid`/`ow-s5..s12`, `ow-nav-item`, `ow-drawer`/`ow-drawer-scrim`, `ow-modal`, `ow-tab-*`, `ow-search`, `ow-cap`…), ported from the design handoff.
-- **Type**: self-hosted Lato via `next/font/local` (the exact `.ttf` files iOS bundles — no Google Fonts CDN), exposed as `--font-lato`. iOS weight model: weight follows size (display = Light 300, body = Regular 400, **no bold**; `font-synthesis: none`).
-- Calm-design rules (from the constitution / `ortho-web` skill): hairlines over borders, no saturated status colors, loss is never red; `:focus-visible` gets a 1.5px accent outline; `.ortho-interactive` provides hover/active surface lift; `prefers-reduced-motion` collapses all transitions; long transaction lists use `.cv-row` (`content-visibility: auto`) for scroll performance.
+- **Biometric lock** (`lib/biometricGate.ts`): opaque overlay at `z-[200]` above a *kept-mounted*
+  provider (unlock never re-bootstraps); subtree gets `inert` while locked. No enrollment ⇒ never
+  gated; plugin failure fails OPEN; re-locks on background; `inFlightRef` guards double Face ID
+  prompts. Z-order (guarded by `test/store/biometric-lock-zorder.test.ts`): mobile Modal 50,
+  `.ow-drawer-scrim` 70, `.ow-drawer` 80, `.ow-scrim`/`.ow-modal` 100, lock 200 — keep new portals
+  below 200.
+- **Paywall gate**: `gateState === 'lapsed'` replaces children shell-wide — no route bypasses it; a
+  **null gate never blocks** (fail open). `gateState` derives from the entitlement row via
+  `lib/entitlements.ts` `deriveGateState` — a deliberate hand-mirror of
+  `services/billing/src/derive.ts`, locked by literal vectors V01–V19 + sha256 digest
+  (`test/entitlements.test.ts` ↔ `specs/018-subscription-system/contracts/entitlement-state.md`).
+  Do NOT "deduplicate" it into a cross-package import; amend the contract before touching
+  semantics. Constants: `TRIAL_DAYS=31`, `LEEWAY_HOURS=48`, `DUNNING_GRACE_DAYS=14`.
+- `components/Paywall.tsx`: plans via `billing-plans` edge function only; consumes
+  `?checkout=success|cancelled` one-shot; clears busy BEFORE navigating to checkout (the Capacitor
+  webview never unloads — a stuck busy would brick recovery). `lib/billing.ts` wraps
+  `functions.invoke` and parses the `{error:{code}}` envelope; plan prices render raw USD
+  (exactly what Stripe charges — not the display-currency converter).
+- Splash (`launchAutoHide:false`) hidden by three coordinated owners: Shell on first `loading`
+  resolution, lock screen when 'locked', sign-in on mount.
+- One sticky error banner in Shell; `bootstrapFailed` adds Retry (`retryBootstrap`).
 
-### Bundle code-splitting (spec 022)
-The three heaviest, least-frequently-needed code regions are deferred via `next/dynamic` (`{ ssr: false }` — they're browser-only and static export has no runtime SSR) so they leave the **initial-load** bundle (the set of chunks a route's built HTML references in `<script>` tags):
-- **Charts** — `recharts` is statically imported ONLY by the leaves under `components/{dashboard,housing}/charts/*` (`CategoryPie`, `DailyTrendChart`, `AmortizationChart`), which their cards dynamic-import; the card's money figures/legend stay eager and the fixed-height wrapper reserves the chart's space (no layout shift). This drops **~95 KB gzip** from `/dashboard` and `/housing` initial-load — the dominant win. A guard test (`test/bundle/no-eager-recharts.test.ts`) fails if any eager module imports `recharts`.
-- **Scan pipeline** — `lib/scan/useScanFlow.ts` dynamic-imports `scanParser`/`scanInference`/`scanPlugin`/`FilePicker` *inside* its capture callbacks (not at module top — the reducer stays eager), and `app/(app)/transactions/page.tsx` dynamic-imports the `ScanFlow` UI; both load only when a scan is initiated. Guard: `test/scan/scan-deferred.test.ts`.
-- **Desktop compositions** — the three master–detail routes dynamic-import their `components/web/*Desktop`, so a mobile/iOS session never downloads the desktop layer. The synchronous `useIsExpanded()` gate is preserved and the loading fallback is `null` (never the mobile layout), so there is no wrong-layout flash — only a brief blank on desktop while the small composition chunk loads. Guard: `test/web/form-factor-split.test.ts`.
-- **i18n catalogs** (spec 023) — `lib/i18n/index.ts` dynamic-`import()`s only the active language's catalog (`useTranslate` returns the English identity until it resolves), so the five non-English catalogs (~30 KB gzip) leave initial-load and a default-English user downloads none. Guard: `test/i18n/no-eager-catalog.test.ts`. Every catalog key must be reachable from the UI — `test/i18n/catalog-reachability.test.ts` (spec 023/FR-021) uses TypeScript's scanner to assert each key's text appears as a source string literal (a `t()`/`tr()` arg, a `label:` data table, an insight string), failing if a dead key is (re)introduced. `Intl.NumberFormat`/`Intl.DateTimeFormat` are cached module-level in `lib/finance/money.ts` / `lib/format.ts` (byte-identical output).
+## 6. Responsive vs desktop composition
 
-Measure with `npm run measure:bundle` (`scripts/measure-bundle.ts`): it derives each route's initial-load from the built HTML `<script>` tags — Turbopack chunk names are opaque content hashes, so filenames can't be classified — and supports `--json` / `--baseline` for before/after diffs. Full rationale and the recorded baseline/after in `specs/022-web-bundle-optimization/`.
+- Tailwind `sm` flips TabBar→Sidebar; **≥1024px = "expanded"** via `useIsExpanded()`
+  (`lib/useMediaQuery.ts`, resolved synchronously on first render — no wrong-layout flash).
+- Dashboard/Transactions/Housing pages branch: `if (isExpanded) return <XDesktop/>` where the
+  desktop compositions (`components/web/{Dashboard,Transactions,Housing}Desktop.tsx`) are
+  `next/dynamic` `{ssr:false, loading:()=>null}` so mobile/iOS never downloads the desktop chunk.
+- Dialog vocabulary: desktop `components/web/Drawer.tsx` (right slide-out, portal, scrim + Escape +
+  focus trap via `lib/useFocusTrap.ts`, scroll lock) and `components/web/WebModal.tsx`; mobile uses
+  the `Modal` bottom-sheet in `components/ui.tsx` plus spec-025 full-page forms.
+- **Spec 025 mobile form pages**: `/transactions/new|edit`, `/housing/new|edit` are dedicated
+  static routes on mobile; at ≥1024px they `router.replace` back to the list (desktop keeps its
+  drawer). Plumbing: `lib/useMobileFormPage.ts` — reads `window.location.search` ONCE post-mount,
+  **never `useSearchParams`** (Suspense deopt under static export; zero uses codebase-wide). Pure
+  intent parsers in `lib/formPageIntent.ts` (`parseTxNewParams`: settle-up `from/to/amount` beats
+  `copyFrom`; malformed → blank form). Frame: `components/web/FormPage.tsx`. Guard:
+  `test/web/form-factor-split.test.ts`.
 
-## 5. Key files (read these first)
+## 7. Hooks
 
-1. `web/lib/store.tsx` — the entire client data layer: bootstrap (incl. the spec-021 client-side auth gate + Capacitor foreground liveness listener), loadAll, optimistic CRUD with rollback, atomic tx+shares writes, FX, owner resolution.
-2. `web/capacitor.config.ts` + `web/ios/App/` — the Capacitor iOS shell (spec 021): scaffold, plugin config, and the native Scan plugin.
-3. `web/app/layout.tsx` — root layout: Lato font, pre-paint appearance boot script, `viewport-fit=cover`.
-4. `web/app/globals.css` — every design token (light/dark) + the `ow-*` desktop chrome.
-5. `web/app/(app)/layout.tsx` — the app shell (provider + Sidebar + TabBar + loading/error states).
-6. `web/lib/types.ts` — domain types (Transaction/Person/Property…) mirroring the Supabase schema; doc-comments explain `paid_by`, `transfer`, `owner_ids`, `shares`; `PICKABLE_CATEGORIES` → `TransactionCategory`.
-7. `web/lib/useMediaQuery.ts` — `useIsExpanded()` (≥1024px), the responsive branch point.
-8. `web/app/(app)/dashboard/page.tsx` — the canonical mobile-vs-desktop branching pattern.
-9. `web/components/web/TransactionsDesktop.tsx` — the biggest desktop composition (ledger table + drawer).
-10. `web/components/web/Drawer.tsx` — the shared right-side slide-out master–detail panel.
-11. `web/components/web/TxForm.tsx` — add/edit transaction form incl. splits and transfers (839 lines, the most complex form).
-12. `web/lib/splits.ts` — split math + `orderedOwnerIds` (parity-critical).
-13. `web/lib/finance/insights.ts`, `web/lib/finance/mortgage.ts`, and `web/lib/finance/housing.ts` — the vectored engines. `housing.ts` (`occupiedRentCents`/`netRentalCents`) is the single source for the net rental figure shown by both `HousingSnapshotCard`/`DashboardDesktop` and the property-detail `MultifamilyCards` (occupied-only; vacant units contribute zero), vector-locked by `housing-net-rental.json` ↔ iOS `HousingMath` (spec 019). All housing date-only values (lease/payment/closing) parse **local** via `parseLocalDate` in `web/lib/format.ts` — never raw `new Date('YYYY-MM-DD')`, which shifts a day west of UTC.
-14. `web/lib/useDashboardRange.ts` + `web/components/dashboard/range.ts` — dashboard scope (persisted range + transient month).
-15. `web/components/ui.tsx` and `web/components/web/kit.tsx` — shared primitives (mobile) and desktop chrome components.
-16. `web/scripts/gen-vectors.ts` — how golden vectors are produced.
-17. `web/vitest.config.ts` — test envs, coverage scope + thresholds.
-18. `web/scripts/import/README.md` — the CLI's full contract (flags, exit codes, adding a bank).
-19. `web/components/settings/appearance.ts` — `THEME_VARS`, single source for boot + live theme toggle.
-20. `web/lib/api/aggregates.ts` — the aggregate-RPC layer (wired since spec 027 by the Reports surface via `web/lib/useReportsData.ts`; `fetchDailyExpense`/`fetchOwnerSpend` still unwired).
+| Hook | Role |
+|---|---|
+| `lib/useDashboardRange.ts` | `useDashboardScope()` — single time-scope source, mobile + desktop; relative range persisted (`dashboardRange`), selected month transient; windows via vectored `monthBounds` |
+| `lib/useTransactionFilters.ts` | single filter-state source; pure engine `lib/transactionFilters.ts`; tag options exclude orphan tags |
+| `lib/useMonthAccordion.ts` | default-open = current month; any active filter force-expands all months |
+| `lib/useReportsData.ts` | spec 027 — first live consumer of `lib/api/aggregates.ts` (`fetchCategoryTotals` + per-month `fetchMonthSummary`); fetched only when Reports mode is open; errors never break Overview |
+| `lib/useMobileFormPage.ts` / `lib/useFocusTrap.ts` / `lib/useMediaQuery.ts` | see §6 |
 
-## 6. Build / run / test
+`lib/api/aggregates.ts`: dashboard widgets deliberately stay local-compute (spec 023 D15 — RPC
+wiring is a net perf loss + breaks offline). `fetchOwnerSpend`/`fetchDailyExpense` are unwired;
+**known latent bug**: `fetchOwnerSpend` types `person_id` but the RPC returns `user_id` — fix
+before wiring (also recorded in `PARITY.md`).
 
-Desktop/mobile web commands run from `web/` (works on Linux dev sandboxes — nothing here is
-macOS-only; only the Capacitor iOS build needs Xcode):
+## 8. i18n & preferences
+
+- `lib/i18n/index.ts`: keys ARE the English source strings; positional `{0}` placeholders. 5
+  catalogs (bn/es/ja/zh/ko) **dynamically imported per active language** (~30 KB gz never in the
+  initial bundle); `useTranslate` returns English identity until the catalog resolves. `'System'`
+  resolves via `navigator.language` prefix. `Language` values are native names (`'Español'`…).
+- localStorage keys: `currency`, `language`, `appearance`, `dashboardRange`, `fxRates`,
+  `fxRatesFetchedAt`, `ortho.flags`, `ortho.plaid.pendingLinkSession`, legacy `localUsers`
+  (consumed once at bootstrap).
+
+## 9. Design tokens — `web/app/globals.css`
+
+- Single source of truth for tokens (Tailwind v4 `@config` maps utility names onto the CSS vars):
+  core semantic (`--bg --surface --text --text-2 --text-3 --accent --positive --destructive
+  --hairline`), 6 household palette pairs, desktop tokens (`--surface-2 --chip-bg --chip-text`),
+  brand fixtures NOT theme-swapped (`--owner-* --cat-* --pay-ach`), motion, safe areas
+  (`--safe-*` = `env(safe-area-inset-*)`).
+- Dark mode: `prefers-color-scheme` media block PLUS static `:root[data-appearance='light'|'dark']`
+  overrides targeted by the pre-paint boot script (from `components/settings/appearance.ts`
+  `THEME_VARS` — change theme tokens in globals.css AND appearance.ts; the latter also drives the
+  native status-bar style).
+- Constitution rules: tokens-only closed palette, no bold (`font-synthesis: none`; weight follows
+  size), loss/cost never red, hairlines over borders, `prefers-reduced-motion` kills transitions.
+- `html.native` disables selection/callout except inputs + `.ortho-selectable`; `touch-action:
+  manipulation` on tappables. Desktop chrome = handwritten `ow-*` class family (grid/card/nav/
+  drawer/modal/ledger-table); `.cv-row` uses `content-visibility: auto` for long-ledger scroll perf.
+- Guard: `test/tokens-only-backgrounds.test.ts`.
+
+## 10. Scan pipeline — `web/lib/scan/` (9 files)
+
+Extraction is native (Vision/PDFKit behind the custom Scan Capacitor plugin); **all
+parsing/inference is TypeScript** (ported from the frozen app's Swift). Native plugin internals:
+[./ios.md](./ios.md). Contract: `specs/021-capacitor-ios-consolidation/contracts/scan-plugin-api.md`.
+
+- `scanModels.ts` types the boundary (`ScanDocumentText`, frames normalized 0–1 top-left origin;
+  `ParsedCandidate` with `amountCents` always > 0 + `direction`; `ScanContext` fully injected — no
+  clock/live collections). `scanHeuristics.ts` = pure parsing primitives (statement half mirrors
+  the import-CLI conventions — convention mirror per `PARITY.md`, not vectored math).
+- `scanParser.ts` `parseScan`: binding 6-tier detection order (multi-row statement → stacked
+  app-list rows → labeled grand total → 1-2 rows → forgiving best-effort receipt → none); each tier
+  gets a fresh `claimed` Set; per page, tables-vs-lines: whichever yields more rows wins.
+- `scanInference.ts` `enrichCandidate`: household merchant history → rule table → form default;
+  duplicate claiming = same day + same amountCents, USD only, greedy one-to-one.
+- `scanSession.ts`: pure reducer, phases `idle → parsing → receiptPrefilled | interstitial →
+  reviewing → summary | failed`; payment rows pre-skipped; `skipDuplicates` survives `reset`;
+  `failureReason: 'unreadable' | 'unsupportedOnWeb'`.
+- `useScanFlow.ts` orchestrates. Camera: native = plugin `capture()` (live-OCR-gated shutter);
+  **web = honest `unsupportedOnWeb` failure** (no browser OCR). PDF: native = file-picker +
+  `extractPDF()`; web = `webCapture.pickFile` + `webPdf.extractPdfToDocument` (unpdf) — both feed
+  the identical `parseScan`, so candidates match cross-platform. Heavy modules dynamically imported
+  inside capture callbacks (spec 022). Multi-page camera: subscribe `pageCaptured` BEFORE
+  `capture()`.
+- `webCapture.ts`: transient `<input type="file">` — `.click()` MUST fire synchronously inside the
+  user gesture, before any `await`. `webPdf.ts`: throws `UnreadablePdfError` for image-only PDFs.
+- `scanPlugin.ts` is the ONLY `registerPlugin('Scan')` call site; contains the "empty object means
+  null" bridge quirk (Capacitor iOS can't resolve bare `null`). `refineMerchant`/`rescue` are wired
+  in the plugin + wrapper but have zero call sites in the app (not yet integrated).
+- UI: `components/scan/{ScanInterstitial,ScanSummary}.tsx`, `components/web/ScanFlow.tsx`
+  (dynamic-imported by `transactions/page.tsx`). Tests: `web/test/scan/` (9 suites).
+
+Separate from scan: `make ingest` — the no-LLM statement importer CLI ([./makefile.md](./makefile.md)).
+
+## 11. Plaid client surface (spec 024 — connect-only)
+
+- `lib/aggregation.ts`: wrappers over the `plaid-*` edge functions — `checkLinkingAvailable()`
+  (probe; Linked-banks page goes dark on `not_configured`), `createLinkSession`,
+  `completeLinkSession` (server-idempotent), `disconnectInstitution` (server revokes first). All
+  responses shape-validated; raw provider text never reaches UI.
+- `lib/plaidLinkSession.ts`: single pending record in localStorage (link token + ids only — never
+  public/access tokens); hosted records get +6h grace past token expiry; injected `now`.
+- Two Link modes: web = embedded `react-plaid-link` (`next/dynamic` in
+  `components/settings/EmbeddedPlaidLink.tsx`, ×2 sites); native = Hosted Link in the external
+  browser, returning via `ortho://plaid-done`. Web OAuth detour returns to `/plaid-oauth`.
+- `components/PlaidHandBack.tsx`: mounted once in Shell, renders nothing, native-only. Three
+  triggers → one idempotent exchange: mount, `appUrlOpen`, foreground poll. Terminal codes clear
+  the pending record; `session_incomplete`/transient keep it.
+- Store holds `linkedInstitutions/linkedAccounts` read-only (edge functions do all writes);
+  `refreshLinkedBanks()` never renders a false-empty on failure.
+
+## 12. Capacitor iOS shell — `web/capacitor.config.ts` + `web/ios/App/`
+
+- `appId: 'AyazUddin.Ortho-iOS'` — deliberately reuses the frozen app's bundle id (TestFlight/ASC
+  listing continuity). `webDir: 'out'`. `ios.contentInset: 'never'` (safe areas are CSS-side).
+  **`server.iosScheme: 'https'` is load-bearing**: the default `capacitor://localhost` origin is
+  rejected by Supabase CORS; `https://localhost` must be on the Supabase CORS allow-list.
+  Plugins: `Keyboard.resize:'body'`, `SplashScreen.launchAutoHide:false`,
+  `StatusBar.overlaysWebView:true`.
+- `web/ios/App/`: `App/` sources + `App.xcodeproj` (scheme **App**) + `CapApp-SPM/` (Capacitor-CLI
+  managed SPM package — do not edit `Package.swift`). Deployment target iOS 15.0; the Scan plugin's
+  structured OCR / Foundation Models paths are iOS 26 and degrade at runtime. `Info.plist` carries
+  camera + Face ID usage strings and the `ortho://` URL scheme.
+- **Do not confuse** `web/ios/App/App.xcodeproj` (scheme `App`, live) with `iOS/Ortho-iOS.xcodeproj`
+  (scheme `Ortho-iOS`, frozen) — same bundle id, different projects. The manual `ios-deploy.yml`
+  lane currently archives the FROZEN app; see [./ios.md](./ios.md) before any TestFlight deploy.
+- Build loop (macOS/Xcode only — **Linux sandboxes cannot build iOS**):
+
+```bash
+cd web
+npm run build                          # static export → out/
+npx cap sync ios                       # copy out/ → ios/App/App/public/ (gitignored), resolve SPM
+npx cap open ios                       # or:
+xcodebuild build -project ios/App/App.xcodeproj -scheme App \
+  -destination 'generic/platform=iOS Simulator'
+```
+
+  `npx cap run ios --live-reload` is dev-only — never ship with `server.url` set (App Store 4.2).
+- CI: `.github/workflows/capacitor-ios-ci.yml` — push to `main` + PRs touching `web/**`;
+  macos-latest; `npm ci` → `npm run build` (placeholder `NEXT_PUBLIC_*` — inlined but never
+  fetched) → `cap sync` → `xcodebuild build`. **Build-only smoke check, no tests**; the native Scan
+  plugin has no automated test target (tracked gap). Watch runs with
+  `GH_TOKEN=placeholder gh run watch --exit-status`.
+
+## 13. Bundle discipline (spec 022)
+
+Deferred via `next/dynamic` so they leave the initial-load bundle: recharts charts (`CategoryPie`,
+`SavingsRateChart`, `DailyTrendChart`, `AmortizationChart` — guard
+`test/bundle/no-eager-recharts.test.ts`), the scan pipeline (loads on scan initiation — guard
+`test/scan/scan-deferred.test.ts`), the 3 desktop compositions (guard
+`test/web/form-factor-split.test.ts`), i18n catalogs (guard `test/i18n/no-eager-catalog.test.ts`),
+and `EmbeddedPlaidLink`. Measure: `npm run build && npm run measure:bundle` (`--json`/`--baseline`
+for diffs) — sizes derive from each `out/<route>.html`'s script tags (Turbopack chunk names are
+opaque). Contract: `specs/022-web-bundle-optimization/contracts/bundle-measurement.md`.
+
+## 14. Test-data harness & corpus (specs 015 + 026)
+
+- `lib/test-build.ts` `isTestBuild()` = `NEXT_PUBLIC_VERCEL_ENV !== 'production'` — build-time
+  constant, so flag machinery is dead-code-eliminated from customer bundles. `lib/flags.ts`:
+  `useTestData` + `bypassAuth` in `localStorage['ortho.flags']`, forced `false` off test builds;
+  Settings › Developer section = `components/settings/flags-section.tsx`.
+- `lib/testdata/memory-client.ts`: chainable Supabase stand-in serving `lib/testdata/seed.ts`
+  (deterministic, anchored 2026-06-15T12:00Z). Writes are accepted and dropped; `rpc()` returns
+  success; no `.functions` surface (billing/aggregation read `not_configured`); ignores column
+  projections (missing-column bugs invisible to unit tests).
+- **Spec 026 corpus** (`web/test/corpus/`): pure deterministic generator (`generateCorpus`,
+  `DEFAULT_SEED = 0x02026`, `CORPUS_VERSION = 1`), 27 coverage dimensions, 232 scenarios; shares
+  computed only via `lib/splits.ts` (guarded — no forked math; also guarded against bundle import).
+  Committed snapshot `test/corpus/__snapshots__/corpus.snapshot.json`; regenerate intentionally
+  with `npm run gen:corpus` and review the diff. `npm run seed:corpus` upserts into a **local/dev**
+  Supabase only (`seed-guard.ts`: remote requires `--i-understand-this-is-not-local` AND
+  `SEED_ALLOW_REMOTE=1`); ids remapped to stable UUIDs via `uuidFrom`, idempotent.
+
+## 15. Vitest suite shape — `web/test/`
+
+- Two configs: `vitest.config.ts` (`TZ='UTC'`, node env default, `fileParallelism:false` — sandbox
+  jsdom worker race, don't "optimize" away; excludes `*.tz.test.ts`) and `vitest.tz.config.ts`
+  (`TZ='America/New_York'`, only `*.tz.test.ts`, run via `npm run test:tz` — **not run by any CI
+  workflow**).
+- **13 `*.parity.test.ts` suites**, 1:1 with the 13 vectors in `shared/test-vectors/` (naming
+  matches the JSON basename except `transaction-splits.json` ↔ `splits.parity.test.ts`). Vectors
+  regenerate via `npm run gen:vectors`; web-ci's drift gate (`gen:vectors` + `git diff --quiet
+  ../shared/test-vectors`) fails if an engine changed without committed regenerated JSON. See
+  [./shared.md](./shared.md).
+- Component suites opt into jsdom per file via first-line `// @vitest-environment jsdom`; pure
+  logic stays node. Helpers: `test/helpers/supabase-mock.ts` (`makeSupabaseMock`, `primeFxCache`,
+  `stubNoNetwork`), `test/helpers/fixtures.ts`.
+- Coverage (`npm run test:coverage`, v8) is **scoped**: pure `lib/` engines +
+  `scripts/import/**` only, thresholds 90/90/80 (import slightly lower). View components are
+  behaviorally tested, not line-covered.
+- CLI import suite: `web/test/import/` (golden statement tests for amex-gold/apple-card/chase-csv/
+  td-bank, `toTransaction.test.ts` with the A4 sort-order lock).
+- CI: `.github/workflows/web-ci.yml` — job 1 typechecks + tests `services/billing`,
+  `services/aggregation` (each incl. the `_shared/` byte-copy drift lock), then web `tsc --noEmit`
+  + `npm test` + the vector-drift gate; job 2 runs `deno check` + `deno test` on the 7 edge-function
+  entrypoints. Keep `npx tsc --noEmit` clean — a type error fails `next build` and there is no
+  other build gate.
+
+## 16. Build / run / deploy
 
 ```bash
 cd web
 npm install
 npm run dev              # http://localhost:3000
-npm run build            # next build (static export, output: 'export' → web/out/, spec 021)
-npm test                 # vitest run
-npm run test:coverage    # v8 coverage, thresholds enforced (see vitest.config.ts)
-npm run gen:vectors      # regenerate shared/test-vectors/ from the TS engines
-npm run measure:bundle   # report per-route initial-load JS sizes (needs a prior `npm run build`)
-npx tsc --noEmit         # typecheck (part of the web CI gate)
+npm run build            # static export → web/out/
+npm test                 # vitest run (UTC)
+npx tsc --noEmit         # CI gate
 ```
 
-CI: `.github/workflows/web-ci.yml` runs `tsc`, `npm test`, and a vector-drift check on every
-`web/**`, `services/**`, `supabase/functions/**`, or `shared/test-vectors/**` change (Linux); since
-spec 018 it also typechecks and tests `services/billing` (whose suite includes the `_shared/`
-drift lock). Keep `npx tsc --noEmit` clean — under Next's defaults a type error fails
-`next build`, and the web app has no other build gate.
+- **Linux sandbox native-binary fix** (node_modules usually installed on macOS-arm64):
+  `npm install @rolldown/binding-linux-arm64-gnu lightningcss-linux-arm64-gnu
+  @tailwindcss/oxide-linux-arm64-gnu @next/swc-linux-arm64-gnu --no-save` — without it vitest and
+  `next build` fail on missing platform bindings. Never touch the lockfile for this.
+- **Vercel** (project `ortho`, Git integration): push to `main` → production; branches/PRs →
+  preview URLs. Load-bearing settings: **Root Directory = `web`** (the #1 first-deploy failure) and
+  `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` env vars (Vercel builds remotely —
+  `.env.local` is not involved; env-less builds succeed on placeholders but can't sign in).
+- **Env** (`web/.env.local`, gitignored): `NEXT_PUBLIC_SUPABASE_URL`,
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY` (inlined at build, incl. the Capacitor build);
+  `SUPABASE_SERVICE_ROLE_KEY` (CLI `ADMIN=1` only); `IMPORT_EMAIL` (optional CLI OTP). Live
+  project: `brujhxmtzfgowimprueo.supabase.co`.
+- iOS: §12 above; TestFlight deploy lane and its frozen-app warning: [./ios.md](./ios.md).
+- Import CLI: run from the **repo root** via `make ingest` / `tx-list|add|edit|rm` /
+  `repair-dates` — full contract in [./makefile.md](./makefile.md) and
+  `web/scripts/import/README.md`.
 
-`npm run measure:bundle` (spec 022) reads `web/out/` and prints each route's initial-load size; add
-`-- --json <path>` to save a baseline and `-- --baseline <path>` to print a before/after diff after a
-code-split change. See the *Bundle code-splitting* subsection in §4.
+## 17. Gotchas (quick list)
 
-`npm start` (`next start`) is gone — static export ships no Node server; serve `web/out/` with any
-static file server if you need to preview the exported bundle directly.
+- Transactions write through the `upsert_transaction` RPC — any "two-step parent+shares" mental
+  model is stale (only properties and tags remain two-step; tags intentionally un-rolled-back).
+- supabase-js resolves `{error}` instead of throwing — must-not-fail-silently results go through
+  `orThrow`; missed checks previously caused duplicate households.
+- Fail-open codes are load-bearing: `PGRST202` (RPC missing), `PGRST205`/`42P01` (table missing).
+- `useSearchParams` is banned (static-export Suspense deopt) — read `window.location.search` in a
+  mount effect. No dynamic `[id]` routes; intent travels as query params on static routes.
+- Hard navigations must use `signInHref()` (`.html` on native) or native signed-out launch loops.
+- `@supabase/ssr` discards `auth.storage` — never route the native client through it.
+- Insight engine outputs USD-formatted strings regardless of display currency (currency-agnostic
+  core, by contract).
+- No single-active-platform lock (feature 010): iOS + web sign-ins coexist; sessions age out at the
+  30-day Supabase timebox.
+- `web/README.md` is untouched create-next-app boilerplate; the generated `web/coverage/`,
+  `web/out/`, `tsconfig.tsbuildinfo` are artifacts.
 
-**Capacitor iOS (spec 021) — macOS/Xcode only, same as the frozen app:**
+## 18. Cross-links
 
-```bash
-cd web
-npm run build            # static export → out/
-npx cap sync ios         # copy out/ into ios/App/App/public/, resolve SPM deps
-npx cap open ios         # opens ios/App/App.xcworkspace-equivalent (SPM: App.xcodeproj) in Xcode
-# or, for CI-style build verification without opening Xcode:
-xcodebuild build -project ios/App/App.xcodeproj -scheme App -destination 'generic/platform=iOS Simulator'
-```
-
-For live-reload development against a device/simulator, `npx cap run ios --live-reload` (dev-only —
-never ship a build with `capacitor.config.ts`'s `server.url` pointing at a live dev server; static,
-bundled assets are required for release, and pointing at a remote origin is also the single
-highest-risk App Store Guideline 4.2 rejection trigger for hybrid apps).
-
-CI: `.github/workflows/web-ci.yml` runs `tsc`, `npm test`, and a vector-drift check on every
-`web/**` or `shared/test-vectors/**` change (Linux); `.github/workflows/capacitor-ios-ci.yml`
-build-verifies the Capacitor iOS project on a macOS runner (spec 021). Keep `npx tsc --noEmit`
-clean — under Next's defaults a type error fails `next build`, and the web app has no other build
-gate.
-
-**Vercel deployment (production = `main`).** The GitHub repo `Ayaz2589/Ortho` is connected to the
-Vercel project `ortho` via Vercel's **Git integration**, so releases are automatic: a push/merge to
-**`main`** ships to **production**; any other branch or PR gets a throwaway **preview** URL (posted
-on the PR). No manual step and no `vercel` CLI are needed for normal releases. Two project settings
-are load-bearing because the Next app lives in the `web/` subdirectory:
-- **Root Directory = `web`** — without it the build runs from the repo root and fails immediately (no
-  `package.json` there). This is the #1 first-deploy failure.
-- **Environment Variables** — `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` set for
-  **Production** (and Preview). Vercel builds *remotely*, so the local `.env.local` is not involved;
-  `NEXT_PUBLIC_VERCEL_ENV`/`NODE_ENV` are injected by Vercel — never set them manually.
-  An env-less build (today's Preview scope) no longer fails: `lib/supabase/client.ts` falls back to
-  placeholder values (the Capacitor-CI pattern), so preview deploys build green but render a bundle
-  that cannot sign in — scope the two vars to **Preview** in the dashboard for fully working previews.
-
-Vercel serves the static export (`output: 'export'` → `out/`) as a static site (preset auto-detected).
-The `web/.vercel/` folder is a local CLI link (gitignored) and is independent of the Git integration.
-To gate production on green CI, add branch protection on `main` requiring the **Web CI** check.
-(Historical note: a `team_…`-scoped `ortho` project from earlier CLI deploys may still exist alongside
-the personal git-connected one — the connected one is authoritative; delete the stray to avoid
-confusion.)
-
-**Environment** (`web/.env.local`, not committed): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (required by the app + CLI — inlined into the client bundle at build time, including the Capacitor build); `SUPABASE_SERVICE_ROLE_KEY` (only for the CLI's `ADMIN=1` mode); `IMPORT_EMAIL` (optional, CLI OTP sign-in). The live Supabase project is `brujhxmtzfgowimprueo.supabase.co`. Supabase's CORS allow-list must include `https://localhost` for the Capacitor build (`capacitor.config.ts`'s `server.iosScheme: 'https'` avoids the default `capacitor://localhost` origin, which Supabase's CORS validator would reject).
-
-**CLI** (from the **repo root**, via the Makefile — see [./makefile.md](./makefile.md)):
-```bash
-make ingest FILE=<statement.pdf|csv> [BANK=td|apple|amex|chase] [DRY_RUN=1] [YES=1] [ADMIN=1]
-make tx-list / tx-add / tx-edit / tx-rm     # transaction CRUD; make ingest-help for flags
-make repair-dates [APPLY=1] [ADMIN=1]       # scripts/maintenance/repair-legacy-dates.ts (dry-run by default)
-```
-
-Since spec 013 the CLI is parity-aligned with the apps: `tx list` runs the shared
-`filterTransactions` engine in-process (only the date window is pushed into SQL), is
-household-wide in scope, supports `QUERY`/`OWNER` and multi-select flags, and prints an explicit
-truncation notice when results are cut off; transaction writes compensate on failure (parent
-rollback on create, prior-shares restore on update), and `validateCustomSplit` delegates to the
-shared `validateSplit`.
-
-## 7. Conventions & patterns
-
-- Every page/component that touches state is `'use client'`; there are no server components beyond the root layout and no API routes — data access is direct Supabase from the browser (RLS enforces access).
-- **State**: one context (`useApp()`), no Redux/query lib. Mutations are optimistic-with-rollback; errors surface via the store's `error` banner in the shell, never thrown.
-- **Money**: integer USD cents in and out of every pure function; conversion/formatting only at render via `formatMoney` (U+2212 for negatives, per parity rules).
-- **Responsive branching**, not CSS-only: pages return an entirely different desktop composition from `components/web/` at ≥1024px; shared scope hooks keep state across the breakpoint.
-- **Styling**: Tailwind utilities bound to semantic tokens for shared components; handwritten `ow-*` classes (plus some inline `style` for exact handoff metrics) for desktop chrome. Never hardcode colors — always tokens; loss/cost is never red; no bold text.
-- **Naming**: mobile-shared feature components in `components/<feature>/`; desktop-only in `components/web/`; pure logic in `lib/` (hooks prefixed `use*`); regression-vectored logic carries doc-comments naming its vector file (no longer a "Swift mirror" reference — spec 021).
-- **Tests**: pure logic in node env; component suites opt into jsdom with a `// @vitest-environment jsdom` first line; regression suites are named `*.parity.test.ts` (name kept for continuity, no longer a cross-language check); Supabase is mocked via `test/helpers/supabase-mock.ts`. New money/date behavior is developed test-first (constitution Principle VI).
-- **i18n locks** (`web/test/i18n/`, spec 013): `render-locale.test.tsx` renders key screens under jsdom in Español and 日本語 and asserts no English fallback leaks. **Spec 021:** `catalog-parity.test.ts` (which cross-checked against the frozen app's `Localizable.xcstrings`) is **deleted** — with that Swift resource file no longer hand-updated, the lock would have started failing on any new web-only key.
-
-## 8. Gotchas
-
-- **Native binaries vs. Linux sandboxes (the big one).** `web/node_modules` is typically installed on macOS-arm64, so Linux-arm64 sandboxes fail with `Cannot find module '@rolldown/binding-linux-arm64-gnu'` (vitest) or missing `lightningcss`/oxide/swc bindings (next build). Fix without touching the lockfile: `npm install @rolldown/binding-linux-arm64-gnu lightningcss-linux-arm64-gnu @tailwindcss/oxide-linux-arm64-gnu @next/swc-linux-arm64-gnu --no-save`. (Verified: after installing the rolldown binding, the full suite passes.)
-- **This is Next 16.** `proxy.ts` (the `middleware.ts` replacement) is **deleted** as of spec 021 — unsupported under `output: 'export'`. Other Next 16 conventions may still differ from memory; per `web/AGENTS.md`, read `web/node_modules/next/dist/docs/` before writing Next-specific code.
-- **Static export constraints (spec 021).** `output: 'export'` disallows Route Handlers-with-Request, `cookies()`/`headers()`, Server Actions, Proxy, and the default `next/image` loader. This app has none of the first four; `images.unoptimized: true` covers the last. If you're tempted to add a Route Handler or read `cookies()` in a Server Component, it won't work under this build mode — do it client-side instead.
-- **Node >= 20.19 required** (vitest 4 uses `require(ESM)`); `package.json` engines enforce it.
-- **Vitest runs files sequentially** (`fileParallelism: false`) because parallel jsdom worker startup races in sandboxes; don't "optimize" this away.
-- **Coverage is scoped**, not global: only the pure `lib/` business logic and `scripts/import/**` are measured, with thresholds (90/90/80/90 overall; slightly lower for `scripts/import/**`). View components are behaviorally tested, not line-covered.
-- **`lib/api/aggregates.ts` — dashboard *widgets* still aggregate client-side** (wiring them is a perf loss, spec 023/D15); the RPCs exist in `supabase/migrations/20260611120000_aggregates.sql`. Since **spec 027** the *Reports* surface (`lib/useReportsData.ts`) is the one live consumer — `fetchMonthSummary`/`fetchCategoryTotals` only. `fetchOwnerSpend`/`fetchDailyExpense` stay unwired.
-- **If you change any regression-vectored engine**, regenerate vectors (`npm run gen:vectors`) and commit the diff — the web CI drift check fails otherwise. There is no longer a second (Swift) consumer to keep in sync.
-- **Dates fed to the finance engines must be built on the LOCAL calendar.** `insights.ts` (and the budget/insight cards) derive the month from *local* getters (`now.getFullYear()/getMonth()/getDate()`), so any reference date must be constructed in local time — `new Date(y, m - 1, d, 12)`, never a `…T12:00:00.000Z` UTC instant. A noon-UTC last-day instant reads as the 1st of the *next* month at UTC+12 and further east (NZ/Fiji), silently re-scoping the whole month (spec 023 fixed this in `monthInsightReference`; the same rule governs housing dates via `parseLocalDate`). The vitest worker pins `TZ=UTC`, so these never surface in CI — test an eastern zone explicitly (see `test/dashboard/insights-month-select.test.ts`).
-- **localStorage keys** the app depends on: `currency`, `language`, `appearance`, `dashboardRange`, `fxRates`/`fxRatesFetchedAt`, `ortho.flags`, legacy `localUsers` (folded into `household_people` on first boot, then removed).
-- **FX needs network** (`floatrates.com`); offline it reuses the last cached live rates (with a staleness caption in Settings), and only a never-fetched install sees `FALLBACK_RATE_FROM_USD`.
-- **No single-active-platform lock**: removed in feature 010. The Capacitor iOS shell and desktop/mobile web may be signed in simultaneously; each independently ages out at the 30-day Supabase session timebox.
-- **Appearance is applied by an inline boot script** in `app/layout.tsx` that embeds `THEME_VARS` — if you change theme tokens, update `app/globals.css` **and** `components/settings/appearance.ts` (they must mirror each other; the latter also drives native status-bar style on the Capacitor build).
-- **The biometric lock overlay is the top of the z-index stack (`z-[200]`).** Since spec 023 B4 the lock keeps the app subtree *mounted* and covers it with an opaque overlay (instead of unmounting it), so the overlay must out-rank every portaled dialog — drawers `.ow-drawer` (80), scrims `.ow-drawer-scrim`/`.ow-scrim` (70/100), the mobile `Modal` (50) — all of which portal to `<body>` and paint against the root stacking context. A lower overlay lets an open dialog leak household data over the lock screen (FR-011). Keep any new portal below 200; `test/store/biometric-lock-zorder.test.ts` enforces the ceiling.
-- **`web/ios/App/` vs. `iOS/Ortho-iOS/` — do not confuse them.** The former is the live Capacitor shell of this codebase; the latter (repo root `iOS/`) is the frozen, unmaintained native app kept only for reference/rollback. They are structurally and namespace-independent.
-- The generated `web/coverage/`, `web/out/`, and `tsconfig.tsbuildinfo` are build artifacts; `web/README.md` is the untouched create-next-app boilerplate (the real docs are the root `README.md`, `PARITY.md`, and `web/scripts/import/README.md`).
-
-## 9. Cross-links
-
-- [./supabase.md](./supabase.md) — the shared schema this client reads/writes (`transactions` + `transaction_shares`, `household_people`, properties/mortgage/lease/units, budgets, aggregate RPCs), plus the spec-018 `entitlements` table and billing edge functions that `lib/billing.ts` invokes.
-- [./ios.md](./ios.md) — the **frozen** native app; read it only for rollback/archaeology or when porting the original Swift source of the on-device scan pipeline (`Services/Scan/*.swift`) that `web/ios/App/App/Plugins/Scan/` now ports.
-- [./shared.md](./shared.md) — the regression-vector fixtures; generated *from* this package by `web/scripts/gen-vectors.ts`.
-- [./makefile.md](./makefile.md) — `make ingest` / `tx-*` targets that drive `web/scripts/import/` via `npx tsx`.
-- Repo-root `PARITY.md` — the audited web/CLI parity matrix (+ the frozen app's historical role); `.specify/memory/constitution.md` (v2.0.0: web is the single canonical implementation) and the `ortho-web` skill — design-system law for this app.
-- `specs/021-capacitor-ios-consolidation/` — the spec/plan/research/contracts for the Capacitor migration.
+- [./finance.md](./finance.md) — the pure engines (`lib/finance/*`, splits, balances, filters).
+- [./supabase.md](./supabase.md) — schema, RLS, RPCs, edge functions this client calls.
+- [./shared.md](./shared.md) — the 13 golden vectors + drift gate.
+- [./makefile.md](./makefile.md) — the import CLI (`web/scripts/import/`).
+- [./ios.md](./ios.md) — native Scan plugin internals, frozen app, TestFlight deploy lane.
+- Root `PARITY.md` — the audited web↔CLI parity contract; `.specify/memory/constitution.md`
+  (v2.0.0) + the `ortho-web` skill — design-system law.

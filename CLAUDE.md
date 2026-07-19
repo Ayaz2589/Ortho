@@ -1,18 +1,17 @@
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan:
-`specs/027-savings-goals/plan.md`
+No feature is currently in flight. The most recent wave (spec 027, shipped 2026-07-19) lives in
+`specs/027-*/`; each shipped spec keeps its `plan.md` for reference. When a new feature starts via
+the Spec Kit flow, this block will point at its plan.
 <!-- SPECKIT END -->
 
 ## Project documentation
 
-Deep-dive docs live in `docs/`. **Read `docs/index.md` first** — it explains how
-iOS, web, supabase, and shared fit together, the golden-vector parity system, the
-env vars/keys each surface needs, and what a fresh (Linux) sandbox can and cannot
-do (no Xcode — iOS builds are macOS-only). It links to a per-subsystem deep dive:
-`docs/ios.md`, `docs/web.md`, `docs/supabase.md`, `docs/shared.md`,
-`docs/makefile.md`. Consult the relevant doc before working in a subsystem, and
-update it when your change makes it stale.
+Deep-dive docs live in `docs/`. **Read `docs/index.md` first** — it maps how web, supabase,
+shared, and the frozen iOS app fit together, the regression-vector system, the env vars/keys each
+surface needs, and what a fresh (Linux) sandbox can and cannot do (no Xcode — iOS builds are
+macOS-only). Per-subsystem deep dives: `docs/web.md`, `docs/finance.md`, `docs/supabase.md`,
+`docs/shared.md`, `docs/makefile.md`, `docs/ios.md`. Consult the relevant doc before working in a
+subsystem, and update it when your change makes it stale.
 
 ## iOS builds & CI (Linux sandboxes cannot build iOS)
 

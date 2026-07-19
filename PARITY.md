@@ -18,7 +18,11 @@
 > `transactions.notes` column, and a tag dimension + notes/tag-name search wired into the pure
 > `filterTransactions` engine, re-locked in `transaction-filters.json`; additive — an untagged
 > transaction behaves exactly as before, and the CLI stays untagged). Each adds a parity-matrix row
-> below; the CLI has none of these paths. Earlier: **spec 024 (Plaid Connect — connect-only bank
+> below; the CLI has none of these paths. Spec 027 also closed the atomic-persistence gap: parent +
+> shares now commit through the single `upsert_transaction` RPC on **both** surfaces (matrix row
+> below), replacing the client-side compensation this file previously tracked as "out of scope".
+> Reports, the remaining spec-027 surface, is web-only and deliberately unvectored — see
+> "Surface-specific by design". Earlier: **spec 024 (Plaid Connect — connect-only bank
 > linking)** adds a web-only bank-connection capability with no vectored money/date logic, so it
 > introduces no new parity-matrix row; spec 018 (billing/entitlements) is likewise accounted for. The deepest
 > structural reconciliation remains **spec 021 (Capacitor iOS consolidation)** — the native SwiftUI app
@@ -45,11 +49,13 @@ Ortho is one product on **two live surfaces over one Supabase backend** (all mon
 | **web** | The canonical implementation — Next.js + React + TypeScript. Ships as a responsive desktop/mobile web app *and*, wrapped natively via Capacitor, as the iOS app. | `web/` (+ `web/ios/App/` for the Capacitor shell) |
 | **CLI** | A deterministic Node tool: bank-statement import + transaction CRUD (no LLM). | `web/scripts/import/` (`cli.ts`, `tx.ts`) |
 
-There is exactly one implementation of the product's finance logic now (`web/lib/*`), pinned by
-**regression vectors** in `shared/test-vectors/*.json` that the Vitest suite asserts, so a change to
-`mortgage.ts`/`insights.ts`/`splits.ts`/`money.ts`/`transactionFilters.ts`/`balances.ts`/`range.ts`/
-`housing.ts`/`lease.ts` can't silently drift from what's already shipped without the drift-check
-step in CI catching it. The **CLI** writes to the same tables and reuses the shared TypeScript
+There is exactly one implementation of the product's finance logic now (`web/lib/*`, plus the two
+vectored engines that live under `web/components/` — `components/dashboard/range.ts` and
+`components/housing/lease.ts`), pinned by **regression vectors** in `shared/test-vectors/*.json`
+(13 files, asserted 1:1 by the 13 `web/test/*.parity.test.ts` suites), so a change to
+`mortgage.ts`/`insights.ts`/`splits.ts`/`money.ts`/`budgets.ts`/`goals.ts`/`transactionFilters.ts`/
+`balances.ts`/`housing.ts`/`range.ts`/`lease.ts` can't silently drift from what's already shipped
+without the drift-check step in CI catching it. The **CLI** writes to the same tables and reuses the shared TypeScript
 finance functions where it can, but it is **not** part of the vector harness and has a few
 intentional and a few unvectored divergences (below) — unaffected by the 021 migration.
 
@@ -81,7 +87,7 @@ ever tracked between them, is in
 | Canonical leftover-cent order | ✅ | ✅ | `orderedOwnerIds` — leftover cent goes to canonically-first owner (ascending UUID string sort), a conscious documented policy (see comment in `lib/splits.ts` and `specs/027-finance-model-correctness/contracts/cli-ordering.md`). Verified 2026-07-18 (spec 027 / A4): CLI `toTransaction` calls `orderedOwnerIds` before `computeShares`; `sort_order` DB ordering does not affect the leftover cent. Test: `web/test/import/toTransaction.test.ts` "A4 — sort_order ≠ UUID order". |
 | Transaction + shares data contract | ✅ | ✅ | columns mirrored (incl. `paid_by`, `notes`) |
 | Member reimbursement / settle-up balance | ✅ | — | `lib/balances.ts` → `member-balance.json` (+ `paid_by`, `transfer` kind) |
-| Atomic parent+shares write | ✅ (rollback) | ✅ (rollback) | client-side compensation on both; spec 023/B7 hardened web to **check** every compensating write and, if a rollback also fails, keep the row flagged + surface a "reload to reconcile" error rather than present a share-less row as consistent (an RPC would make it truly atomic — still tracked, out of scope) |
+| Atomic parent+shares write | ✅ (RPC) | ✅ (RPC) | `upsert_transaction(p_tx, p_shares)` — a single-transaction Postgres RPC (`supabase/migrations/20260718120002_upsert_transaction_atomic.sql`, spec 027) with a DB-level guarantee that shares sum to the parent amount; execute granted only to `authenticated`/`service_role`. **Both** write paths call it: web `web/lib/store.tsx` and CLI `web/scripts/import/db/persist.ts` — the write path itself is now shared. Supersedes spec 023/B7's client-side compensation. The migration counts pre-existing share-less rows (NOTICE) but deliberately does not repair them. |
 | Category / kind / source taxonomy | ✅ | ✅ | Postgres `transaction_category`/`transaction_kind` enums (+ `transfer`) / `lib/types.ts` |
 | Date storage & timezone | ✅ | ✅ | noon-UTC transaction timestamps; date-only columns = local calendar day |
 | Full-UI localization (6 languages) | ✅ | — (English) | `web/lib/i18n/*` |
@@ -106,7 +112,9 @@ pure business logic in `web/lib/*`, pinned by fixtures so an unintended behavior
 in CI before it ships, not a cross-language honesty check:
 
 - **USD-cents storage invariant** — `transactions.amount_cents` is integer cents; per-owner
-  `transaction_shares` (`person_id` + `amount_cents`) sum to the total.
+  `transaction_shares` (`person_id` + `amount_cents`) sum to the total. Since spec 027 that sum
+  invariant is enforced **in the database** by the `upsert_transaction` RPC, which both surfaces
+  write through.
 - **Split math** — `computeShares` / `validateSplit` / `seedSplit` (`lib/splits.ts`); the CLI
   imports and reuses it, canonicalizing owner order through `orderedOwnerIds` first.
 - **Currency** — `toUSDCents` / `toDisplayAmount` / `formatMoney`, round-half-away-from-zero
@@ -171,9 +179,10 @@ These shape which rows exist and what the app displays, but have no regression-v
   `npm run gen:vectors`, then `npm test`. Adding a *new* vector case is now just
   `gen-vectors.ts` + one Vitest file — no pbxproj wiring, since there is no second consumer.
 - **CLI:** has its own unit tests (`web/test/import/*`) but asserts against **no** shared vector.
-  Its reuse of `computeShares` / `formatMoney` / `lib/types` is the main thing keeping it aligned;
-  everything it reimplements (filtering, money parsing, split validation, dates) can drift
-  undetected.
+  Its reuse of `computeShares` / `formatMoney` / `lib/types` — and, since spec 027, the shared
+  `upsert_transaction` write RPC (`web/scripts/import/db/persist.ts`) — is the main thing keeping
+  it aligned; everything it reimplements (filtering, money parsing, split validation, dates) can
+  drift undetected.
 - **Capacitor iOS shell:** `capacitor-ios-ci.yml` build-verifies `web/ios/App/App.xcodeproj` on
   every push touching `web/**` — a compile check, not a test run (the app's testable logic is the
   same TypeScript the Vitest suite already covers; the native Scan plugin currently has no
@@ -210,9 +219,9 @@ These shape which rows exist and what the app displays, but have no regression-v
   wrong — it's a native capability of the single remaining client, on par with any other plugin in
   the plugin matrix (see `specs/021-capacitor-ios-consolidation/plan.md`). The pure parsing/
   heuristics/categorization logic (ported from the frozen app's `ScanHeuristics`/`ScanParser`/
-  `ScanInference`) now lives in `web/lib/scan/*` and is regression-vector-locked like the rest of
-  `web/lib/*`; only the capture/OCR/PDF-extraction half stays native, with no cross-platform
-  equivalent to lock against. The web/desktop equivalent for statements remains the CLI's
+  `ScanInference`) now lives in `web/lib/scan/*` and is unit-tested (`web/test/scan/*`) — though, unlike the
+  money engines, it carries no golden vector; only the capture/OCR/PDF-extraction half stays
+  native, with no cross-platform equivalent to lock against. The web/desktop equivalent for statements remains the CLI's
   `make ingest`.
 - **Test-build feature flags (spec 015).** The frozen native app gated its Settings → Developer
   section (Use test data + Bypass auth) at compile/receipt time
