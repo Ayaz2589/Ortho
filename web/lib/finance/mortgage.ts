@@ -11,6 +11,11 @@
 // lease, payment, and closing-date rendering reuse the same timezone-stable parse.
 import { parseLocalDate } from '../format'
 
+// Loan balances ≤ this threshold (5 USD) are treated as paid off in the display
+// layer. Floating-point amortization accumulates rounding error that can leave a
+// small spurious balance after the final payment.
+export const PAID_OFF_THRESHOLD_CENTS = 500
+
 /**
  * Calculate the fixed monthly payment in cents.
  *

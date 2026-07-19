@@ -45,6 +45,8 @@ import type {
   TransactionCategory,
   LinkedInstitution,
   LinkedAccount,
+  Goal,
+  GoalContribution,
 } from './types'
 import type {
   UserRow,
@@ -60,6 +62,8 @@ import type {
   BudgetRow,
   LinkedInstitutionRow,
   LinkedAccountRow,
+  GoalRow,
+  GoalContributionRow,
 } from './supabase/rows'
 
 const PLACEHOLDER_ID = '00000000-0000-0000-0000-000000000000'
@@ -91,6 +95,11 @@ interface AppStateValue {
   properties: Property[]
   rentalPayments: RentalPayment[]
   budgets: Budget[]
+  /** Household savings/debt-payoff goals (spec 027). */
+  goals: Goal[]
+  /** All contributions across the household's goals; a goal's progress is the
+   *  sum of the ones whose `goal_id` matches. */
+  goalContributions: GoalContribution[]
   currency: CurrencyKey
   rates: Partial<Record<CurrencyKey, number>>
   /** Epoch ms of the last successful live-rate fetch (or cached fetch), null if never. */
@@ -147,6 +156,12 @@ interface AppStateValue {
   deleteRentalPayment: (id: string) => void
   addOrUpdateBudget: (b: Budget) => void
   deleteBudget: (id: string) => void
+  // goals (spec 027) — optimistic with rollback, like budgets/transactions
+  addGoal: (g: Goal) => void
+  updateGoal: (g: Goal) => void
+  deleteGoal: (id: string) => void
+  addContribution: (c: GoalContribution) => void
+  deleteContribution: (id: string) => void
   updateHouseholdName: (name: string) => void
   addPerson: (name: string, colorKey?: string) => void
   renamePerson: (id: string, name: string) => void
@@ -258,6 +273,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [properties, setProperties] = useState<Property[]>([])
   const [rentalPayments, setRentalPayments] = useState<RentalPayment[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
+  const [goals, setGoals] = useState<Goal[]>([])
+  const [goalContributions, setGoalContributions] = useState<GoalContribution[]>([])
   const [linkedInstitutions, setLinkedInstitutions] = useState<LinkedInstitution[]>([])
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([])
   const [currency, setCurrencyState] = useState<CurrencyKey>('usd')
@@ -488,6 +505,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setProperties([])
       setRentalPayments([])
       setBudgets([])
+      setGoals([])
+      setGoalContributions([])
       setEntitlement(null)
       // Spec 024: linked banks are household data too, and the pending link
       // record must not survive into another member's session on this device.
@@ -591,6 +610,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       unitsRes,
       rpRes,
       budgetsRes,
+      goalsRes,
+      goalContribRes,
       linkedInstRes,
       linkedAcctRes,
     ] = await Promise.all([
@@ -613,6 +634,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       supabase.from('units').select('*').order('sort_order', { ascending: true }),
       supabase.from('rental_payments').select('*').order('date', { ascending: false }),
       supabase.from('budgets').select('*'),
+      // Goals (spec 027): household facts like budgets — RLS scopes them; members
+      // read AND write. Fail-open on a missing table (deploy-before-migrate),
+      // same as linked banks below.
+      supabase.from('goals').select('*').order('created_at', { ascending: true }),
+      supabase.from('goal_contributions').select('*').order('date', { ascending: false }),
       // Linked banks (spec 024): household facts like budgets — RLS scopes them,
       // so no explicit household filter is needed (and clients cannot write).
       supabase.from('linked_institutions').select('*').order('created_at', { ascending: true }),
@@ -631,7 +657,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // window. Any OTHER error stays fail-loud like every bootstrap read.
     const missingTable = (e: { code?: string } | null | undefined) =>
       e?.code === 'PGRST205' || e?.code === '42P01'
-    for (const res of [linkedInstRes, linkedAcctRes]) {
+    for (const res of [goalsRes, goalContribRes, linkedInstRes, linkedAcctRes]) {
       if (res.error && missingTable(res.error as { code?: string })) {
         res.data = []
         res.error = null
@@ -698,6 +724,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         created_at: r.created_at ?? undefined,
       })),
     )
+    setGoals((goalsRes.data ?? []) as GoalRow[])
+    setGoalContributions((goalContribRes.data ?? []) as GoalContributionRow[])
     setLinkedInstitutions((linkedInstRes.data ?? []) as LinkedInstitutionRow[])
     setLinkedAccounts((linkedAcctRes.data ?? []) as LinkedAccountRow[])
   }
@@ -848,25 +876,6 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }
 
   // ---- mutations (optimistic) ----
-  /** Replace a transaction's owner-share rows. Returns whether the write fully
-   *  succeeded so callers can keep the parent + shares atomic (a partial failure
-   *  must never leave a share-less parent — see `addTransaction`/`updateTransaction`). */
-  const writeShares = async (tx: Transaction): Promise<{ ok: boolean; error?: string }> => {
-    const { error: delErr } = await supabase.from('transaction_shares').delete().eq('transaction_id', tx.id)
-    if (delErr) return { ok: false, error: delErr.message }
-    const shares = effectiveShares(tx)
-    const rows = tx.owner_ids.map((pid) => ({
-      transaction_id: tx.id,
-      person_id: pid,
-      amount_cents: shares[pid] ?? 0,
-    }))
-    if (rows.length) {
-      const { error: insErr } = await supabase.from('transaction_shares').insert(rows)
-      if (insErr) return { ok: false, error: insErr.message }
-    }
-    return { ok: true }
-  }
-
   const txRecord = (tx: Transaction) => ({
     id: tx.id,
     household_id: tx.household_id,
@@ -880,66 +889,38 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     paid_by: tx.paid_by ?? null,
   })
 
+  /** Per-owner share rows for the upsert_transaction RPC p_shares parameter. */
+  const shareRows = (tx: Transaction) => {
+    const shares = effectiveShares(tx)
+    return tx.owner_ids.map((pid) => ({ person_id: pid, amount_cents: shares[pid] ?? 0 }))
+  }
+
   const addTransaction = (tx: Transaction) => {
     setTransactions((prev) => [tx, ...prev])
     hapticConfirm() // spec 021, FR-012 — optimistic, so it fires immediately on tap
     ;(async () => {
-      const { error: e } = await supabase.from('transactions').insert(txRecord(tx))
+      const { error: e } = await supabase.rpc('upsert_transaction', {
+        p_tx: txRecord(tx),
+        p_shares: shareRows(tx),
+      })
       if (e) {
         setTransactions((prev) => prev.filter((t) => t.id !== tx.id))
         setError(e.message)
-        return
-      }
-      const res = await writeShares(tx)
-      if (!res.ok) {
-        // Shares failed to write — roll back the parent so no share-less
-        // transaction survives (it would rehydrate as "creator owns all").
-        // Matches iOS's all-or-nothing write.
-        const { error: delErr } = await supabase.from('transactions').delete().eq('id', tx.id)
-        if (delErr) {
-          // The compensating rollback ALSO failed: the parent is still in the DB
-          // with no shares. Keep the row in local state (don't hide an orphaned
-          // row) and surface the failure so it isn't presented as a clean
-          // rollback — it stays flagged until the next successful loadAll (B7).
-          setError(`This transaction may not have saved correctly (${res.error ?? delErr.message}). Reload to reconcile.`)
-        } else {
-          setTransactions((prev) => prev.filter((t) => t.id !== tx.id))
-          setError(res.error ?? 'Could not save who this transaction is split between.')
-        }
       }
     })()
   }
 
   const updateTransaction = (tx: Transaction) => {
-    let prevTx: Transaction | undefined
-    setTransactions((prev) => {
-      prevTx = prev.find((t) => t.id === tx.id)
-      return prev.map((t) => (t.id === tx.id ? tx : t))
-    })
+    const prevTx = transactions.find((t) => t.id === tx.id)
+    setTransactions((prev) => prev.map((t) => (t.id === tx.id ? tx : t)))
     ;(async () => {
-      const { error: e } = await supabase.from('transactions').update(txRecord(tx)).eq('id', tx.id)
+      const { error: e } = await supabase.rpc('upsert_transaction', {
+        p_tx: txRecord(tx),
+        p_shares: shareRows(tx),
+      })
       if (e) {
         if (prevTx) setTransactions((prev) => prev.map((t) => (t.id === tx.id ? prevTx! : t)))
         setError(e.message)
-        return
-      }
-      const res = await writeShares(tx)
-      if (!res.ok) {
-        // Shares failed to write — restore the prior transaction locally and
-        // re-write its shares so the row never ends up share-less (atomic with iOS).
-        if (prevTx) {
-          setTransactions((prev) => prev.map((t) => (t.id === tx.id ? prevTx! : t)))
-          const { error: upErr } = await supabase.from('transactions').update(txRecord(prevTx)).eq('id', tx.id)
-          const restore = upErr ? { ok: false as const } : await writeShares(prevTx)
-          if (upErr || !restore.ok) {
-            // The compensating restore ALSO failed: the DB row may be inconsistent
-            // with the reverted local state. Flag it so it isn't presented as a
-            // clean revert — reconciles on the next successful loadAll (B7).
-            setError('This transaction may not have saved correctly. Reload to reconcile.')
-            return
-          }
-        }
-        setError(res.error ?? 'Could not save who this transaction is split between.')
       }
     })()
   }
@@ -1158,6 +1139,112 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     })()
   }
 
+  // ---- goals CRUD (spec 027) ----
+  // Optimistic-with-rollback, the budgets/transactions pattern: state updates
+  // immediately, the write runs async, and a failure restores prior state and
+  // sets the error banner.
+  const addGoal = (g: Goal) => {
+    setGoals((prev) => [...prev, g])
+    ;(async () => {
+      const { error: e } = await supabase.from('goals').insert({
+        id: g.id,
+        household_id: g.household_id,
+        name: g.name,
+        kind: g.kind,
+        target_cents: g.target_cents,
+        target_date: g.target_date,
+        linked_account_id: g.linked_account_id,
+        linked_category: g.linked_category,
+        created_by: g.created_by,
+      })
+      if (e) {
+        setGoals((prev) => prev.filter((x) => x.id !== g.id))
+        setError(e.message)
+      }
+    })()
+  }
+
+  const updateGoal = (g: Goal) => {
+    let prev: Goal | undefined
+    setGoals((cur) => {
+      prev = cur.find((x) => x.id === g.id)
+      return cur.map((x) => (x.id === g.id ? g : x))
+    })
+    ;(async () => {
+      const { error: e } = await supabase
+        .from('goals')
+        .update({
+          name: g.name,
+          kind: g.kind,
+          target_cents: g.target_cents,
+          target_date: g.target_date,
+          linked_account_id: g.linked_account_id,
+          linked_category: g.linked_category,
+        })
+        .eq('id', g.id)
+      if (e) {
+        setGoals((cur) => (prev ? cur.map((x) => (x.id === g.id ? prev! : x)) : cur))
+        setError(e.message)
+      }
+    })()
+  }
+
+  const deleteGoal = (id: string) => {
+    let removedGoal: Goal | undefined
+    let removedContribs: GoalContribution[] = []
+    setGoals((prev) => {
+      removedGoal = prev.find((x) => x.id === id)
+      return prev.filter((x) => x.id !== id)
+    })
+    // Contributions cascade server-side (FK on delete cascade); drop them from
+    // state too so the UI is consistent immediately.
+    setGoalContributions((prev) => {
+      removedContribs = prev.filter((c) => c.goal_id === id)
+      return prev.filter((c) => c.goal_id !== id)
+    })
+    ;(async () => {
+      const { error: e } = await supabase.from('goals').delete().eq('id', id)
+      if (e) {
+        if (removedGoal) setGoals((prev) => [...prev, removedGoal!])
+        if (removedContribs.length) setGoalContributions((prev) => [...prev, ...removedContribs])
+        setError(e.message)
+      }
+    })()
+  }
+
+  const addContribution = (c: GoalContribution) => {
+    setGoalContributions((prev) => [c, ...prev])
+    ;(async () => {
+      const { error: e } = await supabase.from('goal_contributions').insert({
+        id: c.id,
+        goal_id: c.goal_id,
+        amount_cents: c.amount_cents,
+        date: c.date,
+        note: c.note,
+        created_by: c.created_by,
+      })
+      if (e) {
+        setGoalContributions((prev) => prev.filter((x) => x.id !== c.id))
+        setError(e.message)
+      }
+    })()
+  }
+
+  const deleteContribution = (id: string) => {
+    let removed: GoalContribution | undefined
+    setGoalContributions((prev) => {
+      removed = prev.find((c) => c.id === id)
+      return prev.filter((c) => c.id !== id)
+    })
+    ;(async () => {
+      const { error: e } = await supabase.from('goal_contributions').delete().eq('id', id)
+      if (e && removed) {
+        setGoalContributions((prev) => [removed!, ...prev])
+        setError(e.message)
+      }
+    })()
+  }
+
   const updateHouseholdName = (name: string) => {
     if (!household) return
     const prevName = household.name
@@ -1288,6 +1375,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     properties,
     rentalPayments,
     budgets,
+    goals,
+    goalContributions,
     currency,
     rates,
     ratesLastFetched,
@@ -1318,6 +1407,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     deleteRentalPayment,
     addOrUpdateBudget,
     deleteBudget,
+    addGoal,
+    updateGoal,
+    deleteGoal,
+    addContribution,
+    deleteContribution,
     updateHouseholdName,
     addPerson,
     renamePerson,

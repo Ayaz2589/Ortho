@@ -9,10 +9,12 @@
 > Capacitor iOS shell of the same codebase. The frozen native app's
 > [`ios-ci.yml`](.github/workflows/ios-ci.yml) is manual-trigger-only (see below).
 
-> **Last reconciled: 2026-07-19, spec 027 (Budget rollover & bucket types).** Spec 027 adds a new
-> vectored money engine (`lib/finance/budgets.ts` → `budget-rollover.json`) and a new parity-matrix
-> row; it also makes the budget insight (Rule 3) rollover-aware against the derived effective limit,
-> byte-identical for the `fixed` default. Earlier: **spec 024 (Plaid Connect — connect-only bank
+> **Last reconciled: 2026-07-19, spec 027.** Spec 027 added several web-only surfaces with new
+> vectored money engines: **Budget rollover & bucket types** (`lib/finance/budgets.ts` →
+> `budget-rollover.json`; also makes the budget insight Rule 3 rollover-aware against the derived
+> effective limit, byte-identical for the `fixed` default) and **Savings & debt-payoff goals**
+> (`lib/finance/goals.ts` → `goals.json` + one off-track insight rule). Each adds a parity-matrix
+> row below; the CLI has neither path. Earlier: **spec 024 (Plaid Connect — connect-only bank
 > linking)** adds a web-only bank-connection capability with no vectored money/date logic, so it
 > introduces no new parity-matrix row; spec 018 (billing/entitlements) is likewise accounted for. The deepest
 > structural reconciliation remains **spec 021 (Capacitor iOS consolidation)** — the native SwiftUI app
@@ -72,7 +74,7 @@ ever tracked between them, is in
 | Money / USD-cents invariant | ✅ | ✅ | `lib/finance/money.ts` + `currency.ts` → `currency.json` (+ display names/symbols) |
 | Currency conversion (display) | ✅ | — (USD-only) | same as above |
 | Splits & owner shares | ✅ | ✅ | `lib/splits.ts` → `transaction-splits.json` |
-| Canonical leftover-cent order | ✅ | ✅ | `orderedOwnerIds` |
+| Canonical leftover-cent order | ✅ | ✅ | `orderedOwnerIds` — leftover cent goes to canonically-first owner (ascending UUID string sort), a conscious documented policy (see comment in `lib/splits.ts` and `specs/027-finance-model-correctness/contracts/cli-ordering.md`). Verified 2026-07-18 (spec 027 / A4): CLI `toTransaction` calls `orderedOwnerIds` before `computeShares`; `sort_order` DB ordering does not affect the leftover cent. Test: `web/test/import/toTransaction.test.ts` "A4 — sort_order ≠ UUID order". |
 | Transaction + shares data contract | ✅ | ✅ | columns mirrored (incl. `paid_by`) |
 | Member reimbursement / settle-up balance | ✅ | — | `lib/balances.ts` → `member-balance.json` (+ `paid_by`, `transfer` kind) |
 | Atomic parent+shares write | ✅ (rollback) | ✅ (rollback) | client-side compensation on both; spec 023/B7 hardened web to **check** every compensating write and, if a rollback also fails, keep the row flagged + surface a "reload to reconcile" error rather than present a share-less row as consistent (an RPC would make it truly atomic — still tracked, out of scope) |
@@ -83,6 +85,7 @@ ever tracked between them, is in
 | Dashboard month selection | ✅ | — | `components/dashboard/range.ts` → `dashboard-month-scope.json` / `transaction-filters.json` |
 | Insights engine | ✅ | — | `insights.json` (8/8 rules; Rule 3 rollover-aware since spec 027) |
 | Budget rollover & bucket types | ✅ | — | `lib/finance/budgets.ts` → `budget-rollover.json` (spec 027 — fixed/flex/non_monthly carry; the derived effective limit also drives the budget insight) |
+| Savings / debt-payoff goals | ✅ | — | `lib/finance/goals.ts` → `goals.json` (progress + off-track pacing; spec 027) |
 | Mortgage / housing math | ✅ | — | `lib/finance/mortgage.ts` → `mortgage.json`; net rental `lib/finance/housing.ts` → `housing-net-rental.json`; lease date math → `lease.json` |
 | On-device receipt/statement scanning | ✅ (native Capacitor plugin) | — | `web/lib/scan/*` (parsing/heuristics, TS) + `web/ios/App/App/Plugins/Scan/` (capture/OCR/PDF, Swift) — see "Surface-specific" below |
 | Auth (email-OTP, 8-digit) | ✅ | ⚠️ | each calls the Supabase SDK; the CLI's OTP sign-in path differs by necessity (headless) |
@@ -119,6 +122,9 @@ in CI before it ships, not a cross-language honesty check:
 - **Dashboard month scope** — `availableMonths` / `monthReferenceDate` / `stepMonth`
   (`components/dashboard/range.ts`), vectored by `dashboard-month-scope.json`.
 - **Member balance** — `balanceBetween` (`lib/balances.ts`), vectored by `member-balance.json`.
+- **Savings goals** — `goalProgress` / `goalPacing` (`lib/finance/goals.ts`), vectored by `goals.json`
+  (spec 027). The off-track rule is a separate engine so `insights.json` stays byte-stable; its
+  `Insight` output merges into the dashboard consumers via the exported `compareInsights`.
 
 ## Known divergences (live — web vs. CLI)
 
@@ -142,8 +148,7 @@ These shape which rows exist and what the app displays, but have no regression-v
 
 - **Dedupe** is `created_by`-scoped, not household-wide — a partner re-importing the same statement
   can double-write charges into the shared ledger.
-- **Reconciliation** (matching parsed totals to printed subtotals) and any migration backfill place
-  the leftover cent by `sort_order`, which can differ from runtime `computeShares` order.
+- **Reconciliation** (matching parsed totals to printed subtotals) verifies statement sums — not splits. The CLI's `toTransaction` engine canonicalizes owner order via `orderedOwnerIds` before `computeShares`, identical to the web app; `sort_order` does not affect leftover-cent placement. *(Verified spec 027 / A4, 2026-07-18.)*
 - **Exclusions, merchant cleanup, and the merchant→category heuristic** (`engine/categorize.ts`,
   profiles) decide row inclusion, merchant strings, and categories the app then reads.
 - **Admin first-name owner matching** and **Dec→Jan year inference** in date parsing are CLI-only
@@ -175,6 +180,18 @@ These shape which rows exist and what the app displays, but have no regression-v
   conversion, and Plaid **bank-account connection** (connect-only, spec 024 — `web/lib/aggregation.ts`
   over the `plaid-link-token` / `plaid-exchange` / `plaid-disconnect` edge functions; no transaction
   or money engine, hence no vector row). The CLI has no bank-linking path.
+- **web only — Reports (spec 027).** A calm "Reports" mode inside the Dashboard page (segmented
+  Overview | Reports; not a new route or a fifth destination) with a savings-rate-over-time view and
+  a category deep-dive over a chosen range. It is the **first product consumer of the aggregate RPC
+  wrappers** in `web/lib/api/aggregates.ts` (`household_month_summary`, `household_category_totals`,
+  fetched on demand only when Reports is open) — the documented cut-over case spec 023/D15 left open
+  (a new surface over a user-chosen window, not the per-widget wiring that would be a perf loss). The
+  savings-rate math (`web/lib/reports/savings.ts`) and category ranking (`web/lib/reports/categories.ts`)
+  are pure and unit-tested but deliberately **not golden vectors** (report-only ratio/share math, like
+  `entitlements.ts`), so no vector row. **Known divergence (unfixed):** `aggregates.ts`'s
+  `fetchOwnerSpend`/`OwnerSpendRow.person_id` does not match the `household_owner_spend` RPC's returned
+  `user_id` column; Reports avoids that wrapper (it needs only month-summary + category-totals), so the
+  mismatch is documented here for a future targeted fix, not exercised by this feature.
 - **CLI only:** bank detection + per-bank PDF/CSV parsers (`profiles/*`), statement reconciliation,
   dedupe, merchant→category heuristics, exclusions, and `--admin` service-role mode.
 - **On-device receipt & bank-statement scanning** — a native Capacitor plugin

@@ -12,7 +12,7 @@
  *   - the column projections in `loadAll` (only projected columns are present), and
  *   - the domain types in `lib/types.ts` (each row must stay assignable to its domain).
  */
-import type { TransactionCategory, TransactionKind, PropertyKind } from '@/lib/types'
+import type { TransactionCategory, TransactionKind, PropertyKind, GoalKind } from '@/lib/types'
 
 export interface UserRow {
   id: string
@@ -121,6 +121,30 @@ export interface BudgetRow {
   budget_type?: 'fixed' | 'flex' | 'non_monthly' | null
   rollover_cap_cents?: number | null
   created_at?: string | null
+}
+
+export interface GoalRow {
+  id: string
+  household_id: string
+  name: string
+  kind: GoalKind
+  target_cents: number
+  target_date: string | null
+  linked_account_id: string | null
+  linked_category: TransactionCategory | null
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
+export interface GoalContributionRow {
+  id: string
+  goal_id: string
+  amount_cents: number
+  date: string
+  note: string | null
+  created_by: string
+  created_at: string
 }
 
 export interface LinkedInstitutionRow {

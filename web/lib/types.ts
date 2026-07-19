@@ -165,6 +165,48 @@ export interface Budget {
   created_at?: string
 }
 
+/** Savings vs. debt-payoff (spec 027). Both accumulate contributions toward a
+ *  positive target with identical math — kind drives only plain-language framing
+ *  ("saved" vs "paid off"). Mirrors the Postgres `goal_kind` enum. */
+export type GoalKind = 'savings' | 'debt_payoff'
+
+/** A named household goal (Supabase `goals`, spec 027): reach `target_cents` by
+ *  the optional `target_date`. Progress is the client-computed sum of the goal's
+ *  `GoalContribution`s (see `lib/finance/goals.ts`) — never stored. The optional
+ *  `linked_account_id` / `linked_category` are CONTEXT ONLY in v1 (bank balances
+ *  aren't synced — spec 024 is connect-only); at most one is set. */
+export interface Goal {
+  id: string
+  household_id: string
+  name: string
+  kind: GoalKind
+  target_cents: number
+  /** 'YYYY-MM-DD' local calendar day, or null for an undated goal (no pace). */
+  target_date: string | null
+  /** Context association (spec 027 v1): at most one of these two is set; neither
+   *  drives progress. */
+  linked_account_id: string | null
+  linked_category: TransactionCategory | null
+  created_by: string
+  /** Doubles as the pace START reference for the off-track insight. */
+  created_at: string
+  updated_at: string
+}
+
+/** One dated USD-cent amount set aside toward a goal (Supabase
+ *  `goal_contributions`, spec 027). The sum of a goal's contributions is its
+ *  progress; removing a mistaken one is a delete (contributions are positive). */
+export interface GoalContribution {
+  id: string
+  goal_id: string
+  amount_cents: number
+  /** 'YYYY-MM-DD'. */
+  date: string
+  note: string | null
+  created_by: string
+  created_at: string
+}
+
 /** Aggregation provider seam (spec 024): a second provider extends this union
  *  (plus the Postgres enum) without reshaping household data. */
 export type LinkedProvider = 'plaid'

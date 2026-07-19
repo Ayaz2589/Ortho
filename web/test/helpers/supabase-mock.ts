@@ -53,6 +53,9 @@ export interface SupabaseMock {
   invocations: { name: string; body?: unknown }[]
   /** RPC calls recorded by name (e.g. ensure_entitlement idempotence asserts). */
   rpcCalls: string[]
+  /** RPC calls recorded with their params, so tests can assert the payload shape
+   *  a caller sends (e.g. upsert_transaction's p_tx / p_shares — spec 027). */
+  rpcInvocations: { name: string; params?: unknown }[]
 }
 
 // A minimal structural type — enough for the store + aggregates to type-check.
@@ -168,6 +171,7 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
   const authCallbacks: ((event: string, session: unknown) => void)[] = []
   const invocations: { name: string; body?: unknown }[] = []
   const rpcCalls: string[] = []
+  const rpcInvocations: { name: string; params?: unknown }[] = []
 
   const client: SupabaseClientLike = {
     auth: {
@@ -180,8 +184,9 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
       signOut: () => Promise.resolve({ error: null }),
     },
     from: (table: string) => builder(table),
-    rpc: (name: string) => {
+    rpc: (name: string, params?: unknown) => {
       rpcCalls.push(name)
+      rpcInvocations.push({ name, params })
       const err = dataset.rpcErrors?.[name] ?? null
       return Promise.resolve({ data: err ? null : dataset.rpc?.[name] ?? null, error: err })
     },
@@ -217,6 +222,7 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
     },
     invocations,
     rpcCalls,
+    rpcInvocations,
   }
 }
 

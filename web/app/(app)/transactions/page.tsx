@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { Capacitor } from '@capacitor/core'
 import { Search, Plus, X, ArrowUpDown, ChevronDown, SlidersHorizontal, Camera, FileText } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { PageHeader, IconButton, Card, EmptyState, Modal } from '@/components/ui'
@@ -276,7 +277,8 @@ export default function TransactionsPage() {
             className="ortho-interactive flex items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] text-text"
           >
             <FileText size={20} className="text-text-2" />
-            {t('Import a PDF from Files')}
+            {/* "Files" is the iOS Files app; the web build opens a browser file dialog. */}
+            {Capacitor.isNativePlatform() ? t('Import a PDF from Files') : t('Import a PDF')}
           </button>
         </div>
       </Modal>

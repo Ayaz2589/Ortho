@@ -1,0 +1,239 @@
+{
+  "progress": [
+    {
+      "input": {
+        "name": "empty — 0 of target",
+        "target_cents": 200000,
+        "contributions": []
+      },
+      "expected": {
+        "saved_cents": 0,
+        "target_cents": 200000,
+        "remaining_cents": 200000,
+        "fraction": 0,
+        "reached": false
+      }
+    },
+    {
+      "input": {
+        "name": "single contribution — 25%",
+        "target_cents": 200000,
+        "contributions": [
+          50000
+        ]
+      },
+      "expected": {
+        "saved_cents": 50000,
+        "target_cents": 200000,
+        "remaining_cents": 150000,
+        "fraction": 0.25,
+        "reached": false
+      }
+    },
+    {
+      "input": {
+        "name": "multiple under target — 37.5%",
+        "target_cents": 200000,
+        "contributions": [
+          50000,
+          25000
+        ]
+      },
+      "expected": {
+        "saved_cents": 75000,
+        "target_cents": 200000,
+        "remaining_cents": 125000,
+        "fraction": 0.375,
+        "reached": false
+      }
+    },
+    {
+      "input": {
+        "name": "exactly reached",
+        "target_cents": 300000,
+        "contributions": [
+          300000
+        ]
+      },
+      "expected": {
+        "saved_cents": 300000,
+        "target_cents": 300000,
+        "remaining_cents": 0,
+        "fraction": 1,
+        "reached": true
+      }
+    },
+    {
+      "input": {
+        "name": "over-funded — remaining floored, fraction capped",
+        "target_cents": 300000,
+        "contributions": [
+          200000,
+          200000
+        ]
+      },
+      "expected": {
+        "saved_cents": 400000,
+        "target_cents": 300000,
+        "remaining_cents": 0,
+        "fraction": 1,
+        "reached": true
+      }
+    },
+    {
+      "input": {
+        "name": "debt-payoff — identical math",
+        "target_cents": 300000,
+        "contributions": [
+          100000,
+          100000,
+          100000
+        ]
+      },
+      "expected": {
+        "saved_cents": 300000,
+        "target_cents": 300000,
+        "remaining_cents": 0,
+        "fraction": 1,
+        "reached": true
+      }
+    },
+    {
+      "input": {
+        "name": "non-positive target guard",
+        "target_cents": 0,
+        "contributions": [
+          100
+        ]
+      },
+      "expected": {
+        "saved_cents": 100,
+        "target_cents": 0,
+        "remaining_cents": 0,
+        "fraction": 0,
+        "reached": false
+      }
+    }
+  ],
+  "pacing": [
+    {
+      "input": {
+        "name": "behind beyond tolerance",
+        "target_cents": 1200000,
+        "target_date": "2027-01-01",
+        "start": "2026-01-01T00:00:00Z",
+        "saved_cents": 100000,
+        "now": "2026-07-01T12:00:00Z"
+      },
+      "expected": {
+        "off_track": true,
+        "past_due": false,
+        "expected_cents": 595068,
+        "shortfall_cents": 495068,
+        "suggested_monthly_cents": 157143
+      }
+    },
+    {
+      "input": {
+        "name": "on pace (saved >= expected)",
+        "target_cents": 1200000,
+        "target_date": "2027-01-01",
+        "start": "2026-01-01T00:00:00Z",
+        "saved_cents": 600000,
+        "now": "2026-07-01T12:00:00Z"
+      },
+      "expected": {
+        "off_track": false,
+        "past_due": false,
+        "expected_cents": 595068,
+        "shortfall_cents": 0,
+        "suggested_monthly_cents": 85715
+      }
+    },
+    {
+      "input": {
+        "name": "marginally behind within tolerance",
+        "target_cents": 1000000,
+        "target_date": "2027-01-01",
+        "start": "2026-01-01T00:00:00Z",
+        "saved_cents": 460000,
+        "now": "2026-07-01T12:00:00Z"
+      },
+      "expected": {
+        "off_track": false,
+        "past_due": false,
+        "expected_cents": 495890,
+        "shortfall_cents": 35890,
+        "suggested_monthly_cents": 77143
+      }
+    },
+    {
+      "input": {
+        "name": "reached regardless of date",
+        "target_cents": 300000,
+        "target_date": "2027-01-01",
+        "start": "2026-01-01T00:00:00Z",
+        "saved_cents": 300000,
+        "now": "2026-07-01T12:00:00Z"
+      },
+      "expected": {
+        "off_track": false,
+        "past_due": false,
+        "expected_cents": 148767,
+        "shortfall_cents": 0,
+        "suggested_monthly_cents": 0
+      }
+    },
+    {
+      "input": {
+        "name": "no target date — no pace",
+        "target_cents": 200000,
+        "target_date": null,
+        "start": "2026-01-01T00:00:00Z",
+        "saved_cents": 0,
+        "now": "2026-07-01T12:00:00Z"
+      },
+      "expected": {
+        "off_track": false,
+        "past_due": false,
+        "expected_cents": 0,
+        "shortfall_cents": 0,
+        "suggested_monthly_cents": 0
+      }
+    },
+    {
+      "input": {
+        "name": "past due and not reached",
+        "target_cents": 200000,
+        "target_date": "2026-06-01",
+        "start": "2026-01-01T00:00:00Z",
+        "saved_cents": 150000,
+        "now": "2026-07-01T12:00:00Z"
+      },
+      "expected": {
+        "off_track": true,
+        "past_due": true,
+        "expected_cents": 200000,
+        "shortfall_cents": 50000,
+        "suggested_monthly_cents": 50000
+      }
+    },
+    {
+      "input": {
+        "name": "zero-span due-now not reached",
+        "target_cents": 200000,
+        "target_date": "2026-06-01",
+        "start": "2026-06-01T00:00:00Z",
+        "saved_cents": 50000,
+        "now": "2026-06-01T12:00:00Z"
+      },
+      "expected": {
+        "off_track": true,
+        "past_due": true,
+        "expected_cents": 200000,
+        "shortfall_cents": 150000,
+        "suggested_monthly_cents": 150000
+      }
+    }
+  ]
+}

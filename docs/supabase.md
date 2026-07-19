@@ -50,6 +50,7 @@ supabase/
     ├── 20260707120000_unit_occupied.sql                     # spec 020: explicit units.occupied column
     ├── 20260716130000_subscription_entitlements.sql         # spec 018: entitlements, billing_events, ensure_entitlement()
     ├── 20260717120000_plaid_connect.sql                     # spec 024: linked banks + first Vault use (§4.6)
+    ├── 20260718120000_savings_goals.sql                     # spec 027: goals + goal_contributions (member RLS)
     └── 20260719120000_budget_rollover.sql                   # spec 027: budgets.budget_type enum + rollover_cap_cents
 ```
 
@@ -121,6 +122,7 @@ Date ranges are **half-open** (`date >= p_start AND date < p_end`), matching the
 | `20260707120000_unit_occupied.sql` | 020-drift-reconciliation | explicit `units.occupied` boolean (completes 019 US5) |
 | `20260716130000_subscription_entitlements.sql` | 018-subscription-system | `entitlement_status`/`billing_plan` enums; `entitlements` + `billing_events` tables; service-role-only write posture; `ensure_entitlement()` |
 | `20260717120000_plaid_connect.sql` | 024-plaid-connect | `linked_provider`/`linked_institution_status`/`link_session_status` enums; `linked_institutions` + `linked_accounts` (member select, service-role writes); zero-policy `linked_institution_secrets` + `plaid_link_sessions`; first Supabase Vault use via 3 service-role-only wrapper RPCs; **explicit table grants** (newer stacks no longer auto-grant DML on public tables) |
+| `20260718120000_savings_goals.sql` | 027-savings-goals | `goal_kind` enum (`savings`/`debt_payoff`); `goals` (member RLS, the budgets posture) + `goal_contributions` (parent-`EXISTS` RLS, the `transaction_shares` posture); optional context association (linked account **or** category, mutually exclusive check); explicit `authenticated` grants. Member-managed (no secret) — deliberately NOT the service-role-only posture. |
 
 The 20260616 migration is **forward-only and destructive** (drops columns/constraints/policies with data backfill in between) — read it before writing any migration that touches `transactions` or `transaction_shares`.
 
@@ -201,6 +203,30 @@ household's linked institutions. **No transaction/balance sync** — that is a f
 ```bash
 supabase db push
 supabase functions deploy plaid-link-token plaid-exchange plaid-disconnect
+```
+
+### 4.7 Spec 027 — savings & debt-payoff goals
+
+Named household goals (migration `20260718120000_savings_goals.sql`; contracts in
+`specs/027-savings-goals/contracts/`). Member-managed household data (no secret), so it takes the
+**budgets posture**, not the service-role-only entitlements/Plaid one:
+
+- **`goal_kind` enum** (`savings | debt_payoff`) — one progress model; kind is only framing.
+- **`goals`** — `household_id`, `name`, `kind`, `target_cents bigint > 0`, optional `target_date`,
+  optional context association (`linked_account_id` → `linked_accounts` **or** `linked_category`,
+  a check enforcing at most one), `created_by`, timestamps (`touch_updated_at` trigger). Member
+  RLS via `is_household_member`.
+- **`goal_contributions`** — child of `goals` (`on delete cascade`): `amount_cents bigint > 0`,
+  `date`, `note`, `created_by`. A goal's progress is the **client-computed sum** of its
+  contributions (the DB stores, `web/lib/finance/goals.ts` derives — the shares-sum convention).
+  RLS piggybacks on the parent goal's household via an `EXISTS` subquery (the `transaction_shares`
+  pattern). No balance/transaction sync — the optional linked account is context only (spec 024 is
+  connect-only).
+- **Explicit `authenticated` grants** on both tables (the spec-024 ACL rule). The store loads them
+  in the `loadAll` fan-out and fails **open** on a missing table (deploy-before-migrate).
+
+```bash
+supabase db push   # apply the migration; no edge functions for this feature
 ```
 
 ## 5. Key files

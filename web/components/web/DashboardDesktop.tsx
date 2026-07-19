@@ -1,13 +1,15 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useApp } from '@/lib/store'
 import type { DashboardScope } from '@/lib/useDashboardRange'
-import { generateInsights } from '@/lib/finance/insights'
+import { generateInsights, compareInsights } from '@/lib/finance/insights'
+import { goalInsights, contributionsByGoal } from '@/lib/finance/goals'
 import {
   monthlyPaymentCents,
-  currentEquityCents,
+  currentPrincipalBalanceCents,
+  PAID_OFF_THRESHOLD_CENTS,
 } from '@/lib/finance/mortgage'
 import { netRentalCents, rentUnitsFrom } from '@/lib/finance/housing'
 import { InsightsCardStack } from '@/components/dashboard/InsightsCardStack'
@@ -38,7 +40,9 @@ export function housingSummary(properties: Property[]) {
     const pay = m ? monthlyPaymentCents(m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years) : 0
     if (m) {
       cost += pay
-      equity += currentEquityCents(m.purchase_price_cents, m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date)
+      const rawBalance = currentPrincipalBalanceCents(m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date)
+      const balance = rawBalance <= PAID_OFF_THRESHOLD_CENTS ? 0 : rawBalance
+      equity += m.original_loan_cents - balance
     }
     if (p.kind === 'multifamily') {
       multi = true
@@ -70,8 +74,15 @@ const inRange = (iso: string, s: Date, e: Date) => {
   return t >= s.getTime() && t < e.getTime()
 }
 
-export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
-  const { transactions, properties, budgets, formatMoney, locale, t } = useApp()
+export function DashboardDesktop({
+  scope,
+  modeSwitch,
+}: {
+  scope: DashboardScope
+  /** Overview | Reports toggle rendered by the Dashboard page (spec 027). */
+  modeSwitch?: ReactNode
+}) {
+  const { transactions, properties, budgets, goals, goalContributions, formatMoney, locale, t } = useApp()
   const {
     now,
     range: activeRange,
@@ -138,10 +149,13 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
   // Housing summary
   const housing = useMemo(() => housingSummary(properties), [properties])
 
-  const insights = useMemo(
-    () => generateInsights(transactions, budgets, properties, referenceDate, 2, t, locale),
-    [transactions, budgets, properties, referenceDate, t, locale]
-  )
+  const insights = useMemo(() => {
+    // Spec 027: merge the goal off-track rule (separate engine) with the base
+    // rules, re-sort by the shared order, and take the desktop's top 2.
+    const base = generateInsights(transactions, budgets, properties, referenceDate, 2, t, locale)
+    const goalIns = goalInsights(goals, contributionsByGoal(goalContributions), referenceDate, t, locale)
+    return [...base, ...goalIns].sort(compareInsights).slice(0, 2)
+  }, [transactions, budgets, properties, goals, goalContributions, referenceDate, t, locale])
 
   const rangeLabel = periodLabel
 
@@ -166,6 +180,7 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
         title={t('Dashboard')}
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {modeSwitch}
             {rangeOptions.length > 1 && (
               <Seg size="sm" value={activeRange} onChange={setRange} options={rangeOptions} />
             )}
@@ -227,13 +242,13 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
                   <div style={{ fontSize: 22, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.4px' }}>{formatMoney(housing.cost)}</div>
                 </div>
                 <div>
-                  <div className="ow-cap">{t('Equity built')}</div>
+                  <div className="ow-cap">{t('Principal paid down')}</div>
                   <div style={{ fontSize: 22, fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.4px' }}>{formatMoney(housing.equity)}</div>
                 </div>
               </div>
               {housing.multi && (
                 <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '0.5px solid var(--hairline)', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{t('Net rental income')}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{t('Net rental (P&I only)')}</span>
                   <span style={{ fontSize: 15, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: housing.netRental >= 0 ? 'var(--positive)' : 'var(--text)' }}>
                     {formatMoney(housing.netRental, { leadingPlus: housing.netRental > 0 })}
                   </span>
@@ -278,7 +293,7 @@ export function DashboardDesktop({ scope }: { scope: DashboardScope }) {
                   <>
                     <span style={{ fontSize: 13, color: 'var(--text-3)' }}>·</span>
                     <span style={{ fontSize: 13, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: 'var(--positive)' }}>
-                      {t('{0} equity', formatMoney(housing.equity))}
+                      {t('{0} paid down', formatMoney(housing.equity))}
                     </span>
                   </>
                 )}
