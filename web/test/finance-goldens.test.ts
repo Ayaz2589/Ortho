@@ -245,7 +245,7 @@ describe('finance goldens — insights rule 3: budget-over (spec 027 A3)', () =>
 
   it('fires budget-over at critical severity when spend exceeds limit', () => {
     const tx = insightTx({ amount_cents: 12_000, category: 'dining' })
-    const budget: Budget = { id: 'b1', household_id: 'hh-1', category: 'dining', monthly_limit_cents: 10_000 }
+    const budget: Budget = { id: 'b1', household_id: 'hh-1', category: 'dining', monthly_limit_cents: 10_000, budget_type: 'fixed', rollover_cap_cents: null }
     const insights = generateInsights([tx], [budget], [], REF)
     const over = insights.find((i) => i.id === `budget-over-dining-2026-06`)
     expect(over).toBeDefined()
@@ -258,7 +258,7 @@ describe('finance goldens — insights rule 3: budget-over (spec 027 A3)', () =>
     // Independently verified: budgetOverFraction = 1.0 in insights-thresholds.ts.
     // At-limit (fraction = 1.0) satisfies >= 1.0 → budget-over fires with magnitude 0¢.
     const tx = insightTx({ amount_cents: 10_000, category: 'dining' })
-    const budget: Budget = { id: 'b1', household_id: 'hh-1', category: 'dining', monthly_limit_cents: 10_000 }
+    const budget: Budget = { id: 'b1', household_id: 'hh-1', category: 'dining', monthly_limit_cents: 10_000, budget_type: 'fixed', rollover_cap_cents: null }
     const insights = generateInsights([tx], [budget], [], REF)
     const over = insights.find((i) => i.id.startsWith('budget-over-'))
     expect(over).toBeDefined()

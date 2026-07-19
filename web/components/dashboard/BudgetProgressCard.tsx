@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { useApp } from '@/lib/store'
 import { Card, SectionLabel } from '@/components/ui'
 import { categoryMeta } from '@/lib/categories'
+import { budgetStatusForMonth } from '@/lib/finance/budgets'
 import type { Interval } from './range'
 
 /** Sage under; sand --accent near/over limit. Loss/cost is never red — the full
@@ -14,10 +15,11 @@ function barColor(fraction: number): string {
 }
 
 /**
- * Spend vs monthly limit, one row per budgeted category. Defaults to the current
- * month; when a specific month is selected on the dashboard, `interval` scopes it
- * to that month and `label` overrides the "This month" caption.
- * Hides itself when no budgets with a positive limit are set.
+ * Spend vs the rollover-aware EFFECTIVE limit, one row per budgeted category
+ * (spec 027). Shows per-bucket remaining and, when a bucket carried surplus (or a
+ * non-monthly shortfall) into the month, a caption naming it. Defaults to the
+ * current month; a selected month scopes it via `interval` + `label`.
+ * Hides itself when no budgets with a positive base limit are set.
  */
 export function BudgetProgressCard({
   interval,
@@ -31,28 +33,27 @@ export function BudgetProgressCard({
   const now = new Date()
   const monthStart = interval ? interval.start : new Date(now.getFullYear(), now.getMonth(), 1)
   const monthEnd = interval ? interval.end : new Date(now.getFullYear(), now.getMonth() + 1, 1)
-  const startMs = monthStart.getTime()
-  const endMs = monthEnd.getTime()
+  // Reference month = the interval midpoint (~the 15th): local-calendar-stable, so
+  // the carry anchor/series can't be flipped a month by the process timezone.
+  const referenceMonth = useMemo(
+    () => new Date((monthStart.getTime() + monthEnd.getTime()) / 2),
+    [monthStart, monthEnd],
+  )
 
-  // One pass over the ledger builds the in-range expense total per category —
-  // was one whole-array rescan per budgeted category via categoryExpenseTotal —
-  // memoized so unrelated store changes don't recompute it (spec 023 P3).
+  // One rollover-aware status per positive-limit budget (memoized — unrelated
+  // store changes don't recompute). budgetStatusForMonth derives carry from the
+  // ledger, so effective limit / remaining reflect prior-month surplus.
   const rows = useMemo(() => {
-    const spentByCategory = new Map<string, number>()
-    for (const tx of transactions) {
-      if (tx.kind !== 'expense') continue
-      const ms = new Date(tx.date).getTime()
-      if (ms < startMs || ms >= endMs) continue
-      spentByCategory.set(tx.category, (spentByCategory.get(tx.category) ?? 0) + tx.amount_cents)
-    }
     return budgets
       .filter((b) => b.monthly_limit_cents > 0)
       .map((b) => {
-        const spent = spentByCategory.get(b.category) ?? 0
-        return { budget: b, spent, fraction: spent / b.monthly_limit_cents }
+        const status = budgetStatusForMonth(b, transactions, referenceMonth)
+        const fraction =
+          status.effectiveLimitCents > 0 ? status.spentCents / status.effectiveLimitCents : 0
+        return { budget: b, status, fraction }
       })
       .sort((a, b) => b.fraction - a.fraction)
-  }, [transactions, budgets, startMs, endMs])
+  }, [transactions, budgets, referenceMonth])
 
   if (rows.length === 0) return null
 
@@ -64,6 +65,17 @@ export function BudgetProgressCard({
           const meta = categoryMeta(row.budget.category)
           const Icon = meta.icon
           const color = barColor(row.fraction)
+          const { spentCents, effectiveLimitCents, remainingCents, carriedInCents } = row.status
+          const remainingLabel =
+            remainingCents >= 0
+              ? t('{0} left', formatMoney(remainingCents))
+              : t('{0} over', formatMoney(-remainingCents))
+          const carriedLabel =
+            carriedInCents > 0
+              ? t('{0} rolled over', formatMoney(carriedInCents))
+              : carriedInCents < 0
+                ? t('{0} carried shortfall', formatMoney(-carriedInCents))
+                : null
           return (
             <div key={row.budget.id} className="flex flex-col gap-1.5">
               <div className="flex items-baseline justify-between">
@@ -72,7 +84,7 @@ export function BudgetProgressCard({
                   <span className="text-sm font-normal text-text">{t(meta.label)}</span>
                 </div>
                 <span className="text-xs font-normal tabular-nums" style={{ color }}>
-                  {formatMoney(row.spent)} / {formatMoney(row.budget.monthly_limit_cents)}
+                  {remainingLabel}
                 </span>
               </div>
               <div
@@ -80,9 +92,16 @@ export function BudgetProgressCard({
                 style={{ background: 'var(--chip-bg)' }}
               >
                 <div
+                  data-testid="budget-bar-fill"
                   className="h-full rounded-full"
                   style={{ width: `${Math.min(1, row.fraction) * 100}%`, background: color }}
                 />
+              </div>
+              <div className="flex items-baseline justify-between text-xs font-normal text-text-3">
+                <span className="tabular-nums">
+                  {formatMoney(spentCents)} {t('of')} {formatMoney(effectiveLimitCents)}
+                </span>
+                {carriedLabel && <span className="tabular-nums">{carriedLabel}</span>}
               </div>
             </div>
           )

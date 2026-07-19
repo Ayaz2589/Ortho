@@ -3,6 +3,23 @@
 // to positional {0},{1} placeholders. New web-only keys are appended below
 // the seed block.
 const catalog: Record<string, string> = {
+
+  // Budget rollover (spec 027)
+  "Fixed": "固定",
+  "Flex": "フレックス",
+  "Non-monthly": "非月次",
+  "Resets every month.": "毎月リセットされます。",
+  "Unused budget rolls forward.": "未使用分は翌月に繰り越されます。",
+  "A fund for irregular costs.": "不定期な出費のための積立。",
+  "Budget type": "予算タイプ",
+  "Rollover cap": "繰り越し上限",
+  "Uncapped": "上限なし",
+  "{0} left": "残り{0}",
+  "{0} over": "{0}超過",
+  "{0} rolled over": "{0}繰り越し",
+  "{0} carried shortfall": "{0}の不足を繰り越し",
+  "Unused {0} budget rolls into next month (an overspend is forgiven). Set a cap to limit how much accumulates.": "未使用の{0}予算は翌月に繰り越されます（使いすぎは免除）。上限を設定すると累積額を制限できます。",
+  "{0} accumulates every month like a fund for irregular costs; both surplus and shortfall carry forward.": "{0}は不定期な出費のための積立として毎月加算され、余剰も不足も繰り越されます。",
   "(you)": "(あなた)",
   "(you) · {0}": "(あなた) · {0}",
   "{0} / mo": "{0} / 月",

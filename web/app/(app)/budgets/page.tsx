@@ -7,8 +7,15 @@ import { useApp } from '@/lib/store'
 import { PageHeader } from '@/components/ui'
 import { ReadingColumn } from '@/components/layout'
 import { SPEND_CATEGORIES, CATEGORIES } from '@/lib/categories'
-import type { TransactionCategory } from '@/lib/types'
+import type { BudgetType, TransactionCategory } from '@/lib/types'
 import { BudgetDrawer } from '@/components/budgets/BudgetDrawer'
+
+// A non-fixed bucket surfaces its type as a small caption; fixed is the quiet default.
+const TYPE_LABEL: Record<BudgetType, string> = {
+  fixed: 'Fixed',
+  flex: 'Flex',
+  non_monthly: 'Non-monthly',
+}
 
 export default function BudgetsPage() {
   const { budgets, formatMoney, t } = useApp()
@@ -47,13 +54,20 @@ export default function BudgetsPage() {
               </span>
               <span className="text-[17px] font-normal text-text">{t(meta.label)}</span>
               <span className="ml-auto flex items-center gap-1.5">
-                <span
-                  className={
-                    'text-[15px] font-normal tabular-nums ' +
-                    (budget ? 'text-text-2' : 'text-text-3')
-                  }
-                >
-                  {budget ? t('{0} / mo', formatMoney(budget.monthly_limit_cents)) : t('Not set')}
+                <span className="flex flex-col items-end">
+                  <span
+                    className={
+                      'text-[15px] font-normal tabular-nums ' +
+                      (budget ? 'text-text-2' : 'text-text-3')
+                    }
+                  >
+                    {budget ? t('{0} / mo', formatMoney(budget.monthly_limit_cents)) : t('Not set')}
+                  </span>
+                  {budget && budget.budget_type !== 'fixed' && (
+                    <span className="text-[12px] font-normal text-text-3">
+                      {t(TYPE_LABEL[budget.budget_type])}
+                    </span>
+                  )}
                 </span>
                 <ChevronRight size={16} className="text-text-3" />
               </span>

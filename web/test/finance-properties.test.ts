@@ -175,7 +175,7 @@ describe('property — insights invariant 2: every id matches a documented patte
       makeTxForProperty({ merchant: 'Netflix', amount_cents: 1799, date: '2026-04-10' }),
       makeTxForProperty({ merchant: 'Netflix', amount_cents: 1799, date: '2026-06-10' }),
     ]
-    const budget: Budget = { id: 'b1', household_id: 'h', category: 'dining', monthly_limit_cents: 10000 }
+    const budget: Budget = { id: 'b1', household_id: 'h', category: 'dining', monthly_limit_cents: 10000, budget_type: 'fixed', rollover_cap_cents: null }
     const now = new Date('2026-06-15T12:00:00.000Z')
     const insights = generateInsights(txs, [budget], [], now, 20)
     for (const insight of insights) {
@@ -208,7 +208,7 @@ describe('property — insights invariant 4: sorted by severity (no lower rank p
       makeTxForProperty({ merchant: 'Netflix', amount_cents: 1799, date: '2026-04-10' }),
       makeTxForProperty({ merchant: 'Netflix', amount_cents: 1799, date: '2026-06-10' }),
     ]
-    const budget: Budget = { id: 'b2', household_id: 'h', category: 'dining', monthly_limit_cents: 10000 }
+    const budget: Budget = { id: 'b2', household_id: 'h', category: 'dining', monthly_limit_cents: 10000, budget_type: 'fixed', rollover_cap_cents: null }
     const now = new Date('2026-06-15T12:00:00.000Z')
     const insights = generateInsights(txs, [budget], [], now, 20)
     for (let i = 1; i < insights.length; i++) {

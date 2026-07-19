@@ -116,6 +116,11 @@ export interface BudgetRow {
   household_id: string
   category: TransactionCategory
   monthly_limit_cents: number
+  // spec 027: nullable/optional so a deploy-before-migrate client tolerates the
+  // columns' absence — the store defaults them at the row→domain boundary.
+  budget_type?: 'fixed' | 'flex' | 'non_monthly' | null
+  rollover_cap_cents?: number | null
+  created_at?: string | null
 }
 
 export interface GoalRow {

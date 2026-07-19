@@ -1,0 +1,381 @@
+[
+  {
+    "input": {
+      "name": "fixed: resets each month (== pre-027 behavior)",
+      "config": {
+        "type": "fixed",
+        "baseLimitCents": 40000,
+        "rolloverCapCents": null
+      },
+      "monthlySpendCents": [
+        30000,
+        50000,
+        20000
+      ]
+    },
+    "expected": [
+      {
+        "carriedInCents": 0,
+        "baseLimitCents": 40000,
+        "effectiveLimitCents": 40000,
+        "spentCents": 30000,
+        "remainingCents": 10000,
+        "carriedOutCents": 0
+      },
+      {
+        "carriedInCents": 0,
+        "baseLimitCents": 40000,
+        "effectiveLimitCents": 40000,
+        "spentCents": 50000,
+        "remainingCents": -10000,
+        "carriedOutCents": 0
+      },
+      {
+        "carriedInCents": 0,
+        "baseLimitCents": 40000,
+        "effectiveLimitCents": 40000,
+        "spentCents": 20000,
+        "remainingCents": 20000,
+        "carriedOutCents": 0
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "flex: unused surplus accumulates forward",
+      "config": {
+        "type": "flex",
+        "baseLimitCents": 60000,
+        "rolloverCapCents": null
+      },
+      "monthlySpendCents": [
+        50000,
+        40000,
+        55000
+      ]
+    },
+    "expected": [
+      {
+        "carriedInCents": 0,
+        "baseLimitCents": 60000,
+        "effectiveLimitCents": 60000,
+        "spentCents": 50000,
+        "remainingCents": 10000,
+        "carriedOutCents": 10000
+      },
+      {
+        "carriedInCents": 10000,
+        "baseLimitCents": 60000,
+        "effectiveLimitCents": 70000,
+        "spentCents": 40000,
+        "remainingCents": 30000,
+        "carriedOutCents": 30000
+      },
+      {
+        "carriedInCents": 30000,
+        "baseLimitCents": 60000,
+        "effectiveLimitCents": 90000,
+        "spentCents": 55000,
+        "remainingCents": 35000,
+        "carriedOutCents": 35000
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "flex: overspend is forgiven — no debt carries",
+      "config": {
+        "type": "flex",
+        "baseLimitCents": 60000,
+        "rolloverCapCents": null
+      },
+      "monthlySpendCents": [
+        50000,
+        75000,
+        50000
+      ]
+    },
+    "expected": [
+      {
+        "carriedInCents": 0,
+        "baseLimitCents": 60000,
+        "effectiveLimitCents": 60000,
+        "spentCents": 50000,
+        "remainingCents": 10000,
+        "carriedOutCents": 10000
+      },
+      {
+        "carriedInCents": 10000,
+        "baseLimitCents": 60000,
+        "effectiveLimitCents": 70000,
+        "spentCents": 75000,
+        "remainingCents": -5000,
+        "carriedOutCents": 0
+      },
+      {
+        "carriedInCents": 0,
+        "baseLimitCents": 60000,
+        "effectiveLimitCents": 60000,
+        "spentCents": 50000,
+        "remainingCents": 10000,
+        "carriedOutCents": 10000
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "flex: accumulated carry is capped",
+      "config": {
+        "type": "flex",
+        "baseLimitCents": 60000,
+        "rolloverCapCents": 15000
+      },
+      "monthlySpendCents": [
+        40000,
+        40000,
+        40000
+      ]
+    },
+    "expected": [
+      {
+        "carriedInCents": 0,
+        "baseLimitCents": 60000,
+        "effectiveLimitCents": 60000,
+        "spentCents": 40000,
+        "remainingCents": 20000,
+        "carriedOutCents": 15000
+      },
+      {
+        "carriedInCents": 15000,
+        "baseLimitCents": 60000,
+        "effectiveLimitCents": 75000,
+        "spentCents": 40000,
+        "remainingCents": 35000,
+        "carriedOutCents": 15000
+      },
+      {
+        "carriedInCents": 15000,
+        "baseLimitCents": 60000,
+        "effectiveLimitCents": 75000,
+        "spentCents": 40000,
+        "remainingCents": 35000,
+        "carriedOutCents": 15000
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "flex: opening carry seeds the first month",
+      "config": {
+        "type": "flex",
+        "baseLimitCents": 60000,
+        "rolloverCapCents": null,
+        "openingCarryCents": 20000
+      },
+      "monthlySpendCents": [
+        10000
+      ]
+    },
+    "expected": [
+      {
+        "carriedInCents": 20000,
+        "baseLimitCents": 60000,
+        "effectiveLimitCents": 80000,
+        "spentCents": 10000,
+        "remainingCents": 70000,
+        "carriedOutCents": 70000
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "non_monthly: sinking fund builds then a bill draws it negative",
+      "config": {
+        "type": "non_monthly",
+        "baseLimitCents": 5000,
+        "rolloverCapCents": null
+      },
+      "monthlySpendCents": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        60000
+      ]
+    },
+    "expected": [
+      {
+        "carriedInCents": 0,
+        "baseLimitCents": 5000,
+        "effectiveLimitCents": 5000,
+        "spentCents": 0,
+        "remainingCents": 5000,
+        "carriedOutCents": 5000
+      },
+      {
+        "carriedInCents": 5000,
+        "baseLimitCents": 5000,
+        "effectiveLimitCents": 10000,
+        "spentCents": 0,
+        "remainingCents": 10000,
+        "carriedOutCents": 10000
+      },
+      {
+        "carriedInCents": 10000,
+        "baseLimitCents": 5000,
+        "effectiveLimitCents": 15000,
+        "spentCents": 0,
+        "remainingCents": 15000,
+        "carriedOutCents": 15000
+      },
+      {
+        "carriedInCents": 15000,
+        "baseLimitCents": 5000,
+        "effectiveLimitCents": 20000,
+        "spentCents": 0,
+        "remainingCents": 20000,
+        "carriedOutCents": 20000
+      },
+      {
+        "carriedInCents": 20000,
+        "baseLimitCents": 5000,
+        "effectiveLimitCents": 25000,
+        "spentCents": 0,
+        "remainingCents": 25000,
+        "carriedOutCents": 25000
+      },
+      {
+        "carriedInCents": 25000,
+        "baseLimitCents": 5000,
+        "effectiveLimitCents": 30000,
+        "spentCents": 60000,
+        "remainingCents": -30000,
+        "carriedOutCents": -30000
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "non_monthly: negative fund recovers as base accrues",
+      "config": {
+        "type": "non_monthly",
+        "baseLimitCents": 5000,
+        "rolloverCapCents": null,
+        "openingCarryCents": -30000
+      },
+      "monthlySpendCents": [
+        0,
+        0
+      ]
+    },
+    "expected": [
+      {
+        "carriedInCents": -30000,
+        "baseLimitCents": 5000,
+        "effectiveLimitCents": -25000,
+        "spentCents": 0,
+        "remainingCents": -25000,
+        "carriedOutCents": -25000
+      },
+      {
+        "carriedInCents": -25000,
+        "baseLimitCents": 5000,
+        "effectiveLimitCents": -20000,
+        "spentCents": 0,
+        "remainingCents": -20000,
+        "carriedOutCents": -20000
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "zero base: flex stays flat",
+      "config": {
+        "type": "flex",
+        "baseLimitCents": 0,
+        "rolloverCapCents": null
+      },
+      "monthlySpendCents": [
+        0,
+        0
+      ]
+    },
+    "expected": [
+      {
+        "carriedInCents": 0,
+        "baseLimitCents": 0,
+        "effectiveLimitCents": 0,
+        "spentCents": 0,
+        "remainingCents": 0,
+        "carriedOutCents": 0
+      },
+      {
+        "carriedInCents": 0,
+        "baseLimitCents": 0,
+        "effectiveLimitCents": 0,
+        "spentCents": 0,
+        "remainingCents": 0,
+        "carriedOutCents": 0
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "zero base: non_monthly can still go negative",
+      "config": {
+        "type": "non_monthly",
+        "baseLimitCents": 0,
+        "rolloverCapCents": null
+      },
+      "monthlySpendCents": [
+        100
+      ]
+    },
+    "expected": [
+      {
+        "carriedInCents": 0,
+        "baseLimitCents": 0,
+        "effectiveLimitCents": 0,
+        "spentCents": 100,
+        "remainingCents": -100,
+        "carriedOutCents": -100
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "boundary: single month, flex",
+      "config": {
+        "type": "flex",
+        "baseLimitCents": 30000,
+        "rolloverCapCents": null
+      },
+      "monthlySpendCents": [
+        12345
+      ]
+    },
+    "expected": [
+      {
+        "carriedInCents": 0,
+        "baseLimitCents": 30000,
+        "effectiveLimitCents": 30000,
+        "spentCents": 12345,
+        "remainingCents": 17655,
+        "carriedOutCents": 17655
+      }
+    ]
+  },
+  {
+    "input": {
+      "name": "boundary: empty spend series",
+      "config": {
+        "type": "flex",
+        "baseLimitCents": 60000,
+        "rolloverCapCents": null
+      },
+      "monthlySpendCents": []
+    },
+    "expected": []
+  }
+]

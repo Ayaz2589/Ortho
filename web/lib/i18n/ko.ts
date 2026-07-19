@@ -3,6 +3,23 @@
 // to positional {0},{1} placeholders. New web-only keys are appended below
 // the seed block.
 const catalog: Record<string, string> = {
+
+  // Budget rollover (spec 027)
+  "Fixed": "고정",
+  "Flex": "플렉스",
+  "Non-monthly": "비월간",
+  "Resets every month.": "매월 초기화됩니다.",
+  "Unused budget rolls forward.": "사용하지 않은 예산은 다음 달로 이월됩니다.",
+  "A fund for irregular costs.": "비정기 지출을 위한 적립금.",
+  "Budget type": "예산 유형",
+  "Rollover cap": "이월 한도",
+  "Uncapped": "무제한",
+  "{0} left": "{0} 남음",
+  "{0} over": "{0} 초과",
+  "{0} rolled over": "{0} 이월됨",
+  "{0} carried shortfall": "{0} 부족분 이월",
+  "Unused {0} budget rolls into next month (an overspend is forgiven). Set a cap to limit how much accumulates.": "사용하지 않은 {0} 예산은 다음 달로 이월됩니다(초과 지출은 면제). 한도를 설정하면 누적 금액을 제한할 수 있습니다.",
+  "{0} accumulates every month like a fund for irregular costs; both surplus and shortfall carry forward.": "{0}은(는) 비정기 지출을 위한 적립금처럼 매월 누적되며, 잉여와 부족분이 모두 이월됩니다.",
   "(you)": "(나)",
   "(you) · {0}": "(나) · {0}",
   "{0} / mo": "{0} / 월",

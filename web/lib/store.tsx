@@ -711,7 +711,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     }))
     setProperties(props)
     setRentalPayments((rpRes.data ?? []) as RentalPaymentRow[])
-    setBudgets((budgetsRes.data ?? []) as BudgetRow[])
+    // spec 027: map each budget row → domain Budget, defaulting the rollover
+    // columns so a deploy-before-migrate read (columns absent) behaves as fixed.
+    setBudgets(
+      ((budgetsRes.data ?? []) as BudgetRow[]).map((r) => ({
+        id: r.id,
+        household_id: r.household_id,
+        category: r.category,
+        monthly_limit_cents: r.monthly_limit_cents,
+        budget_type: r.budget_type ?? 'fixed',
+        rollover_cap_cents: r.rollover_cap_cents ?? null,
+        created_at: r.created_at ?? undefined,
+      })),
+    )
     setGoals((goalsRes.data ?? []) as GoalRow[])
     setGoalContributions((goalContribRes.data ?? []) as GoalContributionRow[])
     setLinkedInstitutions((linkedInstRes.data ?? []) as LinkedInstitutionRow[])
@@ -1093,6 +1105,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           household_id: b.household_id,
           category: b.category,
           monthly_limit_cents: b.monthly_limit_cents,
+          budget_type: b.budget_type,
+          // flex-only; store null for the other types so a stale cap never lingers.
+          rollover_cap_cents: b.budget_type === 'flex' ? b.rollover_cap_cents : null,
         },
         { onConflict: 'household_id,category' }
       )

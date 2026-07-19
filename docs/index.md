@@ -61,7 +61,7 @@ Two live surfaces, one backend:
 **web is the single canonical implementation; the Capacitor iOS shell and the responsive web app
 are that same implementation, delivered per canvas — never a redesign, never a second
 implementation.** The finance logic (money/currency, splits, balances, filters, insights,
-mortgage, dashboard month scope, and — since spec 021 — the on-device scan parser) is pure
+mortgage, dashboard month scope, budget rollover (spec 027), and — since spec 021 — the on-device scan parser) is pure
 TypeScript in `web/lib/*` (+ `web/components/dashboard/range.ts`), pinned by **regression
 vectors** in `shared/test-vectors/`: `npm run gen:vectors` generates them from the TS engines, and
 the web Vitest suite asserts them, catching accidental behavior changes before they ship — no

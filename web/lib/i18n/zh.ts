@@ -3,6 +3,23 @@
 // to positional {0},{1} placeholders. New web-only keys are appended below
 // the seed block.
 const catalog: Record<string, string> = {
+
+  // Budget rollover (spec 027)
+  "Fixed": "固定",
+  "Flex": "弹性",
+  "Non-monthly": "非按月",
+  "Resets every month.": "每月重置。",
+  "Unused budget rolls forward.": "未用预算结转到下月。",
+  "A fund for irregular costs.": "用于不定期支出的资金池。",
+  "Budget type": "预算类型",
+  "Rollover cap": "结转上限",
+  "Uncapped": "不限",
+  "{0} left": "剩余 {0}",
+  "{0} over": "超支 {0}",
+  "{0} rolled over": "结转 {0}",
+  "{0} carried shortfall": "结转不足 {0}",
+  "Unused {0} budget rolls into next month (an overspend is forgiven). Set a cap to limit how much accumulates.": "未使用的{0}预算会结转到下月（超支予以豁免）。设置上限可限制累积金额。",
+  "{0} accumulates every month like a fund for irregular costs; both surplus and shortfall carry forward.": "{0}像用于不定期支出的资金池一样每月累积；结余和不足都会结转。",
   "(you)": "(您)",
   "(you) · {0}": "(您) · {0}",
   "{0} / mo": "{0} / 月",

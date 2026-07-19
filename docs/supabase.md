@@ -50,7 +50,8 @@ supabase/
     ├── 20260707120000_unit_occupied.sql                     # spec 020: explicit units.occupied column
     ├── 20260716130000_subscription_entitlements.sql         # spec 018: entitlements, billing_events, ensure_entitlement()
     ├── 20260717120000_plaid_connect.sql                     # spec 024: linked banks + first Vault use (§4.6)
-    └── 20260718120000_savings_goals.sql                     # spec 027: goals + goal_contributions (member RLS)
+    ├── 20260718120000_savings_goals.sql                     # spec 027: goals + goal_contributions (member RLS)
+    └── 20260719120000_budget_rollover.sql                   # spec 027: budgets.budget_type enum + rollover_cap_cents
 ```
 
 ## 4. Architecture
@@ -75,7 +76,7 @@ supabase/
 **Money**
 - `transactions` — `household_id` (NOT NULL since 20260616), `merchant`, `category`, `kind`, `amount_cents bigint` (≥ 0 check), `source` (free text, default `''`), `date timestamptz`, `created_by` → `users`, `paid_by` → `household_people` (feature 012: who fronted an expense / the sender of a transfer), `created_at`/`updated_at` (touched by trigger).
 - `transaction_shares` — `(transaction_id, person_id)` PK + `amount_cents`. Authoritative **cents per person**, materialized on every save and summing to the transaction amount (the sum invariant is enforced client-side, not in SQL — noted in the initial migration). Originally `(transaction_id, user_id, percent)`; migrated to cents/person in 20260616 with a rounding-reconciliation step that assigns leftover cents to the lowest-`sort_order` person.
-- `budgets` — one row per `(household_id, category)` (UNIQUE), `monthly_limit_cents`.
+- `budgets` — one row per `(household_id, category)` (UNIQUE), `monthly_limit_cents`. Spec 027 adds `budget_type` (enum `fixed`|`flex`|`non_monthly`, default `fixed`) and a flex-only nullable `rollover_cap_cents`; the rollover carry itself is derived client-side from the ledger, never stored.
 - `cards` — named payment sources per household.
 
 **Housing**

@@ -38,7 +38,14 @@ function tx(over: Partial<Transaction> = {}): Transaction {
 }
 
 function budget(category: Budget['category'], monthly_limit_cents: number): Budget {
-  return { id: `b-${category}`, household_id: 'hh-1', category, monthly_limit_cents }
+  return {
+    id: `b-${category}`,
+    household_id: 'hh-1',
+    category,
+    monthly_limit_cents,
+    budget_type: 'fixed',
+    rollover_cap_cents: null,
+  }
 }
 
 const byId = (ins: Insight[], id: string): Insight | undefined =>
@@ -629,5 +636,56 @@ describe('generateInsights — Rule 6: outlier date locale (013/US3)', () => {
   it('defaults to en-US rendering', () => {
     const ins = generateInsights([...baseline(2000), big()], [], [], REF)
     expect(byId(ins, 'outlier-big-loc')!.body).toContain('Jun 5')
+  })
+})
+
+// Spec 027: Rule 3 measures spend against the rollover-aware EFFECTIVE limit.
+describe('budget insights are rollover-aware (spec 027)', () => {
+  const flexBudget = (limit: number, created_at: string): Budget => ({
+    id: 'b-dining',
+    household_id: 'hh-1',
+    category: 'dining',
+    monthly_limit_cents: limit,
+    budget_type: 'flex',
+    rollover_cap_cents: null,
+    created_at,
+  })
+
+  it('a fixed budget behaves exactly as before (no carry)', () => {
+    // $400 spent on a $300 fixed limit → over by $100, body cites the $300 base.
+    const b = budget('dining', 30000)
+    const txs = [tx({ category: 'dining', amount_cents: 40000, date: '2026-06-09T12:00:00.000Z' })]
+    const over = byId(generateInsights(txs, [b], [], REF), `budget-over-dining-${M}`)
+    expect(over).toBeDefined()
+    expect(over!.magnitude_cents).toBe(10000) // 40000 − 30000
+    expect(over!.body).toContain('$300.00')
+  })
+
+  it('flex carried surplus lifts the effective limit out of "over"', () => {
+    // May $50 on a $300 flex base → $250 rolls to June (effective $550).
+    // June $400 spend is UNDER the $550 effective limit — no over-budget insight.
+    const b = flexBudget(30000, '2026-05-01T12:00:00.000Z')
+    const txs = [
+      tx({ category: 'dining', amount_cents: 5000, date: '2026-05-08T12:00:00.000Z' }),
+      tx({ category: 'dining', amount_cents: 40000, date: '2026-06-09T12:00:00.000Z' }),
+    ]
+    const ins = generateInsights(txs, [b], [], REF)
+    expect(byId(ins, `budget-over-dining-${M}`)).toBeUndefined()
+    // The same spend WITHOUT rollover (fixed) would have been over budget:
+    const fixedIns = generateInsights(txs, [budget('dining', 30000)], [], REF)
+    expect(byId(fixedIns, `budget-over-dining-${M}`)).toBeDefined()
+  })
+
+  it('flex still goes over once spend exceeds the effective limit, citing it', () => {
+    // Effective $550; spend $600 → $50 over, body cites the $550 effective limit.
+    const b = flexBudget(30000, '2026-05-01T12:00:00.000Z')
+    const txs = [
+      tx({ category: 'dining', amount_cents: 5000, date: '2026-05-08T12:00:00.000Z' }),
+      tx({ category: 'dining', amount_cents: 60000, date: '2026-06-09T12:00:00.000Z' }),
+    ]
+    const over = byId(generateInsights(txs, [b], [], REF), `budget-over-dining-${M}`)
+    expect(over).toBeDefined()
+    expect(over!.magnitude_cents).toBe(5000) // 60000 − 55000
+    expect(over!.body).toContain('$550.00')
   })
 })

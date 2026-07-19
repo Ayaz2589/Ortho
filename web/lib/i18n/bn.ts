@@ -3,6 +3,23 @@
 // to positional {0},{1} placeholders. New web-only keys are appended below
 // the seed block.
 const catalog: Record<string, string> = {
+
+  // Budget rollover (spec 027)
+  "Fixed": "নির্দিষ্ট",
+  "Flex": "ফ্লেক্স",
+  "Non-monthly": "অ-মাসিক",
+  "Resets every month.": "প্রতি মাসে রিসেট হয়।",
+  "Unused budget rolls forward.": "অব্যবহৃত বাজেট পরের মাসে চলে যায়।",
+  "A fund for irregular costs.": "অনিয়মিত খরচের জন্য একটি তহবিল।",
+  "Budget type": "বাজেটের ধরন",
+  "Rollover cap": "রোলওভার সীমা",
+  "Uncapped": "সীমাহীন",
+  "{0} left": "{0} বাকি",
+  "{0} over": "{0} বেশি",
+  "{0} rolled over": "{0} স্থানান্তরিত",
+  "{0} carried shortfall": "{0} ঘাটতি স্থানান্তরিত",
+  "Unused {0} budget rolls into next month (an overspend is forgiven). Set a cap to limit how much accumulates.": "অব্যবহৃত {0} বাজেট পরের মাসে চলে যায় (অতিরিক্ত খরচ মাফ)। কত জমা হবে তা সীমিত করতে একটি সীমা দিন।",
+  "{0} accumulates every month like a fund for irregular costs; both surplus and shortfall carry forward.": "{0} অনিয়মিত খরচের তহবিলের মতো প্রতি মাসে জমা হয়; উদ্বৃত্ত ও ঘাটতি উভয়ই স্থানান্তরিত হয়।",
   "(you)": "(আপনি)",
   "(you) · {0}": "(আপনি) · {0}",
   "{0} / mo": "{0} / মাস",

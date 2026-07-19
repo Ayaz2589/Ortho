@@ -57,9 +57,16 @@ shared/
     │                                #   Dashboard summary and property-detail Net balance both show (spec 019)
     ├── lease.json                   # (122 ln) rentDueDay/daysUntilNextRent/daysUntilEnd/isRenewalSoon
     │                                #   (components/housing/lease.ts) with an injected asOf (spec 020)
-    └── goals.json                   # savings-goal engine (lib/finance/goals.ts): goalProgress +
-                                     #   goalPacing (off-track), injected `now` (spec 027)
+    ├── goals.json                   # savings-goal engine (lib/finance/goals.ts): goalProgress +
+    │                                #   goalPacing (off-track), injected `now` (spec 027)
+    └── budget-rollover.json         # computeRolloverLedger (lib/finance/budgets.ts): fixed/flex/
+                                     #   non_monthly carry recurrence in integer cents (spec 027)
 ```
+
+> **spec 027 (2026-07-19):** `budget-rollover.json` is the **twelfth** vector file
+> — the fixed/flex/non_monthly budget carry math. Added the going-forward way
+> (§8): one section in `gen-vectors.ts` + one `budget-rollover.parity.test.ts`,
+> no pbxproj/Swift wiring. Where this doc says "eleven files", read "twelve".
 
 Note: `shared/test-vectors/README.md` now documents all eleven files (its "Files (11)" section, refreshed in feature 020), though it still frames them as a cross-language contract — read it alongside this doc's spec-021 banner. `gen-vectors.ts` and `PARITY.md` remain the most current per-case references.
 
