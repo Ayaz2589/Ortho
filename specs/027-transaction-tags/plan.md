@@ -70,7 +70,7 @@ specs/027-transaction-tags/
 
 ```text
 supabase/migrations/
-└── 20260718120000_transaction_tags.sql   # NEW: tags + transaction_tags + transactions.notes + RLS + grants
+└── 20260718120001_transaction_tags.sql   # NEW: tags + transaction_tags + transactions.notes + RLS + grants
 
 web/lib/
 ├── types.ts                 # + Tag; Transaction gains tags?: string[], notes?: string | null

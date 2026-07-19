@@ -679,7 +679,7 @@ validated constructors (`toCents`, `centsFromDollars`) and guards
 additive: existing call sites are untouched (no ripple), while a new path that
 *requires* `Cents` rejects a plain-`number` dollars value at compile time and a
 non-integer at runtime. Wholesale adoption across the layer is deferred.
-*Done (b):* `supabase/migrations/20260718120000_upsert_transaction_atomic.sql` —
+*Done (b):* `supabase/migrations/20260718120002_upsert_transaction_atomic.sql` —
 `upsert_transaction(p_tx jsonb, p_shares jsonb)` PL/pgSQL RPC (`security definer`)
 validates `sum(shares.amount_cents) = amount_cents` and commits transaction + shares
 atomically. Both `addTransaction`/`updateTransaction` in `web/lib/store.tsx` and the

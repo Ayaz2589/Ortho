@@ -32,7 +32,7 @@ branch `feat/transaction-tags`. All web commands run from `web/`.
 
 **⚠️ CRITICAL**: schema + type foundation. No story UI can compile until these land.
 
-- [ ] T002 [FND] Write migration `supabase/migrations/20260718120000_transaction_tags.sql` per `contracts/migration.md`: `transactions.notes`, `tags`, `transaction_tags`, RLS, explicit grants. Heavily-commented header (spec ref + client invariants), repo migration style.
+- [ ] T002 [FND] Write migration `supabase/migrations/20260718120001_transaction_tags.sql` per `contracts/migration.md`: `transactions.notes`, `tags`, `transaction_tags`, RLS, explicit grants. Heavily-commented header (spec ref + client invariants), repo migration style.
 - [ ] T003 [FND] Apply + verify: `supabase db reset` clean; confirm `tags`/`transaction_tags` exist and the `tags_household_lower_name_idx` rejects a case-insensitive duplicate (quick `psql`/Studio check). Depends on T002.
 - [ ] T004 [P] [FND] `web/lib/types.ts`: add `Tag` interface; add optional `tags?: string[]` + `notes?: string | null` to `Transaction` (doc-comments per data-model.md). Keep `PICKABLE_CATEGORIES`/enums untouched.
 - [ ] T005 [P] [FND] `web/lib/supabase/rows.ts`: add `TagRow`, `TransactionTagRow`; add `notes: string | null` to `TransactionRow`.

@@ -51,7 +51,7 @@ Index: `create index transaction_tags_tag_id_idx on transaction_tags (tag_id)`.
 
 ### Migration file
 
-`supabase/migrations/20260718120000_transaction_tags.sql` — timestamp after the last existing
+`supabase/migrations/20260718120001_transaction_tags.sql` — timestamp after the last existing
 migration (`20260717120000_plaid_connect.sql`). Heavily commented header naming the spec, the
 design intent, and the client-side invariants (tag identity = trimmed/lower name; the join is a
 set), per the repo's migration style. Applies cleanly on `supabase db reset`.

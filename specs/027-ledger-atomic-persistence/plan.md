@@ -60,7 +60,7 @@ specs/027-ledger-atomic-persistence/
 
 ```text
 supabase/migrations/
-└── 20260718120000_upsert_transaction_atomic.sql   # new migration
+└── 20260718120002_upsert_transaction_atomic.sql   # new migration
 
 web/lib/
 └── store.tsx            # addTransaction + updateTransaction — replace two-step write

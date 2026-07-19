@@ -6,7 +6,7 @@ up, `web/.env.local` pointing at `http://127.0.0.1:54321`, `npm ci` done).
 ## Apply the migration
 
 ```bash
-# from repo root — replays all migrations incl. 20260718120000_transaction_tags.sql
+# from repo root — replays all migrations incl. 20260718120001_transaction_tags.sql
 supabase db reset
 ```
 

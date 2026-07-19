@@ -1,4 +1,4 @@
-# Contract: Migration `20260718120000_transaction_tags.sql`
+# Contract: Migration `20260718120001_transaction_tags.sql`
 
 The exact schema contract. The implementation SQL must match this shape (comments abbreviated here;
 the real file carries the full heavily-commented header per repo convention).

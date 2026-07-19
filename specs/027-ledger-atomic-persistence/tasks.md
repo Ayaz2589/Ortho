@@ -19,7 +19,7 @@
 
 **Purpose**: Scaffold the migration file and test file so implementation can begin.
 
-- [X] T001 Create empty migration file `supabase/migrations/20260718120000_upsert_transaction_atomic.sql` with a header comment describing the feature
+- [X] T001 Create empty migration file `supabase/migrations/20260718120002_upsert_transaction_atomic.sql` with a header comment describing the feature
 - [X] T002 [P] Create empty test file `web/test/ledger-atomic.test.ts` with a top-level `describe('upsert_transaction RPC')` block and a single skipped placeholder test — confirms the file is picked up by Vitest
 
 **Checkpoint**: `cd web && npm test` runs without errors (placeholder test skipped, all existing suites green)
@@ -32,14 +32,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete and `supabase db reset` succeeds.
 
-- [X] T003 Write the `upsert_transaction(p_tx jsonb, p_shares jsonb)` PL/pgSQL function body in `supabase/migrations/20260718120000_upsert_transaction_atomic.sql` per `contracts/upsert_transaction.md`:
+- [X] T003 Write the `upsert_transaction(p_tx jsonb, p_shares jsonb)` PL/pgSQL function body in `supabase/migrations/20260718120002_upsert_transaction_atomic.sql` per `contracts/upsert_transaction.md`:
   - Validate `jsonb_array_length(p_shares) >= 1` — raise `check_violation` `'NO_SHARES: ...'` if empty
   - Validate `sum(s->>'amount_cents') = (p_tx->>'amount_cents')::bigint` — raise `check_violation` `'SHARES_MISMATCH: shares sum X != transaction amount Y'` if not equal
   - `INSERT INTO public.transactions … ON CONFLICT (id) DO UPDATE` for all mutable columns
   - `DELETE FROM public.transaction_shares WHERE transaction_id = v_id`
   - `INSERT INTO public.transaction_shares …` for all share rows
   - `security invoker`, `set search_path = public`, `language plpgsql`
-- [X] T004 Add a pre-migration diagnostic query in `supabase/migrations/20260718120000_upsert_transaction_atomic.sql` that logs the count of existing share-less transaction rows (a `DO $$ … $$` block that raises a `NOTICE` — forward-only, no data changes)
+- [X] T004 Add a pre-migration diagnostic query in `supabase/migrations/20260718120002_upsert_transaction_atomic.sql` that logs the count of existing share-less transaction rows (a `DO $$ … $$` block that raises a `NOTICE` — forward-only, no data changes)
 - [X] T005 Apply migration: run `supabase db reset` from repo root; verify `select proname from pg_proc where proname = 'upsert_transaction'` returns one row
 
 **Checkpoint**: Migration applied cleanly. `upsert_transaction` function exists in local Supabase. All existing tests still green.
