@@ -1,11 +1,12 @@
 'use client'
 
 // Scan flow host (spec 021, T053): renders the right chrome for the current
-// ScanSessionState.phase, driven by useScanFlow(). Mobile/modal path only —
-// the desktop drawer form (components/web/TransactionsDesktop.tsx) gets its
-// own scan entry point in a follow-up; wiring both through the same
-// candidate-prefill hook (TxForm.loadFromScanCandidate) keeps that a small
-// addition, not a rewrite.
+// ScanSessionState.phase, driven by useScanFlow(). Shared by BOTH the mobile
+// Transactions page (app/(app)/transactions/page.tsx) and the desktop ledger
+// (components/web/TransactionsDesktop.tsx) — each drives it via its own
+// useScanFlow() and wires every candidate through the same prefill hook
+// (TxForm.loadFromScanCandidate), so scanned rows come out identical across
+// platforms.
 
 import { useEffect, type Dispatch } from 'react'
 import { useApp } from '@/lib/store'
