@@ -1,0 +1,76 @@
+{
+  "bankId": "td-bank-csv",
+  "bankLabel": "TD Bank (Checking CSV)",
+  "accountHolder": "",
+  "source": "TD Bank",
+  "period": {
+    "start": "2026-06-01T12:00:00.000Z",
+    "end": "2026-06-20T12:00:00.000Z"
+  },
+  "sections": [
+    {
+      "name": "Transactions",
+      "kind": "expense",
+      "printedSubtotalCents": 262774,
+      "rows": [
+        {
+          "dateISO": "2026-06-01T12:00:00.000Z",
+          "rawDescription": "STARBUCKS COFFEE",
+          "merchant": "Starbucks Coffee",
+          "amountCents": 575,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "coffee",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-06-05T12:00:00.000Z",
+          "rawDescription": "AMAZON MARKETPLACE",
+          "merchant": "Amazon Marketplace",
+          "amountCents": 3499,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "entertainment",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-06-10T12:00:00.000Z",
+          "rawDescription": "CON EDISON BILL PAY",
+          "merchant": "Con Edison Bill Pay",
+          "amountCents": 8700,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "utilities",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-06-20T12:00:00.000Z",
+          "rawDescription": "ACH CREDIT DIRECT DEP",
+          "merchant": "Ach Credit Direct Dep",
+          "amountCents": 250000,
+          "kind": "income",
+          "section": "Transactions",
+          "category": "income",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        }
+      ]
+    }
+  ],
+  "reconcilable": false
+}

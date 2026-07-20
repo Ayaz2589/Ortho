@@ -1,9 +1,9 @@
 'use client'
 
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Capacitor } from '@capacitor/core'
-import { Camera, ChevronDown, FileText, ScanLine, SlidersHorizontal } from 'lucide-react'
+import { Camera, ChevronDown, FileSpreadsheet, FileText, ScanLine, SlidersHorizontal } from 'lucide-react'
 import { useApp, useAppServices } from '@/lib/store'
 import { useScanFlow } from '@/lib/scan/useScanFlow'
 import { WebModal } from './WebModal'
@@ -33,6 +33,11 @@ import {
 // (interstitial / summary / per-row prefill) loads only once a scan is active,
 // not on desktop ledger load. It mounts only when scan.state.phase !== 'idle'.
 const ScanFlow = dynamic(() => import('./ScanFlow').then((m) => m.ScanFlow), { ssr: false })
+
+const CsvImportFlow = dynamic(
+  () => import('@/components/csv/CsvImportFlow').then((m) => m.CsvImportFlow),
+  { ssr: false }
+)
 
 const TX_COLS = '1.7fr 1fr 1.2fr 0.9fr'
 
@@ -195,7 +200,16 @@ export function TransactionsDesktop() {
   const [settlePrefill, setSettlePrefill] = useState<TransferPrefill | null>(null)
   const [filterOpen, setFilterOpen] = useState(false)
   const [scanPickerOpen, setScanPickerOpen] = useState(false)
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const csvInputRef = useRef<HTMLInputElement>(null)
   const scan = useScanFlow()
+
+  const onCsvFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) setCsvFile(file)
+    // Reset so the same file can be re-selected
+    e.target.value = ''
+  }, [])
 
   // Bank-statement / receipt scan entry. The web build has no on-device OCR
   // (VisionKit is iOS-only), so a photo can't be parsed here — the only real
@@ -340,6 +354,9 @@ export function TransactionsDesktop() {
             </span>
             <ChipIconButton label={t('Scan a receipt or statement')} onClick={onScanClick}>
               <ScanLine size={16} />
+            </ChipIconButton>
+            <ChipIconButton label={t('Import a CSV')} onClick={() => csvInputRef.current?.click()}>
+              <FileSpreadsheet size={16} />
             </ChipIconButton>
             <ChipIconButton label={t('Add transaction')} onClick={openNew}>
               <PlusGlyph />
@@ -533,6 +550,22 @@ export function TransactionsDesktop() {
           state={scan.state}
           dispatch={scan.dispatch}
           onClose={() => scan.dispatch({ type: 'reset' })}
+        />
+      )}
+
+      {/* Hidden file input for CSV import — triggered by the Import CSV chip button */}
+      <input
+        ref={csvInputRef}
+        type="file"
+        accept=".csv"
+        style={{ display: 'none' }}
+        aria-hidden="true"
+        onChange={onCsvFileChange}
+      />
+      {csvFile && (
+        <CsvImportFlow
+          initialFile={csvFile}
+          onClose={() => setCsvFile(null)}
         />
       )}
     </div>
