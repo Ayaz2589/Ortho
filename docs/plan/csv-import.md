@@ -153,13 +153,22 @@ web/components/web/
 ### New bank profiles (CSV)
 ```
 web/scripts/import/profiles/
+├── amex-csv.ts          — Amex CSV (Date,Description,Card Member,Account #,Amount) — separate from amex-gold.ts (PDF)
+├── apple-card-csv.ts    — Apple Card CSV (Transaction Date,Clearing Date,Description,Merchant,Category,Type,Amount (USD)) — separate from apple-card.ts (PDF)
 ├── citi-csv.ts          — Citi CSV (Date,Description,Debit,Credit — two amount columns)
 ├── capital-one-csv.ts   — Capital One CSV (Transaction Date,Posted Date,Card No.,Description,Category,Debit,Credit)
 ├── bofa-csv.ts          — Bank of America CSV (Posted Date,Reference Number,Payee,Address,Amount)
 ├── wellsfargo-csv.ts    — Wells Fargo CSV ("Date","Amount","*","*","Description")
+├── td-bank-csv.ts       — TD Bank CSV (Date,Description,Credit,Debit,Balance) — separate from td-bank.ts (PDF)
 ├── santander-csv.ts     — Santander CSV (needs format research before writing)
-└── csv-index.ts         — CSV_PROFILES registry (Chase + new profiles)
+└── csv-index.ts         — CSV_PROFILES registry (Chase + all new CSV profiles)
 ```
+
+> **Note on the existing PDF profiles:** `amex-gold.ts`, `apple-card.ts`, and `td-bank.ts` parse
+> PDF text layout (section headers, line-by-line prose) and will never match a CSV file — their
+> `detect()` functions look for PDF-specific strings. The CSV profiles above are entirely separate
+> implementations for each bank's CSV export format. Both coexist in `PROFILES` (the CLI uses
+> them for `make ingest` on PDFs); only the CSV profiles go into `CSV_PROFILES`.
 
 ### Entry point wiring
 ```
@@ -247,6 +256,28 @@ The key adapter: `ParsedTransaction` → `ParsedCandidate` conversion (a thin ma
 ## 6. Bank profiles — format reference
 
 Each profile needs a `detect()` (header fingerprint) and `parse()`. Known formats:
+
+### Amex (new — `amex-csv.ts`, distinct from `amex-gold.ts` PDF profile)
+```
+Date,Description,Card Member,Account #,Amount
+01/15/2026,STARBUCKS,AYAZ UDDIN,-99001,5.75
+01/20/2026,PAYMENT - THANK YOU,AYAZ UDDIN,-99001,-150.00
+```
+- Single Amount column; positive = expense, negative = payment/credit
+- `Card Member` column enables multi-cardholder owner matching (same as PDF profile)
+- detect(): header starts with `Date,Description,Card Member,Account #,Amount`
+
+### Apple Card (new — `apple-card-csv.ts`, distinct from `apple-card.ts` PDF profile)
+```
+Transaction Date,Clearing Date,Description,Merchant,Category,Type,Amount (USD)
+2026-01-15,2026-01-16,STARBUCKS,Starbucks,Food and Drinks,Purchase,$5.75
+2026-01-20,2026-01-21,PAYMENT,Apple Card Payment,Payment,Payment,-$150.00
+```
+- ISO dates (YYYY-MM-DD)
+- `Merchant` column is already clean (no cleanup needed)
+- `Type=Payment` → excluded
+- Amount prefixed with `$`; negative = payment/credit
+- detect(): header starts with `Transaction Date,Clearing Date,Description,Merchant,Category,Type,Amount (USD)`
 
 ### Chase (already exists — `chase-csv.ts`)
 ```
@@ -392,8 +423,9 @@ All follow the existing `t()` pattern. No new locale JSON keys needed if keys re
 
 Phase 1 — engine and profiles:
 1. Add `csv-index.ts` (CSV_PROFILES registry)
-2. Write Citi, Capital One, BoA, Wells Fargo, TD Bank CSV profiles with golden fixtures and tests
-3. Research Santander CSV format; write profile if format is confirmed
+2. Write Amex CSV, Apple Card CSV, TD Bank CSV profiles (distinct from the existing PDF profiles)
+3. Write Citi, Capital One, BoA, Wells Fargo CSV profiles with golden fixtures and tests
+4. Research Santander CSV format; write profile if format is confirmed
 
 Phase 2 — session layer:
 4. `csvImportModels.ts` — types + `parsedTransactionToCandidate()` adapter
