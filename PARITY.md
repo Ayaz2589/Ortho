@@ -215,7 +215,10 @@ These shape which rows exist and what the app displays, but have no regression-v
   `fetchOwnerSpend`/`OwnerSpendRow.person_id` does not match the `household_owner_spend` RPC's returned
   `user_id` column; Reports avoids that wrapper (it needs only month-summary + category-totals), so the
   mismatch is documented here for a future targeted fix, not exercised by this feature.
-- **CLI only:** bank detection + per-bank PDF/CSV parsers (`profiles/*`), statement reconciliation,
+- **CSV bank-statement import** — web UI ships in spec 029 (`web/lib/csv/`, `web/components/csv/`).
+  Supports Chase, Amex, Citi, Capital One, BofA, Wells Fargo, and TD Bank CSV formats.
+  CLI retains PDF import + `--admin` service-role mode; web adds the browser file-picker CSV path.
+- **CLI only (remaining):** PDF bank-statement import, statement reconciliation,
   dedupe, merchant→category heuristics, exclusions, and `--admin` service-role mode.
 - **On-device receipt & bank-statement scanning** — a native Capacitor plugin
   (`web/ios/App/App/Plugins/Scan/`, camera capture + Vision OCR + PDFKit + an optional
@@ -227,8 +230,8 @@ These shape which rows exist and what the app displays, but have no regression-v
   heuristics/categorization logic (ported from the frozen app's `ScanHeuristics`/`ScanParser`/
   `ScanInference`) now lives in `web/lib/scan/*` and is unit-tested (`web/test/scan/*`) — though, unlike the
   money engines, it carries no golden vector; only the capture/OCR/PDF-extraction half stays
-  native, with no cross-platform equivalent to lock against. The web/desktop equivalent for statements remains the CLI's
-  `make ingest`.
+  native, with no cross-platform equivalent to lock against. The web/desktop equivalent for CSV
+  statements is the browser-side CSV import (spec 029); PDF statements remain `make ingest` (CLI).
 - **Test-build feature flags (spec 015).** The frozen native app gated its Settings → Developer
   section (Use test data + Bypass auth) at compile/receipt time
   (`Config/TestBuild.swift`: `#if DEBUG` OR the TestFlight sandbox receipt) — now historical, see

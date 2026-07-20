@@ -1,0 +1,76 @@
+{
+  "bankId": "bofa",
+  "bankLabel": "Bank of America (CSV)",
+  "accountHolder": "",
+  "source": "Bank of America",
+  "period": {
+    "start": "2026-06-01T12:00:00.000Z",
+    "end": "2026-06-28T12:00:00.000Z"
+  },
+  "sections": [
+    {
+      "name": "Transactions",
+      "kind": "expense",
+      "printedSubtotalCents": 27774,
+      "rows": [
+        {
+          "dateISO": "2026-06-01T12:00:00.000Z",
+          "rawDescription": "STARBUCKS #1234",
+          "merchant": "Starbucks #1234",
+          "amountCents": 575,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "coffee",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-06-05T12:00:00.000Z",
+          "rawDescription": "AMAZON.COM*XT12345",
+          "merchant": "Amazon.Com",
+          "amountCents": 3499,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "entertainment",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-06-10T12:00:00.000Z",
+          "rawDescription": "CON EDISON COMPANY",
+          "merchant": "Con Edison Company",
+          "amountCents": 8700,
+          "kind": "expense",
+          "section": "Transactions",
+          "category": "utilities",
+          "excluded": false,
+          "excludeReason": null,
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        },
+        {
+          "dateISO": "2026-06-28T12:00:00.000Z",
+          "rawDescription": "ONLINE BANKING PAYMENT",
+          "merchant": "Online Banking Payment",
+          "amountCents": 15000,
+          "kind": "income",
+          "section": "Transactions",
+          "category": "income",
+          "excluded": true,
+          "excludeReason": "card-payment",
+          "duplicate": false,
+          "ownerIds": [],
+          "splits": null
+        }
+      ]
+    }
+  ],
+  "reconcilable": false
+}

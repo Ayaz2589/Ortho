@@ -1,9 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Capacitor } from '@capacitor/core'
-import { Search, Plus, X, ArrowUpDown, ChevronDown, SlidersHorizontal, Camera, FileText } from 'lucide-react'
+import { Search, Plus, X, ArrowUpDown, ChevronDown, SlidersHorizontal, Camera, FileSpreadsheet, FileText } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { PageHeader, IconButton, Card, EmptyState, Modal } from '@/components/ui'
 import { useIsExpanded } from '@/lib/useMediaQuery'
@@ -27,6 +27,11 @@ const ScanFlow = dynamic(() => import('@/components/web/ScanFlow').then((m) => m
   ssr: false,
 })
 
+const CsvImportFlow = dynamic(
+  () => import('@/components/csv/CsvImportFlow').then((m) => m.CsvImportFlow),
+  { ssr: false }
+)
+
 // Deferred so a mobile/iOS session never downloads the desktop composition
 // (spec 022, US3). The synchronous useIsExpanded() gate still selects the branch
 // before paint (no wrong-layout flash); the desktop chunk loads only when expanded.
@@ -45,6 +50,8 @@ export default function TransactionsPage() {
   const [filterOpen, setFilterOpen] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [scanPickerOpen, setScanPickerOpen] = useState(false)
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const csvInputRef = useRef<HTMLInputElement>(null)
   const scan = useScanFlow()
 
   const hasAny = transactions.length > 0
@@ -280,6 +287,17 @@ export default function TransactionsPage() {
             {/* "Files" is the iOS Files app; the web build opens a browser file dialog. */}
             {Capacitor.isNativePlatform() ? t('Import a PDF from Files') : t('Import a PDF')}
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setScanPickerOpen(false)
+              csvInputRef.current?.click()
+            }}
+            className="ortho-interactive flex items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] text-text"
+          >
+            <FileSpreadsheet size={20} className="text-text-2" />
+            {t('Import a CSV file')}
+          </button>
         </div>
       </Modal>
 
@@ -288,6 +306,25 @@ export default function TransactionsPage() {
           state={scan.state}
           dispatch={scan.dispatch}
           onClose={() => scan.dispatch({ type: 'reset' })}
+        />
+      )}
+
+      <input
+        ref={csvInputRef}
+        type="file"
+        accept=".csv"
+        style={{ display: 'none' }}
+        aria-hidden="true"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) setCsvFile(file)
+          e.target.value = ''
+        }}
+      />
+      {csvFile && (
+        <CsvImportFlow
+          initialFile={csvFile}
+          onClose={() => setCsvFile(null)}
         />
       )}
     </div>
