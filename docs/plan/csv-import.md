@@ -112,15 +112,51 @@ ParsedStatement
 
 ### 3.3 State machine phases
 
-Mirrors `scanSession.ts` in structure; simpler because CSV has no "failed to parse" ambiguity — either the bank is detected or it isn't.
-
 ```
-idle → reading → detected → previewing → reviewing → summary
-                          → undetected               (no match)
-                          → previewing → importing → summary  (bulk path)
+idle → reading → list-view → editing (per-row, modal overlay) → list-view
+                           → importing → summary
+              → undetected
 ```
 
-### 3.4 Duplicate detection
+`list-view` is the persistent phase for the entire import session. The user
+stays in it while opening/closing row edits. `editing` is a modal overlay —
+it does not change the machine's primary phase; the list stays mounted underneath.
+`importing` is a brief transition while `addTransaction()` is called for each
+checked draft. `undetected` is terminal (close or retry with a different file).
+
+### 3.4 Draft layer — edits live in session state, not the store
+
+Parsed rows become **drafts** — a mutable, in-session representation that holds
+all the fields the user can change (merchant, category, amount, date, owners,
+splits, tags, notes) before anything is written to the ledger. The store is
+not touched until the user taps "Add transactions".
+
+```ts
+interface CsvDraftRow {
+  id: string                    // generated UUID, used as React key and draft key
+  source: ParsedTransaction     // immutable original from the profile parser
+  // mutable fields — start from parsed values, updated by per-row edit:
+  merchant: string
+  category: TransactionCategory
+  amountCents: number
+  dateISO: string
+  ownerIds: string[]
+  splits: Record<string, number> | null  // null = even
+  tags: string[]
+  notes: string | null
+  // disposition:
+  checked: boolean              // true = will be added on confirm
+  isPaymentRow: boolean         // true = always excluded (dimmed), never togglable
+  duplicateOf: string | null    // id of existing tx if likely duplicate
+}
+```
+
+When the user opens a row and edits it, the draft is updated in session state.
+When they confirm the import, `addTransaction()` is called once per checked
+draft using the draft's current field values (not the original parsed values).
+If the user closes without confirming, nothing was ever written.
+
+### 3.5 Duplicate detection
 
 Reuse the same duplicate-detection logic as the scan pipeline:
 - `buildScanContext()` from `scanInference.ts` already produces `existingTransactionDays[]`
@@ -135,19 +171,26 @@ Reuse the same duplicate-detection logic as the scan pipeline:
 ### Session / hook layer
 ```
 web/lib/csv/
-├── csvImportModels.ts   — CsvImportState, CsvImportAction, CsvImportRow (wraps ParsedTransaction + disposition)
-├── csvImportSession.ts  — pure reducer (idle/reading/detected/undetected/previewing/reviewing/importing/summary)
-└── useCsvImport.ts      — hook: reads file, runs detection + parse, manages session state
+├── csvImportModels.ts   — CsvDraftRow type, disposition helpers, parsedTransactionToDraft()
+├── csvImportSession.ts  — pure reducer: idle→reading→list-view→importing→summary / undetected;
+│                          draft map mutations (edit, toggle checked, skip)
+└── useCsvImport.ts      — hook: file read, detect, parse, build draft map, duplicate detection,
+                           expose (drafts, toggleChecked, updateDraft, startImport)
 ```
 
 ### UI components
 ```
 web/components/csv/
-├── CsvImportList.tsx       — scrollable list view: all rows with check/dim/tilde states, per-row tap → TxForm, live "Add N" CTA
-└── CsvImportSummary.tsx    — summary: N added, spend total, skipped, payment rows, duplicates
+├── CsvImportList.tsx       — date-grouped list matching ledger visual structure; payment rows
+│                             dimmed; duplicate rows muted; tapping opens CsvRowEditModal
+├── CsvRowEditModal.tsx     — full edit modal: merchant, category, amount, date, owners, splits,
+│                             tags, notes, skip button; Save → updateDraft(); uses TxFormFields
+│                             and useTxForm in a draft-write mode (submit writes to session, not
+│                             the store)
+└── CsvImportSummary.tsx    — summary: added count, spend total, skipped/excluded breakdown
 
 web/components/web/
-└── CsvImportFlow.tsx       — phase dispatcher (mirrors ScanFlow.tsx); renders WebModal per phase
+└── CsvImportFlow.tsx       — phase dispatcher; renders WebModal per phase
 ```
 
 ### New bank profiles (CSV)
@@ -182,9 +225,16 @@ web/app/(app)/transactions/page.tsx           — add "Import CSV" option in sca
 
 ## 5. User flow in detail
 
-### 5.1 Why list-first, not wizard-first
+### 5.1 Core idea: a ledger preview you can edit before committing
 
-The scan wizard works for PDF/photo imports because a statement photo typically yields 5–20 rows and the user is already in a deliberate "review this" mindset. CSV imports are a different contract: a full month's Chase statement has 40–80 rows. Walking through them one at a time is unusable. The primary path must be a **list view** where the user can see everything at once, toggle individual rows, and confirm in one tap. The wizard is available as an opt-in for users who want to inspect each row before it lands.
+The import session shows the user a **preview of what their transaction list will look like**
+after the import — grouped by date, same visual structure as the existing Transactions ledger.
+Every row is editable before anything is written. "Add transactions" is the single commit point;
+until then, all changes live only in session state.
+
+This is intentionally different from the scan wizard (one row at a time). A CSV statement
+can have 40–80 rows — a per-row wizard is unusable at that scale. The date-grouped list lets
+the user scan the full import at a glance, spot anything that looks wrong, fix it, and confirm.
 
 ### 5.2 Desktop entry
 
@@ -194,7 +244,7 @@ A second chip button in the Transactions header, to the left of the scan button:
 [Filter ▼]  [↑ Import CSV]  [⌃ Scan]  [+ Add]
 ```
 
-Clicking opens the system file picker filtered to `.csv,text/csv`. No intermediate modal — CSV import on web is file-only (unlike scan, which offers camera + file on native).
+Clicking opens the system file picker filtered to `.csv,text/csv`.
 
 ### 5.3 Mobile entry
 
@@ -229,80 +279,118 @@ Supported banks:
 [Close]   [Enter manually →]
 ```
 
-### 5.6 Phase: list view (primary review path)
+### 5.6 Phase: list view (the import session)
 
-This is the main screen after a successful parse. It replaces the simple stats interstitial
-from the scan flow with a full scrollable list so the user can see exactly what will be added
-before committing anything.
-
-```
-┌─────────────────────────────────────────────────┐
-│  Chase  ·  Jun 1 – Jun 30, 2026         [Close] │
-├─────────────────────────────────────────────────┤
-│  ● 37 selected  ○ 3 payments  ○ 2 duplicates    │
-│  [Skip duplicates  ●────]                        │
-├─────────────────────────────────────────────────┤
-│  ✓  Jun 28   Starbucks             Dining  $5.75 │
-│  ✓  Jun 27   Amazon.com      Shopping  $34.99    │
-│  ✓  Jun 26   Con Edison          Utilities $87.00│
-│  –  Jun 25   Payment Thank You  ░░░░░░░░  $200   │  ← payment row, dimmed
-│  ✓  Jun 24   Uber               Transit   $12.40 │
-│  ~  Jun 23   Netflix             Subs      $15.99 │  ← duplicate, togglable
-│     ...                                          │
-├─────────────────────────────────────────────────┤
-│              [Add 37 transactions]               │
-└─────────────────────────────────────────────────┘
-```
-
-**Row states:**
-- `✓` (checked) — pending, will be added on confirm
-- `–` (dash, dimmed) — excluded: payment/transfer row, never added
-- `~` (tilde, muted) — duplicate, excluded by default; tap to toggle pending
-- Tapping a `✓` row unchecks it (user skips that row)
-- Tapping a `~` row promotes it to `✓` (user wants to add it anyway)
-
-**Each row shows:** date · merchant · auto-assigned category chip · amount. That is enough
-information for the user to decide; they don't need to open the full form for every row.
-
-**Category chips are the key signal.** If the auto-categorisation is wrong (e.g., "Con Edison"
-lands as "Entertainment" instead of "Utilities"), the user sees it here and can tap the row to
-open the full `TxForm` and fix it before adding.
-
-**Tapping a `✓` row** opens the full `TxForm` prefilled with that transaction's data (the same
-form as manual entry and the scan wizard), so the user can edit merchant, category, amount, date,
-or owners before adding it individually. This is the escape hatch for per-row control without
-forcing the whole wizard on everyone.
-
-**"Add N transactions" CTA** is fixed at the bottom. N updates live as the user toggles rows.
-Tapping it adds all checked rows via `addTransaction()` and moves to the summary phase.
-
-### 5.7 Phase: importing
-
-Brief progress state while `addTransaction()` is called for each checked row. For 40+ rows this
-is fast (optimistic local writes) but showing a momentary "Adding 37 transactions…" prevents the
-user from tapping the button again.
-
-### 5.8 Phase: summary
+The main screen. Stays active while the user reviews and edits — it does not advance to
+the next phase until the user taps "Add transactions" or closes.
 
 ```
-✓ 35 transactions added  ·  $2,614.23 total
+┌─────────────────────────────────────────────────────┐
+│  Chase  ·  Jun 1 – Jun 30, 2026             [Close] │
+│  37 to add  ·  3 payments excluded  ·  2 duplicates │
+├─────────────────────────────────────────────────────┤
+│  SATURDAY, JUN 28                                    │
+│  ┌─────────────────────────────────────────────┐    │
+│  │  Starbucks                  Dining    $5.75  │ →  │
+│  │  Amazon.com              Shopping   $34.99   │ →  │
+│  └─────────────────────────────────────────────┘    │
+│                                                      │
+│  FRIDAY, JUN 27                                      │
+│  ┌─────────────────────────────────────────────┐    │
+│  │  Con Edison              Utilities   $87.00  │ →  │
+│  │  ░ Payment Thank You      ————       $200.00 │    │  ← payment, dimmed, no chevron
+│  └─────────────────────────────────────────────┘    │
+│                                                      │
+│  THURSDAY, JUN 26                                    │
+│  ┌─────────────────────────────────────────────┐    │
+│  │  Uber                     Transit   $12.40   │ →  │
+│  │  ~ Netflix                  Subs    $15.99   │ →  │  ← duplicate, muted
+│  └─────────────────────────────────────────────┘    │
+│  ...                                                 │
+├─────────────────────────────────────────────────────┤
+│                [Add 37 transactions]                 │
+└─────────────────────────────────────────────────────┘
+```
 
-  2 rows skipped
+**Row types:**
+- Normal row with `→` — will be added; tapping opens the edit modal
+- `░` dimmed row, no chevron — payment/transfer row, always excluded, not tappable
+- `~` muted row with `→` — probable duplicate, excluded by default; tapping opens the edit
+  modal where the user can choose to include it
+
+**The group date format** matches the existing ledger's `dayLabel()` + `shortDate()` so the
+import preview looks identical to what the user's Transactions page will look like after import.
+
+### 5.7 Per-row edit modal
+
+Tapping any non-payment row opens a full-screen modal with all editable fields. This is where
+the user can make any changes before the row is committed:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  ←  Review import                          [Save]   │
+├─────────────────────────────────────────────────────┤
+│  Merchant      Con Edison                           │
+│  Category      Utilities ▾                          │
+│  Amount        $87.00                               │
+│  Date          Jun 26, 2026                         │
+│  ─────────────────────────────────────────────────  │
+│  Owners        [Ayaz]  [Partner]                    │
+│  Split         Even ▾                               │
+│                Ayaz          $43.50                 │
+│                Partner       $43.50                 │
+│  ─────────────────────────────────────────────────  │
+│  Tags          + Add tag                            │
+│  Notes         ─                                    │
+│  ─────────────────────────────────────────────────  │
+│  [ Skip this transaction ]                          │  ← removes it from the import
+└─────────────────────────────────────────────────────┘
+```
+
+**What the user can change:**
+- **Merchant** — free text edit
+- **Category** — full category picker, same as manual entry
+- **Amount** — editable (e.g. to fix a parsing error)
+- **Date** — editable
+- **Owners** — who the transaction belongs to (defaults to all household members)
+- **Split** — even, by percentage, or by amount; the full split editor from TxForm
+- **Tags** — tag picker, same as manual entry
+- **Notes** — free text
+
+**"Save"** writes all changes back to the session draft for that row and closes the modal.
+Nothing is written to the ledger yet.
+
+**"Skip this transaction"** marks the draft `checked: false` and closes the modal — the row
+becomes muted in the list and won't be included in the import.
+
+**Duplicate rows** show an additional line: `"Possible duplicate of Jun 26 · $87.00"` with
+a checkbox "Include anyway". Checking it marks the draft `checked: true`.
+
+### 5.8 Phase: importing
+
+Brief state while `addTransaction()` is called for each checked draft using its current
+(possibly edited) field values. Optimistic local writes make this fast even for 40+ rows.
+
+### 5.9 Phase: summary
+
+```
+✓ 35 transactions added  ·  $2,614.23
+
+  2 skipped
   3 payment rows excluded
   2 duplicates left out
 
                     [Done]
 ```
 
-Total spend across all added expense rows is shown so the user can sanity-check it matches their
-statement's "New Charges" total without doing mental math.
+The total spend gives the user a quick sanity-check against the statement's printed total
+without mental math.
 
-### 5.9 Source field
+### 5.10 Source field
 
-Every imported transaction has its `source` field set to the bank name from the profile
-(e.g. `"Chase"`, `"Citi"`). This makes imported transactions identifiable in the ledger and
-consistent with transactions imported via the CLI's `make ingest` path, which sets `source` the
-same way. The user does not need to touch the source field during review.
+Every imported transaction has `source` set to the bank name from the profile (e.g. `"Chase"`,
+`"Citi"`), matching the CLI's `make ingest` convention. The user does not see or edit this field
+during review — it is set automatically on commit.
 
 ---
 
@@ -469,21 +557,22 @@ Phase 1 — engine and profiles:
 4. Research Santander CSV format; write profile if format is confirmed
 
 Phase 2 — session layer:
-5. `csvImportModels.ts` — types, row disposition enum (pending/excluded-payment/excluded-duplicate/skipped/added), `parsedTransactionToCandidate()` adapter
-6. `csvImportSession.ts` — reducer (idle → reading → list-view → importing → summary / undetected) and selectors
-7. `useCsvImport.ts` — hook: file read, detect, parse, build import context (duplicate detection), apply preskips, manage session state
+5. `csvImportModels.ts` — `CsvDraftRow` type, `parsedTransactionToDraft()` converter
+6. `csvImportSession.ts` — reducer (idle → reading → list-view → importing → summary / undetected); actions: `file/parsed`, `draft/update`, `draft/toggleChecked`, `draft/skip`, `import/start`, `import/done`
+7. `useCsvImport.ts` — hook: file read, detect, parse, build draft map with duplicate detection, expose session state + mutation helpers
 
 Phase 3 — UI:
-8. `CsvImportList.tsx` — scrollable list with row state indicators, per-row tap to edit, live CTA count, duplicate toggle
-9. `CsvImportSummary.tsx` — summary with spend total
-10. `CsvImportFlow.tsx` — phase dispatcher, WebModal chrome
-11. Wire into `TransactionsDesktop.tsx` (desktop entry)
-12. Wire into `transactions/page.tsx` (mobile picker entry)
+8. `CsvImportList.tsx` — date-grouped list (using existing `groupByDay()` from `lib/format`), payment rows dimmed, duplicate rows muted, tapping opens edit modal
+9. `CsvRowEditModal.tsx` — full edit modal with merchant/category/amount/date/owners/splits/tags/notes; Save → `updateDraft()` in session; Skip → `draft/skip` action
+10. `CsvImportSummary.tsx` — added count, expense total, breakdown
+11. `CsvImportFlow.tsx` — phase dispatcher, WebModal chrome
+12. Wire into `TransactionsDesktop.tsx` (desktop entry)
+13. Wire into `transactions/page.tsx` (mobile picker entry)
 
 Phase 4 — polish:
-13. i18n strings audit
-14. `PARITY.md` update
-15. End-to-end test with a real Chase CSV fixture (upload → list view → add all → verify ledger)
+14. i18n strings audit
+15. `PARITY.md` update
+16. End-to-end test: upload Chase CSV → edit one row's split → add all → verify ledger
 
 ---
 
