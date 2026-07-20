@@ -6,29 +6,10 @@ import type { TransactionCategory, TransactionKind } from '../../../lib/types'
 import type { BankProfile, ParsedStatement, ParsedSection, ParsedTransaction } from '../engine/types'
 import { parseAmountToCents } from '../engine/money'
 import { categorize } from '../engine/categorize'
-import { parseCsv } from '../engine/csv'
+import { parseCsv, cleanMerchant, parseYYYYMMDD } from '../engine/csv'
 
 const SOURCE = 'Capital One'
 const HEADER_KEYS = ['Transaction Date', 'Posted Date', 'Card No.', 'Description', 'Category', 'Debit', 'Credit']
-
-function titleCase(s: string): string {
-  return s
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
-function cleanMerchant(desc: string): string {
-  const stripped = desc.replace(/\*[A-Za-z0-9]{4,}\b/g, '').replace(/\s+/g, ' ').trim()
-  return titleCase(stripped || desc)
-}
-
-function parseYYYYMMDD(s: string): string {
-  const m = s.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (!m) throw new Error(`CAPITAL_ONE_BAD_DATE: ${JSON.stringify(s)}`)
-  return `${m[1]}-${m[2]}-${m[3]}T12:00:00.000Z`
-}
 
 function detect(text: string): boolean {
   const first = text.split(/\r?\n/).find((l) => l.trim() !== '') ?? ''

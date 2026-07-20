@@ -1,13 +1,15 @@
 'use client'
 // React hook for the CSV import session. Wraps csvImportReducer with file reading,
 // bank detection, draft map construction, and store write on confirm.
-import { useReducer, useCallback } from 'react'
+import { useReducer, useCallback, useMemo } from 'react'
 import { CSV_PROFILES } from '../../scripts/import/profiles/csv-index'
 import { detectBank } from '../../scripts/import/engine/detectBank'
 import { csvImportReducer, initialCsvImportState } from './csvImportSession'
 import { checkedDrafts, totalSpendCents } from './csvImportModels'
 import type { CsvDraftRow } from './csvImportModels'
 import type { CsvImportState } from './csvImportSession'
+import { orderedOwnerIds, computeShares } from '../splits'
+import type { SplitInput } from '../splits'
 import { useApp } from '../store'
 import type { Transaction } from '../types'
 
@@ -16,23 +18,21 @@ function buildTransaction(
   bankSource: string,
   currentUserId: string,
   currentPersonId: string,
+  householdId: string,
   now: string
 ): Transaction {
-  const ownerIds = draft.ownerIds.length > 0 ? draft.ownerIds : [currentPersonId]
-  const shares: Record<string, number> =
-    draft.splits ??
-    Object.fromEntries(
-      ownerIds.map((pid, i) => {
-        const evenCents = Math.floor(draft.amountCents / ownerIds.length)
-        // Give any remainder to the first owner
-        const extra = i === 0 ? draft.amountCents - evenCents * ownerIds.length : 0
-        return [pid, evenCents + extra]
-      })
-    )
+  const rawOwners = draft.ownerIds.length > 0 ? draft.ownerIds : [currentPersonId]
+  // Canonicalize owner order so the leftover cent lands on the same owner as
+  // app-entered transactions (orderedOwnerIds = ascending UUID sort, per lib/splits).
+  const owners = orderedOwnerIds(rawOwners)
+  const split: SplitInput = draft.splits
+    ? { method: 'percent', percents: draft.splits }
+    : { method: 'even' }
+  const shares = computeShares(draft.amountCents, owners, split)
 
   return {
     id: crypto.randomUUID(),
-    household_id: '',
+    household_id: householdId,
     merchant: draft.merchant,
     category: draft.category,
     kind: draft.source.kind,
@@ -42,7 +42,7 @@ function buildTransaction(
     created_by: currentUserId,
     created_at: now,
     updated_at: now,
-    owner_ids: ownerIds,
+    owner_ids: owners,
     shares,
     tags: draft.tags,
     notes: draft.notes ?? null,
@@ -51,7 +51,7 @@ function buildTransaction(
 
 export function useCsvImport() {
   const [state, dispatch] = useReducer(csvImportReducer, initialCsvImportState)
-  const { addTransaction, currentUserId, currentPersonId } = useApp()
+  const { addTransaction, currentUserId, currentPersonId, currentHousehold } = useApp()
 
   const loadFile = useCallback(
     async (file: File) => {
@@ -85,16 +85,18 @@ export function useCsvImport() {
 
   const startImport = useCallback(async () => {
     if (state.phase !== 'list-view') return
+    if (!currentHousehold) return
     dispatch({ type: 'import/start' })
     const now = new Date().toISOString()
     const bankSource = state.bankLabel
-    const toAdd = checkedDrafts(Object.values(state.drafts))
-    const excluded = Object.values(state.drafts).filter((d) => d.isPaymentRow)
-    const skipped = Object.values(state.drafts).filter((d) => !d.checked && !d.isPaymentRow && !d.duplicateOf)
-    const duplicates = Object.values(state.drafts).filter((d) => d.duplicateOf && !d.checked)
+    const allDrafts = Object.values(state.drafts)
+    const toAdd = checkedDrafts(allDrafts)
+    const excluded = allDrafts.filter((d) => d.isPaymentRow)
+    const skipped = allDrafts.filter((d) => !d.checked && !d.isPaymentRow && !d.duplicateOf)
+    const duplicates = allDrafts.filter((d) => d.duplicateOf && !d.checked)
 
     for (const draft of toAdd) {
-      const tx = buildTransaction(draft, bankSource, currentUserId, currentPersonId, now)
+      const tx = buildTransaction(draft, bankSource, currentUserId, currentPersonId, currentHousehold.id, now)
       addTransaction(tx)
     }
 
@@ -106,16 +108,15 @@ export function useCsvImport() {
       duplicatesCount: duplicates.length,
       totalSpendCents: totalSpendCents(Object.values(state.drafts)),
     })
-  }, [state, addTransaction, currentUserId, currentPersonId])
+  }, [state, addTransaction, currentUserId, currentPersonId, currentHousehold])
 
   const reset = useCallback(() => dispatch({ type: 'reset' }), [dispatch])
 
-  const drafts: CsvDraftRow[] =
-    state.phase === 'list-view'
-      ? Object.values(state.drafts).sort(
-          (a, b) => new Date(b.dateISO).getTime() - new Date(a.dateISO).getTime()
-        )
-      : []
+  const drafts: CsvDraftRow[] = useMemo(() => {
+    if (state.phase !== 'list-view') return []
+    // ISO dates sort correctly with string comparison — no Date construction needed.
+    return Object.values(state.drafts).sort((a, b) => b.dateISO.localeCompare(a.dateISO))
+  }, [state])
 
   const bankLabel = state.phase === 'list-view' ? state.bankLabel : ''
   const period = state.phase === 'list-view' ? state.period : null

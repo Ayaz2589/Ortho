@@ -57,6 +57,9 @@ export function csvImportReducer(state: CsvImportState, action: CsvImportAction)
       const allRows = action.statement.sections.flatMap((s) => s.rows)
       const drafts: Record<string, CsvDraftRow> = {}
       for (const tx of allRows) {
+        // TODO(spec-030): pass duplicateOf when duplicate detection is implemented.
+        // Currently parsedTransactionToDraft is always called without a second arg,
+        // so draft.duplicateOf is always null and duplicatesCount is always 0.
         const draft = parsedTransactionToDraft(tx)
         drafts[draft.id] = draft
       }

@@ -6,29 +6,10 @@ import type { TransactionCategory, TransactionKind } from '../../../lib/types'
 import type { BankProfile, ParsedStatement, ParsedSection, ParsedTransaction } from '../engine/types'
 import { parseAmountToCents } from '../engine/money'
 import { categorize } from '../engine/categorize'
-import { parseCsv } from '../engine/csv'
+import { parseCsv, cleanMerchant, parseMMDDYYYY } from '../engine/csv'
 
 const SOURCE = 'Amex'
 const HEADER_PREFIX = 'Date,Description,Card Member,Account #,Amount'
-
-function titleCase(s: string): string {
-  return s
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
-function cleanMerchant(desc: string): string {
-  const stripped = desc.replace(/\*[A-Za-z0-9]{4,}\b/g, '').replace(/\s+/g, ' ').trim()
-  return titleCase(stripped || desc)
-}
-
-function parseMMDDYYYY(s: string): string {
-  const m = s.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
-  if (!m) throw new Error(`AMEX_BAD_DATE: ${JSON.stringify(s)}`)
-  return `${m[3]}-${m[1]}-${m[2]}T12:00:00.000Z`
-}
 
 function detect(text: string): boolean {
   const first = text.split(/\r?\n/).find((l) => l.trim() !== '') ?? ''

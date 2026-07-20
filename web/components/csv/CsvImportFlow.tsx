@@ -33,7 +33,7 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
 
   useEffect(() => {
     if (initialFile) void loadFile(initialFile)
-  }, [initialFile])
+  }, [initialFile, loadFile])
 
   const handleClose = () => {
     reset()
