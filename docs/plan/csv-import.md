@@ -143,8 +143,8 @@ web/lib/csv/
 ### UI components
 ```
 web/components/csv/
-├── CsvImportPreview.tsx    — interstitial: bank badge, date range, row counts, duplicate toggle, "Review" / "Add all" CTA
-└── CsvImportSummary.tsx    — summary: N added, M skipped, K duplicates left out
+├── CsvImportList.tsx       — scrollable list view: all rows with check/dim/tilde states, per-row tap → TxForm, live "Add N" CTA
+└── CsvImportSummary.tsx    — summary: N added, spend total, skipped, payment rows, duplicates
 
 web/components/web/
 └── CsvImportFlow.tsx       — phase dispatcher (mirrors ScanFlow.tsx); renders WebModal per phase
@@ -154,7 +154,6 @@ web/components/web/
 ```
 web/scripts/import/profiles/
 ├── amex-csv.ts          — Amex CSV (Date,Description,Card Member,Account #,Amount) — separate from amex-gold.ts (PDF)
-├── apple-card-csv.ts    — Apple Card CSV (Transaction Date,Clearing Date,Description,Merchant,Category,Type,Amount (USD)) — separate from apple-card.ts (PDF)
 ├── citi-csv.ts          — Citi CSV (Date,Description,Debit,Credit — two amount columns)
 ├── capital-one-csv.ts   — Capital One CSV (Transaction Date,Posted Date,Card No.,Description,Category,Debit,Credit)
 ├── bofa-csv.ts          — Bank of America CSV (Posted Date,Reference Number,Payee,Address,Amount)
@@ -169,6 +168,9 @@ web/scripts/import/profiles/
 > `detect()` functions look for PDF-specific strings. The CSV profiles above are entirely separate
 > implementations for each bank's CSV export format. Both coexist in `PROFILES` (the CLI uses
 > them for `make ingest` on PDFs); only the CSV profiles go into `CSV_PROFILES`.
+>
+> **Apple Card CSV:** omitted for now — CSV export is iOS Wallet-only (no web path) and the
+> format is unverified. Add once a real export is available to test against.
 
 ### Entry point wiring
 ```
@@ -180,16 +182,22 @@ web/app/(app)/transactions/page.tsx           — add "Import CSV" option in sca
 
 ## 5. User flow in detail
 
-### 5.1 Desktop entry
+### 5.1 Why list-first, not wizard-first
+
+The scan wizard works for PDF/photo imports because a statement photo typically yields 5–20 rows and the user is already in a deliberate "review this" mindset. CSV imports are a different contract: a full month's Chase statement has 40–80 rows. Walking through them one at a time is unusable. The primary path must be a **list view** where the user can see everything at once, toggle individual rows, and confirm in one tap. The wizard is available as an opt-in for users who want to inspect each row before it lands.
+
+### 5.2 Desktop entry
+
 A second chip button in the Transactions header, to the left of the scan button:
 
 ```
 [Filter ▼]  [↑ Import CSV]  [⌃ Scan]  [+ Add]
 ```
 
-Clicking it opens the system file picker filtered to `.csv,text/csv`. No intermediate modal needed — CSV files only come from file import on web, unlike scan (which has camera + file options on native).
+Clicking opens the system file picker filtered to `.csv,text/csv`. No intermediate modal — CSV import on web is file-only (unlike scan, which offers camera + file on native).
 
-### 5.2 Mobile entry
+### 5.3 Mobile entry
+
 Added as a third option in the existing scan picker modal:
 
 ```
@@ -198,10 +206,12 @@ Added as a third option in the existing scan picker modal:
 📊  Import a CSV file
 ```
 
-### 5.3 Phase: reading
-Spinner shown while file is being read and parsed. Fast (pure in-memory), so this phase is usually imperceptible.
+### 5.4 Phase: reading
 
-### 5.4 Phase: undetected
+Spinner while the file is read and parsed — pure in-memory, usually imperceptible.
+
+### 5.5 Phase: undetected
+
 If `detectBank()` returns `ok: false`:
 
 ```
@@ -209,6 +219,7 @@ We don't recognise this bank's CSV format yet.
 
 Supported banks:
 • Chase (credit card)
+• Amex
 • Citi
 • Capital One
 • Bank of America
@@ -218,38 +229,80 @@ Supported banks:
 [Close]   [Enter manually →]
 ```
 
-### 5.5 Phase: previewing (the interstitial)
+### 5.6 Phase: list view (primary review path)
+
+This is the main screen after a successful parse. It replaces the simple stats interstitial
+from the scan flow with a full scrollable list so the user can see exactly what will be added
+before committing anything.
 
 ```
-┌──────────────────────────────────────────┐
-│  Chase  ·  Jun 1 – Jun 30, 2026          │
-│                                          │
-│  42 transactions found                   │
-│  ── 3 payment rows excluded              │
-│  ── 2 likely duplicates excluded  [show] │
-│                                          │
-│  [Skip duplicates  ●────]                │
-│                                          │
-│  [Review rows one by one]  [Add 37]      │
-└──────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  Chase  ·  Jun 1 – Jun 30, 2026         [Close] │
+├─────────────────────────────────────────────────┤
+│  ● 37 selected  ○ 3 payments  ○ 2 duplicates    │
+│  [Skip duplicates  ●────]                        │
+├─────────────────────────────────────────────────┤
+│  ✓  Jun 28   Starbucks             Dining  $5.75 │
+│  ✓  Jun 27   Amazon.com      Shopping  $34.99    │
+│  ✓  Jun 26   Con Edison          Utilities $87.00│
+│  –  Jun 25   Payment Thank You  ░░░░░░░░  $200   │  ← payment row, dimmed
+│  ✓  Jun 24   Uber               Transit   $12.40 │
+│  ~  Jun 23   Netflix             Subs      $15.99 │  ← duplicate, togglable
+│     ...                                          │
+├─────────────────────────────────────────────────┤
+│              [Add 37 transactions]               │
+└─────────────────────────────────────────────────┘
 ```
 
-"Add N" triggers bulk import (no per-row wizard). "Review rows one by one" enters the wizard.
+**Row states:**
+- `✓` (checked) — pending, will be added on confirm
+- `–` (dash, dimmed) — excluded: payment/transfer row, never added
+- `~` (tilde, muted) — duplicate, excluded by default; tap to toggle pending
+- Tapping a `✓` row unchecks it (user skips that row)
+- Tapping a `~` row promotes it to `✓` (user wants to add it anyway)
 
-### 5.6 Phase: reviewing (per-row wizard)
+**Each row shows:** date · merchant · auto-assigned category chip · amount. That is enough
+information for the user to decide; they don't need to open the full form for every row.
 
-Reuses `ScanCandidateForm` / `TxFormFields` exactly as the scan wizard does — the same form the user already knows, prefilled from the CSV row. User can edit any field before adding. "Skip" moves to the next row.
+**Category chips are the key signal.** If the auto-categorisation is wrong (e.g., "Con Edison"
+lands as "Entertainment" instead of "Utilities"), the user sees it here and can tap the row to
+open the full `TxForm` and fix it before adding.
 
-The key adapter: `ParsedTransaction` → `ParsedCandidate` conversion (a thin mapping function, since the types are close but not identical — `ParsedTransaction` has `kind` where `ParsedCandidate` has `direction`; both carry amount in cents, merchant, date ISO string).
+**Tapping a `✓` row** opens the full `TxForm` prefilled with that transaction's data (the same
+form as manual entry and the scan wizard), so the user can edit merchant, category, amount, date,
+or owners before adding it individually. This is the escape hatch for per-row control without
+forcing the whole wizard on everyone.
 
-### 5.7 Phase: summary
+**"Add N transactions" CTA** is fixed at the bottom. N updates live as the user toggles rows.
+Tapping it adds all checked rows via `addTransaction()` and moves to the summary phase.
+
+### 5.7 Phase: importing
+
+Brief progress state while `addTransaction()` is called for each checked row. For 40+ rows this
+is fast (optimistic local writes) but showing a momentary "Adding 37 transactions…" prevents the
+user from tapping the button again.
+
+### 5.8 Phase: summary
 
 ```
-✓ 35 transactions added
-  2 skipped
+✓ 35 transactions added  ·  $2,614.23 total
+
+  2 rows skipped
   3 payment rows excluded
   2 duplicates left out
+
+                    [Done]
 ```
+
+Total spend across all added expense rows is shown so the user can sanity-check it matches their
+statement's "New Charges" total without doing mental math.
+
+### 5.9 Source field
+
+Every imported transaction has its `source` field set to the bank name from the profile
+(e.g. `"Chase"`, `"Citi"`). This makes imported transactions identifiable in the ledger and
+consistent with transactions imported via the CLI's `make ingest` path, which sets `source` the
+same way. The user does not need to touch the source field during review.
 
 ---
 
@@ -266,18 +319,6 @@ Date,Description,Card Member,Account #,Amount
 - Single Amount column; positive = expense, negative = payment/credit
 - `Card Member` column enables multi-cardholder owner matching (same as PDF profile)
 - detect(): header starts with `Date,Description,Card Member,Account #,Amount`
-
-### Apple Card (new — `apple-card-csv.ts`, distinct from `apple-card.ts` PDF profile)
-```
-Transaction Date,Clearing Date,Description,Merchant,Category,Type,Amount (USD)
-2026-01-15,2026-01-16,STARBUCKS,Starbucks,Food and Drinks,Purchase,$5.75
-2026-01-20,2026-01-21,PAYMENT,Apple Card Payment,Payment,Payment,-$150.00
-```
-- ISO dates (YYYY-MM-DD)
-- `Merchant` column is already clean (no cleanup needed)
-- `Type=Payment` → excluded
-- Amount prefixed with `$`; negative = payment/credit
-- detect(): header starts with `Transaction Date,Clearing Date,Description,Merchant,Category,Type,Amount (USD)`
 
 ### Chase (already exists — `chase-csv.ts`)
 ```
@@ -422,28 +463,27 @@ All follow the existing `t()` pattern. No new locale JSON keys needed if keys re
 ## 12. Implementation order
 
 Phase 1 — engine and profiles:
-1. Add `csv-index.ts` (CSV_PROFILES registry)
-2. Write Amex CSV, Apple Card CSV, TD Bank CSV profiles (distinct from the existing PDF profiles)
+1. Add `csv-index.ts` (CSV_PROFILES registry, Chase already in it)
+2. Write Amex CSV, TD Bank CSV profiles (distinct from the existing PDF profiles) with golden fixtures and tests
 3. Write Citi, Capital One, BoA, Wells Fargo CSV profiles with golden fixtures and tests
 4. Research Santander CSV format; write profile if format is confirmed
 
 Phase 2 — session layer:
-4. `csvImportModels.ts` — types + `parsedTransactionToCandidate()` adapter
-5. `csvImportSession.ts` — reducer and selectors
-6. `useCsvImport.ts` — hook (file read, detect, parse, session wiring)
+5. `csvImportModels.ts` — types, row disposition enum (pending/excluded-payment/excluded-duplicate/skipped/added), `parsedTransactionToCandidate()` adapter
+6. `csvImportSession.ts` — reducer (idle → reading → list-view → importing → summary / undetected) and selectors
+7. `useCsvImport.ts` — hook: file read, detect, parse, build import context (duplicate detection), apply preskips, manage session state
 
 Phase 3 — UI:
-7. `CsvImportPreview.tsx` — interstitial component
-8. `CsvImportSummary.tsx` — summary component
-9. `CsvImportFlow.tsx` — phase dispatcher, WebModal chrome
-10. Wire into `TransactionsDesktop.tsx` (desktop entry)
-11. Wire into `transactions/page.tsx` (mobile picker entry)
+8. `CsvImportList.tsx` — scrollable list with row state indicators, per-row tap to edit, live CTA count, duplicate toggle
+9. `CsvImportSummary.tsx` — summary with spend total
+10. `CsvImportFlow.tsx` — phase dispatcher, WebModal chrome
+11. Wire into `TransactionsDesktop.tsx` (desktop entry)
+12. Wire into `transactions/page.tsx` (mobile picker entry)
 
 Phase 4 — polish:
-12. i18n strings audit
-13. `PARITY.md` update
-14. Bulk-add path (`importing` phase — add all pending rows without wizard)
-15. End-to-end test with a real Chase CSV fixture
+13. i18n strings audit
+14. `PARITY.md` update
+15. End-to-end test with a real Chase CSV fixture (upload → list view → add all → verify ledger)
 
 ---
 
