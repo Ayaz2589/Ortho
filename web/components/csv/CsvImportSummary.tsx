@@ -38,7 +38,7 @@ export function CsvImportSummary({
         <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text)' }}>
           {addedCount} transaction{addedCount === 1 ? '' : 's'} added
         </div>
-        <div style={{ fontSize: '18px', color: 'var(--text-2)', marginTop: '4px' }}>
+        <div style={{ fontSize: '18px', color: 'var(--text-2)', marginTop: '4px', fontVariantNumeric: 'tabular-nums' }}>
           {formatMoney(totalSpendCents)}
         </div>
       </div>

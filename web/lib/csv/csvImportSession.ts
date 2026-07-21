@@ -68,8 +68,10 @@ export function csvImportReducer(state: CsvImportState, action: CsvImportAction)
       for (const tx of allRows) {
         // Flag rows that probably duplicate an existing ledger transaction (same
         // day + amount + similar merchant) so they're excluded by default but
-        // shown in review. Empty `existing` → no matches, as before.
-        const duplicateOf = findDuplicateId(tx, existing)
+        // shown in review. Empty `existing` → no matches, as before. Skip already
+        // excluded rows (e.g. card payments) — they never import, and flagging
+        // them would double-count as both "excluded" and "duplicate".
+        const duplicateOf = tx.excluded ? null : findDuplicateId(tx, existing)
         const draft = parsedTransactionToDraft(tx, duplicateOf, action.defaultOwnerId ?? null)
         drafts[draft.id] = draft
       }

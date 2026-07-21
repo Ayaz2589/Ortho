@@ -44,6 +44,17 @@ describe('merchantsSimilar', () => {
     expect(merchantsSimilar('AT', 'Walmart')).toBe(false)
   })
 
+  it('does not match a word appearing mid-word in an unrelated name', () => {
+    // "uber" is a substring of "huber" but not a word — must NOT match.
+    expect(merchantsSimilar('Uber', 'Huber Auto')).toBe(false)
+    expect(merchantsSimilar('Uber Eats', 'Huber Automotive')).toBe(false)
+  })
+
+  it('matches stems / concatenations via word prefix', () => {
+    expect(merchantsSimilar('McDonald', "McDonald's")).toBe(true)
+    expect(merchantsSimilar('Amazon', 'AmazonPrime')).toBe(true)
+  })
+
   it('returns false when either name is empty after normalization', () => {
     expect(merchantsSimilar('', 'Amazon')).toBe(false)
     expect(merchantsSimilar('####', 'Amazon')).toBe(false)

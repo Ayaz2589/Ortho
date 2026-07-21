@@ -53,15 +53,20 @@ export function merchantsSimilar(a: string, b: string): boolean {
   const nb = normalizeMerchant(b)
   if (!na || !nb) return false
   if (na === nb) return true
-  // One normalized name contained in the other ("amazon" ⊂ "amazon prime").
-  // Guard on length so a 1–2 char fragment can't match half the ledger.
-  const shorter = na.length <= nb.length ? na : nb
-  if (shorter.length >= 3 && (na.includes(nb) || nb.includes(na))) return true
-  // Otherwise, a shared significant word is enough ("Amazon Prime" vs
-  // "Amazon Payments" both keep "amazon").
+  // Compare on significant WORDS, not raw substrings: a shared word, or one word
+  // that is a prefix of another (stems/concatenations: "amazon" vs "amazonprime",
+  // "mcdonald" vs "mcdonalds"). Word-level matching avoids the mid-word
+  // false-positive of substring containment (e.g. "uber" inside "huber auto").
   const ta = significantTokens(a)
-  for (const w of significantTokens(b)) {
-    if (ta.has(w)) return true
+  const tb = significantTokens(b)
+  if (ta.size === 0 || tb.size === 0) return false
+  for (const x of ta) {
+    for (const y of tb) {
+      if (x === y) return true
+      const [shorter, longer] = x.length <= y.length ? [x, y] : [y, x]
+      // Prefix match, min 4 chars so short coincidental stems don't collide.
+      if (shorter.length >= 4 && longer.startsWith(shorter)) return true
+    }
   }
   return false
 }

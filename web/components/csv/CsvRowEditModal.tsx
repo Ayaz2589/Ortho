@@ -30,7 +30,9 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
   const [ownerIds, setOwnerIds] = useState<string[]>(draft.ownerIds)
   const [tags, setTags] = useState<string[]>(draft.tags)
   const [notes, setNotes] = useState(draft.notes ?? '')
-  const [includeAnyway, setIncludeAnyway] = useState(false)
+  // Reflect an already-included duplicate (checked despite being a dup) so the
+  // toggle isn't shown unchecked when reopening a row the user already included.
+  const [includeAnyway, setIncludeAnyway] = useState(!!draft.duplicateOf && draft.checked)
 
   useEffect(() => {
     setMerchant(draft.merchant)
@@ -38,7 +40,7 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
     setOwnerIds(draft.ownerIds)
     setTags(draft.tags)
     setNotes(draft.notes ?? '')
-    setIncludeAnyway(false)
+    setIncludeAnyway(!!draft.duplicateOf && draft.checked)
   }, [draft.id])
 
   const isExpense = draft.source.kind === 'expense'
