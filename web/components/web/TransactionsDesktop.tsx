@@ -6,7 +6,7 @@ import { ChevronDown, FileSpreadsheet, SlidersHorizontal } from 'lucide-react'
 import { useApp, useAppServices } from '@/lib/store'
 import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expenseTotal } from '@/lib/format'
 import { useMonthAccordion } from '@/lib/useMonthAccordion'
-import { transferParties } from '@/lib/transaction'
+import { transferParties, sortByName } from '@/lib/transaction'
 import type { Transaction } from '@/lib/types'
 import { Avatar, StackedAvatars } from '@/components/ui'
 import { TransactionDetailBody } from '@/components/transactions/TransactionDetailBody'
@@ -184,19 +184,6 @@ const TxRow = memo(
 
 export function TransactionsDesktop() {
   const { transactions, formatMoney, deleteTransaction, resolveUser, locale, t } = useApp()
-
-  // Name shown in the Merchant column: the merchant, or "from → to" resolved
-  // names for a reimbursement. Used to sort each day's rows alphabetically.
-  const rowName = useCallback(
-    (tx: Transaction): string => {
-      if (tx.kind === 'transfer') {
-        const p = transferParties(tx)
-        return p.from ? resolveUser(p.from).name : ''
-      }
-      return tx.merchant
-    },
-    [resolveUser]
-  )
   const f = useTransactionFilters()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
@@ -428,11 +415,9 @@ export function TransactionsDesktop() {
                           {formatMoney(expenseTotal(g.items))}
                         </span>
                       </div>
-                      {[...g.items]
-                        .sort((a, b) => rowName(a).localeCompare(rowName(b), locale, { sensitivity: 'base' }))
-                        .map((tx) => (
-                          <TxRow key={tx.id} tx={tx} selected={tx.id === selectedId} onClick={() => selectRow(tx.id)} onCopy={() => openCopy(tx)} />
-                        ))}
+                      {sortByName(g.items, resolveUser, locale).map((tx) => (
+                        <TxRow key={tx.id} tx={tx} selected={tx.id === selectedId} onClick={() => selectRow(tx.id)} onCopy={() => openCopy(tx)} />
+                      ))}
                     </div>
                   ))}
               </div>

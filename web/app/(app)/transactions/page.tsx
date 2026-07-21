@@ -9,6 +9,7 @@ import { useIsExpanded } from '@/lib/useMediaQuery'
 import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expenseTotal } from '@/lib/format'
 import { useMonthAccordion } from '@/lib/useMonthAccordion'
 import type { Transaction } from '@/lib/types'
+import { sortByName } from '@/lib/transaction'
 import { TransactionRow } from '@/components/transactions/TransactionRow'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 import { BalanceSummary } from '@/components/transactions/BalanceSummary'
@@ -34,7 +35,7 @@ const TransactionsDesktop = dynamic(
 export default function TransactionsPage() {
   const isExpanded = useIsExpanded()
   const router = useRouter()
-  const { transactions, formatMoney, deleteTransaction, locale, t } = useApp()
+  const { transactions, formatMoney, deleteTransaction, resolveUser, locale, t } = useApp()
   const f = useTransactionFilters()
 
   const [searchActive, setSearchActive] = useState(false)
@@ -212,7 +213,7 @@ export default function TransactionsPage() {
                         </span>
                       </div>
                       <div className="divide-y divide-hairline">
-                        {g.items.map((tx) => (
+                        {sortByName(g.items, resolveUser, locale).map((tx) => (
                           <TransactionRow
                             key={tx.id}
                             tx={tx}
