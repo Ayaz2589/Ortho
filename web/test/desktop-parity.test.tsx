@@ -236,3 +236,45 @@ describe('desktop bank-statement upload (US4 parity)', () => {
     clickSpy.mockRestore()
   })
 })
+
+describe('desktop ledger — rows sorted by name within a day', () => {
+  const mkTx = (id: string, merchant: string, date: string) => ({
+    id,
+    household_id: 'hh-1',
+    merchant,
+    category: 'groceries',
+    kind: 'expense',
+    amount_cents: 1000,
+    source: 'Checking',
+    date,
+    created_by: 'u-me',
+    created_at: date,
+    updated_at: date,
+  })
+
+  it('orders same-day transactions alphabetically by merchant, not insertion order', async () => {
+    const date = thisMonthISO()
+    const base = dataset(date)
+    // Seed three same-day rows out of alphabetical order.
+    h.mock = makeSupabaseMock({
+      authUser: base.authUser,
+      tables: {
+        ...base.tables,
+        transactions: [mkTx('tx-z', 'Zebra Cafe', date), mkTx('tx-a', 'Apple Store', date), mkTx('tx-m', 'Mango Grill', date)],
+        transaction_shares: [
+          { transaction_id: 'tx-z', person_id: 'u-me', amount_cents: 1000 },
+          { transaction_id: 'tx-a', person_id: 'u-me', amount_cents: 1000 },
+          { transaction_id: 'tx-m', person_id: 'u-me', amount_cents: 1000 },
+        ],
+      },
+    })
+    render(<AppStateProvider><TransactionsDesktop /></AppStateProvider>)
+
+    const apple = await screen.findByText('Apple Store')
+    const mango = screen.getByText('Mango Grill')
+    const zebra = screen.getByText('Zebra Cafe')
+    // Rendered DOM order is Apple → Mango → Zebra.
+    expect(apple.compareDocumentPosition(mango) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(mango.compareDocumentPosition(zebra) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+})

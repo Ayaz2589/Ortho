@@ -183,7 +183,20 @@ const TxRow = memo(
 )
 
 export function TransactionsDesktop() {
-  const { transactions, formatMoney, deleteTransaction, locale, t } = useApp()
+  const { transactions, formatMoney, deleteTransaction, resolveUser, locale, t } = useApp()
+
+  // Name shown in the Merchant column: the merchant, or "from → to" resolved
+  // names for a reimbursement. Used to sort each day's rows alphabetically.
+  const rowName = useCallback(
+    (tx: Transaction): string => {
+      if (tx.kind === 'transfer') {
+        const p = transferParties(tx)
+        return p.from ? resolveUser(p.from).name : ''
+      }
+      return tx.merchant
+    },
+    [resolveUser]
+  )
   const f = useTransactionFilters()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
@@ -415,9 +428,11 @@ export function TransactionsDesktop() {
                           {formatMoney(expenseTotal(g.items))}
                         </span>
                       </div>
-                      {g.items.map((tx) => (
-                        <TxRow key={tx.id} tx={tx} selected={tx.id === selectedId} onClick={() => selectRow(tx.id)} onCopy={() => openCopy(tx)} />
-                      ))}
+                      {[...g.items]
+                        .sort((a, b) => rowName(a).localeCompare(rowName(b), locale, { sensitivity: 'base' }))
+                        .map((tx) => (
+                          <TxRow key={tx.id} tx={tx} selected={tx.id === selectedId} onClick={() => selectRow(tx.id)} onCopy={() => openCopy(tx)} />
+                        ))}
                     </div>
                   ))}
               </div>
