@@ -2,11 +2,8 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { Capacitor } from '@capacitor/core'
-import { Camera, ChevronDown, FileSpreadsheet, FileText, ScanLine, SlidersHorizontal } from 'lucide-react'
+import { ChevronDown, FileSpreadsheet, SlidersHorizontal } from 'lucide-react'
 import { useApp, useAppServices } from '@/lib/store'
-import { useScanFlow } from '@/lib/scan/useScanFlow'
-import { WebModal } from './WebModal'
 import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expenseTotal } from '@/lib/format'
 import { useMonthAccordion } from '@/lib/useMonthAccordion'
 import { transferParties } from '@/lib/transaction'
@@ -28,11 +25,6 @@ import {
   CatTile,
   SourceDot,
 } from './kit'
-
-// Deferred like the mobile Transactions page (spec 022, US2): the scan chrome
-// (interstitial / summary / per-row prefill) loads only once a scan is active,
-// not on desktop ledger load. It mounts only when scan.state.phase !== 'idle'.
-const ScanFlow = dynamic(() => import('./ScanFlow').then((m) => m.ScanFlow), { ssr: false })
 
 const CsvImportFlow = dynamic(
   () => import('@/components/csv/CsvImportFlow').then((m) => m.CsvImportFlow),
@@ -199,10 +191,8 @@ export function TransactionsDesktop() {
   const [copySource, setCopySource] = useState<Transaction | null>(null)
   const [settlePrefill, setSettlePrefill] = useState<TransferPrefill | null>(null)
   const [filterOpen, setFilterOpen] = useState(false)
-  const [scanPickerOpen, setScanPickerOpen] = useState(false)
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const csvInputRef = useRef<HTMLInputElement>(null)
-  const scan = useScanFlow()
 
   const onCsvFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -210,19 +200,6 @@ export function TransactionsDesktop() {
     // Reset so the same file can be re-selected
     e.target.value = ''
   }, [])
-
-  // Bank-statement / receipt scan entry. The web build has no on-device OCR
-  // (VisionKit is iOS-only), so a photo can't be parsed here — the only real
-  // capture is importing a PDF statement, so open the file dialog directly.
-  // The native shell can also use the camera (an iPad in landscape lands on
-  // this ≥1024px desktop layout), so it gets the two-option picker instead.
-  // startFileImport()'s pickFile() must .click() inside this user gesture, so
-  // it's invoked synchronously here (its sync prefix opens the dialog before
-  // the first await) — same contract as the mobile page.
-  const onScanClick = () => {
-    if (Capacitor.isNativePlatform()) setScanPickerOpen(true)
-    else void scan.startFileImport()
-  }
 
   const selected = selectedId ? transactions.find((t) => t.id === selectedId) ?? null : null
   const panelOpen = addOpen || !!selected
@@ -352,9 +329,6 @@ export function TransactionsDesktop() {
                 </span>
               )}
             </span>
-            <ChipIconButton label={t('Scan a receipt or statement')} onClick={onScanClick}>
-              <ScanLine size={16} />
-            </ChipIconButton>
             <ChipIconButton label={t('Import a CSV')} onClick={() => csvInputRef.current?.click()}>
               <FileSpreadsheet size={16} />
             </ChipIconButton>
@@ -509,49 +483,6 @@ export function TransactionsDesktop() {
           <FilterPanel f={f} />
         </div>
       </Drawer>
-
-      {/* Native-only capture picker (camera + PDF). Web goes straight to the
-          file dialog from onScanClick, so this modal only ever opens on the
-          native shell — where "Files" is the iOS Files app and the camera runs
-          on-device OCR. Both options feed the same ScanFlow below. */}
-      {scanPickerOpen && (
-        <WebModal title={t('Scan')} onClose={() => setScanPickerOpen(false)}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '4px 12px 12px' }}>
-            <button
-              type="button"
-              className="ow-btn ortho-interactive"
-              onClick={() => {
-                setScanPickerOpen(false)
-                void scan.startCameraCapture()
-              }}
-              style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', borderRadius: 12, padding: '12px', textAlign: 'left', fontSize: 15, color: 'var(--text)' }}
-            >
-              <Camera size={20} style={{ color: 'var(--text-2)' }} />
-              {t('Take a photo')}
-            </button>
-            <button
-              type="button"
-              className="ow-btn ortho-interactive"
-              onClick={() => {
-                setScanPickerOpen(false)
-                void scan.startFileImport()
-              }}
-              style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', borderRadius: 12, padding: '12px', textAlign: 'left', fontSize: 15, color: 'var(--text)' }}
-            >
-              <FileText size={20} style={{ color: 'var(--text-2)' }} />
-              {t('Import a PDF from Files')}
-            </button>
-          </div>
-        </WebModal>
-      )}
-
-      {scan.state.phase !== 'idle' && (
-        <ScanFlow
-          state={scan.state}
-          dispatch={scan.dispatch}
-          onClose={() => scan.dispatch({ type: 'reset' })}
-        />
-      )}
 
       {/* Hidden file input for CSV import — triggered by the Import CSV chip button */}
       <input

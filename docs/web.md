@@ -236,8 +236,12 @@ parsing/inference is TypeScript** (ported from the frozen app's Swift). Native p
 - `scanPlugin.ts` is the ONLY `registerPlugin('Scan')` call site; contains the "empty object means
   null" bridge quirk (Capacitor iOS can't resolve bare `null`). `refineMerchant`/`rescue` are wired
   in the plugin + wrapper but have zero call sites in the app (not yet integrated).
-- UI: `components/scan/{ScanInterstitial,ScanSummary}.tsx`, `components/web/ScanFlow.tsx`
-  (dynamic-imported by `transactions/page.tsx`). Tests: `web/test/scan/` (9 suites).
+- UI: `components/scan/{ScanInterstitial,ScanSummary}.tsx`, `components/web/ScanFlow.tsx`.
+  **No UI entry point wires these in anymore** — the receipt/statement scan button was removed
+  from both the mobile and desktop Transactions headers in favour of the CSV import route (the
+  camera/scan chips were consolidated away since CSV import supersedes them). The lib + `ScanFlow`
+  chrome are retained (not imported by any page); tests still cover them. Tests: `web/test/scan/`
+  (9 suites).
 
 Separate from scan: `make ingest` — the no-LLM statement importer CLI ([./makefile.md](./makefile.md)).
 

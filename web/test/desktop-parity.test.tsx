@@ -18,11 +18,6 @@ import { makeSupabaseMock, primeFxCache, stubNoNetwork, type SupabaseMock } from
 const h = vi.hoisted(() => ({ mock: null as SupabaseMock | null }))
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => h.mock!.client }))
 
-// Stub the web file-dialog helper (useScanFlow imports pickFile eagerly) so the
-// desktop scan-entry test asserts the upload wiring without a real OS dialog.
-const pick = vi.hoisted(() => ({ fn: vi.fn() }))
-vi.mock('@/lib/scan/webCapture', () => ({ pickFile: (...a: unknown[]) => pick.fn(...a) }))
-
 import { AppStateProvider, useApp } from '@/lib/store'
 import { useDashboardScope } from '@/lib/useDashboardRange'
 import { TransactionsDesktop } from '@/components/web/TransactionsDesktop'
@@ -98,8 +93,6 @@ beforeEach(() => {
   h.mock = makeSupabaseMock(dataset(thisMonthISO()))
   stubNoNetwork()
   primeFxCache()
-  pick.fn.mockReset()
-  pick.fn.mockResolvedValue(null)
 })
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -224,21 +217,22 @@ describe('language → locale in the store (US4 / T027)', () => {
 })
 
 describe('desktop bank-statement upload (US4 parity)', () => {
-  it('exposes a scan entry in the ledger header', async () => {
+  it('exposes a CSV import entry in the ledger header', async () => {
     render(<AppStateProvider><TransactionsDesktop /></AppStateProvider>)
-    // The header renders regardless of data; the scan/upload affordance the
-    // desktop layout used to lack is present.
-    expect(await screen.findByLabelText('Scan a receipt or statement')).toBeInTheDocument()
+    // The header renders regardless of data; the CSV bank-statement upload
+    // affordance (the desktop's statement-import path) is present.
+    expect(await screen.findByLabelText('Import a CSV')).toBeInTheDocument()
   })
 
-  it('opens the PDF file dialog on web (no on-device OCR → PDF import is the path)', async () => {
+  it('opens the CSV file dialog when the import chip is clicked', async () => {
+    // The chip triggers the hidden <input type="file" accept=".csv"> via a
+    // programmatic .click() inside the gesture — assert that wiring fires.
+    const clickSpy = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {})
     render(<AppStateProvider><TransactionsDesktop /></AppStateProvider>)
-    const btn = await screen.findByLabelText('Scan a receipt or statement')
+    const btn = await screen.findByLabelText('Import a CSV')
 
-    // jsdom reports a non-native platform, so clicking goes straight to the web
-    // PDF import — pickFile() must be called with the PDF accept type, inside
-    // the click gesture. (User cancels → resolves null → flow returns to idle.)
     await userEvent.setup().click(btn)
-    await waitFor(() => expect(pick.fn).toHaveBeenCalledWith('application/pdf'))
+    expect(clickSpy).toHaveBeenCalled()
+    clickSpy.mockRestore()
   })
 })

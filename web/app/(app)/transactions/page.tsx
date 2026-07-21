@@ -2,8 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { Capacitor } from '@capacitor/core'
-import { Search, Plus, X, ArrowUpDown, ChevronDown, SlidersHorizontal, Camera, FileSpreadsheet, FileText } from 'lucide-react'
+import { Search, Plus, X, ArrowUpDown, ChevronDown, SlidersHorizontal, FileSpreadsheet } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { PageHeader, IconButton, Card, EmptyState, Modal } from '@/components/ui'
 import { useIsExpanded } from '@/lib/useMediaQuery'
@@ -16,16 +15,8 @@ import { BalanceSummary } from '@/components/transactions/BalanceSummary'
 import { useRouter } from 'next/navigation'
 import type { TransferPrefill } from '@/components/web/TxForm'
 import { useTransactionFilters } from '@/lib/useTransactionFilters'
-import { useScanFlow } from '@/lib/scan/useScanFlow'
 import { FilterPanel } from '@/components/web/FilterPanel'
 import { ActiveFilterChips } from '@/components/web/ActiveFilterChips'
-
-// Deferred so the scan UI (interstitial/summary) loads on demand when a scan is
-// active, not on Transactions-route load (spec 022, US2). It only mounts when
-// scan.state.phase !== 'idle', so the chunk is fetched at that moment.
-const ScanFlow = dynamic(() => import('@/components/web/ScanFlow').then((m) => m.ScanFlow), {
-  ssr: false,
-})
 
 const CsvImportFlow = dynamic(
   () => import('@/components/csv/CsvImportFlow').then((m) => m.CsvImportFlow),
@@ -49,10 +40,8 @@ export default function TransactionsPage() {
   const [searchActive, setSearchActive] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
-  const [scanPickerOpen, setScanPickerOpen] = useState(false)
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const csvInputRef = useRef<HTMLInputElement>(null)
-  const scan = useScanFlow()
 
   const hasAny = transactions.length > 0
 
@@ -119,8 +108,8 @@ export default function TransactionsPage() {
                 )}
               </span>
             )}
-            <IconButton ariaLabel={t('Scan a receipt or statement')} onClick={() => setScanPickerOpen(true)}>
-              <Camera size={18} />
+            <IconButton ariaLabel={t('Import a CSV')} onClick={() => csvInputRef.current?.click()}>
+              <FileSpreadsheet size={18} />
             </IconButton>
             <IconButton ariaLabel={t('Add transaction')} onClick={openAdd}>
               <Plus size={18} />
@@ -261,53 +250,6 @@ export default function TransactionsPage() {
         txId={detailId}
         onClose={() => setDetailId(null)}
       />
-
-      <Modal open={scanPickerOpen} onClose={() => setScanPickerOpen(false)} title={t('Scan')}>
-        <div className="flex flex-col gap-1 py-2">
-          <button
-            type="button"
-            onClick={() => {
-              setScanPickerOpen(false)
-              void scan.startCameraCapture()
-            }}
-            className="ortho-interactive flex items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] text-text"
-          >
-            <Camera size={20} className="text-text-2" />
-            {t('Take a photo')}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setScanPickerOpen(false)
-              void scan.startFileImport()
-            }}
-            className="ortho-interactive flex items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] text-text"
-          >
-            <FileText size={20} className="text-text-2" />
-            {/* "Files" is the iOS Files app; the web build opens a browser file dialog. */}
-            {Capacitor.isNativePlatform() ? t('Import a PDF from Files') : t('Import a PDF')}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setScanPickerOpen(false)
-              csvInputRef.current?.click()
-            }}
-            className="ortho-interactive flex items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] text-text"
-          >
-            <FileSpreadsheet size={20} className="text-text-2" />
-            {t('Import a CSV file')}
-          </button>
-        </div>
-      </Modal>
-
-      {scan.state.phase !== 'idle' && (
-        <ScanFlow
-          state={scan.state}
-          dispatch={scan.dispatch}
-          onClose={() => scan.dispatch({ type: 'reset' })}
-        />
-      )}
 
       <input
         ref={csvInputRef}
