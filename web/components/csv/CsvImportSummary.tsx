@@ -38,7 +38,7 @@ export function CsvImportSummary({
         <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text)' }}>
           {addedCount} transaction{addedCount === 1 ? '' : 's'} added
         </div>
-        <div style={{ fontSize: '18px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+        <div style={{ fontSize: '18px', color: 'var(--text-2)', marginTop: '4px' }}>
           {formatMoney(totalSpendCents)}
         </div>
       </div>
@@ -54,17 +54,17 @@ export function CsvImportSummary({
         }}
       >
         {skippedCount > 0 && (
-          <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+          <div style={{ color: 'var(--text-2)', fontSize: '14px' }}>
             {skippedCount} skipped
           </div>
         )}
         {excludedCount > 0 && (
-          <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+          <div style={{ color: 'var(--text-2)', fontSize: '14px' }}>
             {excludedCount} payment rows excluded
           </div>
         )}
         {duplicatesCount > 0 && (
-          <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+          <div style={{ color: 'var(--text-2)', fontSize: '14px' }}>
             {duplicatesCount} duplicates left out
           </div>
         )}
@@ -76,7 +76,7 @@ export function CsvImportSummary({
           marginTop: '8px',
           padding: '12px 32px',
           background: 'var(--accent)',
-          color: 'var(--background)',
+          color: '#fff',
           border: 'none',
           borderRadius: '8px',
           fontWeight: 600,

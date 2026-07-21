@@ -4,6 +4,7 @@
 import type { ParsedStatement, StatementPeriod } from '../../scripts/import/engine/types'
 import type { CsvDraftRow } from './csvImportModels'
 import { parsedTransactionToDraft } from './csvImportModels'
+import { findDuplicateId, type DuplicateCandidate } from './duplicateMatch'
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -33,7 +34,14 @@ export const initialCsvImportState: CsvImportState = { phase: 'idle' }
 // ── Actions ──────────────────────────────────────────────────────────────────
 
 export type CsvImportAction =
-  | { type: 'file/parsed'; statement: ParsedStatement; bankLabel: string }
+  | {
+      type: 'file/parsed'
+      statement: ParsedStatement
+      bankLabel: string
+      defaultOwnerId?: string | null
+      // Existing ledger rows to check each parsed row against for duplicates.
+      existing?: DuplicateCandidate[]
+    }
   | { type: 'file/undetected' }
   | { type: 'draft/update'; id: string; patch: Partial<Omit<CsvDraftRow, 'id' | 'source'>> }
   | { type: 'draft/toggleChecked'; id: string }
@@ -55,12 +63,14 @@ export function csvImportReducer(state: CsvImportState, action: CsvImportAction)
   switch (action.type) {
     case 'file/parsed': {
       const allRows = action.statement.sections.flatMap((s) => s.rows)
+      const existing = action.existing ?? []
       const drafts: Record<string, CsvDraftRow> = {}
       for (const tx of allRows) {
-        // TODO(spec-030): pass duplicateOf when duplicate detection is implemented.
-        // Currently parsedTransactionToDraft is always called without a second arg,
-        // so draft.duplicateOf is always null and duplicatesCount is always 0.
-        const draft = parsedTransactionToDraft(tx)
+        // Flag rows that probably duplicate an existing ledger transaction (same
+        // day + amount + similar merchant) so they're excluded by default but
+        // shown in review. Empty `existing` → no matches, as before.
+        const duplicateOf = findDuplicateId(tx, existing)
+        const draft = parsedTransactionToDraft(tx, duplicateOf, action.defaultOwnerId ?? null)
         drafts[draft.id] = draft
       }
       return {
@@ -104,11 +114,12 @@ export function csvImportReducer(state: CsvImportState, action: CsvImportAction)
       if (state.phase !== 'list-view') return state
       const existing = state.drafts[action.id]
       if (!existing) return state
+      // Mark skipped so it drops out of the review list (and never imports).
       return {
         ...state,
         drafts: {
           ...state.drafts,
-          [action.id]: { ...existing, checked: false },
+          [action.id]: { ...existing, checked: false, skipped: true },
         },
       }
     }

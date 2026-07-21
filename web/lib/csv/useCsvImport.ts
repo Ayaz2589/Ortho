@@ -7,6 +7,7 @@ import { detectBank } from '../../scripts/import/engine/detectBank'
 import { csvImportReducer, initialCsvImportState } from './csvImportSession'
 import { checkedDrafts, totalSpendCents } from './csvImportModels'
 import type { CsvDraftRow } from './csvImportModels'
+import type { DuplicateCandidate } from './duplicateMatch'
 import type { CsvImportState } from './csvImportSession'
 import { orderedOwnerIds, computeShares } from '../splits'
 import type { SplitInput } from '../splits'
@@ -51,7 +52,18 @@ function buildTransaction(
 
 export function useCsvImport() {
   const [state, dispatch] = useReducer(csvImportReducer, initialCsvImportState)
-  const { addTransaction, currentUserId, currentPersonId, currentHousehold } = useApp()
+  const { addTransaction, transactions, currentUserId, currentPersonId, currentHousehold, householdMembers } = useApp()
+
+  // The importing user, mirroring the transaction form's `defaultOwner`: the
+  // current person, else the first household member, else the auth user.
+  const defaultOwnerId = currentPersonId || householdMembers[0]?.id || currentUserId || null
+
+  // Existing ledger rows to check imported rows against for duplicates (any
+  // owner in the household). Recomputed only when the ledger changes.
+  const existing: DuplicateCandidate[] = useMemo(
+    () => transactions.map((t) => ({ id: t.id, date: t.date, amountCents: t.amount_cents, merchant: t.merchant })),
+    [transactions]
+  )
 
   const loadFile = useCallback(
     async (file: File) => {
@@ -62,9 +74,9 @@ export function useCsvImport() {
         return
       }
       const statement = result.profile.parse([text])
-      dispatch({ type: 'file/parsed', statement, bankLabel: result.profile.label })
+      dispatch({ type: 'file/parsed', statement, bankLabel: result.profile.label, defaultOwnerId, existing })
     },
-    [dispatch]
+    [dispatch, defaultOwnerId, existing]
   )
 
   const toggleChecked = useCallback(
@@ -92,8 +104,8 @@ export function useCsvImport() {
     const allDrafts = Object.values(state.drafts)
     const toAdd = checkedDrafts(allDrafts)
     const excluded = allDrafts.filter((d) => d.isPaymentRow)
-    const skipped = allDrafts.filter((d) => !d.checked && !d.isPaymentRow && !d.duplicateOf)
-    const duplicates = allDrafts.filter((d) => d.duplicateOf && !d.checked)
+    const skipped = allDrafts.filter((d) => d.skipped)
+    const duplicates = allDrafts.filter((d) => d.duplicateOf && !d.checked && !d.skipped)
 
     for (const draft of toAdd) {
       const tx = buildTransaction(draft, bankSource, currentUserId, currentPersonId, currentHousehold.id, now)

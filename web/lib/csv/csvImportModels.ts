@@ -19,14 +19,21 @@ export interface CsvDraftRow {
   checked: boolean
   isPaymentRow: boolean
   duplicateOf: string | null
+  // Explicitly skipped in review (drops out of the list; never imported).
+  skipped: boolean
 }
 
 export function parsedTransactionToDraft(
   tx: ParsedTransaction,
-  duplicateOf: string | null = null
+  duplicateOf: string | null = null,
+  defaultOwnerId: string | null = null
 ): CsvDraftRow {
   const isPaymentRow = tx.excluded && tx.excludeReason === 'card-payment'
   const isExcluded = tx.excluded
+  // Seed the owner from the parsed row if present, else the importing user —
+  // so every reviewed row already has an owner, just like a hand-entered one.
+  const ownerIds =
+    tx.ownerIds && tx.ownerIds.length > 0 ? tx.ownerIds : defaultOwnerId ? [defaultOwnerId] : []
   return {
     id: crypto.randomUUID(),
     source: tx,
@@ -34,13 +41,14 @@ export function parsedTransactionToDraft(
     category: tx.category,
     amountCents: tx.amountCents,
     dateISO: tx.dateISO,
-    ownerIds: tx.ownerIds ?? [],
+    ownerIds,
     splits: tx.splits,
     tags: [],
     notes: null,
     checked: !isExcluded && duplicateOf === null,
     isPaymentRow,
     duplicateOf,
+    skipped: false,
   }
 }
 

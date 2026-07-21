@@ -1,12 +1,18 @@
 'use client'
-// Phase dispatcher for the CSV import session.
+// Phase dispatcher for the CSV import session, rendered in the shared slide-out
+// tray — a right-side drawer on desktop and a full-screen panel on mobile, the
+// same affordance add/edit transaction uses (replaces the old bottom sheet).
 // idle → renders nothing (triggered externally via loadFile)
-// list-view → CsvImportList + optional CsvRowEditModal overlay
-// importing → brief loading overlay
+// list-view → CsvImportList, or the per-row editor pushed into the same pane
+// importing → brief loading state
 // summary → CsvImportSummary
 // undetected → supported banks list
-import { useState, useEffect } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import { useIsExpanded } from '@/lib/useMediaQuery'
+import { useFocusTrap } from '@/lib/useFocusTrap'
 import { useCsvImport } from '@/lib/csv/useCsvImport'
+import { DrawerHeader } from '@/components/web/Drawer'
 import { CsvImportList } from './CsvImportList'
 import { CsvImportSummary } from './CsvImportSummary'
 import { CsvRowEditModal } from './CsvRowEditModal'
@@ -45,26 +51,17 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
 
   if (phase === 'undetected') {
     return (
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Unsupported CSV format"
-        className="ow-drawer-scrim"
-        style={overlayStyle}
-      >
-        <div style={sheetStyle}>
-          <div style={headerStyle}>
-            <span style={{ fontWeight: 600 }}>Import CSV</span>
-            <button onClick={handleClose} style={closeBtnStyle}>✕</button>
-          </div>
+      <CsvTray label="Unsupported CSV format" onClose={handleClose}>
+        <DrawerHeader title="Import CSV" onClose={handleClose} />
+        <TrayBody>
           <div style={{ padding: '24px' }}>
             <p style={{ color: 'var(--text)', marginBottom: '16px' }}>
               We don&apos;t recognise this bank&apos;s CSV format yet.
             </p>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '8px', fontWeight: 600 }}>
+            <p style={{ color: 'var(--text-2)', fontSize: '14px', marginBottom: '8px', fontWeight: 600 }}>
               Supported banks:
             </p>
-            <ul style={{ color: 'var(--text-secondary)', fontSize: '14px', paddingLeft: '16px' }}>
+            <ul style={{ color: 'var(--text-2)', fontSize: '14px', paddingLeft: '16px' }}>
               {SUPPORTED_BANKS.map((b) => (
                 <li key={b} style={{ marginBottom: '4px' }}>{b}</li>
               ))}
@@ -73,31 +70,29 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
               Close
             </button>
           </div>
-        </div>
-      </div>
+        </TrayBody>
+      </CsvTray>
     )
   }
 
   if (phase === 'importing') {
     return (
-      <div role="status" aria-live="polite" className="ow-drawer-scrim" style={overlayStyle}>
-        <div style={sheetStyle}>
-          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+      <CsvTray label="Importing CSV" onClose={handleClose}>
+        <DrawerHeader title="Import CSV" onClose={handleClose} />
+        <TrayBody>
+          <div role="status" aria-live="polite" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-2)' }}>
             Adding transactions…
           </div>
-        </div>
-      </div>
+        </TrayBody>
+      </CsvTray>
     )
   }
 
   if (phase === 'summary' && summary) {
     return (
-      <div role="dialog" aria-modal="true" aria-label="Import complete" className="ow-drawer-scrim" style={overlayStyle}>
-        <div style={sheetStyle}>
-          <div style={headerStyle}>
-            <span style={{ fontWeight: 600 }}>Import complete</span>
-            <button onClick={handleClose} style={closeBtnStyle}>✕</button>
-          </div>
+      <CsvTray label="Import complete" onClose={handleClose}>
+        <DrawerHeader title="Import complete" onClose={handleClose} />
+        <TrayBody>
           <CsvImportSummary
             addedCount={summary.addedCount}
             totalSpendCents={summary.totalSpendCents}
@@ -106,92 +101,141 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
             duplicatesCount={summary.duplicatesCount}
             onDone={handleClose}
           />
-        </div>
-      </div>
+        </TrayBody>
+      </CsvTray>
     )
   }
 
   if (phase === 'list-view') {
     const editingDraft = editingId ? drafts.find((d) => d.id === editingId) ?? null : null
 
+    // The per-row editor is pushed into the SAME pane (master → detail) with a
+    // back button, rather than covering the screen. Esc steps back to the list.
     return (
-      <div role="dialog" aria-modal="true" aria-label="CSV import preview" className="ow-drawer-scrim" style={overlayStyle}>
-        <div style={sheetStyle}>
-          <div style={headerStyle}>
-            <div>
-              <span style={{ fontWeight: 600 }}>{bankLabel}</span>
-            </div>
-            <button onClick={handleClose} style={closeBtnStyle}>✕</button>
-          </div>
-
-          <CsvImportList
-            drafts={drafts}
-            onEdit={(id) => setEditingId(id)}
-            onToggle={toggleChecked}
-            onConfirm={startImport}
+      <CsvTray
+        label={editingDraft ? 'Edit transaction' : 'CSV import preview'}
+        onClose={handleClose}
+        onEscape={editingDraft ? () => setEditingId(null) : handleClose}
+      >
+        {editingDraft ? (
+          <CsvRowEditModal
+            draft={editingDraft}
+            onSave={(id, patch) => {
+              updateDraft(id, patch)
+              setEditingId(null)
+            }}
+            onSkip={(id) => {
+              skipDraft(id)
+              setEditingId(null)
+            }}
+            onClose={() => setEditingId(null)}
           />
-
-          {editingDraft && (
-            <CsvRowEditModal
-              draft={editingDraft}
-              onSave={(id, patch) => {
-                updateDraft(id, patch)
-                setEditingId(null)
-              }}
-              onSkip={(id) => {
-                skipDraft(id)
-                setEditingId(null)
-              }}
-              onClose={() => setEditingId(null)}
-            />
-          )}
-        </div>
-      </div>
+        ) : (
+          <>
+            <DrawerHeader title={bankLabel} onClose={handleClose} />
+            <TrayBody>
+              <CsvImportList
+                drafts={drafts}
+                onEdit={(id) => setEditingId(id)}
+                onToggle={toggleChecked}
+                onConfirm={startImport}
+              />
+            </TrayBody>
+          </>
+        )}
+      </CsvTray>
     )
   }
 
   return null
 }
 
-const overlayStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'flex-end',
-  justifyContent: 'center',
-  zIndex: 100,
+/**
+ * The shared slide-out shell for every CSV import phase. On desktop (≥1024px)
+ * it's the right-side `ow-drawer` + scrim; on mobile it's a full-screen panel —
+ * mirroring how add/edit transaction renders (desktop drawer vs. full mobile
+ * page). Portals to <body>, locks background scroll, and closes on Escape (and,
+ * on desktop, scrim-click). Header-agnostic: each phase supplies its own header
+ * (a standard close header, or the row editor's back header) so a detail view
+ * can push into the same pane.
+ */
+function CsvTray({
+  label,
+  onClose,
+  onEscape,
+  children,
+}: {
+  label: string
+  onClose: () => void
+  onEscape?: () => void
+  children: ReactNode
+}) {
+  const isExpanded = useIsExpanded()
+  const trapRef = useFocusTrap<HTMLElement>(true)
+
+  useEffect(() => {
+    const handleEscape = onEscape ?? onClose
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleEscape()
+    }
+    document.addEventListener('keydown', onKey)
+    // Lock whichever element scrolls: <main> on desktop, <body> on mobile.
+    const main = document.querySelector('main') as HTMLElement | null
+    const prevBody = document.body.style.overflow
+    const prevMain = main?.style.overflow
+    document.body.style.overflow = 'hidden'
+    if (main) main.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevBody
+      if (main) main.style.overflow = prevMain ?? ''
+    }
+  }, [onClose, onEscape])
+
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
+    <>
+      {isExpanded && <div className="ow-drawer-scrim" onClick={onClose} aria-hidden="true" />}
+      <aside
+        ref={trapRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={label}
+        className={isExpanded ? 'ow-drawer' : undefined}
+        style={isExpanded ? { overflow: 'hidden' } : mobileSheetStyle}
+      >
+        {children}
+      </aside>
+    </>,
+    document.body
+  )
 }
 
-const sheetStyle: React.CSSProperties = {
-  width: '100%',
-  maxWidth: '640px',
-  maxHeight: '85vh',
-  background: 'var(--background)',
-  borderRadius: '12px 12px 0 0',
+/** Flex-fill scroll area under a tray header. Gives the phase content a bounded
+ *  height so an inner list + sticky footer (CsvImportList) works. */
+function TrayBody({ children }: { children: ReactNode }) {
+  return (
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      {children}
+    </div>
+  )
+}
+
+const mobileSheetStyle: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  zIndex: 80,
+  background: 'var(--bg)',
   display: 'flex',
   flexDirection: 'column',
-  overflow: 'hidden',
-}
-
-const headerStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: '16px',
-  borderBottom: '0.5px solid var(--hairline)',
-}
-
-const closeBtnStyle: React.CSSProperties = {
-  background: 'none',
-  border: 'none',
-  cursor: 'pointer',
-  color: 'var(--text-secondary)',
-  fontSize: '18px',
-  padding: '4px',
 }
 
 const confirmBtnStyle: React.CSSProperties = {
   padding: '12px 24px',
   background: 'var(--accent)',
-  color: 'var(--background)',
+  color: '#fff',
   border: 'none',
   borderRadius: '8px',
   fontWeight: 600,

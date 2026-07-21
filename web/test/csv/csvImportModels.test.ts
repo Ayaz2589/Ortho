@@ -69,6 +69,22 @@ describe('parsedTransactionToDraft', () => {
     expect(draft.checked).toBe(false)
   })
 
+  it('seeds ownerIds with the default owner when the parsed row has none', () => {
+    const draft = parsedTransactionToDraft(makeParsedTx(), null, 'person-1')
+    expect(draft.ownerIds).toEqual(['person-1'])
+  })
+
+  it('keeps the parsed row owners over the default owner when present', () => {
+    const tx = makeParsedTx({ ownerIds: ['person-2'] })
+    const draft = parsedTransactionToDraft(tx, null, 'person-1')
+    expect(draft.ownerIds).toEqual(['person-2'])
+  })
+
+  it('leaves ownerIds empty when there is no default owner', () => {
+    const draft = parsedTransactionToDraft(makeParsedTx(), null, null)
+    expect(draft.ownerIds).toEqual([])
+  })
+
   it('sets duplicateOf from the second argument', () => {
     const draft = parsedTransactionToDraft(makeParsedTx(), 'existing-tx-id')
     expect(draft.duplicateOf).toBe('existing-tx-id')
