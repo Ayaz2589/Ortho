@@ -154,7 +154,9 @@ for extensionless paths, which infinite-loops signed-out native launches.
   desktop compositions (`components/web/{Dashboard,Transactions,Housing}Desktop.tsx`) are
   `next/dynamic` `{ssr:false, loading:()=>null}` so mobile/iOS never downloads the desktop chunk.
 - Dialog vocabulary: desktop `components/web/Drawer.tsx` (right slide-out, portal, scrim + Escape +
-  focus trap via `lib/useFocusTrap.ts`, scroll lock) and `components/web/WebModal.tsx`; mobile uses
+  focus trap via `lib/useFocusTrap.ts`, scroll lock). Opt-in props: `fullBleedOnMobile` (full-screen
+  panel with no scrim below 1024px, for surfaces that mirror the full-page mobile form — e.g. CSV
+  import) and `onEscape` (staged back before close). `components/web/WebModal.tsx`; mobile uses
   the `Modal` bottom-sheet in `components/ui.tsx` plus spec-025 full-page forms.
 - **Spec 025 mobile form pages**: `/transactions/new|edit`, `/housing/new|edit` are dedicated
   static routes on mobile; at ≥1024px they `router.replace` back to the list (desktop keeps its
@@ -242,6 +244,45 @@ parsing/inference is TypeScript** (ported from the frozen app's Swift). Native p
   camera/scan chips were consolidated away since CSV import supersedes them). The lib + `ScanFlow`
   chrome are retained (not imported by any page); tests still cover them. Tests: `web/test/scan/`
   (9 suites).
+
+CSV import UI (`components/csv/CsvImportFlow.tsx`): the phase dispatcher renders every phase
+(list-view / summary / importing / undetected) inside the shared `Drawer` with `fullBleedOnMobile`
+— the right-side `ow-drawer` + scrim on desktop, a full-screen portalled panel on mobile — matching
+how add/edit transaction renders (desktop drawer vs. full mobile page). Header is the shared
+`DrawerHeader`; rows use the shared `FormRow` (kit) — the same one the transaction form uses.
+Replaced the earlier bottom-sheet chrome. The preview list (`CsvImportList`) uses the app's
+Activity-row vocabulary — category glyph tile (`CatTile`) · merchant + category meta · amount,
+hairline rows, sticky uppercase day headers. Clicking a parsed row pushes the per-row editor
+(`CsvRowEditModal`) into the **same** pane (master → detail) with a back button — not a
+full-screen overlay; Esc steps back to the list. The editor mirrors the new/edit transaction
+form (`ow-card`/`Row` groups, owner chips, shared `TagEditor`, note textarea): a reviewer can set
+merchant, category, **multiple owners, tags, and a note** — amount + date stay read-only (from the
+statement). The Merchant field autocompletes from the household's own merchant names and shows
+"you've used" chips (`lib/csv/merchantSuggest.ts`: `rankedMerchants` by frequency + `suggestMerchants`
+via the same normalize/similar logic as duplicate detection) so a messy descriptor like
+"UBER EATS 8005928996 CA" can be normalized to the "Uber Eats" the household already uses. (Adding
+`list=` makes the input a `combobox`, not a `textbox` — query it by label in tests.) "Skip this
+transaction" sets `skipped:true` on the draft, which drops it out of the review list entirely (not
+just unchecked). On upload each draft is seeded with the importing user as its default owner
+(`parsedTransactionToDraft(tx, dup, defaultOwnerId)`; `defaultOwnerId` threaded through the
+`file/parsed` action from `useCsvImport`), so owners are populated before review and `startImport`'s
+`buildTransaction` computes an even split.
+
+Duplicate detection (`lib/csv/duplicateMatch.ts`): on upload each parsed row is checked against the
+existing ledger — `useCsvImport` passes the household's transactions as `existing` on the
+`file/parsed` action; the reducer calls `findDuplicateId` per row. A row is flagged (`duplicateOf`
+set, `checked:false` — excluded by default but shown in review with "Include anyway") when it shares
+the **same amount + a similar merchant + dates within ±3 days** (the `DEFAULT_DAY_WINDOW` — absorbs
+a card's transaction-vs-post-date drift and small manual-date errors, but stays narrow so a monthly
+subscription isn't flagged against last month's; the closest-dated candidate wins). Merchant
+similarity normalizes both names (lowercase, strip punctuation, drop digit runs) and matches on
+containment or a shared significant word, so a hand-typed "Amazon" catches the CSV's "Amazon Prime".
+Detection runs when the file is PARSED (`loadFile`), not at commit — covered end-to-end by
+`test/csv/useCsvImport.duplicate.test.tsx`. Deliberately does NOT key on
+`source` (unlike the CLI's `engine/dedupe.ts`, which is for idempotent statement re-imports) — a
+manual entry's source is a card name, not the bank label. Known gap: abbreviated bank descriptors
+("AMZN") won't match a spelled-out manual entry without a future alias map. (Note: the CSV components previously used undefined tokens
+`--text-secondary`/`--background`; corrected to `--text-2`/`--bg` and `#fff` on accent fills.)
 
 Separate from scan: `make ingest` — the no-LLM statement importer CLI ([./makefile.md](./makefile.md)).
 

@@ -45,6 +45,7 @@ const makeDraft = (id: string, overrides: Partial<CsvDraftRow> = {}): CsvDraftRo
   checked: true,
   isPaymentRow: false,
   duplicateOf: null,
+  skipped: false,
   ...overrides,
 })
 

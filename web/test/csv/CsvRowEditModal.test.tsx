@@ -8,6 +8,11 @@ vi.mock('@/lib/store', () => ({
   useApp: () => ({
     formatMoney: (c: number) => `$${(c / 100).toFixed(2)}`,
     t: (k: string) => k,
+    householdMembers: [],
+    transactions: [],
+    tags: [],
+    addTag: vi.fn(),
+    resolveUser: (id: string) => ({ id, name: id }),
   }),
 }))
 
@@ -38,6 +43,7 @@ const baseDraft: CsvDraftRow = {
   checked: true,
   isPaymentRow: false,
   duplicateOf: null,
+  skipped: false,
 }
 
 describe('CsvRowEditModal', () => {
@@ -50,7 +56,7 @@ describe('CsvRowEditModal', () => {
         onClose={vi.fn()}
       />
     )
-    const input = screen.getByRole('textbox', { name: /merchant/i }) as HTMLInputElement
+    const input = screen.getByLabelText('Merchant') as HTMLInputElement
     expect(input.value).toBe('Whole Foods')
   })
 
@@ -64,7 +70,7 @@ describe('CsvRowEditModal', () => {
         onClose={vi.fn()}
       />
     )
-    const input = screen.getByRole('textbox', { name: /merchant/i })
+    const input = screen.getByLabelText('Merchant')
     await userEvent.clear(input)
     await userEvent.type(input, 'Target')
     await userEvent.click(screen.getByRole('button', { name: /save/i }))
@@ -113,7 +119,7 @@ describe('CsvRowEditModal', () => {
     expect(screen.queryByText(/possible duplicate/i)).toBeNull()
   })
 
-  it('calls onClose when back arrow is clicked', async () => {
+  it('calls onClose when the back button is clicked', async () => {
     const onClose = vi.fn()
     render(
       <CsvRowEditModal
@@ -123,7 +129,7 @@ describe('CsvRowEditModal', () => {
         onClose={onClose}
       />
     )
-    await userEvent.click(screen.getByRole('button', { name: '←' }))
+    await userEvent.click(screen.getByRole('button', { name: /back/i }))
     expect(onClose).toHaveBeenCalled()
   })
 })

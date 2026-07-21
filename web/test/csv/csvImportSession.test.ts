@@ -54,6 +54,35 @@ describe('csvImportReducer', () => {
     expect(state.phase).toBe('undetected')
   })
 
+  it('flags a row that duplicates an existing ledger transaction', () => {
+    // Hand-typed "Starbucks" vs the CSV's "Starbucks #1234", same day + amount.
+    const statement = makeStatement([makeParsedTx()])
+    const state = csvImportReducer(initialCsvImportState, {
+      type: 'file/parsed',
+      statement,
+      bankLabel: 'Chase',
+      existing: [{ id: 'tx-existing', date: '2026-06-01', amountCents: 575, merchant: 'Starbucks' }],
+    })
+    if (state.phase !== 'list-view') throw new Error('Expected list-view')
+    const draft = Object.values(state.drafts)[0]
+    expect(draft.duplicateOf).toBe('tx-existing')
+    expect(draft.checked).toBe(false) // excluded by default, shown in review
+  })
+
+  it('does not flag when there is no matching ledger row', () => {
+    const statement = makeStatement([makeParsedTx()])
+    const state = csvImportReducer(initialCsvImportState, {
+      type: 'file/parsed',
+      statement,
+      bankLabel: 'Chase',
+      existing: [{ id: 'tx-other', date: '2026-06-01', amountCents: 575, merchant: 'Whole Foods' }],
+    })
+    if (state.phase !== 'list-view') throw new Error('Expected list-view')
+    const draft = Object.values(state.drafts)[0]
+    expect(draft.duplicateOf).toBeNull()
+    expect(draft.checked).toBe(true)
+  })
+
   it('list-view + draft/update → updates draft fields', () => {
     const statement = makeStatement([makeParsedTx()])
     const listState = csvImportReducer(initialCsvImportState, {
@@ -94,7 +123,7 @@ describe('csvImportReducer', () => {
     expect(toggledBack.drafts[id].checked).toBe(true)
   })
 
-  it('list-view + draft/skip → sets checked:false for target', () => {
+  it('list-view + draft/skip → marks checked:false and skipped:true for target', () => {
     const statement = makeStatement([makeParsedTx()])
     const listState = csvImportReducer(initialCsvImportState, {
       type: 'file/parsed',
@@ -107,6 +136,7 @@ describe('csvImportReducer', () => {
     const skipped = csvImportReducer(listState, { type: 'draft/skip', id })
     if (skipped.phase !== 'list-view') throw new Error('Expected list-view')
     expect(skipped.drafts[id].checked).toBe(false)
+    expect(skipped.drafts[id].skipped).toBe(true)
   })
 
   it('list-view + import/start → importing phase', () => {
