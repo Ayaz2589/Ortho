@@ -11,8 +11,9 @@ import { Avatar } from '@/components/ui'
 import { computeShares, validateSplit, orderedOwnerIds, seedSplit, type SplitInput, type SplitMethod } from '@/lib/splits'
 import type { Transaction, TransactionCategory, TransactionKind } from '@/lib/types'
 import type { ParsedCandidate } from '@/lib/scan/scanModels'
-import { Seg, CatTile, SourceDot } from './kit'
+import { Seg, CatTile, SourceDot, FormRow as Row } from './kit'
 import { TagEditor } from './TagEditor'
+import { resolveDefaultOwnerId } from '@/lib/defaultOwner'
 
 const INCOME_SOURCES = ['ACH · Checking', 'ACH · Joint', 'Wire']
 
@@ -86,17 +87,6 @@ function selectStyle(): React.CSSProperties {
   }
 }
 
-function Row({ label, children, first = false }: { label: string; children: ReactNode; first?: boolean }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', minHeight: 50, borderTop: first ? 'none' : '0.5px solid var(--hairline)' }}>
-      <div style={{ flex: '0 0 100px', fontSize: 14, color: 'var(--text-2)', letterSpacing: '-0.1px' }}>{label}</div>
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 400, color: 'var(--text)' }}>
-        {children}
-      </div>
-    </div>
-  )
-}
-
 /** Shared form state + submit for the New/Edit transaction surfaces (modal + drawer). */
 export function useTxForm({
   editing,
@@ -124,7 +114,7 @@ export function useTxForm({
   const r = rate(currency)
   const src = editing ?? copying ?? null
   const initialKind: TransactionKind = initialTransfer ? 'transfer' : src?.kind ?? 'expense'
-  const defaultOwner = currentPersonId || householdMembers[0]?.id || currentUserId
+  const defaultOwner = resolveDefaultOwnerId(currentPersonId, householdMembers, currentUserId)
   const otherMember = (notId: string) => householdMembers.find((m) => m.id !== notId)?.id ?? notId
   // Copy paths validate the source's people against CURRENT membership so a
   // removed member never re-appears as an owner/payer (mirrors iOS prefill).

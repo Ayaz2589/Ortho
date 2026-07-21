@@ -154,7 +154,9 @@ for extensionless paths, which infinite-loops signed-out native launches.
   desktop compositions (`components/web/{Dashboard,Transactions,Housing}Desktop.tsx`) are
   `next/dynamic` `{ssr:false, loading:()=>null}` so mobile/iOS never downloads the desktop chunk.
 - Dialog vocabulary: desktop `components/web/Drawer.tsx` (right slide-out, portal, scrim + Escape +
-  focus trap via `lib/useFocusTrap.ts`, scroll lock) and `components/web/WebModal.tsx`; mobile uses
+  focus trap via `lib/useFocusTrap.ts`, scroll lock). Opt-in props: `fullBleedOnMobile` (full-screen
+  panel with no scrim below 1024px, for surfaces that mirror the full-page mobile form — e.g. CSV
+  import) and `onEscape` (staged back before close). `components/web/WebModal.tsx`; mobile uses
   the `Modal` bottom-sheet in `components/ui.tsx` plus spec-025 full-page forms.
 - **Spec 025 mobile form pages**: `/transactions/new|edit`, `/housing/new|edit` are dedicated
   static routes on mobile; at ≥1024px they `router.replace` back to the list (desktop keeps its
@@ -244,9 +246,10 @@ parsing/inference is TypeScript** (ported from the frozen app's Swift). Native p
   (9 suites).
 
 CSV import UI (`components/csv/CsvImportFlow.tsx`): the phase dispatcher renders every phase
-(list-view / summary / importing / undetected) inside a shared slide-out tray — the right-side
-`ow-drawer` + scrim on desktop, a full-screen portalled panel on mobile — matching how add/edit
-transaction renders (desktop drawer vs. full mobile page). Header is the shared `DrawerHeader`.
+(list-view / summary / importing / undetected) inside the shared `Drawer` with `fullBleedOnMobile`
+— the right-side `ow-drawer` + scrim on desktop, a full-screen portalled panel on mobile — matching
+how add/edit transaction renders (desktop drawer vs. full mobile page). Header is the shared
+`DrawerHeader`; rows use the shared `FormRow` (kit) — the same one the transaction form uses.
 Replaced the earlier bottom-sheet chrome. The preview list (`CsvImportList`) uses the app's
 Activity-row vocabulary — category glyph tile (`CatTile`) · merchant + category meta · amount,
 hairline rows, sticky uppercase day headers. Clicking a parsed row pushes the per-row editor

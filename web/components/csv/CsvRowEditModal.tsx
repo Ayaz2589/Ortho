@@ -4,7 +4,7 @@
 // tags, and a note. Amount + date are read-only (they come from the statement).
 // Edits live in session state (not the store) until the import is committed;
 // "Skip" drops the row, and duplicate rows offer an "include anyway" toggle.
-import { useState, useEffect, useMemo, type ReactNode } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Copy } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { categoryMeta, SPEND_CATEGORIES } from '@/lib/categories'
@@ -13,7 +13,7 @@ import type { TransactionCategory } from '@/lib/types'
 import { mediumDate } from '@/lib/format'
 import { rankedMerchants, suggestMerchants } from '@/lib/csv/merchantSuggest'
 import { Avatar } from '@/components/ui'
-import { CatTile } from '@/components/web/kit'
+import { CatTile, FormRow as Row } from '@/components/web/kit'
 import { TagEditor } from '@/components/web/TagEditor'
 
 interface Props {
@@ -330,25 +330,4 @@ const selectStyle: React.CSSProperties = {
   textAlign: 'right',
   letterSpacing: '-0.2px',
   cursor: 'pointer',
-}
-
-/** Label-on-left / control-on-right form row (matches the transaction form's Row). */
-function Row({ label, children, first = false }: { label: string; children: ReactNode; first?: boolean }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '13px 20px',
-        minHeight: 50,
-        borderTop: first ? 'none' : '0.5px solid var(--hairline)',
-      }}
-    >
-      <div style={{ flex: '0 0 92px', fontSize: 14, color: 'var(--text-2)', letterSpacing: '-0.1px' }}>{label}</div>
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, fontSize: 15, color: 'var(--text)' }}>
-        {children}
-      </div>
-    </div>
-  )
 }

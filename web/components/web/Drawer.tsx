@@ -1,33 +1,45 @@
 'use client'
 
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useApp } from '@/lib/store'
 import { useFocusTrap } from '@/lib/useFocusTrap'
+import { useIsExpanded } from '@/lib/useMediaQuery'
 
 /**
  * The shared right-side slide-out panel — the same affordance the Transactions
  * desktop view uses (`ow-drawer` + `ow-drawer-scrim`), promoted to a reusable
- * shell so Housing, Budgets, and Household share one master–detail pattern at
- * every width. Portals to <body>, dims + locks the background, slides in from
- * the right, and closes on scrim-click or Escape.
+ * shell so Housing, Budgets, Household, and CSV import share one master–detail
+ * pattern at every width. Portals to <body>, dims + locks the background, slides
+ * in from the right, and closes on scrim-click or Escape.
  */
 export function Drawer({
   open,
   onClose,
   label,
   children,
+  fullBleedOnMobile = false,
+  onEscape,
 }: {
   open: boolean
   onClose: () => void
   label: string
   children: ReactNode
+  /** On mobile (<1024px), render a full-screen panel with no scrim instead of
+   *  the 90vw right-side drawer — matching the full-page add/edit form. Desktop
+   *  (≥1024px) is unchanged: the right-side ow-drawer + scrim. */
+  fullBleedOnMobile?: boolean
+  /** Escape handler; defaults to `onClose`. Pass a custom one to step back
+   *  within a pushed detail view before closing the whole drawer. */
+  onEscape?: () => void
 }) {
   const trapRef = useFocusTrap<HTMLElement>(open)
+  const isExpanded = useIsExpanded()
   useEffect(() => {
     if (!open) return
+    const handleEscape = onEscape ?? onClose
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') handleEscape()
     }
     document.addEventListener('keydown', onKey)
     // Lock whichever element scrolls: <main> on desktop, <body> on mobile.
@@ -42,19 +54,38 @@ export function Drawer({
       document.body.style.overflow = prevBody
       if (main) main.style.overflow = prevMain ?? ''
     }
-  }, [open, onClose])
+  }, [open, onClose, onEscape])
 
   if (!open || typeof document === 'undefined') return null
 
+  const mobileFull = fullBleedOnMobile && !isExpanded
+
   return createPortal(
     <>
-      <div className="ow-drawer-scrim" onClick={onClose} aria-hidden="true" />
-      <aside ref={trapRef} tabIndex={-1} className="ow-drawer" role="dialog" aria-modal="true" aria-label={label}>
+      {!mobileFull && <div className="ow-drawer-scrim" onClick={onClose} aria-hidden="true" />}
+      <aside
+        ref={trapRef}
+        tabIndex={-1}
+        className={mobileFull ? undefined : 'ow-drawer'}
+        style={mobileFull ? mobileFullScreenStyle : undefined}
+        role="dialog"
+        aria-modal="true"
+        aria-label={label}
+      >
         {children}
       </aside>
     </>,
     document.body
   )
+}
+
+const mobileFullScreenStyle: CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  zIndex: 80,
+  background: 'var(--bg)',
+  display: 'flex',
+  flexDirection: 'column',
 }
 
 /** Standard drawer header: a close (X) chip on the left, centered title, optional right action. */

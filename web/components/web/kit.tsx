@@ -7,6 +7,20 @@ import type { TransactionCategory } from '@/lib/types'
 
 // Shared desktop (≥1024px) chrome ported from the design handoff (Shell.jsx).
 
+/** Label-on-left / control-on-right form row used inside drawer/modal cards
+ *  (the New/Edit transaction form and the CSV import editor). `first` drops the
+ *  top hairline for the first row in a card. */
+export function FormRow({ label, children, first = false }: { label: string; children: ReactNode; first?: boolean }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', minHeight: 50, borderTop: first ? 'none' : '0.5px solid var(--hairline)' }}>
+      <div style={{ flex: '0 0 100px', fontSize: 14, color: 'var(--text-2)', letterSpacing: '-0.1px' }}>{label}</div>
+      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 400, color: 'var(--text)' }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export function WebPageHeader({
   title,
   sub,

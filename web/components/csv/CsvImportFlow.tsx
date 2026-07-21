@@ -1,18 +1,15 @@
 'use client'
 // Phase dispatcher for the CSV import session, rendered in the shared slide-out
-// tray — a right-side drawer on desktop and a full-screen panel on mobile, the
-// same affordance add/edit transaction uses (replaces the old bottom sheet).
+// Drawer (right-side drawer on desktop, full-screen on mobile — the same
+// affordance add/edit transaction uses).
 // idle → renders nothing (triggered externally via loadFile)
 // list-view → CsvImportList, or the per-row editor pushed into the same pane
 // importing → brief loading state
 // summary → CsvImportSummary
 // undetected → supported banks list
 import { useEffect, useState, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
-import { useIsExpanded } from '@/lib/useMediaQuery'
-import { useFocusTrap } from '@/lib/useFocusTrap'
 import { useCsvImport } from '@/lib/csv/useCsvImport'
-import { DrawerHeader } from '@/components/web/Drawer'
+import { Drawer, DrawerHeader } from '@/components/web/Drawer'
 import { CsvImportList } from './CsvImportList'
 import { CsvImportSummary } from './CsvImportSummary'
 import { CsvRowEditModal } from './CsvRowEditModal'
@@ -51,7 +48,7 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
 
   if (phase === 'undetected') {
     return (
-      <CsvTray label="Unsupported CSV format" onClose={handleClose}>
+      <CsvDrawer label="Unsupported CSV format" onClose={handleClose}>
         <DrawerHeader title="Import CSV" onClose={handleClose} />
         <TrayBody>
           <div style={{ padding: '24px' }}>
@@ -71,26 +68,26 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
             </button>
           </div>
         </TrayBody>
-      </CsvTray>
+      </CsvDrawer>
     )
   }
 
   if (phase === 'importing') {
     return (
-      <CsvTray label="Importing CSV" onClose={handleClose}>
+      <CsvDrawer label="Importing CSV" onClose={handleClose}>
         <DrawerHeader title="Import CSV" onClose={handleClose} />
         <TrayBody>
           <div role="status" aria-live="polite" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-2)' }}>
             Adding transactions…
           </div>
         </TrayBody>
-      </CsvTray>
+      </CsvDrawer>
     )
   }
 
   if (phase === 'summary' && summary) {
     return (
-      <CsvTray label="Import complete" onClose={handleClose}>
+      <CsvDrawer label="Import complete" onClose={handleClose}>
         <DrawerHeader title="Import complete" onClose={handleClose} />
         <TrayBody>
           <CsvImportSummary
@@ -102,7 +99,7 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
             onDone={handleClose}
           />
         </TrayBody>
-      </CsvTray>
+      </CsvDrawer>
     )
   }
 
@@ -112,7 +109,7 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
     // The per-row editor is pushed into the SAME pane (master → detail) with a
     // back button, rather than covering the screen. Esc steps back to the list.
     return (
-      <CsvTray
+      <CsvDrawer
         label={editingDraft ? 'Edit transaction' : 'CSV import preview'}
         onClose={handleClose}
         onEscape={editingDraft ? () => setEditingId(null) : handleClose}
@@ -143,23 +140,16 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
             </TrayBody>
           </>
         )}
-      </CsvTray>
+      </CsvDrawer>
     )
   }
 
   return null
 }
 
-/**
- * The shared slide-out shell for every CSV import phase. On desktop (≥1024px)
- * it's the right-side `ow-drawer` + scrim; on mobile it's a full-screen panel —
- * mirroring how add/edit transaction renders (desktop drawer vs. full mobile
- * page). Portals to <body>, locks background scroll, and closes on Escape (and,
- * on desktop, scrim-click). Header-agnostic: each phase supplies its own header
- * (a standard close header, or the row editor's back header) so a detail view
- * can push into the same pane.
- */
-function CsvTray({
+/** The CSV import shell: the shared Drawer, always open (the phase gates whether
+ *  it renders at all) and full-screen on mobile like the add/edit form. */
+function CsvDrawer({
   label,
   onClose,
   onEscape,
@@ -170,50 +160,14 @@ function CsvTray({
   onEscape?: () => void
   children: ReactNode
 }) {
-  const isExpanded = useIsExpanded()
-  const trapRef = useFocusTrap<HTMLElement>(true)
-
-  useEffect(() => {
-    const handleEscape = onEscape ?? onClose
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleEscape()
-    }
-    document.addEventListener('keydown', onKey)
-    // Lock whichever element scrolls: <main> on desktop, <body> on mobile.
-    const main = document.querySelector('main') as HTMLElement | null
-    const prevBody = document.body.style.overflow
-    const prevMain = main?.style.overflow
-    document.body.style.overflow = 'hidden'
-    if (main) main.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prevBody
-      if (main) main.style.overflow = prevMain ?? ''
-    }
-  }, [onClose, onEscape])
-
-  if (typeof document === 'undefined') return null
-
-  return createPortal(
-    <>
-      {isExpanded && <div className="ow-drawer-scrim" onClick={onClose} aria-hidden="true" />}
-      <aside
-        ref={trapRef}
-        tabIndex={-1}
-        role="dialog"
-        aria-modal="true"
-        aria-label={label}
-        className={isExpanded ? 'ow-drawer' : undefined}
-        style={isExpanded ? { overflow: 'hidden' } : mobileSheetStyle}
-      >
-        {children}
-      </aside>
-    </>,
-    document.body
+  return (
+    <Drawer open onClose={onClose} onEscape={onEscape} label={label} fullBleedOnMobile>
+      {children}
+    </Drawer>
   )
 }
 
-/** Flex-fill scroll area under a tray header. Gives the phase content a bounded
+/** Flex-fill scroll area under a drawer header. Gives the phase content a bounded
  *  height so an inner list + sticky footer (CsvImportList) works. */
 function TrayBody({ children }: { children: ReactNode }) {
   return (
@@ -221,15 +175,6 @@ function TrayBody({ children }: { children: ReactNode }) {
       {children}
     </div>
   )
-}
-
-const mobileSheetStyle: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  zIndex: 80,
-  background: 'var(--bg)',
-  display: 'flex',
-  flexDirection: 'column',
 }
 
 const confirmBtnStyle: React.CSSProperties = {
