@@ -6,7 +6,7 @@ import { ChevronDown, FileSpreadsheet, SlidersHorizontal } from 'lucide-react'
 import { useApp, useAppServices } from '@/lib/store'
 import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expenseTotal } from '@/lib/format'
 import { useMonthAccordion } from '@/lib/useMonthAccordion'
-import { transferParties } from '@/lib/transaction'
+import { transferParties, sortByName } from '@/lib/transaction'
 import type { Transaction } from '@/lib/types'
 import { Avatar, StackedAvatars } from '@/components/ui'
 import { TransactionDetailBody } from '@/components/transactions/TransactionDetailBody'
@@ -183,7 +183,7 @@ const TxRow = memo(
 )
 
 export function TransactionsDesktop() {
-  const { transactions, formatMoney, deleteTransaction, locale, t } = useApp()
+  const { transactions, formatMoney, deleteTransaction, resolveUser, locale, t } = useApp()
   const f = useTransactionFilters()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
@@ -415,7 +415,7 @@ export function TransactionsDesktop() {
                           {formatMoney(expenseTotal(g.items))}
                         </span>
                       </div>
-                      {g.items.map((tx) => (
+                      {sortByName(g.items, resolveUser, locale).map((tx) => (
                         <TxRow key={tx.id} tx={tx} selected={tx.id === selectedId} onClick={() => selectRow(tx.id)} onCopy={() => openCopy(tx)} />
                       ))}
                     </div>
