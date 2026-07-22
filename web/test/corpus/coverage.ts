@@ -44,6 +44,33 @@ export type Dimension =
   // defect-reproduction dimensions
   | 'order-mismatch' // A4: sort_order ≠ lexical id
   | 'tz-boundary-non-noon' // A2: boundary rows at non-noon UTC
+  // ---- spec 030 additions: the previously-uncovered feature surfaces ----
+  // goals (savings & debt-payoff)
+  | 'goal-savings'
+  | 'goal-debt-payoff'
+  | 'goal-reached'
+  | 'goal-off-track'
+  | 'goal-past-due'
+  | 'goal-undated'
+  | 'goal-linked-category'
+  | 'goal-linked-account'
+  // budget bucket types beyond the default `fixed`
+  | 'budget-flex'
+  | 'budget-non-monthly'
+  // tags & notes on transactions
+  | 'transaction-tags'
+  | 'transaction-notes'
+  // entitlement gate-state coverage (by DB status present in the corpus)
+  | 'entitlement-admin'
+  | 'entitlement-trialing'
+  | 'entitlement-active'
+  | 'entitlement-grace'
+  | 'entitlement-lapsed'
+  // bank linking (connect scope)
+  | 'bank-active'
+  | 'bank-disconnected'
+  | 'bank-plaid'
+  | 'bank-simplefin'
 
 export const DIMENSIONS: readonly Dimension[] = [
   'household-joint',
@@ -73,6 +100,28 @@ export const DIMENSIONS: readonly Dimension[] = [
   'recurring-merchant',
   'order-mismatch',
   'tz-boundary-non-noon',
+  // spec 030 additions
+  'goal-savings',
+  'goal-debt-payoff',
+  'goal-reached',
+  'goal-off-track',
+  'goal-past-due',
+  'goal-undated',
+  'goal-linked-category',
+  'goal-linked-account',
+  'budget-flex',
+  'budget-non-monthly',
+  'transaction-tags',
+  'transaction-notes',
+  'entitlement-admin',
+  'entitlement-trialing',
+  'entitlement-active',
+  'entitlement-grace',
+  'entitlement-lapsed',
+  'bank-active',
+  'bank-disconnected',
+  'bank-plaid',
+  'bank-simplefin',
 ] as const
 
 /** dimension → labels of scenarios covering it. A dimension mapping to [] is a

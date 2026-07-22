@@ -14,6 +14,7 @@ import { App } from '@capacitor/app'
 import { createClient } from './supabase/client'
 import { isTestBuild } from './test-build'
 import { readFlags } from './flags'
+import { autoLoginEnabled, autoLoginCreds } from './auth/autoLogin'
 import { signInHref } from './nav'
 import { hapticConfirm, hapticDestructive } from './haptics'
 import { formatMoney as fmtMoney, type CurrencyKey } from './finance/money'
@@ -351,9 +352,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setError(null)
     setBootstrapFailed(false)
     try {
-      const {
+      let {
         data: { user: authUser },
       } = await supabase.auth.getUser()
+
+      // spec 030: in local/stage, auto-authenticate a known seed user against the
+      // REAL backend (no OTP screen) so the app opens fully populated with real
+      // RLS/RPCs/edge functions. Triple-gated (appEnv()!=='prod' + explicit
+      // opt-in + creds) so it is provably impossible in production. Distinct from
+      // the in-memory `bypassAuth` stub below, which never touches a backend.
+      if (!authUser && autoLoginEnabled()) {
+        const creds = autoLoginCreds()
+        if (creds) {
+          const { error: signInError } = await supabase.auth.signInWithPassword(creds)
+          if (!signInError) {
+            authUser = (await supabase.auth.getUser()).data.user
+          }
+        }
+      }
+
       if (!authUser) {
         setLoading(false)
         // spec 021: this used to be caught server-side by `proxy.ts` before any

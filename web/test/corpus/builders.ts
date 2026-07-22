@@ -15,10 +15,19 @@ import type {
   Unit,
   RentalPayment,
   Budget,
+  Tag,
+  Goal,
+  GoalKind,
+  GoalContribution,
+  LinkedInstitution,
+  LinkedAccount,
+  LinkedProvider,
+  LinkedInstitutionStatus,
   TransactionCategory,
   TransactionKind,
   PropertyKind,
 } from '@/lib/types'
+import type { DbEntitlement, EntitlementStatus } from '@/lib/entitlements'
 import { computeShares, orderedOwnerIds, type SplitInput, type SplitMethod } from '@/lib/splits'
 import type { GeneratedTransaction, GeneratedProperty, HouseholdMember, TxIntent } from './model'
 
@@ -74,7 +83,8 @@ export function buildBudget(
   category: TransactionCategory,
   monthlyLimitCents: number,
   budgetType: Budget['budget_type'] = 'fixed',
-  rolloverCapCents: number | null = null
+  rolloverCapCents: number | null = null,
+  createdAt?: string
 ): Budget {
   return {
     id,
@@ -83,6 +93,9 @@ export function buildBudget(
     monthly_limit_cents: monthlyLimitCents,
     budget_type: budgetType,
     rollover_cap_cents: rolloverCapCents,
+    // Carry anchor for flex/non_monthly rollover. Omitted when unset so existing
+    // fixed budgets serialize byte-identically to the spec-026 snapshot.
+    ...(createdAt !== undefined ? { created_at: createdAt } : {}),
   }
 }
 
@@ -101,6 +114,10 @@ export interface TxSpec {
   paidBy?: string | null
   split?: SplitInput
   intent?: TxIntent[]
+  /** Ids of household `tags` attached to this transaction (spec 030). */
+  tags?: string[]
+  /** Free-form note (spec 030). */
+  notes?: string | null
 }
 
 /**
@@ -135,8 +152,145 @@ export function buildTransaction(spec: TxSpec): GeneratedTransaction {
     paid_by: spec.paidBy ?? (spec.kind === 'income' ? null : spec.createdBy),
     owner_ids: ordered,
     shares: sharesMap,
+    // Only emit tags/notes when the caller sets them, so transactions that carry
+    // neither serialize byte-identically to the spec-026 snapshot.
+    ...(spec.tags !== undefined ? { tags: spec.tags } : {}),
+    ...(spec.notes !== undefined ? { notes: spec.notes } : {}),
   }
   return { transaction, shares, splitMethod: split.method as SplitMethod, intent: spec.intent ?? [] }
+}
+
+// ---------------------------------------------------------------------------
+// spec 030 — builders for the holistic-seed tables (tags, goals, banks,
+// entitlements). Every one returns an EXISTING lib/types (or lib/entitlements)
+// row shape; no new domain type is defined here.
+// ---------------------------------------------------------------------------
+
+export function buildTag(id: string, householdId: string, name: string): Tag {
+  return { id, household_id: householdId, name, created_at: FIXED_TS }
+}
+
+export interface GoalSpec {
+  id: string
+  householdId: string
+  name: string
+  kind?: GoalKind
+  targetCents: number
+  targetDate?: string | null
+  linkedAccountId?: string | null
+  linkedCategory?: TransactionCategory | null
+  createdBy: string
+  createdAt?: string
+}
+
+export function buildGoal(spec: GoalSpec): Goal {
+  return {
+    id: spec.id,
+    household_id: spec.householdId,
+    name: spec.name,
+    kind: spec.kind ?? 'savings',
+    target_cents: spec.targetCents,
+    target_date: spec.targetDate ?? null,
+    linked_account_id: spec.linkedAccountId ?? null,
+    linked_category: spec.linkedCategory ?? null,
+    created_by: spec.createdBy,
+    created_at: spec.createdAt ?? FIXED_TS,
+    updated_at: spec.createdAt ?? FIXED_TS,
+  }
+}
+
+export function buildGoalContribution(
+  id: string,
+  goalId: string,
+  amountCents: number,
+  date: string,
+  createdBy: string,
+  note: string | null = null
+): GoalContribution {
+  return { id, goal_id: goalId, amount_cents: amountCents, date, note, created_by: createdBy, created_at: date }
+}
+
+export interface LinkedInstitutionSpec {
+  id: string
+  householdId: string
+  provider: LinkedProvider
+  providerItemId: string
+  institutionName: string
+  status?: LinkedInstitutionStatus
+  createdBy: string
+  disconnectedAt?: string | null
+  lastSyncedAt?: string | null
+  syncCursor?: string | null
+}
+
+export function buildLinkedInstitution(spec: LinkedInstitutionSpec): LinkedInstitution {
+  return {
+    id: spec.id,
+    household_id: spec.householdId,
+    provider: spec.provider,
+    provider_item_id: spec.providerItemId,
+    provider_institution_id: null,
+    institution_name: spec.institutionName,
+    status: spec.status ?? 'active',
+    created_by: spec.createdBy,
+    created_at: FIXED_TS,
+    updated_at: FIXED_TS,
+    disconnected_at: spec.disconnectedAt ?? null,
+    // SimpleFIN carries sync state; Plaid leaves it null (spec 028).
+    last_synced_at: spec.lastSyncedAt ?? null,
+    last_manual_refresh_at: null,
+    sync_cursor: spec.syncCursor ?? null,
+  }
+}
+
+export interface LinkedAccountSpec {
+  id: string
+  institutionId: string
+  providerAccountId: string
+  name: string
+  mask?: string | null
+  accountType: string
+  accountSubtype?: string | null
+  currency?: string | null
+}
+
+export function buildLinkedAccount(spec: LinkedAccountSpec): LinkedAccount {
+  return {
+    id: spec.id,
+    institution_id: spec.institutionId,
+    provider_account_id: spec.providerAccountId,
+    name: spec.name,
+    official_name: null,
+    mask: spec.mask ?? null,
+    account_type: spec.accountType,
+    account_subtype: spec.accountSubtype ?? null,
+    currency: spec.currency ?? null,
+    created_at: FIXED_TS,
+  }
+}
+
+export interface EntitlementSpec {
+  userId: string
+  status: EntitlementStatus
+  accessExpiresAt?: string | null
+  plan?: 'monthly' | 'yearly' | null
+  source?: 'trial' | 'stripe' | 'operator'
+  createdAt?: string
+}
+
+export function buildEntitlement(spec: EntitlementSpec): DbEntitlement {
+  return {
+    user_id: spec.userId,
+    status: spec.status,
+    access_expires_at: spec.accessExpiresAt ?? null,
+    plan: spec.plan ?? null,
+    source: spec.source ?? (spec.status === 'trialing' ? 'trial' : 'stripe'),
+    stripe_customer_id: null,
+    stripe_subscription_id: null,
+    last_event_at: null,
+    created_at: spec.createdAt ?? FIXED_TS,
+    updated_at: spec.createdAt ?? FIXED_TS,
+  }
 }
 
 export interface PropertySpec {

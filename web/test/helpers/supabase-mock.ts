@@ -14,6 +14,11 @@ export interface SupabaseMockDataset {
   tables?: Record<string, unknown[]>
   /** Auth user returned by `auth.getUser()`. `null` short-circuits store load. */
   authUser?: { id: string; email?: string } | null
+  /** spec 030: the user that a successful `auth.signInWithPassword()` produces
+   *  (local/stage auto-login). When set with `authUser: null`, `getUser()`
+   *  returns null until sign-in, then returns this user — mirroring the real
+   *  auto-login flow. Absent → `signInWithPassword` resolves an error. */
+  signInUser?: { id: string; email?: string }
   /** Map of RPC name -> result data (for `lib/api/aggregates.ts`). */
   rpc?: Record<string, unknown>
   /** RPC name -> Error, to exercise error propagation. */
@@ -66,6 +71,12 @@ export interface SupabaseClientLike {
     // getSession() on foreground — a plain stub here (tests that care about
     // its call count override it directly on `mock.client.auth`).
     getSession: () => Promise<{ data: { session: unknown }; error: null }>
+    // spec 030: local/stage auto-login signs in a seed user against the real
+    // backend. The mock flips `getUser()` to `signInUser` on success.
+    signInWithPassword: (creds: { email: string; password: string }) => Promise<{
+      data: { user: unknown }
+      error: { message: string } | null
+    }>
     onAuthStateChange: (cb: (event: string, session: unknown) => void) => {
       data: { subscription: { unsubscribe: () => void } }
     }
@@ -100,7 +111,11 @@ interface QueryBuilder extends PromiseLike<{ data: unknown[] | null; error: { me
 export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMock {
   const tables = dataset.tables ?? {}
   const calls: RecordedCall[] = []
-  const authUser = dataset.authUser === undefined ? { id: 'u-me', email: 'me@example.com' } : dataset.authUser
+  // Mutable current session: starts at `authUser` and flips to `signInUser` when
+  // `signInWithPassword` succeeds (spec 030 auto-login). Existing tests never
+  // call sign-in, so this is unchanged for them.
+  let currentUser =
+    dataset.authUser === undefined ? { id: 'u-me', email: 'me@example.com' } : dataset.authUser
 
   function builder(table: string): QueryBuilder {
     const rows = (tables[table] ?? []) as unknown[]
@@ -175,8 +190,15 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
 
   const client: SupabaseClientLike = {
     auth: {
-      getUser: () => Promise.resolve({ data: { user: authUser }, error: null }),
-      getSession: () => Promise.resolve({ data: { session: authUser ? { user: authUser } : null }, error: null }),
+      getUser: () => Promise.resolve({ data: { user: currentUser }, error: null }),
+      getSession: () => Promise.resolve({ data: { session: currentUser ? { user: currentUser } : null }, error: null }),
+      signInWithPassword: (_creds: { email: string; password: string }) => {
+        if (!dataset.signInUser) {
+          return Promise.resolve({ data: { user: null }, error: { message: 'Invalid login credentials' } })
+        }
+        currentUser = dataset.signInUser
+        return Promise.resolve({ data: { user: currentUser }, error: null })
+      },
       onAuthStateChange: (cb) => {
         authCallbacks.push(cb)
         return { data: { subscription: { unsubscribe: () => {} } } }

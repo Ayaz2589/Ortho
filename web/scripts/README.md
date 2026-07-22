@@ -38,21 +38,30 @@ TypeScript implementations so the web and iOS suites stay in parity.
 cd web && npm run gen:vectors
 ```
 
-## Coverage corpus — `gen-corpus.ts` / `seed-corpus.ts`
+## Coverage corpus & holistic seed — `gen-corpus.ts` / `seed-corpus.ts`
 
-The deterministic edge-case coverage corpus (spec 026, §9.1). `gen-corpus.ts`
-regenerates the committed snapshot **manifest**; `seed-corpus.ts` populates a
-**local/dev** Supabase from the corpus (guarded — it refuses non-local targets
-unless a loud double opt-in is set).
+The deterministic edge-case coverage corpus (spec 026, §9.1) plus the holistic
+seed + realistic demo household (spec 030). `gen-corpus.ts` regenerates the
+committed snapshot **manifest**; `seed-corpus.ts` populates a **local/dev**
+Supabase (guarded — it refuses non-local targets unless a loud double opt-in is
+set). It creates the required `auth.users` rows via the Admin API and seeds every
+table the app loads (goals, tags, linked banks, entitlements included).
 
 ```bash
 cd web && npm run gen:corpus                       # rewrite the snapshot manifest
-cd web && npm run seed:corpus -- --dry-run         # planned per-table counts, no writes
-cd web && npm run seed:corpus                       # seed a local stack (idempotent)
+cd web && npm run seed:corpus -- --dry-run         # planned per-table counts + guard verdict, no writes
+cd web && npm run seed:corpus                       # seed the realistic DEMO household (idempotent)
+cd web && npm run seed:corpus -- --corpus          # ALSO seed the full edge-coverage corpus
 ```
 
-👉 See [`docs/web.md`](../../docs/web.md) → "Coverage corpus + dev seeding
-(spec 026)" and [`specs/026-seed-data-harness/`](../../specs/026-seed-data-harness/).
+Set `NEXT_PUBLIC_APP_ENV=local`, `NEXT_PUBLIC_DEV_AUTOLOGIN=1`, and
+`NEXT_PUBLIC_DEV_AUTOLOGIN_EMAIL/_PASSWORD` (matching `SEED_USER_EMAIL/_PASSWORD`)
+to have the app auto-sign-in the seed user against the seeded backend.
+
+👉 Full operator runbook (local + staging):
+[`specs/030-holistic-seed-auth/quickstart.md`](../../specs/030-holistic-seed-auth/quickstart.md).
+See also [`docs/web.md`](../../docs/web.md) §14 and
+[`specs/026-seed-data-harness/`](../../specs/026-seed-data-harness/).
 
 ## Notes
 

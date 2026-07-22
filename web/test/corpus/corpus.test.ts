@@ -6,6 +6,8 @@ import { EPOCH, addMonths } from './clock'
 import { toDisplayAmount } from '@/lib/finance/money'
 import { FALLBACK_RATE_FROM_USD } from '@/lib/finance/currency'
 import { generateInsights } from '@/lib/finance/insights'
+import { goalOffTrackInsight, goalProgress } from '@/lib/finance/goals'
+import { GOALS_NOW_ISO } from './scenarios'
 
 const corpus = generateCorpus(DEFAULT_SEED)
 const tables = toTables(corpus)
@@ -195,6 +197,71 @@ describe('coverage corpus — budget-band tags are realized by real spend (SC-00
       }
     })
   }
+})
+
+describe('coverage corpus — spec 030 holistic tables (referential integrity + non-empty)', () => {
+  const userIds = new Set(tables.users.map((u) => u.id))
+  const hhIds = new Set(tables.households.map((h) => h.id))
+  const txIds = new Set(tables.transactions.map((t) => t.id))
+  const goalIds = new Set(tables.goals.map((g) => g.id))
+  const tagIds = new Set(tables.tags.map((t) => t.id))
+  const instIds = new Set(tables.linked_institutions.map((i) => i.id))
+  const acctIds = new Set(tables.linked_accounts.map((a) => a.id))
+
+  it('every previously-missing table is populated (no empty screen)', () => {
+    expect(tables.tags.length).toBeGreaterThan(0)
+    expect(tables.transaction_tags.length).toBeGreaterThan(0)
+    expect(tables.goals.length).toBeGreaterThan(0)
+    expect(tables.goal_contributions.length).toBeGreaterThan(0)
+    expect(tables.linked_institutions.length).toBeGreaterThan(0)
+    expect(tables.linked_accounts.length).toBeGreaterThan(0)
+    expect(tables.entitlements.length).toBeGreaterThan(0)
+  })
+
+  it('tags + transaction_tags resolve', () => {
+    for (const tg of tables.tags) expect(hhIds.has(tg.household_id)).toBe(true)
+    for (const tt of tables.transaction_tags) {
+      expect(txIds.has(tt.transaction_id)).toBe(true)
+      expect(tagIds.has(tt.tag_id)).toBe(true)
+    }
+  })
+
+  it('goals + contributions resolve; goal associations are mutually exclusive (spec 027 v1)', () => {
+    for (const g of tables.goals) {
+      expect(hhIds.has(g.household_id)).toBe(true)
+      expect(userIds.has(g.created_by)).toBe(true)
+      expect(g.linked_account_id === null || g.linked_category === null).toBe(true)
+      if (g.linked_account_id) expect(acctIds.has(g.linked_account_id)).toBe(true)
+      expect(g.target_cents).toBeGreaterThan(0)
+    }
+    for (const c of tables.goal_contributions) {
+      expect(goalIds.has(c.goal_id)).toBe(true)
+      expect(c.amount_cents).toBeGreaterThan(0)
+    }
+  })
+
+  it('linked accounts belong to known institutions; institutions to households + users', () => {
+    for (const inst of tables.linked_institutions) {
+      expect(hhIds.has(inst.household_id)).toBe(true)
+      expect(userIds.has(inst.created_by)).toBe(true)
+    }
+    for (const a of tables.linked_accounts) expect(instIds.has(a.institution_id)).toBe(true)
+  })
+
+  it('entitlements reference known users', () => {
+    for (const e of tables.entitlements) expect(userIds.has(e.user_id)).toBe(true)
+  })
+
+  it('goal-off-track coverage is non-vacuous: emits the off-track insight, and reached is reached', () => {
+    const now = new Date(GOALS_NOW_ISO)
+    const offTrack = tables.goals.find((g) => g.id === 'goals-lifecycle-g-a')!
+    const offContribs = tables.goal_contributions.filter((c) => c.goal_id === offTrack.id)
+    expect(goalOffTrackInsight(offTrack, offContribs, now)).not.toBeNull()
+
+    const reached = tables.goals.find((g) => g.id === 'goals-lifecycle-g-b')!
+    const reachedContribs = tables.goal_contributions.filter((c) => c.goal_id === reached.id)
+    expect(goalProgress(reached.target_cents, reachedContribs).reached).toBe(true)
+  })
 })
 
 describe('coverage corpus — snapshot (FR-002)', () => {

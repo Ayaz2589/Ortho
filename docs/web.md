@@ -347,23 +347,40 @@ and `EmbeddedPlaidLink`. Measure: `npm run build && npm run measure:bundle` (`--
 for diffs) — sizes derive from each `out/<route>.html`'s script tags (Turbopack chunk names are
 opaque). Contract: `specs/022-web-bundle-optimization/contracts/bundle-measurement.md`.
 
-## 14. Test-data harness & corpus (specs 015 + 026)
+## 14. Test-data harness, holistic seed & env-gated auth (specs 015 + 026 + 030)
 
-- `lib/test-build.ts` `isTestBuild()` = `NEXT_PUBLIC_VERCEL_ENV !== 'production'` — build-time
-  constant, so flag machinery is dead-code-eliminated from customer bundles. `lib/flags.ts`:
-  `useTestData` + `bypassAuth` in `localStorage['ortho.flags']`, forced `false` off test builds;
-  Settings › Developer section = `components/settings/flags-section.tsx`.
-- `lib/testdata/memory-client.ts`: chainable Supabase stand-in serving `lib/testdata/seed.ts`
-  (deterministic, anchored 2026-06-15T12:00Z). Writes are accepted and dropped; `rpc()` returns
-  success; no `.functions` surface (billing/aggregation read `not_configured`); ignores column
-  projections (missing-column bugs invisible to unit tests).
-- **Spec 026 corpus** (`web/test/corpus/`): pure deterministic generator (`generateCorpus`,
-  `DEFAULT_SEED = 0x02026`, `CORPUS_VERSION = 1`), 27 coverage dimensions, 232 scenarios; shares
-  computed only via `lib/splits.ts` (guarded — no forked math; also guarded against bundle import).
-  Committed snapshot `test/corpus/__snapshots__/corpus.snapshot.json`; regenerate intentionally
-  with `npm run gen:corpus` and review the diff. `npm run seed:corpus` upserts into a **local/dev**
-  Supabase only (`seed-guard.ts`: remote requires `--i-understand-this-is-not-local` AND
-  `SEED_ALLOW_REMOTE=1`); ids remapped to stable UUIDs via `uuidFrom`, idempotent.
+- **Environment signal (spec 030):** `lib/app-env.ts` `appEnv()` → `local | stage | prod` from
+  `NEXT_PUBLIC_APP_ENV` → `NEXT_PUBLIC_VERCEL_ENV` → `NODE_ENV`, **deny-by-default to `prod`** for any
+  env it cannot prove non-prod. `lib/test-build.ts` `isTestBuild()` = `appEnv() !== 'prod'` (same
+  truth table as before). `lib/flags.ts`: `useTestData` + `bypassAuth` in `localStorage['ortho.flags']`,
+  forced `false` off test builds; Settings › Developer = `components/settings/flags-section.tsx`.
+- **Local/stage auto-login (spec 030):** `lib/auth/autoLogin.ts` `autoLoginEnabled()` is **triple-gated**
+  (`appEnv() !== 'prod'` AND `NEXT_PUBLIC_DEV_AUTOLOGIN === '1'` AND `NEXT_PUBLIC_DEV_AUTOLOGIN_EMAIL/
+  _PASSWORD` set) so it is provably impossible in production (dead-code-eliminated). `store.tsx`
+  `runBootstrap()` calls `supabase.auth.signInWithPassword(seed creds)` against the **real** backend
+  when there is no session — skipping the OTP screen but exercising real RLS/RPCs/edge functions.
+  Distinct from `bypassAuth` (the in-memory stub, no backend).
+- `lib/testdata/memory-client.ts`: chainable Supabase stand-in serving `lib/testdata/seed.ts`. Spec 030
+  replaced the hand-typed 16-row array with a small deterministic GENERATOR (recurring monthly basket
+  + goals + tags + a linked SimpleFIN bank), so the offline in-memory mode also populates the Goals,
+  Tags/Notes, and Linked-banks screens. Bundle-safe (reuses only `lib/splits`; never imports
+  `test/corpus`). Writes are accepted and dropped; `rpc('ensure_entitlement')` returns null (subscription
+  hidden in test-data mode).
+- **Coverage corpus** (`web/test/corpus/`, specs 026 + 030): pure deterministic generator
+  (`generateCorpus`, `DEFAULT_SEED = 0x02026`, `CORPUS_VERSION = 2`), now covering the previously-missing
+  tables (goals, goal_contributions, tags, transaction_tags, linked_institutions, linked_accounts,
+  entitlements) across extended coverage dimensions; ~236 scenarios; shares computed only via
+  `lib/splits.ts` (guarded — no forked math; guarded against bundle import). Committed snapshot
+  `test/corpus/__snapshots__/corpus.snapshot.json`; regenerate with `npm run gen:corpus`.
+- **Realism / demo layer (spec 030):** `web/test/corpus/realism.ts` `buildDemoHousehold(now)` — one
+  realistic, **now-anchored** household (the auto-login user owns it) that populates every screen;
+  deterministic given `now`, NOT part of the snapshot corpus.
+- **Holistic seeder:** `npm run seed:corpus` seeds the demo household by default (add `--corpus` for the
+  full edge corpus) into a **local/dev** Supabase only (`seed-guard.ts`: remote requires
+  `--i-understand-this-is-not-local` AND `SEED_ALLOW_REMOTE=1`). It creates the required `auth.users`
+  rows via the Admin API (mapping every user-id column to the real auth id — fixing the latent
+  `public.users → auth.users` FK gap), inserts `entitlements` as service-role, and upserts on stable ids
+  (idempotent). Operator runbook: `specs/030-holistic-seed-auth/quickstart.md`.
 
 ## 15. Vitest suite shape — `web/test/`
 
