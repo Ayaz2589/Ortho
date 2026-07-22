@@ -15,6 +15,7 @@
 // stable ids, so re-running is idempotent (FR-011). The safe-target guard
 // (FR-014) refuses any non-local target unless a loud double opt-in is set.
 
+import { pathToFileURL } from 'node:url'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { loadEnv, makeClient } from './import/db/client'
 import { txRecord, shareRows } from './import/db/persist'
@@ -63,18 +64,33 @@ const USER_COLUMNS: Record<string, string[]> = {
 }
 
 /** Remap a row's id/FK columns: user columns → auth id, everything else → uuidFrom. */
-function remapRow(table: string, row: unknown, userIds: Map<string, string>): unknown {
+export function remapRow(table: string, row: unknown, userIds: Map<string, string>): unknown {
   const r = { ...(row as Record<string, unknown>) }
   for (const c of ID_COLUMNS[table] ?? []) {
     if (c in r && typeof r[c] === 'string') r[c] = uuidFrom(r[c] as string)
   }
   for (const c of USER_COLUMNS[table] ?? []) {
-    if (c in r && typeof r[c] === 'string') r[c] = userIds.get(r[c] as string) ?? uuidFrom(r[c] as string)
+    if (c in r && typeof r[c] === 'string') {
+      const readable = r[c] as string
+      // A USER column must reference a user we created an auth.users row for.
+      // Fail loud on a miss: silently falling back to uuidFrom() would insert a
+      // phantom id with no matching auth.users row, surfacing only as an opaque
+      // FK violation later (this seeder exists precisely to close that gap).
+      const authId = userIds.get(readable)
+      if (authId === undefined) {
+        throw new Error(
+          `remapRow: ${table}.${c} references user "${readable}", which has no auth.users row ` +
+            `(it was not in tables.users, so ensureAuthUsers created no id for it). ` +
+            `Add it to the seeded users instead of inserting a dangling foreign key.`
+        )
+      }
+      r[c] = authId
+    }
   }
   return r
 }
 
-function remapRows(table: string, rows: unknown[], userIds: Map<string, string>): unknown[] {
+export function remapRows(table: string, rows: unknown[], userIds: Map<string, string>): unknown[] {
   return rows.map((row) => remapRow(table, row, userIds))
 }
 
@@ -300,7 +316,10 @@ async function main(): Promise<void> {
   console.log(`\n✓ Seed complete. Auto-login as ${creds.email} (owner of the demo household).`)
 }
 
-main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err)
-  process.exitCode = 1
-})
+// Only run the CLI when invoked directly (so tests can import the remap helpers).
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((err) => {
+    console.error(err instanceof Error ? err.message : err)
+    process.exitCode = 1
+  })
+}
