@@ -42,6 +42,7 @@ function sha256(s: string): string {
 
 function countRows(s: HouseholdScenario): Record<string, number> {
   const shares = s.transactions.reduce((n, t) => n + t.shares.length, 0)
+  const transactionTags = s.transactions.reduce((n, t) => n + (t.transaction.tags?.length ?? 0), 0)
   return {
     users: s.users.length,
     people: s.people.length,
@@ -55,6 +56,14 @@ function countRows(s: HouseholdScenario): Record<string, number> {
     units: s.properties.reduce((n, p) => n + p.units.length, 0),
     rental_payments: s.properties.reduce((n, p) => n + p.rentalPayments.length, 0),
     budgets: s.budgets.length,
+    // spec 030 tables
+    tags: s.tags?.length ?? 0,
+    transaction_tags: transactionTags,
+    goals: s.goals?.length ?? 0,
+    goal_contributions: s.goalContributions?.length ?? 0,
+    linked_institutions: s.linkedInstitutions?.length ?? 0,
+    linked_accounts: s.linkedAccounts?.length ?? 0,
+    entitlements: s.entitlements?.length ?? 0,
   }
 }
 

@@ -17,7 +17,13 @@ import type {
   Unit,
   RentalPayment,
   Budget,
+  Tag,
+  Goal,
+  GoalContribution,
+  LinkedInstitution,
+  LinkedAccount,
 } from '@/lib/types'
+import type { DbEntitlement } from '@/lib/entitlements'
 import type { CurrencyKey } from '@/lib/finance/money'
 import type { SplitMethod } from '@/lib/splits'
 import type { Dimension } from './coverage'
@@ -28,6 +34,13 @@ export interface HouseholdMember {
   user_id: string
   role: 'owner' | 'member'
   created_at: string
+}
+
+/** `transaction_tags` join row (spec 027/030). Derived in `toTables` from each
+ *  transaction's `tags` field — a SET, no sum invariant. */
+export interface TransactionTag {
+  transaction_id: string
+  tag_id: string
 }
 
 /** Why a generated transaction exists — read by coverage + reproduction tests. */
@@ -77,6 +90,17 @@ export interface HouseholdScenario {
   transactions: GeneratedTransaction[]
   properties: GeneratedProperty[]
   budgets: Budget[]
+  // spec 030 additions — OPTIONAL so scenarios that do not set them serialize
+  // byte-identically to the spec-026 snapshot (JSON.stringify drops undefined).
+  // `transaction_tags` join rows are DERIVED in toTables from each transaction's
+  // `tags` field, so scenarios only carry the tag definitions here.
+  tags?: Tag[]
+  goals?: Goal[]
+  goalContributions?: GoalContribution[]
+  linkedInstitutions?: LinkedInstitution[]
+  linkedAccounts?: LinkedAccount[]
+  /** One entitlement row per relevant user (user-scoped, not household-scoped). */
+  entitlements?: DbEntitlement[]
 }
 
 export interface CorpusMeta {
@@ -108,4 +132,12 @@ export interface CorpusTables {
   units: Unit[]
   rental_payments: RentalPayment[]
   budgets: Budget[]
+  // spec 030 — the previously-missing tables the store loads (holistic seed).
+  tags: Tag[]
+  transaction_tags: TransactionTag[]
+  goals: Goal[]
+  goal_contributions: GoalContribution[]
+  linked_institutions: LinkedInstitution[]
+  linked_accounts: LinkedAccount[]
+  entitlements: DbEntitlement[]
 }

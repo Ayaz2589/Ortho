@@ -5,8 +5,10 @@
 import type { Corpus, CorpusTables, HouseholdScenario } from './model'
 import { buildAllScenarios } from './scenarios'
 
-/** Bumped intentionally when the corpus SHAPE changes (drives snapshot review). */
-const CORPUS_VERSION = 1
+/** Bumped intentionally when the corpus SHAPE changes (drives snapshot review).
+ *  v2 (spec 030): added goals, goal_contributions, tags, transaction_tags,
+ *  linked_institutions, linked_accounts, entitlements + their coverage. */
+const CORPUS_VERSION = 2
 
 /** The default seed — a fixed constant so `generateCorpus()` is reproducible. */
 export const DEFAULT_SEED = 0x02026
@@ -39,6 +41,14 @@ export function toTables(corpus: Corpus): CorpusTables {
     units: [],
     rental_payments: [],
     budgets: [],
+    // spec 030
+    tags: [],
+    transaction_tags: [],
+    goals: [],
+    goal_contributions: [],
+    linked_institutions: [],
+    linked_accounts: [],
+    entitlements: [],
   }
   const pushScenario = (s: HouseholdScenario): void => {
     t.users.push(...s.users)
@@ -59,8 +69,19 @@ export function toTables(corpus: Corpus): CorpusTables {
     for (const gt of s.transactions) {
       t.transactions.push(gt.transaction)
       t.transaction_shares.push(...gt.shares)
+      // transaction_tags is a DERIVED join: one row per (transaction, tag id).
+      for (const tagId of gt.transaction.tags ?? []) {
+        t.transaction_tags.push({ transaction_id: gt.transaction.id, tag_id: tagId })
+      }
     }
     t.budgets.push(...s.budgets)
+    // spec 030 tables (optional on the scenario).
+    if (s.tags) t.tags.push(...s.tags)
+    if (s.goals) t.goals.push(...s.goals)
+    if (s.goalContributions) t.goal_contributions.push(...s.goalContributions)
+    if (s.linkedInstitutions) t.linked_institutions.push(...s.linkedInstitutions)
+    if (s.linkedAccounts) t.linked_accounts.push(...s.linkedAccounts)
+    if (s.entitlements) t.entitlements.push(...s.entitlements)
   }
   for (const s of corpus.scenarios) pushScenario(s)
   return t

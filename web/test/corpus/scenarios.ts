@@ -22,6 +22,12 @@ import {
   buildBudget,
   buildTransaction,
   buildProperty,
+  buildTag,
+  buildGoal,
+  buildGoalContribution,
+  buildLinkedInstitution,
+  buildLinkedAccount,
+  buildEntitlement,
   type TxSpec,
 } from './builders'
 import { EPOCH, firstOfMonth, lastOfMonth, isoAt, nonNoonUtc, addMonths } from './clock'
@@ -669,6 +675,190 @@ function subscriptionCreep(r: Prng): HouseholdScenario {
   return s
 }
 
+// ---------------------------------------------------------------------------
+// spec 030 — holistic-seed coverage scenarios. These populate the tables the
+// spec-026 corpus omitted (goals, tags, linked banks, entitlements) so a
+// corpus-seeded database renders every screen, and add the coverage dimensions
+// that force each new feature surface to stay non-empty.
+// ---------------------------------------------------------------------------
+
+/** 'YYYY-MM-DD' local calendar day (goal `target_date` / contribution `date`). */
+function ymd(year: number, month1: number, day: number): string {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${year}-${p(month1)}-${p(day)}`
+}
+
+/** A fixed reference "today" for the pinned corpus, so goal off-track/past-due
+ *  coverage tags are non-vacuous (asserted in corpus.test.ts). The realism/demo
+ *  layer (realism.ts) re-anchors goals to the real now for the seeded app. */
+const NOW = addMonths(EPOCH.year, EPOCH.month, 0)
+export const GOALS_NOW_ISO = isoAt(NOW.year, NOW.month1, 15, 12, 0)
+
+function goalsLifecycle(r: Prng): HouseholdScenario {
+  const base = baseHousehold('goals-lifecycle', { currency: 'usd' })
+  const s = base.scenario
+  const u0 = `${base.label}-u-0`
+  const before6 = addMonths(EPOCH.year, EPOCH.month, -6)
+  const after6 = addMonths(EPOCH.year, EPOCH.month, 6)
+  const before2 = addMonths(EPOCH.year, EPOCH.month, -2)
+  const created = isoAt(before6.year, before6.month1, 15, 12, 0)
+
+  // A SimpleFIN institution + account so a goal can link to a real account id
+  // (also covers bank-active + bank-simplefin).
+  const instId = `${base.label}-inst`
+  const acctId = `${base.label}-acct`
+  s.linkedInstitutions = [
+    buildLinkedInstitution({
+      id: instId,
+      householdId: base.hhId,
+      provider: 'simplefin',
+      providerItemId: 'sf-item-1',
+      institutionName: 'Community CU',
+      status: 'active',
+      createdBy: u0,
+      lastSyncedAt: isoAt(NOW.year, NOW.month1, 10, 9, 0),
+      syncCursor: 'cursor-1',
+    }),
+  ]
+  s.linkedAccounts = [
+    buildLinkedAccount({
+      id: acctId,
+      institutionId: instId,
+      providerAccountId: 'acc-1',
+      name: 'Rainy-day Savings',
+      mask: '4821',
+      accountType: 'depository',
+      accountSubtype: 'savings',
+      currency: 'USD',
+    }),
+  ]
+
+  s.goals = [
+    // A: savings, OFF-TRACK (way behind pace at GOALS_NOW), linked to a category.
+    buildGoal({ id: `${base.label}-g-a`, householdId: base.hhId, name: 'Emergency fund', kind: 'savings', targetCents: 600000, targetDate: ymd(after6.year, after6.month1, 15), linkedCategory: 'groceries', createdBy: u0, createdAt: created }),
+    // B: savings, REACHED (saved ≥ target).
+    buildGoal({ id: `${base.label}-g-b`, householdId: base.hhId, name: 'New laptop', kind: 'savings', targetCents: 100000, targetDate: ymd(after6.year, after6.month1, 1), createdBy: u0, createdAt: created }),
+    // C: savings, PAST-DUE and unreached.
+    buildGoal({ id: `${base.label}-g-c`, householdId: base.hhId, name: 'Ski trip', kind: 'savings', targetCents: 300000, targetDate: ymd(before2.year, before2.month1, 10), createdBy: u0, createdAt: created }),
+    // D: UNDATED savings (no pace).
+    buildGoal({ id: `${base.label}-g-d`, householdId: base.hhId, name: 'Someday sabbatical', kind: 'savings', targetCents: 500000, targetDate: null, createdBy: u0, createdAt: created }),
+    // E: DEBT-PAYOFF, linked to an ACCOUNT.
+    buildGoal({ id: `${base.label}-g-e`, householdId: base.hhId, name: 'Credit-card payoff', kind: 'debt_payoff', targetCents: 400000, targetDate: ymd(after6.year, after6.month1, 20), linkedAccountId: acctId, createdBy: u0, createdAt: created }),
+  ]
+  s.goalContributions = [
+    buildGoalContribution(`${base.label}-c-a1`, `${base.label}-g-a`, 30000, ymd(before6.year, before6.month1, 20), u0),
+    buildGoalContribution(`${base.label}-c-a2`, `${base.label}-g-a`, 20000, ymd(before2.year, before2.month1, 5), u0),
+    buildGoalContribution(`${base.label}-c-b1`, `${base.label}-g-b`, 60000, ymd(before6.year, before6.month1, 21), u0),
+    buildGoalContribution(`${base.label}-c-b2`, `${base.label}-g-b`, 40000, ymd(before2.year, before2.month1, 6), u0),
+    buildGoalContribution(`${base.label}-c-c1`, `${base.label}-g-c`, 100000, ymd(before6.year, before6.month1, 22), u0),
+    buildGoalContribution(`${base.label}-c-d1`, `${base.label}-g-d`, 75000, ymd(before2.year, before2.month1, 7), u0),
+    buildGoalContribution(`${base.label}-c-e1`, `${base.label}-g-e`, 150000, ymd(before2.year, before2.month1, 8), u0),
+  ]
+  s.entitlements = [
+    buildEntitlement({ userId: u0, status: 'trialing', accessExpiresAt: isoAt(after6.year, after6.month1, 1, 12, 0), source: 'trial' }),
+  ]
+
+  addDim(
+    s,
+    'household-joint',
+    'currency-usd',
+    'goal-savings',
+    'goal-debt-payoff',
+    'goal-reached',
+    'goal-off-track',
+    'goal-past-due',
+    'goal-undated',
+    'goal-linked-category',
+    'goal-linked-account',
+    'bank-active',
+    'bank-simplefin',
+    'entitlement-trialing'
+  )
+  return s
+}
+
+function tagsAndNotes(r: Prng): HouseholdScenario {
+  const base = baseHousehold('tags-and-notes', { currency: 'usd' })
+  const s = base.scenario
+  const u0 = `${base.label}-u-0`
+  const cur = addMonths(EPOCH.year, EPOCH.month, 0)
+  const tVacation = `${base.label}-tag-vacation`
+  const tReimb = `${base.label}-tag-reimbursable`
+  const tWedding = `${base.label}-tag-wedding`
+  s.tags = [
+    buildTag(tVacation, base.hhId, 'Vacation'),
+    buildTag(tReimb, base.hhId, 'Reimbursable'),
+    buildTag(tWedding, base.hhId, 'Wedding'),
+  ]
+  s.transactions.push(
+    buildTransaction({ id: `${base.label}-tx-0`, householdId: base.hhId, merchant: 'Whole Foods', category: 'groceries', kind: 'expense', amountCents: 8400, source: 'Everyday Card', date: isoAt(cur.year, cur.month1, 4, 12, 0), createdBy: u0, owners: [base.p0, base.p1], paidBy: base.p0, tags: [tReimb], notes: 'Split with the Nguyens — collect $42 back' }),
+    buildTransaction({ id: `${base.label}-tx-1`, householdId: base.hhId, merchant: 'Delta Air Lines', category: 'transit', kind: 'expense', amountCents: 42000, source: 'Everyday Card', date: isoAt(cur.year, cur.month1, 8, 12, 0), createdBy: u0, owners: [base.p0, base.p1], paidBy: base.p1, tags: [tVacation, tWedding], notes: 'Flights for the Maine wedding' }),
+    buildTransaction({ id: `${base.label}-tx-2`, householdId: base.hhId, merchant: 'Tartine', category: 'dining', kind: 'expense', amountCents: 6600, source: 'Joint Checking', date: isoAt(cur.year, cur.month1, 11, 12, 0), createdBy: u0, owners: [base.p0, base.p1], paidBy: base.p0, notes: 'Anniversary dinner' })
+  )
+  s.entitlements = [
+    buildEntitlement({ userId: u0, status: 'active', accessExpiresAt: isoAt(EPOCH.year + 1, 7, 1, 12, 0), plan: 'yearly', source: 'stripe' }),
+  ]
+  addDim(s, 'household-joint', 'split-even', 'currency-usd', 'transaction-tags', 'transaction-notes', 'entitlement-active')
+  return s
+}
+
+function budgetTypes(r: Prng): HouseholdScenario {
+  const base = baseHousehold('budget-types', { currency: 'usd' })
+  const s = base.scenario
+  const u0 = `${base.label}-u-0`
+  // Five months of grocery spend alternating under/over the flex limit so the
+  // rollover ledger accrues carry then consumes it (positive carry + forgiven
+  // overspend). The carry anchor is the earliest month.
+  let idx = 0
+  const flexLimit = 50000
+  for (let m = 4; m >= 0; m--) {
+    const { year, month1 } = addMonths(EPOCH.year, EPOCH.month, -m)
+    const spend = m % 2 === 0 ? 30000 : 62000
+    s.transactions.push(
+      buildTransaction({ id: `${base.label}-tx-${idx++}`, householdId: base.hhId, merchant: r.pick(MERCHANTS.groceries), category: 'groceries', kind: 'expense', amountCents: spend, source: 'Everyday Card', date: isoAt(year, month1, 12, 12, 0), createdBy: u0, owners: [base.p0, base.p1], paidBy: base.p0 })
+    )
+  }
+  const anchor = addMonths(EPOCH.year, EPOCH.month, -4)
+  const anchorTs = isoAt(anchor.year, anchor.month1, 1, 12, 0)
+  s.budgets.push(
+    buildBudget(`${base.label}-b-flex`, base.hhId, 'groceries', flexLimit, 'flex', 100000, anchorTs),
+    buildBudget(`${base.label}-b-nonmonthly`, base.hhId, 'utilities', 20000, 'non_monthly', null, anchorTs)
+  )
+  s.entitlements = [buildEntitlement({ userId: u0, status: 'admin', accessExpiresAt: null, source: 'operator' })]
+  addDim(s, 'household-joint', 'split-even', 'currency-usd', 'budget-flex', 'budget-non-monthly', 'entitlement-admin')
+  return s
+}
+
+function banksAndBilling(r: Prng): HouseholdScenario {
+  const base = baseHousehold('banks-and-billing', { currency: 'usd' })
+  const s = base.scenario
+  const u0 = `${base.label}-u-0`
+  const u1 = `${base.label}-u-1`
+  const instPlaid = `${base.label}-inst-plaid`
+  const instDisc = `${base.label}-inst-disc`
+  const disc = addMonths(EPOCH.year, EPOCH.month, -1)
+  const synced = addMonths(EPOCH.year, EPOCH.month, -2)
+  s.linkedInstitutions = [
+    // A deprecated-provider (Plaid) institution — still active, null sync columns.
+    buildLinkedInstitution({ id: instPlaid, householdId: base.hhId, provider: 'plaid', providerItemId: 'plaid-item-9', institutionName: 'First National', status: 'active', createdBy: u0 }),
+    // A disconnected SimpleFIN institution.
+    buildLinkedInstitution({ id: instDisc, householdId: base.hhId, provider: 'simplefin', providerItemId: 'sf-item-9', institutionName: 'Old Bank', status: 'disconnected', createdBy: u0, disconnectedAt: isoAt(disc.year, disc.month1, 3, 12, 0), lastSyncedAt: isoAt(synced.year, synced.month1, 1, 9, 0), syncCursor: 'cursor-old' }),
+  ]
+  s.linkedAccounts = [
+    buildLinkedAccount({ id: `${base.label}-acct-plaid`, institutionId: instPlaid, providerAccountId: 'pa-1', name: 'Everyday Checking', mask: '0001', accountType: 'depository', accountSubtype: 'checking', currency: null }),
+    buildLinkedAccount({ id: `${base.label}-acct-disc`, institutionId: instDisc, providerAccountId: 'pa-2', name: 'Legacy Savings', mask: '9999', accountType: 'depository', accountSubtype: 'savings', currency: 'USD' }),
+  ]
+  // Owner in grace (past_due, recently expired within dunning); member lapsed
+  // (canceled, expired) — entitlement gate-state coverage.
+  const lapsed = addMonths(EPOCH.year, EPOCH.month, -3)
+  s.entitlements = [
+    buildEntitlement({ userId: u0, status: 'past_due', accessExpiresAt: isoAt(NOW.year, NOW.month1, 8, 12, 0), plan: 'monthly', source: 'stripe' }),
+    buildEntitlement({ userId: u1, status: 'canceled', accessExpiresAt: isoAt(lapsed.year, lapsed.month1, 1, 12, 0), plan: 'monthly', source: 'stripe' }),
+  ]
+  addDim(s, 'household-joint', 'currency-usd', 'bank-plaid', 'bank-disconnected', 'entitlement-grace', 'entitlement-lapsed')
+  return s
+}
+
 function specialScenarios(root: Prng): HouseholdScenario[] {
   return [
     jointEvenUsd(root.sub('joint-even-usd')),
@@ -687,6 +877,11 @@ function specialScenarios(root: Prng): HouseholdScenario[] {
     tzBoundaryA2(root.sub('tz-boundary')),
     budgetBands(root.sub('budget-bands')),
     subscriptionCreep(root.sub('subscription-creep')),
+    // spec 030 — holistic-seed coverage.
+    goalsLifecycle(root.sub('goals-lifecycle')),
+    tagsAndNotes(root.sub('tags-and-notes')),
+    budgetTypes(root.sub('budget-types')),
+    banksAndBilling(root.sub('banks-and-billing')),
   ]
 }
 
