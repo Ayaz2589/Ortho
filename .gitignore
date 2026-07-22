@@ -40,3 +40,4 @@ web/tsconfig.tsbuildinfo
 # Stray dir recreated by a dev server still running in the pre-rename path.
 # Stop that server and restart from web/.
 Ortho-web/
+.vercel

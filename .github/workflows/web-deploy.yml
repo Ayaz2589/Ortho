@@ -1,0 +1,183 @@
+# Web PRODUCTION deploy — the migrate-BEFORE-deploy guard (spec 030 hybrid model).
+#
+# WHY THIS EXISTS: prod runs on Vercel. Vercel's Git integration used to ship
+# `main` to Production automatically, IN PARALLEL with the Supabase migration job —
+# the exact race that took prod down on 2026-07-19 ("column transactions.notes does
+# not exist": new code reached an un-migrated schema). This workflow OWNS the prod
+# release: job `migrate` applies pending migrations FIRST, then job `deploy` builds
+# and ships the web app with the Vercel CLI — so schema always lands before the code
+# that needs it. STAGING is deliberately NOT here: it stays on Vercel's Git
+# integration (push the `staging` branch → preview URL); no token, no gating.
+#
+# INERT UNTIL ACTIVATED: every job is gated on `vars.VERCEL_PROJECT_ID`, so merging
+# this file changes nothing until you deliberately cut over (see ACTIVATION below).
+#
+# ── ACTIVATION (do these together, as one cutover) ──────────────────────────
+#   1. repo → Settings → Secrets and variables → Actions:
+#        Secret    VERCEL_TOKEN      = a token from https://vercel.com/account/tokens
+#        Variable  VERCEL_ORG_ID     = team_Wwk1YYk6ezPG2UUbCMdI49ts
+#        Variable  VERCEL_PROJECT_ID = prj_ihPJ6iduQg7cAQ8UZ2gvZqPl5yoK
+#      (Supabase SUPABASE_ACCESS_TOKEN / SUPABASE_DB_PASSWORD / SUPABASE_PROJECT_REF
+#       are already set for supabase-migrations.yml and reused by `migrate` below.)
+#   2. In the Vercel project (Production scope) set  NEXT_PUBLIC_APP_ENV=prod  — the
+#      spec-030 primary env discriminator. `--prebuilt` deploys do NOT inject
+#      Vercel's own VERCEL_ENV, so make prod explicit instead of relying on it.
+#   3. Disable Vercel's automatic PRODUCTION Git deploys by committing web/vercel.json
+#      with:  { "git": { "deploymentEnabled": { "main": false } } }
+#      This stops main→prod auto-deploys (this workflow owns them) while PREVIEW
+#      deploys (the `staging` branch) keep working. Commit it in the SAME change that
+#      sets the vars above — never before, or prod would stop deploying entirely.
+#   4. Retire the now-redundant prod applier: drop the `migrate` job from
+#      supabase-migrations.yml (keep its `validate` job). web-deploy.migrate is the
+#      single prod-migration path once active; running both risks two concurrent
+#      `supabase db push`.
+#
+# ── OPTIONAL manual-approval gate before ANY prod write ─────────────────────
+#   Settings → Environments → create `prod-web-deploy` with required reviewers. It is
+#   attached to the `migrate` job (the FIRST, irreversible prod write) so approval
+#   gates schema AND code (deploy `needs: migrate`). A distinct name (NOT `production`)
+#   avoids colliding with Vercel's own GitHub "Production" deployment environment.
+#   Ungated until you add reviewers, so it is safe to leave as-is.
+#
+# ── STAGING DB (separate concern, not solved here) ──────────────────────────
+#   Staging needs its own Supabase project with migrations applied. The `staging`
+#   branch preview will not migrate any DB on its own — apply staging migrations
+#   manually (`supabase db push` against the staging ref) or add a staging lane to
+#   supabase-migrations.yml. Tracked in specs/030-holistic-seed-auth/quickstart.md §B.
+
+name: Web deploy (prod)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    name: Apply pending migrations to prod
+    # Canonical repo + main ref only (so workflow_dispatch from another branch can
+    # never migrate prod); inert until BOTH Vercel identifiers and the Supabase
+    # project-ref are configured. Skips cleanly (green), never red.
+    if: >-
+      github.repository == 'Ayaz2589/Ortho'
+      && github.ref == 'refs/heads/main'
+      && vars.VERCEL_PROJECT_ID != ''
+      && vars.VERCEL_ORG_ID != ''
+      && vars.SUPABASE_PROJECT_REF != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Serializes ALL prod schema writes (also with supabase-migrations.migrate while
+    # that job still exists); never interrupt a mid-flight migration.
+    concurrency:
+      group: prod-schema-write
+      cancel-in-progress: false
+    # Approval gate (if configured) fires HERE, before any schema change.
+    environment: prod-web-deploy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: "2.109.1"
+      - name: Link to prod and push pending migrations (idempotent)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          echo "── migration status before push ──"
+          supabase migration list || true
+          echo "── applying pending migrations ──"
+          supabase db push
+          echo "── migration status after push ──"
+          supabase migration list
+
+  deploy:
+    name: Build & deploy web to Vercel (prod)
+    needs: migrate
+    # Runs after migrate SUCCEEDS or is legitimately SKIPPED (e.g. Supabase not
+    # configured), but NOT if migrate FAILED — a failed schema push must block the
+    # deploy. `!cancelled()` drops it when a newer push supersedes this run.
+    # No ${{ }} wrapper on purpose: a status function (cancelled()) already removes
+    # the implicit success() gate, and an unwrapped folded scalar avoids the
+    # multiline-${{ }}-is-always-truthy footgun (github/docs#6508). Matches migrate's
+    # style. `cancelled() == false` (not `!cancelled()`) so the value doesn't start
+    # with `!`, which YAML would read as a tag.
+    if: >-
+      github.repository == 'Ayaz2589/Ortho'
+      && github.ref == 'refs/heads/main'
+      && vars.VERCEL_ORG_ID != ''
+      && vars.VERCEL_PROJECT_ID != ''
+      && cancelled() == false
+      && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Newest deploy wins: a fresher main push cancels a stale in-flight deploy so prod
+    # never lingers on older code. (Safe — Vercel promotes a deployment atomically.)
+    concurrency:
+      group: prod-deploy
+      cancel-in-progress: true
+    env:
+      # Non-secret identifiers — safe at job level; the CLI reads them from env.
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Root .nvmrc (Node 22); setup-node resolves it from the workspace root,
+          # same as web-ci.yml.
+          node-version-file: .nvmrc
+
+      - name: Assert Vercel token is present
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::error::VERCEL_TOKEN secret is not set — see the ACTIVATION block in this file."
+            exit 1
+          fi
+
+      # `@latest` for the first green run; then pin to the printed version below for
+      # reproducibility on the prod path (the repo pins the Supabase CLI the same way).
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+
+      - name: Print Vercel CLI version (pin this once it deploys cleanly)
+        run: vercel --version
+
+      # `vercel pull` writes .vercel/project.json (incl. Root Directory = web) and the
+      # Production env vars — so `vercel build` builds web/ with the same NEXT_PUBLIC_*
+      # values Vercel uses today. Run from the repo root. FIRST-RUN CHECK: confirm
+      # .vercel/output exists after build before trusting --prebuilt.
+      - name: Pull prod project settings & env
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel pull --yes --environment=production
+
+      - name: Build (production)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel build --prod
+
+      - name: Deploy prebuilt output to production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel deploy --prebuilt --prod
+
+      # Make the dangerous skew (schema applied, code not shipped) obvious, since that
+      # is precisely the 2026-07-19 failure mode inverted.
+      - name: On failure, record prod schema/code state
+        if: failure()
+        run: |
+          {
+            echo "### ❌ Prod release failed at the deploy step"
+            echo ""
+            echo "- **Schema (migrations):** already applied by the \`migrate\` job."
+            echo "- **Code (Vercel deploy):** did NOT complete — prod may serve the PREVIOUS build against the NEW schema."
+            echo ""
+            echo "Re-run this workflow: \`supabase db push\` and \`vercel deploy\` are both idempotent."
+          } >> "$GITHUB_STEP_SUMMARY"
