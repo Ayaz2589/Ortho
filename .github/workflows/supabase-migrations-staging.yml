@@ -1,0 +1,85 @@
+# Supabase migrations — STAGING lane (spec 030 hybrid model).
+#
+# WHY THIS EXISTS: the `staging` branch deploys to Vercel's Preview environment
+# (the staging site), but that preview does NOT migrate any database on its own.
+# This applies pending migrations to the dedicated STAGING Supabase project
+# whenever migration files change on the `staging` branch — the staging
+# counterpart of supabase-migrations.yml (which owns prod). Staging is lower-stakes
+# (no real users), so — unlike prod's web-deploy.yml — it does NOT gate the Vercel
+# deploy behind the migration; the small deploy-vs-migrate window is acceptable here.
+#
+# INERT until you configure staging: gated on `vars.SUPABASE_STAGING_PROJECT_REF`,
+# so merging this file changes nothing until you create the project and set it.
+#
+# ── ONE-TIME SETUP (repo → Settings → Secrets and variables → Actions) ──────
+#   Variable  SUPABASE_STAGING_PROJECT_REF = <the staging project ref>
+#   Secret    SUPABASE_STAGING_DB_PASSWORD = staging Project Settings → Database → password
+#   Reused    SUPABASE_ACCESS_TOKEN        = already set; a personal ACCOUNT token
+#                                            (https://supabase.com/dashboard/account/tokens),
+#                                            so it links/pushes any project in the account.
+#   (Prefer isolation? Set SUPABASE_STAGING_ACCESS_TOKEN and swap it in the env below.)
+#
+# ── PROVISION + SEED the staging project (one-time, from a TRUSTED machine) ──
+#   1. Create the staging Supabase project in the dashboard — a SEPARATE ref from
+#      prod `brujhxmtzfgowimprueo`. Set the two secrets/var above.
+#   2. Apply the schema: push to the `staging` branch (this workflow runs), or run
+#      locally: `supabase link --project-ref <staging-ref> && supabase db push`.
+#   3. Seed it (NOT from CI — it needs the service-role key):
+#        SEED_ALLOW_REMOTE=1 \
+#        NEXT_PUBLIC_SUPABASE_URL=https://<staging-ref>.supabase.co \
+#        SUPABASE_SERVICE_ROLE_KEY=<staging service-role key> \
+#        SEED_USER_EMAIL=<stage seed email> SEED_USER_PASSWORD=<stage seed pw> \
+#          npm run seed:corpus -- --corpus --i-understand-this-is-not-local
+#   4. Set the staging Vercel env vars (Preview scope, scoped to the `staging` branch):
+#        NEXT_PUBLIC_APP_ENV=stage
+#        NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY → the staging project
+#        NEXT_PUBLIC_DEV_AUTOLOGIN=1 + NEXT_PUBLIC_DEV_AUTOLOGIN_EMAIL/PASSWORD (the seed user)
+#   Full runbook: specs/030-holistic-seed-auth/quickstart.md §B.
+
+name: Supabase migrations (staging)
+
+on:
+  push:
+    branches: [staging]
+    paths:
+      - "supabase/migrations/**"
+      - ".github/workflows/supabase-migrations-staging.yml"
+  workflow_dispatch:
+
+concurrency:
+  # Serialize staging schema writes; never cancel a mid-flight migration.
+  group: staging-schema-write
+  cancel-in-progress: false
+
+jobs:
+  migrate-staging:
+    name: Apply migrations to staging
+    # Canonical repo + `staging` ref only (workflow_dispatch from another branch
+    # skips); inert until the staging project ref is configured. Skips green.
+    if: >-
+      github.repository == 'Ayaz2589/Ortho'
+      && github.ref == 'refs/heads/staging'
+      && vars.SUPABASE_STAGING_PROJECT_REF != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: "2.109.1"
+
+      - name: Link to staging and push pending migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_STAGING_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          echo "── migration status before push (staging) ──"
+          supabase migration list || true
+          echo "── applying pending migrations (staging) ──"
+          supabase db push
+          echo "── migration status after push (staging) ──"
+          supabase migration list

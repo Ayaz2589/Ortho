@@ -53,8 +53,10 @@ Staging is a first-class, isolated environment that behaves like production but 
 seed data and never touches the production project.
 
 1. **Create a dedicated staging Supabase project** (separate ref from prod
-   `brujhxmtzfgowimprueo`). Apply migrations to it (`supabase link` + `supabase db push`, or the
-   `supabase-migrations.yml` lane pointed at the staging ref).
+   `brujhxmtzfgowimprueo`). Apply migrations to it by setting the staging var/secret and pushing to
+   the `staging` branch — the dedicated `.github/workflows/supabase-migrations-staging.yml` lane runs
+   `supabase db push` against the staging ref (inert until `SUPABASE_STAGING_PROJECT_REF` is set) —
+   or run `supabase link --project-ref <staging-ref> && supabase db push` locally.
 2. **Set the staging Vercel environment variables** (Vercel › Project › Settings › Environment
    Variables, scoped to the *Preview*/staging environment only — never Production):
    - `NEXT_PUBLIC_APP_ENV=stage`
