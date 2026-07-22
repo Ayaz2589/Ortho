@@ -58,7 +58,10 @@ function TransactionRowImpl({
       <button
         type="button"
         onClick={onOpen}
-        className="flex flex-1 items-center gap-3 text-left"
+        // min-w-0 lets this flex child shrink below its content width so the
+        // merchant/meta `truncate` engages — otherwise a long name pushes the
+        // amount past the row edge and clips it.
+        className="flex min-w-0 flex-1 items-center gap-3 text-left"
       >
         {/* Category tile + owner avatar overlap */}
         <div className="relative shrink-0">
@@ -106,13 +109,17 @@ function TransactionRowImpl({
         </span>
       </button>
 
-      {/* Context menu trigger */}
-      <div className="relative shrink-0">
+      {/* Context menu trigger — absolutely positioned so it doesn't reserve a
+          slot in the flow (which left dead space to the right of the amount).
+          A mouse-only affordance: it fades in on row hover/focus as a surface
+          chip floating over the row's right edge; on touch it stays hidden and
+          the amount sits flush right. */}
+      <div className="absolute right-2 top-1/2 -translate-y-1/2">
         <button
           type="button"
           aria-label={t('Transaction actions')}
           onClick={() => setMenuOpen((o) => !o)}
-          className="flex h-7 w-7 items-center justify-center rounded-full text-text-3 opacity-0 transition-opacity hover:bg-[var(--hairline)] focus:opacity-100 group-hover:opacity-100"
+          className="flex h-7 w-7 items-center justify-center rounded-full bg-surface text-text-3 opacity-0 shadow-[0_0_0_0.5px_var(--hairline),0_1px_2px_rgba(0,0,0,0.06)] transition-opacity hover:bg-[var(--hairline)] focus:opacity-100 group-hover:opacity-100"
         >
           <MoreHorizontal size={16} />
         </button>
