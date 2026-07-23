@@ -301,26 +301,27 @@ supabase/functions/_shared/
   per-file byte identity; run via `npm test` in each service dir (own package.json, vitest). A hand
   edit of the copies fails CI and is overwritten by the next sync.
 
-## 8. CI — `.github/workflows/supabase-migrations.yml`
+## 8. CI — migrations: validate here, apply in the deploy pipeline
 
 Added after the 2026-07-19 prod outage ("column transactions.notes does not exist"): Vercel shipped
-`main` while the prod DB sat 8 hand-applied-and-forgotten migrations behind.
+`main` while the prod DB sat 8 hand-applied-and-forgotten migrations behind. Two lanes now prevent a
+recurrence — **this file validates**, and the prod **apply happens migrate-before-deploy** (so the
+racy parallel-deploy window that outage exposed is *closed*, not merely accepted).
 
-- **Triggers**: push to `main` + `pull_request` (path-filtered to `supabase/migrations/**` and the
-  workflow file) + `workflow_dispatch` for on-demand apply. Concurrency group per-ref with
-  `cancel-in-progress: false` — never cancel a mid-flight prod migration.
-- **`validate` job** (every PR/push): rejects filenames not matching `^[0-9]{14}_.+\.sql$` and
-  duplicate 14-digit version prefixes (see §3 collision lesson).
-- **`migrate` job** (`needs: validate`): runs on `(push to main OR workflow_dispatch) AND repo ==
-  Ayaz2589/Ortho AND vars.SUPABASE_PROJECT_REF != ''` — **skips cleanly (not red) until the
-  `SUPABASE_PROJECT_REF` repo Variable is set** (`vars` work in job `if:`; `secrets` don't). Steps:
-  `supabase/setup-cli@v1` pinned `2.109.1` → `link` → `migration list` → `db push` →
-  `migration list`. Required secrets: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`. Until the
-  variable is set, keep applying by hand (`supabase db push`).
-- Deliberately **no `environment:` key** — it would collide with Vercel's "Production" environment;
-  an approval gate would need a dedicated env (e.g. `supabase-migrations`).
-- **Accepted residual race**: Vercel deploys `main` in parallel, so a brief new-code/old-schema
-  window remains.
+- **`supabase-migrations.yml` — VALIDATE-ONLY.** Triggers: every `pull_request` + push to `main` +
+  `workflow_dispatch` (path-filtered to `supabase/migrations/**` and the workflow file). The
+  `validate` job rejects filenames not matching `^[0-9]{14}_.+\.sql$` and duplicate 14-digit version
+  prefixes (see §3 collision lesson — three files at `20260718120000` once shipped). It **no longer
+  writes to any database**; its old prod-`migrate` job was retired when `web-deploy.yml` took over.
+- **Staging apply → `.github/workflows/web-deploy-staging.yml` (auto).** On push to `main`, its
+  `migrate` job runs `supabase/setup-cli@v1` (pinned `2.109.1`) → `link` → `db push` against
+  `SUPABASE_STAGING_PROJECT_REF`, and THEN deploys the staging web app in the **same run**
+  (migrate-before-deploy). Concurrency `staging-schema-write`, `cancel-in-progress: false`.
+- **Prod apply → `.github/workflows/web-deploy.yml` (manual).** A deliberate `workflow_dispatch`
+  runs `migrate` (`db push` against `SUPABASE_PROJECT_REF`) THEN `deploy`, same run — schema before
+  code. Concurrency `prod-schema-write`, `cancel-in-progress: false`. Secrets:
+  `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`.
+- Full pipeline, branch→env mapping, and the Secrets/Variables matrix: **[./environments.md](./environments.md).**
 
 ## 9. Testing
 

@@ -422,10 +422,13 @@ npx tsc --noEmit         # CI gate
   `npm install @rolldown/binding-linux-arm64-gnu lightningcss-linux-arm64-gnu
   @tailwindcss/oxide-linux-arm64-gnu @next/swc-linux-arm64-gnu --no-save` — without it vitest and
   `next build` fail on missing platform bindings. Never touch the lockfile for this.
-- **Vercel** (project `ortho`, Git integration): push to `main` → production; branches/PRs →
-  preview URLs. Load-bearing settings: **Root Directory = `web`** (the #1 first-deploy failure) and
-  `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` env vars (Vercel builds remotely —
-  `.env.local` is not involved; env-less builds succeed on placeholders but can't sign in).
+- **Vercel** (project `ortho`, team `ayaz2589s-projects`): **Actions own all deploys — no Vercel Git
+  auto-deploy on `main`** (`web/vercel.json` `deploymentEnabled.main:false`). Merging to `main`
+  auto-deploys **staging** (`web-deploy-staging.yml`); **prod is a manual promotion**
+  (`web-deploy.yml`, `workflow_dispatch`). Both use the Vercel CLI (migrate-then-deploy). Load-bearing
+  settings: **Root Directory = `web`** (the #1 first-deploy failure) and the per-environment
+  `NEXT_PUBLIC_*` vars (Vercel builds remotely — `.env.local` is not involved; env-less builds
+  succeed on placeholders but can't sign in). **Full environment/deploy model: [./environments.md](./environments.md).**
 - **Env** (`web/.env.local`, gitignored): `NEXT_PUBLIC_SUPABASE_URL`,
   `NEXT_PUBLIC_SUPABASE_ANON_KEY` (inlined at build, incl. the Capacitor build);
   `SUPABASE_SERVICE_ROLE_KEY` (CLI `ADMIN=1` only); `IMPORT_EMAIL` (optional CLI OTP). Live
