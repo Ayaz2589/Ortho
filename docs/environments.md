@@ -123,8 +123,12 @@ touches the prod project.
   (`needs: migrate`) — the same migrate-before-deploy guard as prod. Concurrency
   `staging-schema-write`, `cancel-in-progress: false`. (The old standalone
   `supabase-migrations-staging.yml` lane was folded into this and removed.)
-- **Seed data:** the demo household (spec 030) — 1 household, 2 users, ~68 transactions, 2 goals,
-  seeded from a trusted machine (§8). Owner `seed@ortho.test` is the auto-login user.
+- **Seed data:** the demo household (spec 030) — 1 household, 2 users, ~450 transactions across a
+  rolling 6 months (a research-grounded two-person ledger: recurring bills + ~11 subscriptions, a
+  discretionary long tail, two-earner variable income, a monthly remittance, seasonal spikes, and a
+  car/medical shock with the resulting overdraft), 2 goals, seeded from a trusted machine (§8). Owner
+  `seed@ortho.test` is the auto-login user. Re-seeding is a deliberate operator step — a web deploy
+  does **not** refresh existing seed rows.
 
 ## 6. Local
 

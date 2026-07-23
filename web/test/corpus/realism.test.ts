@@ -18,7 +18,7 @@ describe('demo household — determinism & coverage', () => {
     expect(d.users.length).toBe(2)
     expect(d.people.length).toBe(2)
     expect(d.members.some((m) => m.role === 'owner' && m.user_id === DEMO.ownerUserId)).toBe(true)
-    expect(d.transactions.length).toBeGreaterThan(20)
+    expect(d.transactions.length).toBeGreaterThan(150)
     expect(d.budgets.map((b) => b.budget_type).sort()).toEqual(['fixed', 'fixed', 'flex', 'non_monthly'])
     expect(d.goals.length).toBe(2)
     expect(d.goalContributions.length).toBeGreaterThan(0)
@@ -54,5 +54,59 @@ describe('demo household — determinism & coverage', () => {
     const goal = d.goals.find((g) => g.id === 'demo-goal-emergency')!
     const contribs = d.goalContributions.filter((c) => c.goal_id === goal.id)
     expect(goalOffTrackInsight(goal, contribs, NOW)).toBeNull()
+  })
+})
+
+describe('demo household — realistic volume & messiness', () => {
+  const merchantsOf = (d: ReturnType<typeof buildDemoHousehold>) =>
+    new Set(d.transactions.map((t) => t.transaction.merchant))
+
+  it('generates a realistic monthly volume, not the old ~11/mo basket', () => {
+    const d = buildDemoHousehold(NOW)
+    // A full past month (May 2026 = monthOf(NOW, -2)) should read like a real
+    // two-person household (~60-100/mo per research §5), floored conservatively.
+    const inMay = d.transactions.filter((t) => t.transaction.date.startsWith('2026-05'))
+    expect(inMay.length).toBeGreaterThanOrEqual(40)
+  })
+
+  it('has two earners, one with variable income (research U2)', () => {
+    const d = buildDemoHousehold(NOW)
+    const incomes = d.transactions.filter((t) => t.transaction.kind === 'income')
+    const owners = new Set(incomes.flatMap((t) => t.transaction.owner_ids))
+    expect(owners.has(DEMO.ownerPersonId)).toBe(true)
+    expect(owners.has(DEMO.partnerPersonId)).toBe(true)
+    // The partner's freelance income varies month to month.
+    const partnerAmts = new Set(
+      incomes
+        .filter((t) => t.transaction.owner_ids.length === 1 && t.transaction.owner_ids[0] === DEMO.partnerPersonId)
+        .map((t) => t.transaction.amount_cents)
+    )
+    expect(partnerAmts.size).toBeGreaterThan(1)
+  })
+
+  it('models subscription creep — many small recurring subs (research U5)', () => {
+    const d = buildDemoHousehold(NOW)
+    const subs = d.transactions.filter((t) => t.transaction.category === 'subs')
+    expect(subs.length).toBeGreaterThanOrEqual(50)
+    expect(new Set(subs.map((t) => t.transaction.merchant)).size).toBeGreaterThanOrEqual(10)
+  })
+
+  it('carries a recurring remittance line and shock + fragility rows', () => {
+    const merchants = merchantsOf(buildDemoHousehold(NOW))
+    expect(merchants.has('Remitly — Family')).toBe(true) // nyc §9 remittance
+    expect(merchants.has('Mavis Discount Tire')).toBe(true) // car-repair shock (U11)
+    expect(merchants.has('Mount Sinai — Billing')).toBe(true) // medical shock (U11)
+    expect(merchants.has('Overdraft Fee')).toBe(true) // fragility chain (U6/U8)
+  })
+
+  it('leaves an ambiguous/miscategorized tail (research U4)', () => {
+    const merchants = merchantsOf(buildDemoHousehold(NOW))
+    expect(['Venmo', 'PayPal', 'Square', 'Cash App'].some((m) => merchants.has(m))).toBe(true)
+  })
+
+  it('has multiple transfers (remittances + periodic settle-ups)', () => {
+    const d = buildDemoHousehold(NOW)
+    const transfers = d.transactions.filter((t) => t.transaction.kind === 'transfer')
+    expect(transfers.length).toBeGreaterThan(6)
   })
 })

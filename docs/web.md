@@ -373,8 +373,12 @@ opaque). Contract: `specs/022-web-bundle-optimization/contracts/bundle-measureme
   `lib/splits.ts` (guarded — no forked math; guarded against bundle import). Committed snapshot
   `test/corpus/__snapshots__/corpus.snapshot.json`; regenerate with `npm run gen:corpus`.
 - **Realism / demo layer (spec 030):** `web/test/corpus/realism.ts` `buildDemoHousehold(now)` — one
-  realistic, **now-anchored** household (the auto-login user owns it) that populates every screen;
-  deterministic given `now`, NOT part of the snapshot corpus.
+  realistic, **now-anchored** household (the auto-login user owns it) that populates every screen.
+  A rolling 6-month, ~450-transaction ledger grounded in `docs/research/finance-habits-budgeting-apps.md`
+  (§5 cadence, §3 unhappy-path taxonomy) + the NYC market analysis: ~11 subscriptions (creep),
+  recurring bills, a discretionary long tail, two-earner variable income, a monthly remittance,
+  seasonal spikes, and a car/medical shock with an overdraft. Deterministic given `now` (fixed-seed
+  PRNG + per-month substream — no `Date.now`/`Math.random`), NOT part of the snapshot corpus.
 - **Holistic seeder:** `npm run seed:corpus` seeds the demo household by default (add `--corpus` for the
   full edge corpus) into a **local/dev** Supabase only (`seed-guard.ts`: remote requires
   `--i-understand-this-is-not-local` AND `SEED_ALLOW_REMOTE=1`). It creates the required `auth.users`
