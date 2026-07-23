@@ -1,36 +1,20 @@
-# Supabase migrations — the deploy-before-migrate guard.
+# Supabase migrations — VALIDATE migration files (prod apply lives in web-deploy.yml).
 #
 # WHY THIS EXISTS: on 2026-07-19 prod went down with "column transactions.notes
-# does not exist" — Vercel had shipped `main` to production while the prod
-# database silently sat EIGHT migrations behind (migrations were applied by hand,
-# and got forgotten). This workflow makes migrations part of the merge, not a
-# manual afterthought:
+# does not exist" — Vercel had shipped `main` to production while the prod database
+# silently sat EIGHT migrations behind (migrations were applied by hand, and got
+# forgotten). Two things now prevent a recurrence:
 #
-#   • validate — on every PR + push: rejects duplicate migration versions and
-#     malformed filenames (a duplicate version collides in supabase's
+#   • validate (THIS file) — on every PR + push: rejects duplicate migration
+#     versions and malformed filenames (a duplicate version collides in supabase's
 #     schema_migrations tracking; that exact bug — three files at 20260718120000 —
-#     shipped this week and this check would have caught it).
-#   • migrate  — on push to main only: applies pending migrations to prod via
-#     `supabase db push`, so the schema lands with the code instead of after it.
+#     shipped and this check catches it).
+#   • APPLY-then-DEPLOY — prod migrations are applied by web-deploy.yml, which runs
+#     `supabase db push` and THEN deploys the web app in the same run, so the schema
+#     always lands before the code (closing the race this file used to leave open).
 #
-# ── ONE-TIME SETUP (repo Settings) ──────────────────────────────────────────
-#   Secrets (Settings → Secrets and variables → Actions → Secrets):
-#     SUPABASE_ACCESS_TOKEN  — https://supabase.com/dashboard/account/tokens
-#     SUPABASE_DB_PASSWORD   — Project Settings → Database → Database password
-#   Variables (…→ Variables):
-#     SUPABASE_PROJECT_REF   — brujhxmtzfgowimprueo  (not secret; it's in the
-#                              public client URL — a Variable, not a Secret)
-#   Optional prod-write approval gate: create an Environment named `production`
-#   (Settings → Environments) with required reviewers. Leave it ungated for
-#   fully-automatic apply.
-#
-# ── RESIDUAL RACE (known, acceptable for now) ───────────────────────────────
-#   Vercel auto-deploys `main` in parallel with this job, so there's a brief
-#   window where new code could hit the old schema. This is already a massive
-#   improvement (migrations apply automatically within ~a minute, never
-#   forgotten). To close the window entirely, either (a) sequence the Vercel
-#   deploy AFTER this job via a deploy hook, or (b) make the app's reads tolerate
-#   a not-yet-migrated column the way they already tolerate missing tables.
+# This file no longer writes to prod — see web-deploy.yml for the prod migrate+deploy
+# pipeline (and its SUPABASE_* secrets/var). Staging: supabase-migrations-staging.yml.
 
 name: Supabase migrations
 
@@ -84,50 +68,3 @@ jobs:
 
           if [ "$fail" -eq 0 ]; then echo "Migrations OK: $(ls -1 *.sql | wc -l | tr -d ' ') files, all uniquely versioned."; fi
           exit "$fail"
-
-  migrate:
-    name: Apply migrations to prod
-    needs: validate
-    # push to main on the canonical repo only — never on PRs or forks (which
-    # can't read the secrets anyway).
-    # `vars` (unlike `secrets`) are allowed in job `if:`, so until you set the
-    # project-ref variable this job SKIPS cleanly instead of failing red.
-    # Runs on a merge to main OR a manual "Run workflow" (the latter lets you
-    # test the wiring / apply pending migrations on demand).
-    if: >-
-      (
-        (github.event_name == 'push' && github.ref == 'refs/heads/main')
-        || github.event_name == 'workflow_dispatch'
-      )
-      && github.repository == 'Ayaz2589/Ortho'
-      && vars.SUPABASE_PROJECT_REF != ''
-    runs-on: ubuntu-latest
-    # No `environment:` here on purpose — it would collide with Vercel's existing
-    # "Production" environment. To add a manual-approval gate before prod writes,
-    # create a DEDICATED environment (e.g. `supabase-migrations`) with required
-    # reviewers and set `environment: supabase-migrations`.
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: supabase/setup-cli@v1
-        with:
-          version: "2.109.1"
-
-      - name: Link to prod and push pending migrations
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
-        run: |
-          set -euo pipefail
-          if [ -z "${SUPABASE_PROJECT_REF:-}" ]; then
-            echo "::error::SUPABASE_PROJECT_REF variable is not set (repo Settings → Variables)."
-            exit 1
-          fi
-          supabase link --project-ref "$SUPABASE_PROJECT_REF"
-          echo "── migration status before push ──"
-          supabase migration list || true
-          echo "── applying ──"
-          supabase db push
-          echo "── migration status after push ──"
-          supabase migration list
