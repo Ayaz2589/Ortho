@@ -1,0 +1,129 @@
+# Web STAGING deploy — AUTOMATIC on every push to `main` (migrate-before-deploy).
+#
+# DEPLOY MODEL (2026-07-23): `main` is the STAGING line. Merging to `main`
+# migrates the staging DB FIRST, then builds and deploys the web app to the Vercel
+# `staging` custom environment via the CLI — so staging is always the latest `main`,
+# with schema landing before the code that needs it. PRODUCTION is a deliberate,
+# MANUAL promotion of the same code — see web-deploy.yml (workflow_dispatch only).
+#
+# This replaces the old `staging`-branch flow: the standalone
+# supabase-migrations-staging.yml lane is folded into this file's `migrate` job, and
+# staging no longer tracks the `staging` git branch (drive it from `main`).
+#
+# Uses (already configured): var SUPABASE_STAGING_PROJECT_REF, secret
+# SUPABASE_STAGING_DB_PASSWORD, secret SUPABASE_ACCESS_TOKEN (account-scoped),
+# var VERCEL_ORG_ID / VERCEL_PROJECT_ID, secret VERCEL_TOKEN. Every job skips
+# cleanly (green) until its identifiers are set, so the lane is inert until ready.
+#
+# Vercel custom-environment deploy uses `--environment=staging` (pull) and
+# `--target=staging` (build + deploy) — `--target=staging` on BUILD is what inlines
+# the staging NEXT_PUBLIC_* values (a plain `vercel build` would use Preview vars).
+
+name: Web deploy (staging)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    name: Apply pending migrations to staging
+    # Canonical repo + main ref only; inert until the Vercel identifiers and the
+    # staging project-ref are set. Skips cleanly (green), never red.
+    if: >-
+      github.repository == 'Ayaz2589/Ortho'
+      && github.ref == 'refs/heads/main'
+      && vars.VERCEL_PROJECT_ID != ''
+      && vars.VERCEL_ORG_ID != ''
+      && vars.SUPABASE_STAGING_PROJECT_REF != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Serialize staging schema writes; never interrupt a mid-flight migration.
+    concurrency:
+      group: staging-schema-write
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: "2.109.1"
+      - name: Link to staging and push pending migrations (idempotent)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_STAGING_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          echo "── migration status before push (staging) ──"
+          supabase migration list || true
+          echo "── applying pending migrations (staging) ──"
+          supabase db push
+          echo "── migration status after push (staging) ──"
+          supabase migration list
+
+  deploy:
+    name: Build & deploy web to Vercel (staging)
+    needs: migrate
+    # Runs after migrate SUCCEEDS or is legitimately SKIPPED (Vercel/Supabase not
+    # configured), but NOT if migrate FAILED — a failed schema push blocks the deploy.
+    # `cancelled() == false` drops it when a newer push supersedes this run. Style +
+    # unwrapped-folded-scalar rationale mirror web-deploy.yml's deploy gate.
+    if: >-
+      github.repository == 'Ayaz2589/Ortho'
+      && github.ref == 'refs/heads/main'
+      && vars.VERCEL_ORG_ID != ''
+      && vars.VERCEL_PROJECT_ID != ''
+      && cancelled() == false
+      && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Newest staging deploy wins: a fresher main push cancels a stale in-flight deploy.
+    concurrency:
+      group: staging-deploy
+      cancel-in-progress: true
+    env:
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Assert Vercel token is present
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::error::VERCEL_TOKEN secret is not set — see web-deploy.yml's ACTIVATION block."
+            exit 1
+          fi
+
+      # Pinned to the version proven on prod (2026-07-23); bump deliberately.
+      - name: Install Vercel CLI
+        run: npm i -g vercel@56.5.0
+
+      - name: Print Vercel CLI version
+        run: vercel --version
+
+      # `--environment=staging` pulls the custom env's settings + NEXT_PUBLIC_* vars.
+      - name: Pull staging project settings & env
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel pull --yes --environment=staging
+
+      # `--target=staging` (NOT `--prod`) builds against the custom env so the staging
+      # NEXT_PUBLIC_* values inline into the client bundle.
+      - name: Build (staging)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel build --target=staging
+
+      - name: Deploy prebuilt output to staging
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel deploy --prebuilt --target=staging

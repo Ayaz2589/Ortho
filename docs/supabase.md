@@ -313,14 +313,14 @@ racy parallel-deploy window that outage exposed is *closed*, not merely accepted
   `validate` job rejects filenames not matching `^[0-9]{14}_.+\.sql$` and duplicate 14-digit version
   prefixes (see §3 collision lesson — three files at `20260718120000` once shipped). It **no longer
   writes to any database**; its old prod-`migrate` job was retired when `web-deploy.yml` took over.
-- **Prod apply → `.github/workflows/web-deploy.yml`.** On push to `main`, its `migrate` job runs
-  `supabase/setup-cli@v1` (pinned `2.109.1`) → `link` → `db push` against `SUPABASE_PROJECT_REF`,
-  and THEN deploys the web app in the **same run** — so schema always lands before the code that
-  needs it. Concurrency `prod-schema-write`, `cancel-in-progress: false`. Secrets:
+- **Staging apply → `.github/workflows/web-deploy-staging.yml` (auto).** On push to `main`, its
+  `migrate` job runs `supabase/setup-cli@v1` (pinned `2.109.1`) → `link` → `db push` against
+  `SUPABASE_STAGING_PROJECT_REF`, and THEN deploys the staging web app in the **same run**
+  (migrate-before-deploy). Concurrency `staging-schema-write`, `cancel-in-progress: false`.
+- **Prod apply → `.github/workflows/web-deploy.yml` (manual).** A deliberate `workflow_dispatch`
+  runs `migrate` (`db push` against `SUPABASE_PROJECT_REF`) THEN `deploy`, same run — schema before
+  code. Concurrency `prod-schema-write`, `cancel-in-progress: false`. Secrets:
   `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`.
-- **Staging apply → `.github/workflows/supabase-migrations-staging.yml`.** Push to the `staging`
-  branch (path-filtered) → `db push` against `SUPABASE_STAGING_PROJECT_REF` (does not gate the
-  staging web deploy). Inert until that variable is set.
 - Full pipeline, branch→env mapping, and the Secrets/Variables matrix: **[./environments.md](./environments.md).**
 
 ## 9. Testing

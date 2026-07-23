@@ -1,4 +1,4 @@
-# Web PRODUCTION deploy — the migrate-BEFORE-deploy guard (spec 030 hybrid model).
+# Web PRODUCTION deploy — MANUAL migrate-BEFORE-deploy promotion (spec 030 model).
 #
 # WHY THIS EXISTS: prod runs on Vercel. Vercel's Git integration used to ship
 # `main` to Production automatically, IN PARALLEL with the Supabase migration job —
@@ -6,8 +6,13 @@
 # not exist": new code reached an un-migrated schema). This workflow OWNS the prod
 # release: job `migrate` applies pending migrations FIRST, then job `deploy` builds
 # and ships the web app with the Vercel CLI — so schema always lands before the code
-# that needs it. STAGING is deliberately NOT here: it stays on Vercel's Git
-# integration (push the `staging` branch → preview URL); no token, no gating.
+# that needs it.
+#
+# TRIGGER = MANUAL ONLY (workflow_dispatch). Merging to `main` no longer touches
+# prod — it auto-deploys STAGING (web-deploy-staging.yml). To release prod you
+# deliberately run this workflow (Actions ▸ "Web deploy (prod)" ▸ Run workflow, or
+# `gh workflow run web-deploy.yml`) from `main` — a promotion of code already
+# exercised on staging.
 #
 # INERT UNTIL ACTIVATED: every job is gated on `vars.VERCEL_PROJECT_ID`, so merging
 # this file changes nothing until you deliberately cut over (see ACTIVATION below).
@@ -34,15 +39,17 @@
 #   Ungated until you add reviewers, so it is safe to leave as-is.
 #
 # ── STAGING (separate track) ────────────────────────────────────────────────
-#   Staging stays on Vercel's Git integration (`staging` branch → preview); its DB
-#   migrations are applied by supabase-migrations-staging.yml. Provisioning the
-#   staging Supabase project is tracked in specs/030-holistic-seed-auth/quickstart.md §B.
+#   Staging AUTO-deploys on every push to `main` via web-deploy-staging.yml
+#   (migrate the staging DB → deploy the Vercel `staging` custom env). Full
+#   local/stage/prod model + branch mapping: docs/environments.md.
 
 name: Web deploy (prod)
 
 on:
-  push:
-    branches: [main]
+  # MANUAL ONLY. Merging to `main` auto-deploys STAGING (web-deploy-staging.yml),
+  # never prod. Release prod deliberately: Actions ▸ Run workflow (or
+  # `gh workflow run web-deploy.yml`) from `main` — the `github.ref` gates below
+  # require the `main` ref, so a dispatch from any other branch skips cleanly.
   workflow_dispatch:
 
 jobs:
