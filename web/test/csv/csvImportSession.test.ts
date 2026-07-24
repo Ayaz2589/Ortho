@@ -102,6 +102,28 @@ describe('csvImportReducer', () => {
     expect(updated.drafts[id].merchant).toBe('Edited Merchant')
     expect(updated.drafts[id].notes).toBe('test note')
     expect(updated.drafts[id].source).toBe(listState.drafts[id].source)
+    // A value-changing update flags the row as edited.
+    expect(listState.drafts[id].edited).toBe(false)
+    expect(updated.drafts[id].edited).toBe(true)
+  })
+
+  it('draft/update with no real change does not flag the row edited', () => {
+    const statement = makeStatement([makeParsedTx({ merchant: 'Starbucks #1234' })])
+    const listState = csvImportReducer(initialCsvImportState, {
+      type: 'file/parsed',
+      statement,
+      bankLabel: 'Chase',
+    })
+    if (listState.phase !== 'list-view') throw new Error('Expected list-view')
+    const id = Object.keys(listState.drafts)[0]
+    // Re-save the same merchant it already has → no change → not edited.
+    const updated = csvImportReducer(listState, {
+      type: 'draft/update',
+      id,
+      patch: { merchant: 'Starbucks #1234' },
+    })
+    if (updated.phase !== 'list-view') throw new Error('Expected list-view')
+    expect(updated.drafts[id].edited).toBe(false)
   })
 
   it('list-view + draft/toggleChecked → flips checked flag', () => {

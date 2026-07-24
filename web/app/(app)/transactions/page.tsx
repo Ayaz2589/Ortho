@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Search, Plus, X, ArrowUpDown, ChevronDown, ChevronLeft, SlidersHorizontal, FileSpreadsheet } from 'lucide-react'
 import { useApp } from '@/lib/store'
@@ -42,8 +42,7 @@ export default function TransactionsPage() {
   const [filterOpen, setFilterOpen] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [csvFile, setCsvFile] = useState<File | null>(null)
-  const csvInputRef = useRef<HTMLInputElement>(null)
+  const [csvOpen, setCsvOpen] = useState(false)
 
   const hasAny = transactions.length > 0
 
@@ -185,7 +184,7 @@ export default function TransactionsPage() {
                 )}
               </span>
             )}
-            <IconButton ariaLabel={t('Import a CSV')} onClick={() => csvInputRef.current?.click()}>
+            <IconButton ariaLabel={t('Import a CSV')} onClick={() => setCsvOpen(true)}>
               <FileSpreadsheet size={18} />
             </IconButton>
             <IconButton ariaLabel={t('Add transaction')} onClick={openAdd}>
@@ -322,24 +321,7 @@ export default function TransactionsPage() {
         <FilterPanel f={f} />
       </Modal>
 
-      <input
-        ref={csvInputRef}
-        type="file"
-        accept=".csv"
-        style={{ display: 'none' }}
-        aria-hidden="true"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
-          if (file) setCsvFile(file)
-          e.target.value = ''
-        }}
-      />
-      {csvFile && (
-        <CsvImportFlow
-          initialFile={csvFile}
-          onClose={() => setCsvFile(null)}
-        />
-      )}
+      {csvOpen && <CsvImportFlow onClose={() => setCsvOpen(false)} />}
     </div>
   )
 }
