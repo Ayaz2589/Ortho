@@ -221,3 +221,235 @@ ownership.
 
 All 191 test files pass as of 2026-07-24 (`npm test`). TypeScript clean
 (`npx tsc --noEmit` exits 0).
+
+---
+
+## 11. Next Steps — Household Feature Redesign
+
+Written 2026-07-24 after auditing the existing system against the product vision and market
+research in `docs/research/`. Read alongside `docs/research/finance-habits-budgeting-apps.md`
+(§4 couples-splitting reality) and `docs/research/product-fit-analysis.md` (§3 code audit).
+
+---
+
+### 11.1 Product vision
+
+A user does **not** need to be in a household. The app works as a solo budgeting tool. Household
+features are opt-in — a user can add "local members" (a roommate, a partner, a family member who
+doesn't have an Ortho account) and then assign transaction ownership and splits among those people.
+
+Core behaviors once household members exist:
+
+| Transaction ownership mode | `paid_by` | `owner_ids` | Balance effect |
+|---|---|---|---|
+| **Just me** | self | [self] | none |
+| **We each paid our share** | null / each | [multiple] | none (each paid their portion) |
+| **I paid for everyone** | self | [self + others] | others owe self their shares |
+| **They paid for everyone** | other | [self + other] | self owes other their share |
+| **Shared income (received by one)** | recipient | [recipient + others] | others are owed their shares |
+| **Shared income (received jointly)** | null | [multiple] | none or per individual shares |
+| **Settlement** | payer | [payee] | zeroes out existing balance |
+
+The existing `paid_by` + `owner_ids` + `shares` data model already encodes all of these. The
+missing pieces are:
+1. UX clarity (a "payment mode" selector that hides the underlying model complexity)
+2. Income balance effects (currently excluded from `balanceBetween`)
+3. N-person pairwise balance matrix (current `balanceBetween` is viewer-anchored, breaks for 3+)
+4. A dashboard balance widget
+
+---
+
+### 11.2 Gap analysis — what exists vs what to build
+
+| Feature | Status | Notes |
+|---|---|---|
+| Solo mode (no household required) | 🟡 Needs UX change | Bootstrap always creates a household; `activePeople.length === 1` guard needed in split UI |
+| Local members (no Ortho account) | ✅ Exists | `household_people` with `linked_user_id = null` already supports this; needs clearer onboarding copy |
+| Transaction ownership type UI | ❌ Needs new UI | Maps onto existing `paid_by` + `owner_ids` — UX wrapper only, no schema change |
+| Flexible splits (equal / pct / amount) | ✅ Exists | `shares Record<personId, cents>` — needs preset buttons in transaction form |
+| One-paid-for-everyone → balance | ✅ Exists | `paid_by ≠ owner_ids` logic in `balanceBetween` is already correct |
+| Income balance effects | ❌ Missing | `balanceBetween` (`lib/balances.ts`) skips income with an explicit `continue` |
+| N-person pairwise balance matrix (3+) | ❌ Missing | Current function is viewer-anchored; `what Amir owes Fatima is invisible to Carol` |
+| Balance debt simplification | ❌ Missing (optional) | For 3+ people: collapse A→B + B→C into A→C |
+| Dashboard balance widget | 🟡 Partial | `BalanceSummary` lives on Transactions page only; needs to become a dashboard widget |
+| Settle-up for income balances | ❌ Missing | Automatic once income balance effects land (same prefill flow) |
+
+---
+
+### 11.3 Technical changes required
+
+#### A. Solo mode
+
+No schema changes. Guard on `activePeople.length > 1` (already available in store):
+
+- `AddTransactionForm` / `EditTransactionForm`: hide "split with" and "who paid" sections when solo
+- `BalanceSummary` and balance widget: render nothing when solo
+- Settings → Household: surface "Add a person" as the entry point, not a prerequisite
+
+#### B. Income balance effects
+
+Current exclusion in `lib/balances.ts`:
+
+```ts
+// current — income excluded entirely
+if (tx.type === 'income') continue;
+```
+
+New logic: income follows the same `paid_by` / `owner_ids` / `shares` formula as expenses, but
+with inverted sign semantics. When someone **receives** income that is designated shared:
+
+- **Recipient is `paid_by`:** non-recipient owners are owed their share → `net += other.share`
+  from the viewer's perspective toward the recipient
+- Mechanically identical to the existing expense path — the sign inversion is already handled by
+  the `paid_by === viewer` vs `paid_by === other` branches in `balanceBetween`
+
+The fix is removing the `if (tx.type === 'income') continue` guard and testing the income vectors
+(add new golden vectors to `test/member-balance.parity.test.ts`).
+
+#### C. N-person pairwise balance matrix
+
+Current `balanceBetween(viewer, other, transactions)` is asymmetric and viewer-scoped. For 3+
+people, add:
+
+```ts
+// lib/balances.ts
+allPairBalances(
+  people: Person[],
+  transactions: Transaction[],
+  shares: Shares
+): Map<personId, Map<personId, number>>
+// [a][b] = amount B owes A (positive) or A owes B (negative)
+```
+
+This is a double loop over `people × people`, calling `balanceBetween` for each ordered pair. The
+matrix is symmetric by sign (`[a][b] === -[b][a]`). Used by the balance widget to enumerate all
+outstanding pairs.
+
+#### D. Balance debt simplification (optional, recommended for 3+ households)
+
+For 3+ person households, multi-hop debts can be collapsed. If Alice owes Bob $30 and Bob owes
+Carol $20, the net is Alice→Carol $20 + Alice→Bob $10. Implement as a pure function over the
+balance matrix (Splitwise's published "Debts Made Simple" algorithm). Reduces the number of
+settle-up transfers the household needs to complete.
+
+This is non-trivial to explain in the UI but materially reduces friction in shared households.
+Gate it behind `activePeople.length >= 3` and show a "Simplified" toggle.
+
+#### E. Dashboard balance widget (`HouseholdBalancesWidget`)
+
+- Replaces / mirrors `BalanceSummary` on the dashboard Overview
+- Shows each non-zero pairwise balance as a row: `{name} owes you $X` / `You owe {name} $X`
+- "Settle up" button per pair — prefills a transfer transaction (B9 fix intact)
+- "All settled" empty state when all balances are zero
+- Hidden when solo or no household members
+- Show total net position at the top ("You are owed $X net" / "You owe $X net")
+
+#### F. Transaction ownership type UX
+
+Add a mode selector to transaction forms — three modes that wrap the existing model:
+
+| Mode label (UI) | `paid_by` | `owner_ids` |
+|---|---|---|
+| Just me | self | [self] |
+| Split — we each paid | null | [selected people] |
+| [Person] paid for everyone | selected payer | [all selected] |
+
+"Split — we each paid" hides the balance implication; "paid for everyone" makes it explicit that
+a balance will be created. Income transactions get the same selector with language flipped
+("received by" instead of "paid by").
+
+No schema changes. Fully maps onto the existing `paid_by` + `owner_ids` + `shares` fields.
+
+---
+
+### 11.4 Research-backed enhancements (not in the original ask — recommended additions)
+
+From `docs/research/finance-habits-budgeting-apps.md` §4 and `docs/research/product-fit-analysis.md`:
+
+1. **Split presets** — Research: ~46% of couples actually split 50/50; ~38% proportional-to-income
+   (YouGov UK, Census SIPP). One-tap "Equal split" button is the single highest-frequency
+   affordance in the split UI. Proportional-to-income requires per-person income to be set (a
+   future settings field).
+
+2. **Settle-up threshold nudge** — Research synthesis: shared-expense settle-up is episodic;
+   balances accumulate until a manual threshold (~$100–300, around payday). A configurable nudge
+   ("You're owed $145 — settle up?") on the balance widget surfaces what the dashboard otherwise
+   buries. Low build cost, high perceived attentiveness.
+
+3. **Settlement history** — Show a filtered view of past transfer/settle-up transactions within
+   the balance widget. Answers "when did we last settle?" and builds trust in the running balance
+   number. Already exists in the transaction ledger; just needs a filtered view.
+
+4. **Balance debt simplification** — See §11.3.D. NYC's target households are 2–4 adults
+   (`docs/research/nyc-market-language-analysis.md` §8: ~10% of immigrant families in overcrowded
+   shared households). For 3-person households this is a tangible quality-of-life win.
+
+5. **Recurring split memory** — For recurring merchants (Netflix, rent, Con Ed), remember and
+   suggest the previous split configuration. Research: ~10–15 recurring charges/month are the
+   minority of transaction *count* but a large share of *value*
+   (`docs/research/finance-habits-budgeting-apps.md` §5). Reducing friction on the most common
+   shared expenses reduces abandonment.
+
+6. **Cash payment tracking** — Research: ~24% of payments for households under $25k are cash
+   (FDIC 2023; `docs/research/product-fit-analysis.md` §4.3). The current model assumes a tracked
+   payment. For balance purposes, "Alex paid cash for groceries — split 50/50" should create the
+   same balance as a card payment. Ensure the transaction form's "who paid" flow works for
+   cash-payer designation.
+
+---
+
+### 11.5 What NOT to change
+
+- The `household_people` / `transaction_shares` schema — solid, don't restructure
+- The atomic `upsert_transaction` RPC — keep as-is; extend only if income balance effects require
+  a DB-level constraint change (unlikely — the share-sum check is amount-agnostic)
+- Soft-delete on `household_people` — critical for balance history with removed members (§7 note:
+  `BalanceSummary` already finds and shows removed-member balances correctly)
+- The B9 settle-up fix (exact integer cents through `amountCents`, not display currency) — keep
+- `paid_by` + `owner_ids` + `shares` transaction model — clarify the UX, not the model
+- No invite flow decision (§9) — still a deliberate deferral; local members remain name-only
+
+---
+
+### 11.6 Implementation order (recommended phases)
+
+**Phase 1 — UX only, no logic changes, no schema changes**
+
+1. Solo mode guard: hide split/balance UI when `activePeople.length === 1`
+2. Onboarding copy: "Add a roommate or family member — they don't need an Ortho account"
+3. Transaction ownership type selector (wraps existing `paid_by` + `owner_ids` UX)
+4. Split preset buttons: "Equal" one-tap, manual percentage/amount
+
+**Phase 2 — New logic, no schema changes**
+
+5. Income balance effects: remove income exclusion in `lib/balances.ts`; add income vectors to
+   `test/member-balance.parity.test.ts`
+6. N-person pairwise balance matrix: `allPairBalances` in `lib/balances.ts`
+7. Dashboard balance widget: `HouseholdBalancesWidget` using the matrix
+8. Settle-up for income balances: automatic once Phase 2.5 lands (same prefill flow)
+
+**Phase 3 — Research-backed enhancements**
+
+9. Settle-up threshold nudge (configurable in Settings)
+10. Settlement history view (filtered ledger inside the balance widget)
+11. Balance debt simplification for 3+ person households
+12. Recurring split memory (suggest previous split for known recurring merchants)
+
+---
+
+### 11.7 Open questions flagged by research
+
+- **Balance visibility in multi-person households**: Should Carol see Alice and Bob's balance with
+  each other? Today `balanceBetween` is viewer-scoped so Carol cannot. Full transparency aids trust
+  in shared households but may feel invasive. Decide before shipping the balance matrix.
+
+- **Private transactions**: `transactions.scope` was dropped in spec 007. In multigenerational or
+  mixed-income households, not every expense should be visible to all members. This is a non-goal
+  for now but will come up once households have 3+ members.
+
+- **Household-level vs per-person budgets**: The budget engine currently models a merged wallet
+  (`lib/finance/budgets.ts` has zero references to `owner_ids`). As households grow to 3+ people,
+  "who is over budget" becomes ambiguous. This is deferred but the architecture has a seam here.
+
+- **Income split UI language**: "Received by" vs "Who earned it" vs "Who gets credit" — the right
+  framing for income splits needs a user test, not a design assumption.
