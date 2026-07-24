@@ -12,9 +12,37 @@ import type { CsvDraftRow } from '@/lib/csv/csvImportModels'
 import type { TransactionCategory } from '@/lib/types'
 import { mediumDate } from '@/lib/format'
 import { rankedMerchants, suggestMerchants } from '@/lib/csv/merchantSuggest'
+import { computeShares, validateSplit, orderedOwnerIds, type SplitInput, type SplitMethod } from '@/lib/splits'
+import { evenPercentStrings, evenValueStrings, rebalancePercents } from '@/lib/splitFields'
+import { currencySymbol, fractionDigits } from '@/lib/finance/currency'
+import { parseMoney } from '@/components/inputs'
 import { Avatar } from '@/components/ui'
-import { CatTile, FormRow as Row } from '@/components/web/kit'
+import { CatTile, Seg, FormRow as Row } from '@/components/web/kit'
 import { TagEditor } from '@/components/web/TagEditor'
+
+/** Display-currency string for USD cents (empty for 0). Mirrors TxForm. */
+function centsToDisplay(cents: number, rate: number, fd: number): string {
+  if (!cents) return ''
+  return ((cents / 100) * rate).toFixed(fd)
+}
+
+/** Reconstruct the per-owner split-field text from a stored SplitInput so the
+ *  editor reopens showing the same split (mirrors TxForm's seed). */
+function seedSplitFields(
+  split: SplitInput | null,
+  owners: string[],
+  rate: number,
+  fd: number
+): { method: SplitMethod; text: Record<string, string> } {
+  if (!split || owners.length < 2 || split.method === 'even') return { method: 'even', text: {} }
+  const text: Record<string, string> = {}
+  if (split.method === 'percent') {
+    for (const id of owners) text[id] = (split.percents[id] ?? 0).toFixed(2)
+    return { method: 'percent', text }
+  }
+  for (const id of owners) text[id] = ((split.values[id] ?? 0) / 100 * rate).toFixed(fd)
+  return { method: 'value', text }
+}
 
 interface Props {
   draft: CsvDraftRow
@@ -24,12 +52,20 @@ interface Props {
 }
 
 export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
-  const { householdMembers, transactions, formatMoney, t } = useApp()
+  const { householdMembers, transactions, cards, formatMoney, currency, rate, t } = useApp()
+  const fd = fractionDigits(currency)
+  const r = rate(currency)
   const [merchant, setMerchant] = useState(draft.merchant)
   const [category, setCategory] = useState<TransactionCategory>(draft.category)
   const [ownerIds, setOwnerIds] = useState<string[]>(draft.ownerIds)
+  const [paymentSource, setPaymentSource] = useState(draft.paymentSource)
   const [tags, setTags] = useState<string[]>(draft.tags)
   const [notes, setNotes] = useState(draft.notes ?? '')
+  // Split editor: method + per-owner text (percentage or display amount). Even by
+  // default; reopens on the draft's stored split — same vocabulary as TxForm.
+  const initialSplit = seedSplitFields(draft.split, draft.ownerIds, r, fd)
+  const [splitMethod, setSplitMethod] = useState<SplitMethod>(initialSplit.method)
+  const [splitText, setSplitText] = useState<Record<string, string>>(initialSplit.text)
   // Reflect an already-included duplicate (checked despite being a dup) so the
   // toggle isn't shown unchecked when reopening a row the user already included.
   const [includeAnyway, setIncludeAnyway] = useState(!!draft.duplicateOf && draft.checked)
@@ -38,13 +74,19 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
     setMerchant(draft.merchant)
     setCategory(draft.category)
     setOwnerIds(draft.ownerIds)
+    setPaymentSource(draft.paymentSource)
     setTags(draft.tags)
     setNotes(draft.notes ?? '')
+    const s = seedSplitFields(draft.split, draft.ownerIds, r, fd)
+    setSplitMethod(s.method)
+    setSplitText(s.text)
     setIncludeAnyway(!!draft.duplicateOf && draft.checked)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.id])
 
   const isExpense = draft.source.kind === 'expense'
   const showOwners = householdMembers.length > 1
+  const showSplit = ownerIds.length >= 2
 
   // Merchant names the household already uses — for autocomplete + "you've used"
   // suggestions that normalize a messy CSV descriptor to a familiar name.
@@ -54,16 +96,58 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
     [merchant, knownMerchants]
   )
 
-  const toggleOwner = (id: string) =>
+  const toggleOwner = (id: string) => {
     setOwnerIds((prev) =>
       prev.includes(id) ? (prev.length > 1 ? prev.filter((x) => x !== id) : prev) : [...prev, id]
     )
+    // Owner-set changes rebalance to an even split (mirrors TxForm).
+    setSplitMethod('even')
+    setSplitText({})
+  }
+
+  /** Switch split method, seeding even values so the editor opens valid. */
+  const chooseSplitMethod = (m: SplitMethod) => {
+    setSplitMethod(m)
+    if (m === 'percent') setSplitText(evenPercentStrings(ownerIds))
+    else if (m === 'value') setSplitText(evenValueStrings(ownerIds, centsToDisplay(draft.amountCents, r, fd), fd))
+    else setSplitText({})
+  }
+  const setSplitValue = (id: string, v: string) => setSplitText((prev) => ({ ...prev, [id]: v }))
+  const setSplitPercent = (id: string, v: string) =>
+    setSplitText((prev) => rebalancePercents(prev, id, v, ownerIds))
+
+  // The chosen split as a SplitInput (null = even). Percents are read verbatim;
+  // by-value amounts are parsed from display currency back to USD cents.
+  const buildSplit = (): SplitInput | null => {
+    if (ownerIds.length < 2 || splitMethod === 'even') return null
+    if (splitMethod === 'percent') {
+      const percents: Record<string, number> = {}
+      for (const id of ownerIds) percents[id] = Number(splitText[id] ?? '') || 0
+      return { method: 'percent', percents }
+    }
+    const values: Record<string, number> = {}
+    for (const id of ownerIds) values[id] = parseMoney(splitText[id] ?? '', currency, r) ?? 0
+    return { method: 'value', values }
+  }
+  const splitInput = buildSplit()
+  const splitValidation = splitInput
+    ? validateSplit(draft.amountCents, ownerIds, splitInput)
+    : ({ ok: true } as const)
+  const splitOk = splitValidation.ok
+  const splitReason = splitValidation.ok ? null : splitValidation.reason
+  // Live per-owner cents for the editor's amount readout.
+  const displayShares = showSplit
+    ? computeShares(draft.amountCents, orderedOwnerIds(ownerIds), splitInput ?? { method: 'even' })
+    : {}
 
   const handleSave = () => {
+    if (!splitOk) return
     const patch: Partial<Omit<CsvDraftRow, 'id' | 'source'>> = {
       merchant,
       category,
       ownerIds,
+      split: buildSplit(),
+      paymentSource,
       tags,
       notes: notes.trim() || null,
     }
@@ -121,7 +205,16 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
         <button
           className="ow-btn"
           onClick={handleSave}
-          style={{ marginLeft: 'auto', fontSize: 15, fontWeight: 400, color: 'var(--accent)', letterSpacing: '-0.2px', zIndex: 1 }}
+          disabled={!splitOk}
+          style={{
+            marginLeft: 'auto',
+            fontSize: 15,
+            fontWeight: 400,
+            color: splitOk ? 'var(--accent)' : 'var(--text-3)',
+            letterSpacing: '-0.2px',
+            zIndex: 1,
+            cursor: splitOk ? 'pointer' : 'default',
+          }}
         >
           Save
         </button>
@@ -207,6 +300,30 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
           <Row label="Date">
             <span style={{ color: 'var(--text-2)' }}>{mediumDate(new Date(draft.dateISO))}</span>
           </Row>
+          {/* Paid with — seeded from a card matching the imported bank; editable
+              here, or "Not set" (flagged in the list until chosen). */}
+          <Row label="Paid with">
+            {cards.length === 0 ? (
+              <span style={{ color: 'var(--text-3)' }}>No cards yet</span>
+            ) : (
+              <select
+                value={paymentSource}
+                onChange={(e) => setPaymentSource(e.target.value)}
+                aria-label="Paid with"
+                style={selectStyle}
+              >
+                <option value="">Not set</option>
+                {cards.map((c) => (
+                  <option key={c.id} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+                {paymentSource && !cards.some((c) => c.name === paymentSource) && (
+                  <option value={paymentSource}>{paymentSource}</option>
+                )}
+              </select>
+            )}
+          </Row>
         </div>
 
         {/* Owners — tap to toggle; leave the split even (computed on commit). */}
@@ -240,6 +357,70 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
                 })}
               </div>
             </Row>
+          </div>
+        )}
+
+        {/* Split editor (multi-owner only) — same vocabulary as the new
+            transaction form: even shares, percentage, or by-amount. */}
+        {showSplit && (
+          <div className="ow-card" style={{ margin: '0 20px 14px' }}>
+            <Row label="Split" first>
+              <Seg
+                value={splitMethod}
+                onChange={chooseSplitMethod}
+                options={[
+                  { value: 'even', label: 'Even' },
+                  { value: 'percent', label: '%' },
+                  { value: 'value', label: currencySymbol(currency) },
+                ]}
+              />
+            </Row>
+            {ownerIds.map((id) => {
+              const name = householdMembers.find((m) => m.id === id)?.name ?? '—'
+              return (
+                <Row key={id} label={name}>
+                  {splitMethod === 'even' ? (
+                    <span style={{ color: 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>
+                      {formatMoney(displayShares[id] ?? 0)}
+                    </span>
+                  ) : splitMethod === 'percent' ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <input
+                        className="ow-row-input"
+                        style={{ textAlign: 'right', width: 56 }}
+                        inputMode="decimal"
+                        aria-label={`${name} percent`}
+                        value={splitText[id] ?? ''}
+                        onChange={(e) => setSplitPercent(id, e.target.value.replace(/[^\d.]/g, ''))}
+                      />
+                      <span style={{ color: 'var(--text-3)' }}>%</span>
+                      <span style={{ color: 'var(--text-3)', minWidth: 70, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                        {formatMoney(displayShares[id] ?? 0)}
+                      </span>
+                    </span>
+                  ) : (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ color: 'var(--text-3)' }}>{currencySymbol(currency)}</span>
+                      <input
+                        className="ow-row-input"
+                        style={{ textAlign: 'right', width: 78 }}
+                        inputMode="decimal"
+                        aria-label={`${name} amount`}
+                        value={splitText[id] ?? ''}
+                        onChange={(e) => setSplitValue(id, e.target.value.replace(/[^\d.,]/g, ''))}
+                      />
+                    </span>
+                  )}
+                </Row>
+              )
+            })}
+            {!splitOk && (
+              <div style={{ padding: '6px 20px 12px', fontSize: 12.5, lineHeight: 1.45, color: 'var(--text-2)' }}>
+                {splitReason === 'percent_sum'
+                  ? 'Percentages must total 100%.'
+                  : `Amounts must add up to ${formatMoney(draft.amountCents)}.`}
+              </div>
+            )}
           </div>
         )}
 
