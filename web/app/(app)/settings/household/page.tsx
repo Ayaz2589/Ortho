@@ -23,7 +23,7 @@ export default function HouseholdPage() {
 
   return (
     <ReadingColumn>
-      <div className="pt-2">
+      <div className="pt-2 lg:hidden">
         <Link href="/settings" className="inline-flex items-center gap-1 text-[15px] text-accent">
           <ChevronLeft size={18} />
           {t('Settings')}

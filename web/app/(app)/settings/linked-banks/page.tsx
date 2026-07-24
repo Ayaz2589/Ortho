@@ -12,13 +12,13 @@ export default function LinkedBanksPage() {
   const { t } = useApp()
   return (
     <ReadingColumn>
-      <div className="pt-2">
+      <div className="pt-2 lg:hidden">
         <Link
-          href="/settings"
+          href="/settings/household"
           className="inline-flex min-h-11 items-center gap-1 text-[15px] text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
         >
           <ChevronLeft size={18} />
-          {t('Settings')}
+          {t('Household')}
         </Link>
       </div>
       <PageHeader title={t('Linked banks')} />
