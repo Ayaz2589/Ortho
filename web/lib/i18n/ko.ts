@@ -448,6 +448,26 @@ const catalog: Record<string, string> = {
   "Spending by category": "카테고리별 지출",
   "No income or spending in this period yet.": "이 기간에 아직 수입이나 지출이 없습니다.",
   "Couldn’t load reports.": "리포트를 불러오지 못했습니다.",
+  // spec 031 — household redesign
+  "No settlements yet": "아직 정산 내역 없음",
+  "Simplified": "간소화",
+  "You are owed {0} net": "총 {0}을 받아야 합니다",
+  "You owe {0} net": "총 {0}을 내야 합니다",
+  "{0} owes {1}": "{0}이 {1}에게 빚졌습니다",
+  "{0} & {1}": "{0}과 {1}",
+  "{0} owes {1} {2} — settle up?": "{0}이 {1}에게 {2}를 빚졌습니다 — 정산하시겠습니까?",
+  "History": "내역",
+  "Just me": "나만",
+  "We each paid our share": "각자 자기 몫을 냈어요",
+  "We each received our share": "각자 자기 몫을 받았어요",
+  "I received this": "제가 받았습니다",
+  "{0} received it for us": "{0}이 우리를 위해 받았습니다",
+  "{0} paid": "{0}이 결제했습니다",
+  "Split like last time": "지난번처럼 나누기",
+  "Dismiss split suggestion": "분할 제안 닫기",
+  "Settle-up reminder": "정산 알림",
+  "Settle-up reminder amount": "정산 알림 금액",
+  "Show a reminder when a balance exceeds this amount": "잔액이 이 금액을 초과하면 알림 표시",
 }
 
 export default catalog

@@ -15,6 +15,7 @@ import type { ParsedCandidate } from '@/lib/scan/scanModels'
 import { Seg, CatTile, SourceDot, FormRow as Row } from './kit'
 import { TagEditor } from './TagEditor'
 import { resolveDefaultOwnerId } from '@/lib/defaultOwner'
+import { getLastSplitForMerchant, type SplitMemory } from '@/lib/splitMemory'
 
 const INCOME_SOURCES = ['ACH · Checking', 'ACH · Joint', 'Wire']
 
@@ -79,6 +80,7 @@ export function useTxForm({
     currentPersonId,
     householdMembers,
     resolveUser,
+    transactions,
     addTransaction,
     updateTransaction,
   } = useApp()
@@ -131,6 +133,7 @@ export function useTxForm({
   const originalAmountCents = editing ? editing.amount_cents : initialTransfer ? initialTransfer.amountCents : null
   const [originalAmountText] = useState(originalAmountCents != null ? centsToDisplay(originalAmountCents, r, fd) : '')
   const [merchant, setMerchant] = useState(src?.merchant ?? '')
+  const [splitSuggestion, setSplitSuggestion] = useState<SplitMemory | null>(null)
   const [category, setCategory] = useState<TransactionCategory>(
     src && src.kind === 'expense' ? src.category : 'groceries'
   )
@@ -257,6 +260,30 @@ export function useTxForm({
   function resetSplitsToEven() {
     setSplitMethod('even')
     setSplitText({})
+  }
+
+  function setMerchantAndCheck(name: string) {
+    setMerchant(name)
+    if (!editing) {
+      const suggestion = getLastSplitForMerchant(name, transactions ?? [])
+      setSplitSuggestion(suggestion)
+    }
+  }
+
+  function applySplitSuggestion() {
+    if (!splitSuggestion) return
+    const text: Record<string, string> = {}
+    for (const id of splitSuggestion.ownerIds) {
+      text[id] = centsToDisplay(splitSuggestion.shares[id] ?? 0, r, fd)
+    }
+    setOwners(splitSuggestion.ownerIds)
+    setSplitMethod('value')
+    setSplitText(text)
+    setSplitSuggestion(null)
+  }
+
+  function dismissSplitSuggestion() {
+    setSplitSuggestion(null)
   }
 
   function setDir(d: TransactionKind) {
@@ -416,11 +443,12 @@ export function useTxForm({
     amount,
     setAmount,
     merchant,
-    setMerchant,
+    setMerchant: setMerchantAndCheck,
     category,
     setCategory,
     owners,
     toggleOwner,
+    setOwners,
     paidBy,
     setPaidBy,
     transferFrom,
@@ -437,6 +465,7 @@ export function useTxForm({
     setDate,
     isIncome,
     isTransfer,
+    isEditing: !!editing,
     members,
     sources,
     fd,
@@ -451,6 +480,10 @@ export function useTxForm({
     shares,
     splitOk,
     splitReason,
+    // split memory
+    splitSuggestion,
+    applySplitSuggestion,
+    dismissSplitSuggestion,
     canSave,
     submit,
     loadFrom,
@@ -485,13 +518,32 @@ function MemberSelect({
 }
 
 /** The shared field stack (amount hero, toggles, rows) used by both the modal and the drawer. */
+type OwnerMode = 'solo' | 'each' | 'payer'
+
 export function TxFormFields({ form }: { form: TxFormApi }) {
   const { currency, isIncome, isTransfer } = form
-  const { formatMoney, t } = useApp()
+  const { formatMoney, t, currentPersonId } = useApp()
   // Owner / payer pickers appear whenever the household has more than one person.
   const showOwners = form.members.length > 1
   const multi = form.owners.length >= 2
   const heroColor = isIncome ? 'var(--positive)' : 'var(--text)'
+
+  // Ownership mode: 'solo' = only current user, 'each' = everyone pays own share,
+  // 'payer' = all owners but one person paid on behalf of all.
+  const [ownerMode, setOwnerMode] = useState<OwnerMode>(() =>
+    form.owners.length < 2 ? 'solo' : 'payer'
+  )
+  function handleModeChange(mode: OwnerMode) {
+    const allIds = form.members.map((m) => m.id)
+    if (mode === 'solo') {
+      form.setOwners([currentPersonId])
+      form.setPaidBy(currentPersonId)
+    } else {
+      form.setOwners(allIds)
+    }
+    form.setSplitMethod('even')
+    setOwnerMode(mode)
+  }
   return (
     <>
       {/* Amount hero */}
@@ -563,36 +615,84 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
             )}
           </div>
 
-          {/* Owners + who paid */}
+          {/* Ownership mode picker + who paid */}
           {showOwners && (
             <div className="ow-card" style={{ margin: '0 20px 14px' }}>
               <Row label={t('Owners')} first>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  {form.members.map((u) => {
-                    const on = form.owners.includes(u.id)
-                    return (
-                      <button
-                        key={u.id}
-                        type="button"
-                        aria-pressed={on}
-                        className="ow-btn"
-                        onClick={() => form.toggleOwner(u.id)}
-                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 9px 3px 4px', borderRadius: 999, background: 'var(--chip-bg)', boxShadow: on ? 'inset 0 0 0 1.5px var(--text)' : 'none' }}
-                      >
-                        <Avatar user={u} size={20} />
-                        <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text)' }}>{u.name}</span>
-                      </button>
-                    )
-                  })}
-                </div>
+                {(() => {
+                  const payerName = form.members.find((m) => m.id === form.paidBy)?.name ?? form.members[0]?.name ?? '—'
+                  return (
+                    <Seg
+                      value={ownerMode}
+                      onChange={(v) => handleModeChange(v as OwnerMode)}
+                      options={[
+                        { value: 'solo', label: isIncome ? t('I received this') : t('Just me') },
+                        { value: 'each', label: isIncome ? t('We each received our share') : t('We each paid our share') },
+                        { value: 'payer', label: isIncome ? t('{0} received it for us', payerName) : t('{0} paid', payerName) },
+                      ]}
+                    />
+                  )
+                })()}
               </Row>
-              {!isIncome && (
+              {ownerMode !== 'solo' && (
+                <Row label={t('Who')}>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    {form.members.map((u) => {
+                      const on = form.owners.includes(u.id)
+                      return (
+                        <button
+                          key={u.id}
+                          type="button"
+                          aria-pressed={on}
+                          className="ow-btn"
+                          onClick={() => form.toggleOwner(u.id)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 9px 3px 4px', borderRadius: 999, background: 'var(--chip-bg)', boxShadow: on ? 'inset 0 0 0 1.5px var(--text)' : 'none' }}
+                        >
+                          <Avatar user={u} size={20} />
+                          <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text)' }}>{u.name}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </Row>
+              )}
+              {ownerMode === 'payer' && (
                 <Row label={t('Paid by')}>
                   <MemberSelect value={form.paidBy} onChange={form.setPaidBy} members={form.members} ariaLabel={t('Paid by')} />
                 </Row>
               )}
             </div>
           )}
+
+          {/* Split suggestion chip (new forms only, dismissable) */}
+          {form.splitSuggestion && !form.isEditing && (() => {
+            const s = form.splitSuggestion
+            const total = Object.values(s.shares).reduce((a, b) => a + b, 0)
+            const ratioStr = total > 0
+              ? s.ownerIds.map((id) => Math.round(((s.shares[id] ?? 0) / total) * 100)).join('/')
+              : ''
+            return (
+              <div style={{ margin: '0 20px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--chip-bg)', borderRadius: 12, padding: '8px 14px', gap: 8 }}>
+                <button
+                  type="button"
+                  className="ow-btn"
+                  onClick={() => { form.applySplitSuggestion() }}
+                  style={{ flex: 1, textAlign: 'left', fontSize: 13, color: 'var(--text)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  {t('Split like last time')}{ratioStr ? ` (${ratioStr})` : ''}
+                </button>
+                <button
+                  type="button"
+                  className="ow-btn"
+                  aria-label={t('Dismiss split suggestion')}
+                  onClick={() => form.dismissSplitSuggestion()}
+                  style={{ fontSize: 16, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', lineHeight: 1, minWidth: 24, minHeight: 40 }}
+                >
+                  ×
+                </button>
+              </div>
+            )
+          })()}
 
           {/* Split editor (multi-owner only) */}
           {multi && (

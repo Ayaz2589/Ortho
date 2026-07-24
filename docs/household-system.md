@@ -453,3 +453,29 @@ From `docs/research/finance-habits-budgeting-apps.md` §4 and `docs/research/pro
 
 - **Income split UI language**: "Received by" vs "Who earned it" vs "Who gets credit" — the right
   framing for income splits needs a user test, not a design assumption.
+
+---
+
+## 12. Spec 031 — Household Redesign (shipped 2026-07-24)
+
+All gaps identified in §11.2 were addressed in **spec 031** (`specs/031-household-redesign/`).
+
+### What shipped
+
+| Gap | Resolution |
+|---|---|
+| Income balance effects | `balanceBetween` now handles income via same `paid_by`/`owner_ids` path — income golden vectors added to balance parity tests |
+| N-person pairwise balance matrix | `allPairBalances(people, transactions)` in `lib/balances.ts` — `O(n²)` double loop over all pairs |
+| Balance debt simplification | `simplifyDebts(pairs, people)` in `lib/balances.ts` — collapses A→B+B→C into A→C for 3+ people |
+| Dashboard balance widget | `HouseholdBalancesWidget` component — shows per-pair balances with settle-up deep-link, threshold nudge, settlement history, and simplified toggle |
+| Transaction ownership type UI | `OwnershipModePicker` Seg in `TxFormFields` — "Just me" / "We each paid" / "[Name] paid" modes, income-aware labels |
+| Recurring split memory | `getLastSplitForMerchant` in `lib/splitMemory.ts` — suggests prior multi-person split for repeat merchants with a dismissable chip |
+| Settle-up threshold settings | `useSettleThreshold` hook + settings input at `settings/household/page.tsx` |
+| Settlement history panel | Per-pair history of past transfers in `HouseholdBalancesWidget` |
+
+### What remains open (deferred to future specs)
+
+- Balance visibility transparency (Carol seeing Alice↔Bob balance): deferred pending UX decision
+- Private/scoped transactions: non-goal until 3+ member households are common
+- Per-person budget attribution: architecture seam exists, deferred
+- Income split UI copy: needs user testing

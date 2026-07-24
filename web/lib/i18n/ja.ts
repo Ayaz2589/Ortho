@@ -448,6 +448,26 @@ const catalog: Record<string, string> = {
   "Spending by category": "カテゴリ別支出",
   "No income or spending in this period yet.": "この期間の収入も支出もまだありません。",
   "Couldn’t load reports.": "レポートを読み込めませんでした。",
+  // spec 031 — household redesign
+  "No settlements yet": "まだ精算はありません",
+  "Simplified": "簡略化",
+  "You are owed {0} net": "合計{0}が未回収です",
+  "You owe {0} net": "合計{0}を支払う必要があります",
+  "{0} owes {1}": "{0}は{1}に借りがあります",
+  "{0} & {1}": "{0}と{1}",
+  "{0} owes {1} {2} — settle up?": "{0}は{1}に{2}を借りています — 精算しますか？",
+  "History": "履歴",
+  "Just me": "自分だけ",
+  "We each paid our share": "それぞれが自分の分を支払った",
+  "We each received our share": "それぞれが自分の分を受け取った",
+  "I received this": "私が受け取った",
+  "{0} received it for us": "{0}が私たちのために受け取った",
+  "{0} paid": "{0}が支払った",
+  "Split like last time": "前回と同じ分割",
+  "Dismiss split suggestion": "分割提案を閉じる",
+  "Settle-up reminder": "精算リマインダー",
+  "Settle-up reminder amount": "精算リマインダーの金額",
+  "Show a reminder when a balance exceeds this amount": "残高がこの金額を超えたときにリマインダーを表示する",
 }
 
 export default catalog

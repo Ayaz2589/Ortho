@@ -2,10 +2,14 @@
 
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
+import { useRouter } from 'next/navigation'
 import { PageHeader } from '@/components/ui'
 import { useApp } from '@/lib/store'
+import { HouseholdBalancesWidget } from '@/components/web/HouseholdBalancesWidget'
+import type { TransferPrefill } from '@/components/web/TxForm'
 import { useIsExpanded } from '@/lib/useMediaQuery'
 import { useDashboardScope } from '@/lib/useDashboardRange'
+import { useSettleThreshold } from '@/lib/useSettleThreshold'
 import { ModeSwitch, type DashboardMode } from '@/components/dashboard/ModeSwitch'
 import { ReportsView } from '@/components/dashboard/ReportsView'
 import { RangePicker } from '@/components/dashboard/RangePicker'
@@ -29,12 +33,19 @@ const DashboardDesktop = dynamic(
 )
 
 export default function DashboardPage() {
-  const { t } = useApp()
+  const router = useRouter()
+  const { t, currentHousehold } = useApp()
   const isExpanded = useIsExpanded()
+
+  function openSettle(prefill: TransferPrefill) {
+    const q = new URLSearchParams({ from: prefill.from, to: prefill.to, amount: String(prefill.amountCents) })
+    router.push(`/transactions/new?${q.toString()}`)
+  }
   // One scope source for the whole dashboard — lifted here so the mobile and
   // desktop layouts share the same relative range AND the same (transient)
   // selected month, and a resize across the breakpoint preserves the selection.
   const scope = useDashboardScope()
+  const [settleThresholdCents] = useSettleThreshold(currentHousehold?.id ?? '')
   // Reports is a MODE within Dashboard (spec 027), not a new route/destination —
   // the four destinations are preserved. State lives here so it survives
   // Overview↔Reports toggles while the page stays mounted.
@@ -54,7 +65,7 @@ export default function DashboardPage() {
   }
 
   // Desktop (≥1024px): the 12-column grid composition.
-  if (isExpanded) return <DashboardDesktop scope={scope} modeSwitch={modeSwitch} />
+  if (isExpanded) return <DashboardDesktop scope={scope} modeSwitch={modeSwitch} onSettle={openSettle} settleThresholdCents={settleThresholdCents} />
 
   // Mobile / medium: single-column stack.
   const monthLabel = scope.isSpecificMonth ? scope.periodLabel : undefined
@@ -74,6 +85,7 @@ export default function DashboardPage() {
             onClear={scope.clearMonth}
           />
         </div>
+        <HouseholdBalancesWidget onSettle={openSettle} settleThresholdCents={settleThresholdCents} />
         <MonthSummaryCard
           range={scope.range}
           interval={scope.interval}

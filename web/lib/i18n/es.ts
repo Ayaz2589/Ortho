@@ -448,6 +448,26 @@ const catalog: Record<string, string> = {
   "Spending by category": "Gastos por categoría",
   "No income or spending in this period yet.": "Aún no hay ingresos ni gastos en este período.",
   "Couldn’t load reports.": "No se pudieron cargar los informes.",
+  // spec 031 — household redesign
+  "No settlements yet": "Aún no hay saldes",
+  "Simplified": "Simplificado",
+  "You are owed {0} net": "Te deben {0} en total",
+  "You owe {0} net": "Debes {0} en total",
+  "{0} owes {1}": "{0} le debe a {1}",
+  "{0} & {1}": "{0} y {1}",
+  "{0} owes {1} {2} — settle up?": "{0} le debe {2} a {1} — ¿saldar?",
+  "History": "Historial",
+  "Just me": "Solo yo",
+  "We each paid our share": "Cada uno pagó lo suyo",
+  "We each received our share": "Cada uno recibió lo suyo",
+  "I received this": "Yo lo recibí",
+  "{0} received it for us": "{0} lo recibió por nosotros",
+  "{0} paid": "{0} pagó",
+  "Split like last time": "Dividir como la última vez",
+  "Dismiss split suggestion": "Descartar sugerencia de división",
+  "Settle-up reminder": "Recordatorio de saldo",
+  "Settle-up reminder amount": "Monto del recordatorio de saldo",
+  "Show a reminder when a balance exceeds this amount": "Mostrar un recordatorio cuando un saldo supere este monto",
 }
 
 export default catalog

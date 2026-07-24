@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/ui'
 import { ReadingColumn } from '@/components/layout'
 import { SectionCard, UserRow, AddRow, LinkRow } from '@/components/settings/rows'
 import { HouseholdDrawer, type HouseholdDrawerMode } from '@/components/settings/HouseholdDrawer'
+import { useSettleThreshold } from '@/lib/useSettleThreshold'
 
 export default function HouseholdPage() {
   const {
@@ -21,6 +22,7 @@ export default function HouseholdPage() {
   } = useApp()
 
   const [drawer, setDrawer] = useState<HouseholdDrawerMode>(null)
+  const [settleThresholdCents, setSettleThresholdCents] = useSettleThreshold(currentHousehold?.id ?? '')
 
   return (
     <ReadingColumn>
@@ -63,6 +65,32 @@ export default function HouseholdPage() {
       <p className="px-1 pt-3 text-[13px] leading-relaxed text-text-3">
         {t('Everyone in your household can be an owner of a transaction. People you add need no Ortho account; you can split any transaction between them.')}
       </p>
+
+      {/* Settle-up reminder threshold (spec 031) */}
+      {currentHousehold && (
+        <SectionCard>
+          <div className="flex min-h-[60px] items-center gap-3 px-4 py-3">
+            <span className="text-[17px] font-normal text-text">{t('Settle-up reminder')}</span>
+            <div className="ml-auto flex items-center gap-1.5">
+              <span className="text-[17px] font-normal text-text-3">$</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                aria-label={t('Settle-up reminder amount')}
+                value={settleThresholdCents / 100}
+                onChange={(e) => {
+                  const dollars = Number(e.target.value)
+                  if (!isNaN(dollars) && dollars >= 0) setSettleThresholdCents(Math.round(dollars * 100))
+                }}
+                style={{ width: 70, textAlign: 'right', fontSize: 17, background: 'transparent', border: 0, outline: 'none', color: 'var(--text-2)' }}
+              />
+            </div>
+          </div>
+          <p className="px-4 pb-3 text-[13px] leading-relaxed text-text-3">
+            {t('Show a reminder when a balance exceeds this amount')}
+          </p>
+        </SectionCard>
+      )}
 
       {/* Linked banks (spec 024) — household members only. Kept reachable on
           desktop, where the section nav has no dedicated Linked banks entry. */}

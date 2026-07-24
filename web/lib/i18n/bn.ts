@@ -448,6 +448,26 @@ const catalog: Record<string, string> = {
   "Spending by category": "বিভাগ অনুযায়ী খরচ",
   "No income or spending in this period yet.": "এই সময়ে এখনও কোনও আয় বা খরচ নেই।",
   "Couldn’t load reports.": "রিপোর্ট লোড করা যায়নি।",
+  // spec 031 — household redesign
+  "No settlements yet": "এখনও কোনও পরিশোধ নেই",
+  "Simplified": "সরলীকৃত",
+  "You are owed {0} net": "মোট {0} পাওনা আপনার",
+  "You owe {0} net": "মোট {0} দেনা আপনার",
+  "{0} owes {1}": "{0} এর কাছে {1} দেনা",
+  "{0} & {1}": "{0} ও {1}",
+  "{0} owes {1} {2} — settle up?": "{0} এর কাছে {1} এর {2} দেনা — পরিশোধ করবেন?",
+  "History": "ইতিহাস",
+  "Just me": "শুধু আমি",
+  "We each paid our share": "আমরা প্রত্যেকে নিজ নিজ ভাগ দিয়েছি",
+  "We each received our share": "আমরা প্রত্যেকে নিজ নিজ ভাগ পেয়েছি",
+  "I received this": "আমি এটি পেয়েছি",
+  "{0} received it for us": "{0} আমাদের হয়ে এটি পেয়েছে",
+  "{0} paid": "{0} পরিশোধ করেছে",
+  "Split like last time": "গত বারের মতো ভাগ করুন",
+  "Dismiss split suggestion": "ভাগের পরামর্শ বাতিল করুন",
+  "Settle-up reminder": "পরিশোধ স্মারক",
+  "Settle-up reminder amount": "পরিশোধ স্মারকের পরিমাণ",
+  "Show a reminder when a balance exceeds this amount": "ব্যালেন্স এই পরিমাণ ছাড়িয়ে গেলে স্মারক দেখান",
 }
 
 export default catalog

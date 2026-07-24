@@ -8,6 +8,8 @@ import userEvent from '@testing-library/user-event'
 // The overview cards + heavy hooks are stubbed so this test isolates the page's
 // mode-branching wiring (FR-001, FR-002, FR-013).
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: () => {} }) }))
+vi.mock('@/components/web/HouseholdBalancesWidget', () => ({ HouseholdBalancesWidget: () => null }))
 vi.mock('@/lib/store', () => ({
   useApp: () => ({ t: (k: string) => k }),
 }))

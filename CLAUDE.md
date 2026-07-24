@@ -1,13 +1,11 @@
 <!-- SPECKIT START -->
-Active feature: **spec 030 — holistic seed system + env-gated auth for local/stage**. Plan:
-`specs/030-holistic-seed-auth/plan.md` (spec/plan/tasks/quickstart alongside it). Extends the
-spec-026 corpus to every store-loaded table (goals, tags, linked banks, entitlements) + a
-now-anchored realistic demo household; adds `NEXT_PUBLIC_APP_ENV` (`local|stage|prod`, deny-by-default
-to prod) and a triple-gated auto-login against a real seeded backend for local/stage (production stays
-fully locked); the holistic seeder creates `auth.users` and seeds every table; the in-app "Use test
-data" seed is now generated (hand-typed rows removed). Prior: spec 028 — SimpleFIN bank-sync
-(`specs/028-simplefin-sync/plan.md`), spec 027 wave (`specs/027-*/`, shipped 2026-07-19). Each shipped
-spec keeps its `plan.md` for reference.
+Active feature: **spec 031 — household feature redesign**. Plan:
+`specs/031-household-redesign/plan.md` (spec/plan/research/data-model/quickstart/contracts alongside it).
+Closes UX and logic gaps in the existing household system (no schema changes): income balance effects,
+N-person pairwise balance matrix, dashboard balance widget, ownership type picker, debt simplification,
+recurring split memory, and settle-up nudge. TDD-first: golden vectors before every logic change.
+Prior: spec 030 — holistic seed system + env-gated auth (`specs/030-holistic-seed-auth/plan.md`).
+Each shipped spec keeps its `plan.md` for reference.
 <!-- SPECKIT END -->
 
 ## Project documentation

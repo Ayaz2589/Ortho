@@ -347,6 +347,146 @@
         }
       ],
       "expected": 3000
+    },
+    {
+      "name": "income received by viewer split even — other owes viewer",
+      "viewer": "00000000-0000-0000-0000-000000000101",
+      "other": "00000000-0000-0000-0000-000000000102",
+      "transactions": [
+        {
+          "id": "",
+          "household_id": "h",
+          "merchant": "Acme Co. payroll",
+          "category": "income",
+          "kind": "income",
+          "amount_cents": 100000,
+          "source": "ACH · Checking",
+          "date": "2026-06-15T12:00:00.000Z",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "paid_by": "00000000-0000-0000-0000-000000000101",
+          "owner_ids": [
+            "00000000-0000-0000-0000-000000000101",
+            "00000000-0000-0000-0000-000000000102"
+          ],
+          "shares": {
+            "00000000-0000-0000-0000-000000000101": 50000,
+            "00000000-0000-0000-0000-000000000102": 50000
+          }
+        }
+      ],
+      "expected": 50000
+    },
+    {
+      "name": "income received by other split even — viewer owes other",
+      "viewer": "00000000-0000-0000-0000-000000000101",
+      "other": "00000000-0000-0000-0000-000000000102",
+      "transactions": [
+        {
+          "id": "",
+          "household_id": "h",
+          "merchant": "Acme Co. payroll",
+          "category": "income",
+          "kind": "income",
+          "amount_cents": 100000,
+          "source": "ACH · Checking",
+          "date": "2026-06-15T12:00:00.000Z",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "paid_by": "00000000-0000-0000-0000-000000000102",
+          "owner_ids": [
+            "00000000-0000-0000-0000-000000000101",
+            "00000000-0000-0000-0000-000000000102"
+          ],
+          "shares": {
+            "00000000-0000-0000-0000-000000000101": 50000,
+            "00000000-0000-0000-0000-000000000102": 50000
+          }
+        }
+      ],
+      "expected": -50000
+    },
+    {
+      "name": "income solo (just viewer) — no balance effect",
+      "viewer": "00000000-0000-0000-0000-000000000101",
+      "other": "00000000-0000-0000-0000-000000000102",
+      "transactions": [
+        {
+          "id": "",
+          "household_id": "h",
+          "merchant": "Freelance",
+          "category": "income",
+          "kind": "income",
+          "amount_cents": 100000,
+          "source": "ACH · Checking",
+          "date": "2026-06-15T12:00:00.000Z",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "paid_by": "00000000-0000-0000-0000-000000000101",
+          "owner_ids": [
+            "00000000-0000-0000-0000-000000000101"
+          ],
+          "shares": {
+            "00000000-0000-0000-0000-000000000101": 100000
+          }
+        }
+      ],
+      "expected": 0
+    },
+    {
+      "name": "income + prior expense net balance",
+      "viewer": "00000000-0000-0000-0000-000000000101",
+      "other": "00000000-0000-0000-0000-000000000102",
+      "transactions": [
+        {
+          "id": "",
+          "household_id": "h",
+          "merchant": "Whole Foods",
+          "category": "groceries",
+          "kind": "expense",
+          "amount_cents": 20000,
+          "source": "",
+          "date": "2026-06-14T12:00:00.000Z",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "paid_by": "00000000-0000-0000-0000-000000000101",
+          "owner_ids": [
+            "00000000-0000-0000-0000-000000000101",
+            "00000000-0000-0000-0000-000000000102"
+          ],
+          "shares": {
+            "00000000-0000-0000-0000-000000000101": 10000,
+            "00000000-0000-0000-0000-000000000102": 10000
+          }
+        },
+        {
+          "id": "",
+          "household_id": "h",
+          "merchant": "Acme Co. payroll",
+          "category": "income",
+          "kind": "income",
+          "amount_cents": 100000,
+          "source": "ACH · Checking",
+          "date": "2026-06-15T12:00:00.000Z",
+          "created_by": "u",
+          "created_at": "",
+          "updated_at": "",
+          "paid_by": "00000000-0000-0000-0000-000000000102",
+          "owner_ids": [
+            "00000000-0000-0000-0000-000000000101",
+            "00000000-0000-0000-0000-000000000102"
+          ],
+          "shares": {
+            "00000000-0000-0000-0000-000000000101": 50000,
+            "00000000-0000-0000-0000-000000000102": 50000
+          }
+        }
+      ],
+      "expected": -40000
     }
   ]
 }

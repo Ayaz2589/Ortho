@@ -82,7 +82,8 @@ describe('split editor', () => {
     const h = setup()
     await h.user.type(h.amount(), '100')
     await h.user.type(h.merchant(), 'Dinner')
-    await h.user.click(screen.getByRole('button', { name: /Bob/ }))
+    // Switch to "We each paid" mode — sets owners to all members (Alice + Bob)
+    await h.user.click(screen.getByRole('tab', { name: /We each paid/i }))
     // Even method present + each owner shows $50.00.
     expect(screen.getByRole('tab', { name: 'Even' })).toBeInTheDocument()
     expect(h.getApi().shares).toEqual({ p1: 5000, p2: 5000 })
@@ -92,7 +93,8 @@ describe('split editor', () => {
     const h = setup()
     await h.user.type(h.amount(), '100')
     await h.user.type(h.merchant(), 'Dinner')
-    await h.user.click(screen.getByRole('button', { name: /Bob/ }))
+    // Switch to "We each paid" mode — sets owners to all members
+    await h.user.click(screen.getByRole('tab', { name: /We each paid/i }))
     await h.user.click(screen.getByRole('tab', { name: '%' }))
 
     // Seeded even — the editor opens valid.
@@ -119,7 +121,8 @@ describe('split editor', () => {
     const h = setup()
     await h.user.type(h.amount(), '100')
     await h.user.type(h.merchant(), 'Dinner')
-    await h.user.click(screen.getByRole('button', { name: /Bob/ }))
+    // Switch to "We each paid" mode — sets owners to all members
+    await h.user.click(screen.getByRole('tab', { name: /We each paid/i }))
     await h.user.click(screen.getByRole('tab', { name: '$' }))
 
     // Seeded to an even split of the entered amount.
@@ -140,9 +143,11 @@ describe('split editor', () => {
     const h = setup()
     await h.user.type(h.amount(), '100')
     await h.user.type(h.merchant(), 'Dinner')
-    await h.user.click(screen.getByRole('button', { name: /Bob/ })) // add
+    // Switch to "We each paid" — adds all members (Alice + Bob)
+    await h.user.click(screen.getByRole('tab', { name: /We each paid/i }))
     expect(h.getApi().owners).toHaveLength(2)
-    await h.user.click(screen.getByRole('button', { name: /Bob/ })) // remove
+    // Click Bob's chip to deselect him from the split
+    await h.user.click(screen.getByRole('button', { name: /Bob/ }))
     expect(h.getApi().owners).toEqual(['p1'])
     expect(screen.queryByRole('tab', { name: 'Even' })).toBeNull()
   })

@@ -448,6 +448,26 @@ const catalog: Record<string, string> = {
   "Spending by category": "按类别支出",
   "No income or spending in this period yet.": "此期间还没有收入或支出。",
   "Couldn’t load reports.": "无法加载报告。",
+  // spec 031 — household redesign
+  "No settlements yet": "暂无结算记录",
+  "Simplified": "简化",
+  "You are owed {0} net": "净欠你{0}",
+  "You owe {0} net": "你净欠{0}",
+  "{0} owes {1}": "{0}欠{1}",
+  "{0} & {1}": "{0}和{1}",
+  "{0} owes {1} {2} — settle up?": "{0}欠{1}{2}——结清？",
+  "History": "历史",
+  "Just me": "仅限我",
+  "We each paid our share": "各自付了自己的份额",
+  "We each received our share": "各自收到了自己的份额",
+  "I received this": "我收到了",
+  "{0} received it for us": "{0}代我们收取",
+  "{0} paid": "{0}支付了",
+  "Split like last time": "按上次方式分摊",
+  "Dismiss split suggestion": "关闭分摊建议",
+  "Settle-up reminder": "结清提醒",
+  "Settle-up reminder amount": "结清提醒金额",
+  "Show a reminder when a balance exceeds this amount": "当余额超过此金额时显示提醒",
 }
 
 export default catalog

@@ -3,6 +3,8 @@
 import { useMemo, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useApp } from '@/lib/store'
+import { HouseholdBalancesWidget } from '@/components/web/HouseholdBalancesWidget'
+import type { TransferPrefill } from '@/components/web/TxForm'
 import type { DashboardScope } from '@/lib/useDashboardRange'
 import { generateInsights, compareInsights } from '@/lib/finance/insights'
 import { goalInsights, contributionsByGoal } from '@/lib/finance/goals'
@@ -77,10 +79,15 @@ const inRange = (iso: string, s: Date, e: Date) => {
 export function DashboardDesktop({
   scope,
   modeSwitch,
+  onSettle,
+  settleThresholdCents,
 }: {
   scope: DashboardScope
   /** Overview | Reports toggle rendered by the Dashboard page (spec 027). */
   modeSwitch?: ReactNode
+  /** Called when the user taps Settle Up on the balances widget. */
+  onSettle?: (p: TransferPrefill) => void
+  settleThresholdCents?: number
 }) {
   const { transactions, properties, budgets, goals, goalContributions, formatMoney, locale, t } = useApp()
   const {
@@ -317,6 +324,13 @@ export function DashboardDesktop({
               interval={isSpecificMonth ? interval : undefined}
               label={isSpecificMonth ? periodLabel : undefined}
             />
+          </div>
+        )}
+
+        {/* Household balances — hides when solo or all settled. */}
+        {onSettle && (
+          <div className="ow-s12">
+            <HouseholdBalancesWidget onSettle={onSettle} settleThresholdCents={settleThresholdCents} />
           </div>
         )}
 
