@@ -5,7 +5,7 @@ import { MoreHorizontal, Copy, Trash2 } from 'lucide-react'
 import { useAppServices } from '@/lib/store'
 import { transferParties } from '@/lib/transaction'
 import { categoryMeta } from '@/lib/categories'
-import { Avatar, StackedAvatars } from '@/components/ui'
+import { Avatar, StackedAvatars, NoSourceTag } from '@/components/ui'
 import type { Transaction } from '@/lib/types'
 
 /**
@@ -92,7 +92,7 @@ function TransactionRowImpl({
               <>
                 <span className="truncate">{ownerLabel}</span>
                 <span className="opacity-50">·</span>
-                <span className="truncate">{tx.source}</span>
+                {tx.source ? <span className="truncate">{tx.source}</span> : <NoSourceTag />}
               </>
             )}
           </div>

@@ -3,19 +3,24 @@
 // the app's Activity rows: category glyph tile · merchant + meta · amount.
 // Normal rows: tappable, will be added. Payment rows: dimmed, non-tappable.
 // Duplicate rows: muted, excluded by default but tappable to include.
-import { ChevronRight, Copy } from 'lucide-react'
+import { ChevronRight, Copy, Pencil } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { categoryMeta } from '@/lib/categories'
 import type { CsvDraftRow } from '@/lib/csv/csvImportModels'
 import { checkedDrafts } from '@/lib/csv/csvImportModels'
 import { shortDate } from '@/lib/format'
 import { CatTile } from '@/components/web/kit'
+import { NoSourceTag } from '@/components/ui'
+import { OwnerPicker } from './OwnerPicker'
+import type { User } from '@/lib/types'
 
 interface Props {
   drafts: CsvDraftRow[]
   onEdit: (id: string) => void
   onToggle: (id: string) => void
   onConfirm: () => void
+  /** Assign owners to a row inline (from the list), without opening the editor. */
+  onSetOwners: (id: string, ownerIds: string[]) => void
 }
 
 interface DraftDayGroup {
@@ -42,8 +47,14 @@ function groupDraftsByDay(drafts: CsvDraftRow[]): DraftDayGroup[] {
     }))
 }
 
-export function CsvImportList({ drafts, onEdit, onConfirm }: Props) {
-  const { formatMoney } = useApp()
+export function CsvImportList({ drafts, onEdit, onConfirm, onSetOwners }: Props) {
+  const app = useApp()
+  const { formatMoney } = app
+  // Owners only matter when the household has more than one person; a solo
+  // household hides the picker (mirrors CsvRowEditModal's `showOwners`).
+  const householdMembers: User[] = app.householdMembers ?? []
+  const resolveUser = app.resolveUser
+  const showOwners = householdMembers.length > 1
   const groups = groupDraftsByDay(drafts)
   const toAdd = checkedDrafts(drafts)
 
@@ -69,7 +80,16 @@ export function CsvImportList({ drafts, onEdit, onConfirm }: Props) {
               {group.dateLabel}
             </div>
             {group.items.map((draft) => (
-              <DraftRow key={draft.id} draft={draft} onEdit={onEdit} formatMoney={formatMoney} />
+              <DraftRow
+                key={draft.id}
+                draft={draft}
+                onEdit={onEdit}
+                formatMoney={formatMoney}
+                showOwners={showOwners}
+                householdMembers={householdMembers}
+                resolveUser={resolveUser}
+                onSetOwners={onSetOwners}
+              />
             ))}
           </section>
         ))}
@@ -103,14 +123,25 @@ function DraftRow({
   draft,
   onEdit,
   formatMoney,
+  showOwners,
+  householdMembers,
+  resolveUser,
+  onSetOwners,
 }: {
   draft: CsvDraftRow
   onEdit: (id: string) => void
   formatMoney: (cents: number) => string
+  showOwners: boolean
+  householdMembers: User[]
+  resolveUser: (id: string) => User
+  onSetOwners: (id: string, ownerIds: string[]) => void
 }) {
   const isPayment = draft.isPaymentRow
   const isDuplicate = draft.duplicateOf !== null && !draft.checked
   const meta = categoryMeta(draft.category)
+  // Payment rows are never imported, so they carry no owner. Everything else
+  // gets a tappable owner avatar in the tile's corner (like the ledger row).
+  const ownerControl = showOwners && !isPayment
 
   const subtitle = isPayment ? "Payment — won't be added" : meta.label
 
@@ -150,7 +181,21 @@ function DraftRow({
         boxShadow: isDuplicate ? 'inset 3px 0 0 0 var(--accent)' : undefined,
       }}
     >
-      <CatTile category={draft.category} size={38} />
+      {ownerControl ? (
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <CatTile category={draft.category} size={38} />
+          <div style={{ position: 'absolute', bottom: -4, right: -4 }}>
+            <OwnerPicker
+              ownerIds={draft.ownerIds}
+              members={householdMembers}
+              resolveUser={resolveUser}
+              onChange={(ids) => onSetOwners(draft.id, ids)}
+            />
+          </div>
+        </div>
+      ) : (
+        <CatTile category={draft.category} size={38} />
+      )}
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
@@ -185,17 +230,41 @@ function DraftRow({
             Possible duplicate
           </span>
         ) : (
-          <div
-            style={{
-              marginTop: '2px',
-              fontSize: '13px',
-              color: 'var(--text-3)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {subtitle}
+          <div style={{ marginTop: '2px', display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+            {draft.paymentSource === '' && <NoSourceTag />}
+            {draft.edited && (
+              <span
+                data-testid={`csv-edited-${draft.id}`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  flexShrink: 0,
+                  padding: '1px 7px 1px 5px',
+                  borderRadius: 999,
+                  background: 'color-mix(in srgb, var(--accent) 12%, transparent)',
+                  color: 'var(--accent)',
+                  fontSize: 11,
+                  fontWeight: 500,
+                  letterSpacing: '0.01em',
+                }}
+              >
+                <Pencil size={9.5} strokeWidth={2.2} />
+                Edited
+              </span>
+            )}
+            <span
+              style={{
+                minWidth: 0,
+                fontSize: '13px',
+                color: 'var(--text-3)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {subtitle}
+            </span>
           </div>
         )}
       </div>

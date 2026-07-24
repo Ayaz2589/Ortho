@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { ChevronDown, FileSpreadsheet, SlidersHorizontal } from 'lucide-react'
 import { useApp, useAppServices } from '@/lib/store'
@@ -8,7 +8,7 @@ import { groupByDay, groupDaysByMonth, dayLabel, shortDate, monthYearLong, expen
 import { useMonthAccordion } from '@/lib/useMonthAccordion'
 import { transferParties, sortByName } from '@/lib/transaction'
 import type { Transaction } from '@/lib/types'
-import { Avatar, StackedAvatars } from '@/components/ui'
+import { Avatar, StackedAvatars, NoSourceTag } from '@/components/ui'
 import { TransactionDetailBody } from '@/components/transactions/TransactionDetailBody'
 import { Drawer, DrawerHeader } from './Drawer'
 import { useTransactionFilters } from '@/lib/useTransactionFilters'
@@ -147,10 +147,23 @@ function TxRowImpl({
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-          <SourceDot />
-          <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {isTransfer ? t('Reimbursement') : tx.source}
-          </span>
+          {isTransfer ? (
+            <>
+              <SourceDot />
+              <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {t('Reimbursement')}
+              </span>
+            </>
+          ) : tx.source ? (
+            <>
+              <SourceDot />
+              <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {tx.source}
+              </span>
+            </>
+          ) : (
+            <NoSourceTag />
+          )}
         </div>
         <div style={{ fontSize: 14.5, fontWeight: 400, textAlign: 'right', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.3px', whiteSpace: 'nowrap', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
           {formatMoney(tx.amount_cents, { leadingPlus: isIncome })}
@@ -191,15 +204,7 @@ export function TransactionsDesktop() {
   const [copySource, setCopySource] = useState<Transaction | null>(null)
   const [settlePrefill, setSettlePrefill] = useState<TransferPrefill | null>(null)
   const [filterOpen, setFilterOpen] = useState(false)
-  const [csvFile, setCsvFile] = useState<File | null>(null)
-  const csvInputRef = useRef<HTMLInputElement>(null)
-
-  const onCsvFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) setCsvFile(file)
-    // Reset so the same file can be re-selected
-    e.target.value = ''
-  }, [])
+  const [csvOpen, setCsvOpen] = useState(false)
 
   const selected = selectedId ? transactions.find((t) => t.id === selectedId) ?? null : null
   const panelOpen = addOpen || !!selected
@@ -329,7 +334,7 @@ export function TransactionsDesktop() {
                 </span>
               )}
             </span>
-            <ChipIconButton label={t('Import a CSV')} onClick={() => csvInputRef.current?.click()}>
+            <ChipIconButton label={t('Import a CSV')} onClick={() => setCsvOpen(true)}>
               <FileSpreadsheet size={16} />
             </ChipIconButton>
             <ChipIconButton label={t('Add transaction')} onClick={openNew}>
@@ -484,21 +489,8 @@ export function TransactionsDesktop() {
         </div>
       </Drawer>
 
-      {/* Hidden file input for CSV import — triggered by the Import CSV chip button */}
-      <input
-        ref={csvInputRef}
-        type="file"
-        accept=".csv"
-        style={{ display: 'none' }}
-        aria-hidden="true"
-        onChange={onCsvFileChange}
-      />
-      {csvFile && (
-        <CsvImportFlow
-          initialFile={csvFile}
-          onClose={() => setCsvFile(null)}
-        />
-      )}
+      {/* CSV import — the uploader and the parsed list live in one slide-out tray. */}
+      {csvOpen && <CsvImportFlow onClose={() => setCsvOpen(false)} />}
     </div>
   )
 }
