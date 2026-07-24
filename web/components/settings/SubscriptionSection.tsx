@@ -22,7 +22,7 @@ import {
   type PlansInfo,
 } from '@/lib/billing'
 
-export function SubscriptionSection() {
+export function SubscriptionSection({ id }: { id?: string }) {
   const { entitlement, gateState, locale, t, refreshEntitlement } = useApp()
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
@@ -123,7 +123,7 @@ export function SubscriptionSection() {
   })()
 
   return (
-    <section className="flex flex-col gap-2" aria-labelledby="subscription-label">
+    <section id={id} className="flex flex-col gap-2" aria-labelledby="subscription-label">
       <SectionLabel>
         <span id="subscription-label">{t('Subscription')}</span>
       </SectionLabel>
