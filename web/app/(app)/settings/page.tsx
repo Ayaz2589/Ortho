@@ -11,8 +11,8 @@ import {
 } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { PageHeader, SectionLabel } from '@/components/ui'
-import { ReadingColumn } from '@/components/layout'
 import { SectionCard, LinkRow, CardRow, AddRow, ActionRow } from '@/components/settings/rows'
+import { SettingsSecondaryNav } from '@/components/settings/SettingsSecondaryNav'
 import { ChoiceRow } from '@/components/settings/ChoiceRows'
 import { AddCardModal } from '@/components/settings/AddCardModal'
 import { FlagsSection } from '@/components/settings/flags-section'
@@ -99,167 +99,172 @@ export default function SettingsPage() {
   }
 
   return (
-    <ReadingColumn>
-      <PageHeader title={t('Settings')} />
+    // Mobile: single centered column. Desktop (lg+): secondary nav + content side by side.
+    <div className="mx-auto w-full max-w-[560px] lg:mx-0 lg:flex lg:max-w-none lg:gap-10">
+      <SettingsSecondaryNav />
 
-      <div className="flex flex-col gap-6">
-        <section className="flex flex-col gap-2">
-          <SectionLabel>{t('Household')}</SectionLabel>
-          <SectionCard>
-            <LinkRow href="/settings/household" label={t('Household')} peek={currentHousehold?.name} />
-            {/* Linked banks (spec 024) — household members only; a user with no
-                household never sees the entry (spec edge case). */}
-            {currentHousehold && (
+      <div className="min-w-0 flex-1 lg:max-w-[560px]">
+        <PageHeader title={t('Settings')} />
+
+        <div className="flex flex-col gap-6">
+          <section id="settings-household" className="flex flex-col gap-2">
+            <SectionLabel>{t('Household')}</SectionLabel>
+            <SectionCard>
+              <LinkRow href="/settings/household" label={t('Household')} peek={currentHousehold?.name} />
+              {/* Linked banks (spec 024) — household members only; a user with no
+                  household never sees the entry (spec edge case). */}
+              {currentHousehold && (
+                <LinkRow
+                  href="/settings/linked-banks"
+                  label={t('Linked banks')}
+                  peek={(() => {
+                    const n = linkedInstitutions.filter((i) => i.status === 'active').length
+                    return n ? t('{0} connected', n) : t('None connected')
+                  })()}
+                />
+              )}
+            </SectionCard>
+          </section>
+
+          <section id="settings-planning" className="flex flex-col gap-2">
+            <SectionLabel>{t('Planning')}</SectionLabel>
+            <SectionCard>
               <LinkRow
-                href="/settings/linked-banks"
-                label={t('Linked banks')}
-                peek={(() => {
-                  const n = linkedInstitutions.filter((i) => i.status === 'active').length
-                  return n ? t('{0} connected', n) : t('None connected')
-                })()}
+                href="/budgets"
+                label={t('Budgets')}
+                peek={budgets.length ? t('{0} set', budgets.length) : t('None set')}
               />
-            )}
-          </SectionCard>
-        </section>
+              <LinkRow
+                href="/goals"
+                label={t('Goals')}
+                peek={goals.length ? t('{0} set', goals.length) : t('None set')}
+              />
+            </SectionCard>
+          </section>
 
-        <section className="flex flex-col gap-2">
-          <SectionLabel>{t('Planning')}</SectionLabel>
-          <SectionCard>
-            <LinkRow
-              href="/budgets"
-              label={t('Budgets')}
-              peek={budgets.length ? t('{0} set', budgets.length) : t('None set')}
-            />
-            <LinkRow
-              href="/goals"
-              label={t('Goals')}
-              peek={goals.length ? t('{0} set', goals.length) : t('None set')}
-            />
-          </SectionCard>
-        </section>
+          <section id="settings-cards" className="flex flex-col gap-2">
+            <SectionLabel>{t('Cards')}</SectionLabel>
+            <SectionCard>
+              {cards.map((c) => (
+                <CardRow key={c.id} card={c} onDelete={() => deleteCard(c.id)} />
+              ))}
+              {/* Disabled until a real household is resolved — adding a card
+                  without one silently no-ops server-side (mirrors iOS). */}
+              <AddRow label={t('Add card')} onClick={() => setAddingCard(true)} disabled={!currentHousehold} />
+            </SectionCard>
+            <p className="px-1 text-[13px] leading-relaxed text-text-3">
+              {t('Cards appear in the Paid with menu when you log a new expense. Existing transactions keep their original card name.')}
+            </p>
+          </section>
 
-        <section className="flex flex-col gap-2">
-          <SectionLabel>{t('Cards')}</SectionLabel>
-          <SectionCard>
-            {cards.map((c) => (
-              <CardRow key={c.id} card={c} onDelete={() => deleteCard(c.id)} />
-            ))}
-            {/* Disabled until a real household is resolved — adding a card
-                without one silently no-ops server-side (mirrors iOS). */}
-            <AddRow label={t('Add card')} onClick={() => setAddingCard(true)} disabled={!currentHousehold} />
-          </SectionCard>
-          <p className="px-1 text-[13px] leading-relaxed text-text-3">
-            {t('Cards appear in the Paid with menu when you log a new expense. Existing transactions keep their original card name.')}
-          </p>
-        </section>
+          {/* Spec 018 — after Cards on both surfaces (US7). */}
+          <SubscriptionSection id="settings-subscription" />
 
-        {/* Spec 018 — after Cards on both surfaces (US7). */}
-        <SubscriptionSection />
+          <section id="settings-currency" className="flex flex-col gap-2">
+            <SectionLabel>{t('Currency')}</SectionLabel>
+            <SectionCard>
+              {CURRENCIES.map((c) => (
+                <ChoiceRow
+                  key={c}
+                  icon={<Globe size={16} />}
+                  label={`${t(CURRENCY_NAMES[c])} (${currencyCode(c)})`}
+                  active={c === currency}
+                  onClick={() => setCurrency(c)}
+                />
+              ))}
+            </SectionCard>
+            <p className="px-1 text-[13px] leading-relaxed text-text-3">
+              {ratesCaption({
+                isLoading: ratesIsLoading,
+                lastFetched: ratesLastFetched,
+                error: ratesError,
+                hasRates: Object.keys(rates).length > 0,
+                locale,
+                t,
+              })}
+            </p>
+          </section>
 
-        <section className="flex flex-col gap-2">
-          <SectionLabel>{t('Currency')}</SectionLabel>
-          <SectionCard>
-            {CURRENCIES.map((c) => (
+          <section id="settings-language" className="flex flex-col gap-2">
+            <SectionLabel>{t('Language')}</SectionLabel>
+            <SectionCard>
+              {LANGUAGES.map((lang) => (
+                <ChoiceRow
+                  key={lang}
+                  icon={<Languages size={16} />}
+                  label={lang}
+                  active={lang === language}
+                  onClick={() => chooseLanguage(lang)}
+                />
+              ))}
+            </SectionCard>
+          </section>
+
+          <section id="settings-appearance" className="flex flex-col gap-2">
+            <SectionLabel>{t('Appearance')}</SectionLabel>
+            <SectionCard>
               <ChoiceRow
-                key={c}
-                icon={<Globe size={16} />}
-                label={`${t(CURRENCY_NAMES[c])} (${currencyCode(c)})`}
-                active={c === currency}
-                onClick={() => setCurrency(c)}
+                icon={<Monitor size={16} />}
+                label={t('System')}
+                active={appearance === 'system'}
+                onClick={() => chooseAppearance('system')}
               />
-            ))}
-          </SectionCard>
-          <p className="px-1 text-[13px] leading-relaxed text-text-3">
-            {ratesCaption({
-              isLoading: ratesIsLoading,
-              lastFetched: ratesLastFetched,
-              error: ratesError,
-              hasRates: Object.keys(rates).length > 0,
-              locale,
-              t,
-            })}
-          </p>
-        </section>
-
-        <section className="flex flex-col gap-2">
-          <SectionLabel>{t('Language')}</SectionLabel>
-          <SectionCard>
-            {LANGUAGES.map((lang) => (
               <ChoiceRow
-                key={lang}
-                icon={<Languages size={16} />}
-                label={lang}
-                active={lang === language}
-                onClick={() => chooseLanguage(lang)}
+                icon={<Sun size={16} />}
+                label={t('Light')}
+                active={appearance === 'light'}
+                onClick={() => chooseAppearance('light')}
               />
-            ))}
-          </SectionCard>
-        </section>
-
-        <section className="flex flex-col gap-2">
-          <SectionLabel>{t('Appearance')}</SectionLabel>
-          <SectionCard>
-            <ChoiceRow
-              icon={<Monitor size={16} />}
-              label={t('System')}
-              active={appearance === 'system'}
-              onClick={() => chooseAppearance('system')}
-            />
-            <ChoiceRow
-              icon={<Sun size={16} />}
-              label={t('Light')}
-              active={appearance === 'light'}
-              onClick={() => chooseAppearance('light')}
-            />
-            <ChoiceRow
-              icon={<Moon size={16} />}
-              label={t('Dark')}
-              active={appearance === 'dark'}
-              onClick={() => chooseAppearance('dark')}
-            />
-          </SectionCard>
-        </section>
-
-        <section className="flex flex-col gap-2">
-          <SectionLabel>{t('Account')}</SectionLabel>
-          <SectionCard>
-            {signingOut ? (
-              <div className="flex min-h-[60px] items-center gap-3 px-4 py-3">
-                <span className="text-[15px] text-text-2">{t('Sign out of Ortho?')}</span>
-                <span className="ml-auto flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setSigningOut(false)}
-                    className="text-[15px] font-normal text-text-2"
-                  >
-                    {t('Cancel')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void signOut()}
-                    className="text-[15px] font-normal text-destructive"
-                  >
-                    {t('Sign out')}
-                  </button>
-                </span>
-              </div>
-            ) : (
-              <ActionRow
-                icon={<LogOut size={16} />}
-                label={t('Sign out')}
-                sub={currentUserEmail ?? undefined}
-                destructive
-                onClick={() => setSigningOut(true)}
+              <ChoiceRow
+                icon={<Moon size={16} />}
+                label={t('Dark')}
+                active={appearance === 'dark'}
+                onClick={() => chooseAppearance('dark')}
               />
-            )}
-          </SectionCard>
-        </section>
+            </SectionCard>
+          </section>
 
-        {/* Developer / feature flags — self-gated to test builds only. */}
-        <FlagsSection />
+          <section id="settings-account" className="flex flex-col gap-2">
+            <SectionLabel>{t('Account')}</SectionLabel>
+            <SectionCard>
+              {signingOut ? (
+                <div className="flex min-h-[60px] items-center gap-3 px-4 py-3">
+                  <span className="text-[15px] text-text-2">{t('Sign out of Ortho?')}</span>
+                  <span className="ml-auto flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSigningOut(false)}
+                      className="text-[15px] font-normal text-text-2"
+                    >
+                      {t('Cancel')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void signOut()}
+                      className="text-[15px] font-normal text-destructive"
+                    >
+                      {t('Sign out')}
+                    </button>
+                  </span>
+                </div>
+              ) : (
+                <ActionRow
+                  icon={<LogOut size={16} />}
+                  label={t('Sign out')}
+                  sub={currentUserEmail ?? undefined}
+                  destructive
+                  onClick={() => setSigningOut(true)}
+                />
+              )}
+            </SectionCard>
+          </section>
+
+          {/* Developer / feature flags — self-gated to test builds only. */}
+          <FlagsSection />
+        </div>
+
+        <AddCardModal open={addingCard} onClose={() => setAddingCard(false)} />
       </div>
-
-      <AddCardModal open={addingCard} onClose={() => setAddingCard(false)} />
-    </ReadingColumn>
+    </div>
   )
 }
