@@ -45,4 +45,7 @@ afterEach(async () => {
     const { cleanup } = await import('@testing-library/react')
     cleanup()
   }
+  // Keep sessionStorage-backed state (e.g. the persisted CSV import session) from
+  // leaking between tests in the same jsdom file.
+  if (typeof sessionStorage !== 'undefined') sessionStorage.clear()
 })

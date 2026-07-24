@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Search, Plus, X, ArrowUpDown, ChevronDown, ChevronLeft, SlidersHorizontal, FileSpreadsheet } from 'lucide-react'
 import { useApp } from '@/lib/store'
@@ -18,6 +18,7 @@ import type { TransferPrefill } from '@/components/web/TxForm'
 import { useTransactionFilters } from '@/lib/useTransactionFilters'
 import { FilterPanel } from '@/components/web/FilterPanel'
 import { ActiveFilterChips } from '@/components/web/ActiveFilterChips'
+import { hasCsvSession } from '@/lib/csv/csvImportPersistence'
 
 const CsvImportFlow = dynamic(
   () => import('@/components/csv/CsvImportFlow').then((m) => m.CsvImportFlow),
@@ -43,6 +44,12 @@ export default function TransactionsPage() {
   const [detailId, setDetailId] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [csvOpen, setCsvOpen] = useState(false)
+
+  // Reopen the import tray after an accidental refresh if a review session was
+  // persisted (post-mount so static-export hydration stays consistent).
+  useEffect(() => {
+    if (hasCsvSession()) setCsvOpen(true)
+  }, [])
 
   const hasAny = transactions.length > 0
 

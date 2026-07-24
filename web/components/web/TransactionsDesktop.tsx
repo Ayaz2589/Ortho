@@ -25,6 +25,7 @@ import {
   CatTile,
   SourceDot,
 } from './kit'
+import { hasCsvSession } from '@/lib/csv/csvImportPersistence'
 
 const CsvImportFlow = dynamic(
   () => import('@/components/csv/CsvImportFlow').then((m) => m.CsvImportFlow),
@@ -205,6 +206,12 @@ export function TransactionsDesktop() {
   const [settlePrefill, setSettlePrefill] = useState<TransferPrefill | null>(null)
   const [filterOpen, setFilterOpen] = useState(false)
   const [csvOpen, setCsvOpen] = useState(false)
+
+  // Reopen the import tray after an accidental refresh if a review session was
+  // persisted (post-mount so static-export hydration stays consistent).
+  useEffect(() => {
+    if (hasCsvSession()) setCsvOpen(true)
+  }, [])
 
   const selected = selectedId ? transactions.find((t) => t.id === selectedId) ?? null : null
   const panelOpen = addOpen || !!selected
