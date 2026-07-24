@@ -54,7 +54,7 @@ export function TxFormPageClient({
           }}
         />
       )}
-      <div className="flex-1 px-4 pb-10 pt-2">
+      <div className="flex-1 px-5 pb-10 pt-2">
         {picking ? (
           <TxCopyList
             onPick={(tx) => {
