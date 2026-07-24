@@ -1,7 +1,7 @@
 'use client'
 // React hook for the CSV import session. Wraps csvImportReducer with file reading,
 // bank detection, draft map construction, and store write on confirm.
-import { useReducer, useCallback, useMemo } from 'react'
+import { useReducer, useCallback, useMemo, useEffect } from 'react'
 import { CSV_PROFILES } from '../../scripts/import/profiles/csv-index'
 import { detectBank } from '../../scripts/import/engine/detectBank'
 import { csvImportReducer, initialCsvImportState } from './csvImportSession'
@@ -10,6 +10,7 @@ import type { CsvDraftRow } from './csvImportModels'
 import type { DuplicateCandidate } from './duplicateMatch'
 import { resolveDefaultOwnerId } from '../defaultOwner'
 import { matchSourceForBank } from './matchSource'
+import { loadCsvSession, saveCsvSession } from './csvImportPersistence'
 import type { CsvImportState } from './csvImportSession'
 import { orderedOwnerIds, computeShares } from '../splits'
 import type { SplitInput } from '../splits'
@@ -54,7 +55,18 @@ function buildTransaction(
 }
 
 export function useCsvImport() {
-  const [state, dispatch] = useReducer(csvImportReducer, initialCsvImportState)
+  // Lazy-restore a review session persisted before an accidental refresh; falls
+  // back to idle when there's nothing stored.
+  const [state, dispatch] = useReducer(
+    csvImportReducer,
+    initialCsvImportState,
+    (init) => loadCsvSession() ?? init
+  )
+  // Persist the session on every change (list-view is saved; anything else clears
+  // it — so committing or closing the tray drops the stored copy).
+  useEffect(() => {
+    saveCsvSession(state)
+  }, [state])
   const { addTransaction, transactions, cards, currentUserId, currentPersonId, currentHousehold, householdMembers } =
     useApp()
 
