@@ -22,6 +22,7 @@ vi.mock('@/lib/store', () => ({
   useApp: () => ({
     addTransaction,
     transactions: [manualTx],
+    cards: [],
     currentUserId: 'user-1',
     currentPersonId: 'person-1',
     currentHousehold: { id: 'hh-1', name: 'Home' },

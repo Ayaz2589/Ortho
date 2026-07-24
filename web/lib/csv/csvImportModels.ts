@@ -1,6 +1,7 @@
 // Draft layer for CSV import. Edits live in session state until the user
 // commits — the store is not touched until addTransaction() is called on confirm.
 import type { TransactionCategory } from '../types'
+import type { SplitInput } from '../splits'
 import type { ParsedTransaction } from '../../scripts/import/engine/types'
 
 export interface CsvDraftRow {
@@ -12,7 +13,14 @@ export interface CsvDraftRow {
   amountCents: number
   dateISO: string
   ownerIds: string[]
-  splits: Record<string, number> | null
+  // How to split the amount among ownerIds. null = even (the default). The
+  // per-row editor sets this to a percent/value split — same vocabulary as the
+  // new-transaction form; shares are computed from it on commit (useCsvImport).
+  split: SplitInput | null
+  // The payment source (a household card name) the transaction is imported to.
+  // Seeded from a card matching the bank; '' when no match — flagged "No source"
+  // in the list and editable per row.
+  paymentSource: string
   tags: string[]
   notes: string | null
   // disposition:
@@ -21,12 +29,17 @@ export interface CsvDraftRow {
   duplicateOf: string | null
   // Explicitly skipped in review (drops out of the list; never imported).
   skipped: boolean
+  // True once the user has changed any editable field from the parsed original
+  // (via the row editor or the inline owner picker) — surfaced in the list so
+  // reviewed-and-tweaked rows are distinguishable at a glance before commit.
+  edited: boolean
 }
 
 export function parsedTransactionToDraft(
   tx: ParsedTransaction,
   duplicateOf: string | null = null,
-  defaultOwnerId: string | null = null
+  defaultOwnerId: string | null = null,
+  defaultSource = ''
 ): CsvDraftRow {
   const isPaymentRow = tx.excluded && tx.excludeReason === 'card-payment'
   const isExcluded = tx.excluded
@@ -34,6 +47,10 @@ export function parsedTransactionToDraft(
   // so every reviewed row already has an owner, just like a hand-entered one.
   const ownerIds =
     tx.ownerIds && tx.ownerIds.length > 0 ? tx.ownerIds : defaultOwnerId ? [defaultOwnerId] : []
+  // A parser-provided split arrives as per-owner percentages; carry it as a
+  // percent SplitInput, else default to even (null).
+  const split: SplitInput | null =
+    tx.splits && Object.keys(tx.splits).length > 0 ? { method: 'percent', percents: tx.splits } : null
   return {
     id: crypto.randomUUID(),
     source: tx,
@@ -42,13 +59,15 @@ export function parsedTransactionToDraft(
     amountCents: tx.amountCents,
     dateISO: tx.dateISO,
     ownerIds,
-    splits: tx.splits,
+    split,
+    paymentSource: defaultSource,
     tags: [],
     notes: null,
     checked: !isExcluded && duplicateOf === null,
     isPaymentRow,
     duplicateOf,
     skipped: false,
+    edited: false,
   }
 }
 

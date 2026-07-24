@@ -43,9 +43,10 @@ describe('parsedTransactionToDraft', () => {
     expect(draft.amountCents).toBe(tx.amountCents)
     expect(draft.dateISO).toBe(tx.dateISO)
     expect(draft.ownerIds).toEqual([])
-    expect(draft.splits).toBeNull()
+    expect(draft.split).toBeNull()
     expect(draft.tags).toEqual([])
     expect(draft.notes).toBeNull()
+    expect(draft.edited).toBe(false)
   })
 
   it('sets checked:true for normal expense rows', () => {
