@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from 'react'
 import { useApp } from '@/lib/store'
-import { SPEND_CATEGORIES, categoryMeta } from '@/lib/categories'
+import { CATEGORY_GROUPS, categoryMeta } from '@/lib/categories'
 import { currencySymbol, fractionDigits } from '@/lib/finance/currency'
 import { toUSDCents } from '@/lib/finance/money'
 import { groupByDay, dayLabel } from '@/lib/format'
@@ -134,6 +134,9 @@ export function useTxForm({
   const [category, setCategory] = useState<TransactionCategory>(
     src && src.kind === 'expense' ? src.category : 'groceries'
   )
+  const [incomeCategory, setIncomeCategory] = useState<TransactionCategory>(
+    src && src.kind === 'income' ? src.category : 'salary'
+  )
   const [owners, setOwners] = useState<string[]>(initialOwners)
   // Who paid an expense — defaults to the creator/current person, editable.
   const [paidBy, setPaidBy] = useState<string>(
@@ -261,8 +264,13 @@ export function useTxForm({
 
   function setDir(d: TransactionKind) {
     setDirection(d)
-    if (d === 'income') setSource((s) => (INCOME_SOURCES.includes(s) ? s : INCOME_SOURCES[0]))
-    else if (d === 'expense') setSource((s) => (expenseSources.includes(s) ? s : expenseSources[0] ?? ''))
+    if (d === 'income') {
+      setSource((s) => (INCOME_SOURCES.includes(s) ? s : INCOME_SOURCES[0]))
+      setIncomeCategory((c) => (c === 'groceries' ? 'salary' : c))
+    } else if (d === 'expense') {
+      setSource((s) => (expenseSources.includes(s) ? s : expenseSources[0] ?? ''))
+      setCategory((c) => (c === 'salary' ? 'groceries' : c))
+    }
     // Flipping direction resets the split to even, like iOS `onChange(of: kind)`.
     resetSplitsToEven()
   }
@@ -306,7 +314,11 @@ export function useTxForm({
       return
     }
     setMerchant(tx.merchant)
-    setCategory(tx.kind === 'expense' ? tx.category : 'groceries')
+    if (tx.kind === 'income') {
+      setIncomeCategory(tx.category)
+    } else {
+      setCategory(tx.kind === 'expense' ? tx.category : 'groceries')
+    }
     const validOwners = tx.owner_ids.filter((id) => memberIds.has(id))
     const nextOwners = validOwners.length ? validOwners : [defaultOwner]
     setOwners(nextOwners)
@@ -395,7 +407,7 @@ export function useTxForm({
       tx = {
         ...base,
         merchant: merchant.trim(),
-        category: isIncome ? 'income' : category,
+        category: isIncome ? incomeCategory : category,
         kind: direction,
         source,
         paid_by: isIncome ? null : paidBy,
@@ -419,6 +431,8 @@ export function useTxForm({
     setMerchant,
     category,
     setCategory,
+    incomeCategory,
+    setIncomeCategory,
     owners,
     toggleOwner,
     paidBy,
@@ -549,14 +563,43 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
             <Row label={isIncome ? t('Source') : t('Merchant')} first>
               <input className="ow-row-input" value={form.merchant} onChange={(e) => form.setMerchant(e.target.value)} placeholder={isIncome ? t('e.g. Acme Co. payroll') : t('e.g. Whole Foods')} />
             </Row>
-            {!isIncome && (
+            {isIncome ? (
+              <Row label={t('Category')}>
+                <CatTile category={form.incomeCategory} size={22} />
+                <select
+                  aria-label={t('Category')}
+                  value={form.incomeCategory}
+                  onChange={(e) => form.setIncomeCategory(e.target.value as TransactionCategory)}
+                  style={selectStyle()}
+                >
+                  {CATEGORY_GROUPS.income.map((group) => (
+                    <optgroup key={group.key} label={t(group.label)}>
+                      {group.children.map((c) => (
+                        <option key={c} value={c}>
+                          {t(categoryMeta(c).label)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </Row>
+            ) : (
               <Row label={t('Category')}>
                 <CatTile category={form.category} size={22} />
-                <select value={form.category} onChange={(e) => form.setCategory(e.target.value as TransactionCategory)} style={selectStyle()}>
-                  {SPEND_CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {t(categoryMeta(c).label)}
-                    </option>
+                <select
+                  aria-label={t('Category')}
+                  value={form.category}
+                  onChange={(e) => form.setCategory(e.target.value as TransactionCategory)}
+                  style={selectStyle()}
+                >
+                  {CATEGORY_GROUPS.expense.map((group) => (
+                    <optgroup key={group.key} label={t(group.label)}>
+                      {group.children.map((c) => (
+                        <option key={c} value={c}>
+                          {t(categoryMeta(c).label)}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </Row>

@@ -240,4 +240,54 @@ describe('transactions filter UI (compact)', () => {
     await user.click(screen.getByRole('button', { name: 'Remove Dining filter' }))
     expect(visibleMerchants().sort()).toEqual([...MERCHANTS].sort())
   })
+
+  // Spec 031: grouped category filter
+  it('US3(031): filter panel shows group headers for expense categories', async () => {
+    const user = setup()
+    await openFilters(user)
+
+    // Group containers have role="group" + aria-label for semantic structure
+    expect(screen.getByRole('group', { name: 'Food & Drink' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Transport' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Home' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Health & Wellness' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Entertainment' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Shopping' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Subscriptions' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Education' })).toBeInTheDocument()
+  })
+
+  it('US3(031): new subcategory chips appear in the filter panel', async () => {
+    const user = setup()
+    await openFilters(user)
+
+    // New expense subcategories must have chips
+    expect(panelChip('Fast Food')).toBeInTheDocument()
+    expect(panelChip('Rideshare')).toBeInTheDocument()
+    expect(panelChip('Gym')).toBeInTheDocument()
+    expect(panelChip('Streaming')).toBeInTheDocument()
+    expect(panelChip('Clothing')).toBeInTheDocument()
+  })
+
+  it('US3(031): selecting a new subcategory chip (gym) narrows to matching transactions', async () => {
+    const GYM_TX = tx({ id: 'gym1', merchant: 'Equinox', category: 'gym', kind: 'expense', date: '2026-06-05T12:00:00' })
+    TRANSACTIONS = [...ALL, GYM_TX]
+    const user = setup()
+    await openFilters(user)
+    await user.click(panelChip('Gym'))
+
+    // Equinox should be visible; original merchants should be hidden
+    expect(screen.queryByText('Equinox')).toBeInTheDocument()
+    expect(screen.queryByText('Dining Out')).not.toBeInTheDocument()
+    expect(screen.queryByText('Grocery Run')).not.toBeInTheDocument()
+  })
+
+  it('US3(031): income group header shown; income subcategory chips present', async () => {
+    const user = setup()
+    await openFilters(user)
+
+    expect(screen.getByRole('group', { name: 'Employment & Business' })).toBeInTheDocument()
+    expect(panelChip('Salary')).toBeInTheDocument()
+    expect(panelChip('Freelance')).toBeInTheDocument()
+  })
 })

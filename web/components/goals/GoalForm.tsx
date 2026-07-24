@@ -6,7 +6,7 @@ import { useApp } from '@/lib/store'
 import { Modal, FormGroup, FieldRow, Segmented } from '@/components/ui'
 import { TextInput, MoneyInput, parseMoney, DatePicker } from '@/components/inputs'
 import { fractionDigits } from '@/lib/finance/currency'
-import { SPEND_CATEGORIES, CATEGORIES } from '@/lib/categories'
+import { CATEGORY_GROUPS, CATEGORIES } from '@/lib/categories'
 import type { Goal, GoalKind, TransactionCategory } from '@/lib/types'
 
 function centsToDisplay(cents: number, currency: ReturnType<typeof useApp>['currency'], rate: number): string {
@@ -143,13 +143,15 @@ export function GoalForm({
               className="max-w-[200px] bg-transparent text-right text-[15px] text-text outline-none"
             >
               <option value="">{t('None')}</option>
-              <optgroup label={t('Category')}>
-                {SPEND_CATEGORIES.map((c) => (
-                  <option key={c} value={`cat:${c}`}>
-                    {t(CATEGORIES[c].label)}
-                  </option>
-                ))}
-              </optgroup>
+              {CATEGORY_GROUPS.expense.map((group) => (
+                <optgroup key={group.key} label={t(group.label)}>
+                  {group.children.map((c) => (
+                    <option key={c} value={`cat:${c}`}>
+                      {t(CATEGORIES[c].label)}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
               {linkedAccounts.length > 0 ? (
                 <optgroup label={t('Account')}>
                   {linkedAccounts.map((a) => (
