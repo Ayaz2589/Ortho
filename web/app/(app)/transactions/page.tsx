@@ -84,7 +84,10 @@ export default function TransactionsPage() {
   if (detailTx) {
     const isIncome = detailTx.kind === 'income'
     const kindLabel = detailTx.kind === 'transfer' ? t('Reimbursement') : isIncome ? t('Income') : t('Expense')
-    const detailTitle =
+    // Hero title: the merchant/source name (or "Reimbursement" for transfers).
+    // Subtitle: kind + household, mirroring the housing detail pattern.
+    const heroTitle = detailTx.kind === 'transfer' ? t('Reimbursement') : detailTx.merchant
+    const heroSubtitle =
       currentHousehold && detailTx.household_id === currentHousehold.id
         ? `${kindLabel} · ${currentHousehold.name}`
         : kindLabel
@@ -99,7 +102,8 @@ export default function TransactionsPage() {
             <ChevronLeft size={18} />
           </IconButton>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-[28px] font-light tracking-[-0.6px] text-text">{detailTitle}</h1>
+            <h1 className="truncate text-[28px] font-light tracking-[-0.6px] text-text">{heroTitle}</h1>
+            <p className="text-[13px] text-text-2">{heroSubtitle}</p>
           </div>
           <button
             type="button"
@@ -112,7 +116,7 @@ export default function TransactionsPage() {
             {t('Edit')}
           </button>
         </div>
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-5 px-4">
           <TransactionDetailBody tx={detailTx} />
           {confirmDelete ? (
             <div className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
