@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { PageHeader } from '@/components/ui'
 import { ReadingColumn } from '@/components/layout'
-import { SectionCard, UserRow, AddRow } from '@/components/settings/rows'
+import { SectionCard, UserRow, AddRow, LinkRow } from '@/components/settings/rows'
 import { HouseholdDrawer, type HouseholdDrawerMode } from '@/components/settings/HouseholdDrawer'
 
 export default function HouseholdPage() {
@@ -14,6 +14,7 @@ export default function HouseholdPage() {
     currentHousehold,
     currentPersonId,
     householdMembers,
+    linkedInstitutions,
     formatMoney,
     monthlySpentBy,
     t,
@@ -62,6 +63,21 @@ export default function HouseholdPage() {
       <p className="px-1 pt-3 text-[13px] leading-relaxed text-text-3">
         {t('Everyone in your household can be an owner of a transaction. People you add need no Ortho account; you can split any transaction between them.')}
       </p>
+
+      {/* Linked banks (spec 024) — household members only. Kept reachable on
+          desktop, where the section nav has no dedicated Linked banks entry. */}
+      {currentHousehold && (
+        <SectionCard>
+          <LinkRow
+            href="/settings/linked-banks"
+            label={t('Linked banks')}
+            peek={(() => {
+              const n = linkedInstitutions.filter((i) => i.status === 'active').length
+              return n ? t('{0} connected', n) : t('None connected')
+            })()}
+          />
+        </SectionCard>
+      )}
 
       <HouseholdDrawer mode={drawer} onClose={() => setDrawer(null)} />
     </ReadingColumn>
