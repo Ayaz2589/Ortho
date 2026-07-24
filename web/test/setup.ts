@@ -21,9 +21,31 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
   })) as typeof window.matchMedia
 }
 
+// jsdom does not implement IntersectionObserver; scroll-spy components (e.g.
+// SettingsSecondaryNav) construct one in a client effect. Real browsers always
+// have it, so provide a no-op stub for the test DOM.
+if (typeof globalThis !== 'undefined' && !('IntersectionObserver' in globalThis)) {
+  class IntersectionObserverStub {
+    root = null
+    rootMargin = ''
+    thresholds: number[] = []
+    constructor(_cb: IntersectionObserverCallback, _opts?: IntersectionObserverInit) {}
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return []
+    }
+  }
+  globalThis.IntersectionObserver = IntersectionObserverStub as unknown as typeof IntersectionObserver
+}
+
 afterEach(async () => {
   if (typeof document !== 'undefined') {
     const { cleanup } = await import('@testing-library/react')
     cleanup()
   }
+  // Keep sessionStorage-backed state (e.g. the persisted CSV import session) from
+  // leaking between tests in the same jsdom file.
+  if (typeof sessionStorage !== 'undefined') sessionStorage.clear()
 })

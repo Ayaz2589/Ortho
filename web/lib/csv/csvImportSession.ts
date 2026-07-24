@@ -39,6 +39,9 @@ export type CsvImportAction =
       statement: ParsedStatement
       bankLabel: string
       defaultOwnerId?: string | null
+      // Card name matching the imported bank, seeded as every row's payment
+      // source ('' when no card matches).
+      defaultSource?: string
       // Existing ledger rows to check each parsed row against for duplicates.
       existing?: DuplicateCandidate[]
     }
@@ -72,7 +75,12 @@ export function csvImportReducer(state: CsvImportState, action: CsvImportAction)
         // excluded rows (e.g. card payments) — they never import, and flagging
         // them would double-count as both "excluded" and "duplicate".
         const duplicateOf = tx.excluded ? null : findDuplicateId(tx, existing)
-        const draft = parsedTransactionToDraft(tx, duplicateOf, action.defaultOwnerId ?? null)
+        const draft = parsedTransactionToDraft(
+          tx,
+          duplicateOf,
+          action.defaultOwnerId ?? null,
+          action.defaultSource ?? ''
+        )
         drafts[draft.id] = draft
       }
       return {
@@ -90,11 +98,18 @@ export function csvImportReducer(state: CsvImportState, action: CsvImportAction)
       if (state.phase !== 'list-view') return state
       const existing = state.drafts[action.id]
       if (!existing) return state
+      // Mark the row edited only when the patch actually changes a value — so a
+      // no-op save (open the editor, Save without changes) doesn't flag it.
+      const existingRec = existing as unknown as Record<string, unknown>
+      const patchRec = action.patch as Record<string, unknown>
+      const changed = Object.keys(patchRec).some(
+        (k) => JSON.stringify(existingRec[k]) !== JSON.stringify(patchRec[k])
+      )
       return {
         ...state,
         drafts: {
           ...state.drafts,
-          [action.id]: { ...existing, ...action.patch },
+          [action.id]: { ...existing, ...action.patch, edited: existing.edited || changed },
         },
       }
     }

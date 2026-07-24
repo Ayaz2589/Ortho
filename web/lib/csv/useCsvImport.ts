@@ -1,7 +1,7 @@
 'use client'
 // React hook for the CSV import session. Wraps csvImportReducer with file reading,
 // bank detection, draft map construction, and store write on confirm.
-import { useReducer, useCallback, useMemo } from 'react'
+import { useReducer, useCallback, useMemo, useEffect } from 'react'
 import { CSV_PROFILES } from '../../scripts/import/profiles/csv-index'
 import { detectBank } from '../../scripts/import/engine/detectBank'
 import { csvImportReducer, initialCsvImportState } from './csvImportSession'
@@ -9,6 +9,8 @@ import { checkedDrafts, totalSpendCents } from './csvImportModels'
 import type { CsvDraftRow } from './csvImportModels'
 import type { DuplicateCandidate } from './duplicateMatch'
 import { resolveDefaultOwnerId } from '../defaultOwner'
+import { matchSourceForBank } from './matchSource'
+import { loadCsvSession, saveCsvSession } from './csvImportPersistence'
 import type { CsvImportState } from './csvImportSession'
 import { orderedOwnerIds, computeShares } from '../splits'
 import type { SplitInput } from '../splits'
@@ -17,7 +19,6 @@ import type { Transaction } from '../types'
 
 function buildTransaction(
   draft: CsvDraftRow,
-  bankSource: string,
   currentUserId: string,
   currentPersonId: string,
   householdId: string,
@@ -27,9 +28,9 @@ function buildTransaction(
   // Canonicalize owner order so the leftover cent lands on the same owner as
   // app-entered transactions (orderedOwnerIds = ascending UUID sort, per lib/splits).
   const owners = orderedOwnerIds(rawOwners)
-  const split: SplitInput = draft.splits
-    ? { method: 'percent', percents: draft.splits }
-    : { method: 'even' }
+  // The per-row editor's chosen split (even/percent/value); shares are computed
+  // here, identically to the new-transaction form's write path.
+  const split: SplitInput = draft.split ?? { method: 'even' }
   const shares = computeShares(draft.amountCents, owners, split)
 
   return {
@@ -39,7 +40,9 @@ function buildTransaction(
     category: draft.category,
     kind: draft.source.kind,
     amount_cents: draft.amountCents,
-    source: bankSource,
+    // The per-row payment source (a card matching the bank, or one the user
+    // picked). '' when unset — surfaced as "No source" in the ledger.
+    source: draft.paymentSource,
     date: draft.dateISO.slice(0, 10),
     created_by: currentUserId,
     created_at: now,
@@ -52,12 +55,26 @@ function buildTransaction(
 }
 
 export function useCsvImport() {
-  const [state, dispatch] = useReducer(csvImportReducer, initialCsvImportState)
-  const { addTransaction, transactions, currentUserId, currentPersonId, currentHousehold, householdMembers } = useApp()
+  // Lazy-restore a review session persisted before an accidental refresh; falls
+  // back to idle when there's nothing stored.
+  const [state, dispatch] = useReducer(
+    csvImportReducer,
+    initialCsvImportState,
+    (init) => loadCsvSession() ?? init
+  )
+  // Persist the session on every change (list-view is saved; anything else clears
+  // it — so committing or closing the tray drops the stored copy).
+  useEffect(() => {
+    saveCsvSession(state)
+  }, [state])
+  const { addTransaction, transactions, cards, currentUserId, currentPersonId, currentHousehold, householdMembers } =
+    useApp()
 
   // The importing user, shared with the transaction form so imported and
   // hand-entered rows resolve their owner identically.
   const defaultOwnerId = resolveDefaultOwnerId(currentPersonId, householdMembers, currentUserId) || null
+
+  const cardNames = useMemo(() => cards.map((c) => c.name), [cards])
 
   // Existing ledger rows to check imported rows against for duplicates (any
   // owner in the household). Recomputed only when the ledger changes.
@@ -75,9 +92,18 @@ export function useCsvImport() {
         return
       }
       const statement = result.profile.parse([text])
-      dispatch({ type: 'file/parsed', statement, bankLabel: result.profile.label, defaultOwnerId, existing })
+      // Seed every row's payment source from a card matching this bank ('' if none).
+      const defaultSource = matchSourceForBank(result.profile.id, result.profile.label, cardNames)
+      dispatch({
+        type: 'file/parsed',
+        statement,
+        bankLabel: result.profile.label,
+        defaultOwnerId,
+        defaultSource,
+        existing,
+      })
     },
-    [dispatch, defaultOwnerId, existing]
+    [dispatch, defaultOwnerId, existing, cardNames]
   )
 
   const toggleChecked = useCallback(
@@ -101,7 +127,6 @@ export function useCsvImport() {
     if (!currentHousehold) return
     dispatch({ type: 'import/start' })
     const now = new Date().toISOString()
-    const bankSource = state.bankLabel
     const allDrafts = Object.values(state.drafts)
     const toAdd = checkedDrafts(allDrafts)
     const excluded = allDrafts.filter((d) => d.isPaymentRow)
@@ -109,7 +134,7 @@ export function useCsvImport() {
     const duplicates = allDrafts.filter((d) => d.duplicateOf && !d.checked && !d.skipped)
 
     for (const draft of toAdd) {
-      const tx = buildTransaction(draft, bankSource, currentUserId, currentPersonId, currentHousehold.id, now)
+      const tx = buildTransaction(draft, currentUserId, currentPersonId, currentHousehold.id, now)
       addTransaction(tx)
     }
 

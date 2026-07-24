@@ -94,6 +94,31 @@ export function StackedAvatars({
   )
 }
 
+/** A small accent pill flagging a transaction/import row whose payment source
+ *  hasn't been set — shown in the CSV import list and the ledger tables so an
+ *  unassigned source is easy to spot and fix. */
+export function NoSourceTag({ label = 'No source' }: { label?: string }) {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        flexShrink: 0,
+        padding: '1px 7px',
+        borderRadius: 999,
+        background: 'color-mix(in srgb, var(--accent) 12%, transparent)',
+        color: 'var(--accent)',
+        fontSize: 11,
+        fontWeight: 500,
+        letterSpacing: '0.01em',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {label}
+    </span>
+  )
+}
+
 export function IconButton({
   onClick,
   children,

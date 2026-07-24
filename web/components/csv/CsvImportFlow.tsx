@@ -1,13 +1,16 @@
 'use client'
 // Phase dispatcher for the CSV import session, rendered in the shared slide-out
 // Drawer (right-side drawer on desktop, full-screen on mobile — the same
-// affordance add/edit transaction uses).
-// idle → renders nothing (triggered externally via loadFile)
+// affordance add/edit transaction uses). The uploader lives INSIDE the tray:
+// idle → upload view (dropzone + supported banks); pick/drop a file and the
+// same tray switches to the parsed list.
+// idle → CsvUploadView (or a loading state when opened with a preset file)
 // list-view → CsvImportList, or the per-row editor pushed into the same pane
 // importing → brief loading state
 // summary → CsvImportSummary
-// undetected → supported banks list
-import { useEffect, useState, type ReactNode } from 'react'
+// undetected → upload view with an "unrecognized format" note
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { FileSpreadsheet, Upload } from 'lucide-react'
 import { useCsvImport } from '@/lib/csv/useCsvImport'
 import { Drawer, DrawerHeader } from '@/components/web/Drawer'
 import { CsvImportList } from './CsvImportList'
@@ -26,6 +29,9 @@ const SUPPORTED_BANKS = [
 
 interface Props {
   onClose: () => void
+  /** Optional preset file — bypasses the in-tray uploader and parses straight
+   *  away. Left over for callers that already have a File; the primary flow now
+   *  opens on the upload view and takes the file from there. */
   initialFile?: File | null
 }
 
@@ -44,29 +50,39 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
     onClose()
   }
 
-  if (phase === 'idle') return null
+  // idle: show the in-tray uploader (unless a preset file is mid-parse).
+  if (phase === 'idle') {
+    if (initialFile) {
+      return (
+        <CsvDrawer label="Importing CSV" onClose={handleClose}>
+          <DrawerHeader title="Import CSV" onClose={handleClose} />
+          <TrayBody>
+            <div role="status" aria-live="polite" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-2)' }}>
+              Reading file…
+            </div>
+          </TrayBody>
+        </CsvDrawer>
+      )
+    }
+    return (
+      <CsvDrawer label="Import CSV" onClose={handleClose}>
+        <DrawerHeader title="Import CSV" onClose={handleClose} />
+        <TrayBody>
+          <CsvUploadView onFile={(f) => void loadFile(f)} />
+        </TrayBody>
+      </CsvDrawer>
+    )
+  }
 
   if (phase === 'undetected') {
     return (
       <CsvDrawer label="Unsupported CSV format" onClose={handleClose}>
         <DrawerHeader title="Import CSV" onClose={handleClose} />
         <TrayBody>
-          <div style={{ padding: '24px' }}>
-            <p style={{ color: 'var(--text)', marginBottom: '16px' }}>
-              We don&apos;t recognise this bank&apos;s CSV format yet.
-            </p>
-            <p style={{ color: 'var(--text-2)', fontSize: '14px', marginBottom: '8px', fontWeight: 600 }}>
-              Supported banks:
-            </p>
-            <ul style={{ color: 'var(--text-2)', fontSize: '14px', paddingLeft: '16px' }}>
-              {SUPPORTED_BANKS.map((b) => (
-                <li key={b} style={{ marginBottom: '4px' }}>{b}</li>
-              ))}
-            </ul>
-            <button onClick={handleClose} style={{ ...confirmBtnStyle, marginTop: '24px', width: '100%' }}>
-              Close
-            </button>
-          </div>
+          <CsvUploadView
+            onFile={(f) => void loadFile(f)}
+            error="We don’t recognise this bank’s CSV format yet. Try one of the supported banks below."
+          />
         </TrayBody>
       </CsvDrawer>
     )
@@ -131,11 +147,15 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
           <>
             <DrawerHeader title={bankLabel} onClose={handleClose} />
             <TrayBody>
+              {/* Changing owners from the list resets any custom split back to
+                  even (same rule as the row editor) so it can't reference a
+                  dropped owner. */}
               <CsvImportList
                 drafts={drafts}
                 onEdit={(id) => setEditingId(id)}
                 onToggle={toggleChecked}
                 onConfirm={startImport}
+                onSetOwners={(id, ownerIds) => updateDraft(id, { ownerIds, split: null })}
               />
             </TrayBody>
           </>
@@ -145,6 +165,143 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
   }
 
   return null
+}
+
+/** The in-tray uploader: a click/drag dropzone plus the list of supported banks.
+ *  Picking or dropping a .csv hands the File to `onFile` (→ parse → list view). */
+function CsvUploadView({ onFile, error }: { onFile: (file: File) => void; error?: string }) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [dragOver, setDragOver] = useState(false)
+  const pick = () => inputRef.current?.click()
+  const take = (files: FileList | null) => {
+    const f = files?.[0]
+    if (f) onFile(f)
+  }
+
+  return (
+    <div style={{ padding: '20px' }}>
+      {error && (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: '10px 14px',
+            borderRadius: 12,
+            fontSize: 13,
+            lineHeight: 1.45,
+            color: 'var(--text-2)',
+            background: 'color-mix(in srgb, var(--accent) 8%, transparent)',
+            boxShadow: 'inset 3px 0 0 0 var(--accent)',
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="Upload a CSV file"
+        onClick={pick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            pick()
+          }
+        }}
+        onDragOver={(e) => {
+          e.preventDefault()
+          setDragOver(true)
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault()
+          setDragOver(false)
+          take(e.dataTransfer.files)
+        }}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 8,
+          padding: '36px 20px',
+          borderRadius: 16,
+          cursor: 'pointer',
+          textAlign: 'center',
+          border: '1.5px dashed var(--hairline)',
+          background: dragOver ? 'color-mix(in srgb, var(--accent) 8%, transparent)' : 'var(--surface)',
+          boxShadow: dragOver ? 'inset 0 0 0 1.5px var(--accent)' : 'none',
+          transition: 'background var(--duration-fast) var(--ease-out)',
+        }}
+      >
+        <span
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 44,
+            height: 44,
+            borderRadius: 999,
+            background: 'var(--chip-bg)',
+            color: 'var(--accent)',
+          }}
+        >
+          <Upload size={20} />
+        </span>
+        <div style={{ fontSize: 15, color: 'var(--text)' }}>Upload a CSV</div>
+        <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Drag a file here, or click to browse</div>
+      </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".csv"
+        style={{ display: 'none' }}
+        aria-hidden="true"
+        onChange={(e) => {
+          take(e.target.files)
+          e.target.value = ''
+        }}
+      />
+
+      <div style={{ marginTop: 24 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 13,
+            fontWeight: 400,
+            letterSpacing: '0.4px',
+            textTransform: 'uppercase',
+            color: 'var(--text-2)',
+            marginBottom: 8,
+          }}
+        >
+          <FileSpreadsheet size={14} />
+          Supported CSVs
+        </div>
+        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {SUPPORTED_BANKS.map((b) => (
+            <li
+              key={b}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '7px 4px',
+                fontSize: 14,
+                color: 'var(--text)',
+                borderBottom: '0.5px solid var(--hairline)',
+              }}
+            >
+              <span style={{ width: 5, height: 5, borderRadius: 999, background: 'var(--accent)', flexShrink: 0 }} />
+              {b}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  )
 }
 
 /** The CSV import shell: the shared Drawer, always open (the phase gates whether
@@ -175,14 +332,4 @@ function TrayBody({ children }: { children: ReactNode }) {
       {children}
     </div>
   )
-}
-
-const confirmBtnStyle: React.CSSProperties = {
-  padding: '12px 24px',
-  background: 'var(--accent)',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '8px',
-  fontWeight: 600,
-  cursor: 'pointer',
 }

@@ -224,16 +224,15 @@ describe('desktop bank-statement upload (US4 parity)', () => {
     expect(await screen.findByLabelText('Import a CSV')).toBeInTheDocument()
   })
 
-  it('opens the CSV file dialog when the import chip is clicked', async () => {
-    // The chip triggers the hidden <input type="file" accept=".csv"> via a
-    // programmatic .click() inside the gesture — assert that wiring fires.
-    const clickSpy = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {})
+  it('opens the in-tray CSV uploader when the import chip is clicked', async () => {
+    // The chip now opens the import tray directly on its uploader view (the
+    // file picker lives inside the tray), rather than firing an OS file dialog.
     render(<AppStateProvider><TransactionsDesktop /></AppStateProvider>)
     const btn = await screen.findByLabelText('Import a CSV')
 
     await userEvent.setup().click(btn)
-    expect(clickSpy).toHaveBeenCalled()
-    clickSpy.mockRestore()
+    expect(await screen.findByText('Upload a CSV')).toBeInTheDocument()
+    expect(screen.getByText('Supported CSVs')).toBeInTheDocument()
   })
 })
 

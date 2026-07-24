@@ -266,7 +266,7 @@ export function PropertyForm({
   return (
     <>
       {header({ navTitle, isEditing, canSubmit, submit: handleSubmit })}
-      <div className="flex flex-col gap-5 overflow-auto p-4 pb-6">
+      <div className="flex flex-col gap-5 overflow-auto px-6 pt-4 pb-6">
         <FormGroup>
           <FieldRow label={t('Address')}>
             <TextInput

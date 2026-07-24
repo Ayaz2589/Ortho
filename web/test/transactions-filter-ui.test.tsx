@@ -12,7 +12,6 @@ vi.mock('@/lib/useMediaQuery', () => ({ useIsExpanded: () => false }))
 vi.mock('@/components/transactions/TransactionRow', () => ({
   TransactionRow: ({ tx }: { tx: Transaction }) => <div data-testid="tx-row">{tx.merchant}</div>,
 }))
-vi.mock('@/components/transactions/TransactionDetailModal', () => ({ TransactionDetailModal: () => null }))
 // The mobile page navigates to dedicated add/edit routes (spec 025).
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
