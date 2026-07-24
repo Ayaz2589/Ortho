@@ -33,7 +33,7 @@ export function PropertyFormPageClient({
         // New property, no kind chosen yet → the in-page kind picker.
         <>
           <FormPageHeader title={t('New property')} cancelLabel={t('Cancel')} onCancel={onDone} />
-          <div className="flex-1 px-4 pb-10 pt-2">
+          <div className="flex-1 px-5 pb-10 pt-2">
             <PropertyKindChoices onPick={setKind} />
           </div>
         </>
