@@ -1,13 +1,13 @@
 'use client'
 
-import { CATEGORIES, SPEND_CATEGORIES } from '@/lib/categories'
+import { CATEGORIES, CATEGORY_GROUPS } from '@/lib/categories'
 import { useApp } from '@/lib/store'
 import { CatTile } from '@/components/web/kit'
 import { Segmented, SectionLabel } from '@/components/ui'
 import type { TransactionCategory, TransactionKind } from '@/lib/types'
 import type { TxFilters } from '@/lib/useTransactionFilters'
 
-const ALL_CATEGORIES: TransactionCategory[] = [...SPEND_CATEGORIES, 'income']
+const ALL_GROUPS = [...CATEGORY_GROUPS.expense, ...CATEGORY_GROUPS.income]
 
 function Chip({
   active,
@@ -60,12 +60,30 @@ export function FilterPanel({ f }: { f: TxFilters }) {
 
       <section className="flex flex-col gap-2.5">
         <SectionLabel>{t('Category')}</SectionLabel>
-        <div className="flex flex-wrap gap-2">
-          {ALL_CATEGORIES.map((c) => (
-            <Chip key={c} active={f.criteria.categories.includes(c)} onClick={() => f.toggleCategory(c)} label={t(CATEGORIES[c].label)}>
-              <CatTile category={c} size={18} />
-              {t(CATEGORIES[c].label)}
-            </Chip>
+        <div className="flex flex-col gap-3">
+          {ALL_GROUPS.map((group) => (
+            <div key={group.key} role="group" aria-label={t(group.label)}>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: 'var(--text-2)',
+                  marginBottom: 6,
+                }}
+              >
+                {t(group.label)}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {group.children.map((c: TransactionCategory) => (
+                  <Chip key={c} active={f.criteria.categories.includes(c)} onClick={() => f.toggleCategory(c)} label={t(CATEGORIES[c].label)}>
+                    <CatTile category={c} size={18} />
+                    {t(CATEGORIES[c].label)}
+                  </Chip>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </section>

@@ -1,12 +1,11 @@
 <!-- SPECKIT START -->
-Active feature: **spec 030 — holistic seed system + env-gated auth for local/stage**. Plan:
-`specs/030-holistic-seed-auth/plan.md` (spec/plan/tasks/quickstart alongside it). Extends the
-spec-026 corpus to every store-loaded table (goals, tags, linked banks, entitlements) + a
-now-anchored realistic demo household; adds `NEXT_PUBLIC_APP_ENV` (`local|stage|prod`, deny-by-default
-to prod) and a triple-gated auto-login against a real seeded backend for local/stage (production stays
-fully locked); the holistic seeder creates `auth.users` and seeds every table; the in-app "Use test
-data" seed is now generated (hand-typed rows removed). Prior: spec 028 — SimpleFIN bank-sync
-(`specs/028-simplefin-sync/plan.md`), spec 027 wave (`specs/027-*/`, shipped 2026-07-19). Each shipped
+Active feature: **spec 031 — category & subcategory expansion**. Plan:
+`specs/031-category-subcategory-expansion/plan.md` (spec/plan/data-model/quickstart/contracts alongside it).
+Expands the flat 11-category `transaction_category` Postgres enum to a two-level grouped taxonomy:
+8 expense parent groups with 28 subcategories, plus 10 income subcategories (9 new + legacy `income`).
+Touches: DB migration, `web/lib/types.ts`, `web/lib/categories.ts`, TxForm, FilterPanel, BudgetDrawer,
+GoalForm, CSV categoriser, seed data, and `docs/finance.md`. All existing slugs are kept; additive-only.
+Prior: spec 030 — holistic seed system (`specs/030-holistic-seed-auth/plan.md`, shipped). Each shipped
 spec keeps its `plan.md` for reference.
 <!-- SPECKIT END -->
 

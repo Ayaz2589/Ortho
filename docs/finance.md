@@ -71,7 +71,7 @@ conversion round-trip) assert truth that a laundered vector regeneration cannot 
 ## 3. Data shapes (`web/lib/types.ts`, mirrors Postgres column-for-column)
 
 - **Transaction**: `kind: 'expense' | 'income' | 'transfer'` (**3 kinds**);
-  `category: TransactionCategory` (**12 values** = 11 pickable + non-pickable `transfer`);
+  `category: TransactionCategory` (**41 values** = 40 pickable + non-pickable `transfer`);
   `amount_cents`; `paid_by?` (who paid out); `owner_ids: string[]`;
   `shares: Record<string, number>` (must sum to `amount_cents`); `notes`; `tags?: string[]`
   (tag ids, spec 027).
@@ -346,13 +346,29 @@ Deliberately **unvectored** (unit tests only; documented policy in `PARITY.md`).
 
 ## 14. Categories & severity (`web/lib/categories.ts`, 110 lines)
 
-- **3 kinds**, **12 categories** total: 11 `PICKABLE_CATEGORIES` (`coffee, groceries, dining,
-  subs, fuel, rent, health, income, transit, utilities, entertainment` — `entertainment` added by
-  migration `20260522170000_add_entertainment_category`) + non-pickable `transfer`.
-  `SPEND_CATEGORIES` = **10** (pickable minus `income`). Adding a category requires the Postgres
-  enum migration **and** `PICKABLE_CATEGORIES` (in `web/lib/types.ts`, not here) **and** a
-  `CATEGORIES` entry.
-- `CATEGORIES` — label / lucide icon / tint per category (tints ported from iOS).
+- **3 kinds**, **41 categories** total: 40 `PICKABLE_CATEGORIES` + non-pickable `transfer`.
+  Expense subcategories (29) organized in 8 groups via `CATEGORY_GROUPS.expense`; income
+  subcategories (10) in 3 groups via `CATEGORY_GROUPS.income`. `SPEND_CATEGORIES` = 29 (all
+  expense slugs derived from `CATEGORY_GROUPS.expense`). `INCOME_CATEGORIES` = 10 (all income
+  slugs). Adding a category requires the Postgres enum migration (`ALTER TYPE transaction_category
+  ADD VALUE IF NOT EXISTS`) **and** `PICKABLE_CATEGORIES` (in `web/lib/types.ts`) **and** a
+  `CATEGORIES` entry with `parent: CategoryGroupKey` **and** adding it to `CATEGORY_GROUPS`.
+
+  | Group | Children |
+  |-------|---------|
+  | Food & Drink | coffee, groceries, dining, fast_food, alcohol, takeout |
+  | Transport | transit, fuel, parking, rideshare |
+  | Home | rent, utilities, home_improvement, insurance |
+  | Health & Wellness | health, gym, pharmacy, mental_health |
+  | Entertainment | entertainment, streaming, gaming, events |
+  | Shopping | clothing, electronics, personal_care, gifts |
+  | Subscriptions | subs |
+  | Education | education, books |
+  | Employment & Business (income) | salary, bonus, freelance, business_income |
+  | Investment & Assets (income) | dividends, rental_income |
+  | Other Income | gift_received, refund, other_income, income |
+
+- `CATEGORIES` — label / lucide icon / tint / parent per category (tints ported from iOS).
 - `SEVERITY_ORDER` / `severityColor` — severity → sort rank / CSS token (`--destructive`,
   `--accent`, `--positive`, `--text-2`). `SEVERITY_ORDER` is defined twice with identical values
   (`categories.ts` for UI, `insights.ts` for sorting) — treat `insights.ts` as canonical for

@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { PageHeader } from '@/components/ui'
 import { ReadingColumn } from '@/components/layout'
-import { SPEND_CATEGORIES, CATEGORIES } from '@/lib/categories'
+import { CATEGORY_GROUPS, CATEGORIES } from '@/lib/categories'
 import type { BudgetType, TransactionCategory } from '@/lib/types'
 import { BudgetDrawer } from '@/components/budgets/BudgetDrawer'
 
@@ -31,49 +31,61 @@ export default function BudgetsPage() {
       </div>
       <PageHeader title={t('Budgets')} />
 
-      <div
-        className="divide-y divide-hairline overflow-hidden rounded-2xl bg-surface"
-        style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
-      >
-        {SPEND_CATEGORIES.map((cat) => {
-          const meta = CATEGORIES[cat]
-          const Icon = meta.icon
-          const budget = budgets.find((b) => b.category === cat) ?? null
-          return (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setEditing(cat)}
-              className="flex min-h-[56px] w-full items-center gap-3 px-4 py-3 text-left"
+      <div className="flex flex-col gap-4">
+        {CATEGORY_GROUPS.expense.map((group) => (
+          <div key={group.key}>
+            <div
+              className="px-1 pb-2"
+              style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-3)' }}
             >
-              <span
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white"
-                style={{ background: meta.tint }}
-              >
-                <Icon size={14} />
-              </span>
-              <span className="text-[17px] font-normal text-text">{t(meta.label)}</span>
-              <span className="ml-auto flex items-center gap-1.5">
-                <span className="flex flex-col items-end">
-                  <span
-                    className={
-                      'text-[15px] font-normal tabular-nums ' +
-                      (budget ? 'text-text-2' : 'text-text-3')
-                    }
+              {t(group.label)}
+            </div>
+            <div
+              className="divide-y divide-hairline overflow-hidden rounded-2xl bg-surface"
+              style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
+            >
+              {group.children.map((cat) => {
+                const meta = CATEGORIES[cat]
+                const Icon = meta.icon
+                const budget = budgets.find((b) => b.category === cat) ?? null
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setEditing(cat)}
+                    className="flex min-h-[56px] w-full items-center gap-3 px-4 py-3 text-left"
                   >
-                    {budget ? t('{0} / mo', formatMoney(budget.monthly_limit_cents)) : t('Not set')}
-                  </span>
-                  {budget && budget.budget_type !== 'fixed' && (
-                    <span className="text-[12px] font-normal text-text-3">
-                      {t(TYPE_LABEL[budget.budget_type])}
+                    <span
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white"
+                      style={{ background: meta.tint }}
+                    >
+                      <Icon size={14} />
                     </span>
-                  )}
-                </span>
-                <ChevronRight size={16} className="text-text-3" />
-              </span>
-            </button>
-          )
-        })}
+                    <span className="text-[17px] font-normal text-text">{t(meta.label)}</span>
+                    <span className="ml-auto flex items-center gap-1.5">
+                      <span className="flex flex-col items-end">
+                        <span
+                          className={
+                            'text-[15px] font-normal tabular-nums ' +
+                            (budget ? 'text-text-2' : 'text-text-3')
+                          }
+                        >
+                          {budget ? t('{0} / mo', formatMoney(budget.monthly_limit_cents)) : t('Not set')}
+                        </span>
+                        {budget && budget.budget_type !== 'fixed' && (
+                          <span className="text-[12px] font-normal text-text-3">
+                            {t(TYPE_LABEL[budget.budget_type])}
+                          </span>
+                        )}
+                      </span>
+                      <ChevronRight size={16} className="text-text-3" />
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       <p className="px-1 pt-3 text-[13px] leading-relaxed text-text-3">

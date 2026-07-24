@@ -5,19 +5,27 @@ export type PropertyKind = 'primary_home' | 'multifamily' | 'rental'
  *  absent — Reimbursement is never a pickable category/budget/filter (locked
  *  product decision, 2026-07-02 audit). The union derives from this list so a
  *  new category can never reach the type without reaching every picker
- *  (spec 013 US5). */
+ *  (spec 013 US5). Spec 031 expanded this list to a two-level taxonomy. */
 export const PICKABLE_CATEGORIES = [
-  'coffee',
-  'groceries',
-  'dining',
+  // Food & Drink
+  'coffee', 'groceries', 'dining', 'fast_food', 'alcohol', 'takeout',
+  // Transport
+  'transit', 'fuel', 'parking', 'rideshare',
+  // Home
+  'rent', 'utilities', 'home_improvement', 'insurance',
+  // Health & Wellness
+  'health', 'gym', 'pharmacy', 'mental_health',
+  // Entertainment
+  'entertainment', 'streaming', 'gaming', 'events',
+  // Shopping
+  'clothing', 'electronics', 'personal_care', 'gifts',
+  // Subscriptions
   'subs',
-  'fuel',
-  'rent',
-  'health',
-  'income',
-  'transit',
-  'utilities',
-  'entertainment',
+  // Education
+  'education', 'books',
+  // Income (legacy + subcategories)
+  'income', 'salary', 'bonus', 'freelance', 'business_income',
+  'dividends', 'rental_income', 'gift_received', 'refund', 'other_income',
 ] as const
 export type TransactionCategory = (typeof PICKABLE_CATEGORIES)[number] | 'transfer'
 export type InsightSeverity = 'critical' | 'warning' | 'info' | 'positive'

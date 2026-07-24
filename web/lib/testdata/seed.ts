@@ -132,7 +132,7 @@ export function buildSeedTables(): { authUser: typeof SEED_AUTH_USER; tables: Re
       for (const tagId of built.tagIds) transaction_tags.push({ transaction_id: built.tx.id, tag_id: tagId })
     }
     // Monthly income + a partial settle-up so balances stay non-zero.
-    const income = buildTx(`td-income-${monthBase}`, 'Acme Payroll', 'income', 'income', 520000, 'Joint Checking', monthBase + 1, [P_ME], null)
+    const income = buildTx(`td-income-${monthBase}`, 'Acme Payroll', 'salary', 'income', 520000, 'Joint Checking', monthBase + 1, [P_ME], null)
     transactions.push(income.tx)
     transaction_shares.push(...income.shares)
   }
