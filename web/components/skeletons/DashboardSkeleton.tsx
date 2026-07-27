@@ -1,7 +1,8 @@
 'use client'
 
+import { Card } from '@/components/ui'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { SkeletonRegion, SkeletonCard } from './SkeletonRegion'
+import { SkeletonRegion } from './SkeletonRegion'
 
 /** Dashboard skeleton (spec 032) — fixed shape mirroring the widget stack:
  *  header + range pill, a tall month-summary card, then a set of widget cards.
@@ -15,7 +16,7 @@ export function DashboardSkeleton() {
       </div>
 
       {/* month summary headline card */}
-      <SkeletonCard className="mt-4">
+      <Card className="mt-4 p-5">
         <Skeleton width={90} height={12} />
         <div className="mt-3">
           <Skeleton width={180} height={30} />
@@ -24,12 +25,12 @@ export function DashboardSkeleton() {
           <Skeleton width={100} height={14} />
           <Skeleton width={100} height={14} />
         </div>
-      </SkeletonCard>
+      </Card>
 
       {/* widget cards */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         {Array.from({ length: 4 }).map((_, i) => (
-          <SkeletonCard key={i}>
+          <Card key={i} className="p-5">
             <Skeleton width={120} height={12} />
             <div className="mt-4 flex flex-col gap-3">
               {Array.from({ length: 3 }).map((_, j) => (
@@ -39,7 +40,7 @@ export function DashboardSkeleton() {
                 </div>
               ))}
             </div>
-          </SkeletonCard>
+          </Card>
         ))}
       </div>
     </SkeletonRegion>

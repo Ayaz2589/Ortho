@@ -1,9 +1,10 @@
 'use client'
 
+import { Card } from '@/components/ui'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ReadingColumn } from '@/components/layout'
 import { CATEGORY_GROUPS } from '@/lib/categories'
-import { SkeletonRegion, SkeletonCard } from './SkeletonRegion'
+import { SkeletonRegion } from './SkeletonRegion'
 
 /** Budgets skeleton (spec 032) — a fixed shape: one group caption + a card of
  *  rows per expense category group. The number of groups is data-independent
@@ -24,7 +25,7 @@ export function BudgetsSkeleton() {
               <div className="px-1 pb-2">
                 <Skeleton width={120} height={11} />
               </div>
-              <SkeletonCard className="!p-0">
+              <Card>
                 {group.children.slice(0, 3).map((child, i) => (
                   <div
                     key={child}
@@ -35,7 +36,7 @@ export function BudgetsSkeleton() {
                     <Skeleton width={64} height={13} />
                   </div>
                 ))}
-              </SkeletonCard>
+              </Card>
             </div>
           ))}
         </div>

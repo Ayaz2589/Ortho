@@ -1,8 +1,9 @@
 'use client'
 
+import { Card } from '@/components/ui'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ReadingColumn } from '@/components/layout'
-import { SkeletonRegion, SkeletonCard, atLeastOne } from './SkeletonRegion'
+import { SkeletonRegion, atLeastOne } from './SkeletonRegion'
 
 /** Goals skeleton (spec 032) — back link + header, then `count` goal-card
  *  placeholders (headline amount, progress bar, meta line), sized from the
@@ -21,7 +22,7 @@ export function GoalsSkeleton({ count = 3 }: { count?: number }) {
         </div>
         <div className="mt-4 flex flex-col gap-4">
           {Array.from({ length: cards }).map((_, i) => (
-            <SkeletonCard key={i}>
+            <Card key={i} className="p-5">
               <div className="flex items-center gap-3">
                 <Skeleton width={36} height={36} radius={10} />
                 <Skeleton width="45%" height={15} />
@@ -37,7 +38,7 @@ export function GoalsSkeleton({ count = 3 }: { count?: number }) {
                 <Skeleton width="30%" height={12} />
                 <Skeleton width="25%" height={12} />
               </div>
-            </SkeletonCard>
+            </Card>
           ))}
         </div>
       </ReadingColumn>

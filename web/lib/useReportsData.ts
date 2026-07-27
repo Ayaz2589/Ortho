@@ -59,9 +59,12 @@ export function useReportsData(householdId: string, interval: Interval): Reports
         setCategories(ranked)
         setStatus('ready')
         // spec 032: remember the row counts so the NEXT Reports open renders a
-        // correctly-sized skeleton. Best-effort — never throws.
+        // correctly-sized skeleton. Best-effort — never throws. The category view
+        // only ever DISPLAYS up to 6 ranked rows + one "Other" bucket
+        // (CategoryDeepDiveView MAX_ROWS), so record the displayed cap — not the
+        // full ranked length — or the skeleton would be far taller than the content.
         writeSkeletonCount('reportsSavings', savingsSeries.length)
-        writeSkeletonCount('reportsCategories', ranked.length)
+        writeSkeletonCount('reportsCategories', Math.min(ranked.length, 7))
       } catch {
         if (cancelled) return
         setStatus('error')

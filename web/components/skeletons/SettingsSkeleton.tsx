@@ -1,8 +1,9 @@
 'use client'
 
+import { Card } from '@/components/ui'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ReadingColumn } from '@/components/layout'
-import { SkeletonRegion, SkeletonCard } from './SkeletonRegion'
+import { SkeletonRegion } from './SkeletonRegion'
 
 /** Settings skeleton (spec 032) — a fixed shape: header + a few section cards,
  *  each holding several link-row placeholders. The section list is
@@ -18,7 +19,7 @@ export function SettingsSkeleton() {
         </div>
         <div className="mt-4 flex flex-col gap-6">
           {SECTIONS.map((rows, s) => (
-            <SkeletonCard key={s} className="!p-0">
+            <Card key={s}>
               {Array.from({ length: rows }).map((_, i) => (
                 <div
                   key={i}
@@ -29,7 +30,7 @@ export function SettingsSkeleton() {
                   <Skeleton width={16} height={16} radius="full" />
                 </div>
               ))}
-            </SkeletonCard>
+            </Card>
           ))}
         </div>
       </ReadingColumn>

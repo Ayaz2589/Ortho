@@ -2,8 +2,9 @@
 
 import { usePathname } from 'next/navigation'
 import { readSkeletonCount } from '@/lib/skeletonCounts'
+import { Card } from '@/components/ui'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { SkeletonRegion, SkeletonCard } from './SkeletonRegion'
+import { SkeletonRegion } from './SkeletonRegion'
 import { DashboardSkeleton } from './DashboardSkeleton'
 import { TransactionsSkeleton } from './TransactionsSkeleton'
 import { HousingSkeleton } from './HousingSkeleton'
@@ -25,13 +26,13 @@ function GenericSkeleton() {
       </div>
       <div className="mt-4 flex flex-col gap-4">
         {Array.from({ length: 3 }).map((_, i) => (
-          <SkeletonCard key={i}>
+          <Card key={i} className="p-5">
             <Skeleton width="40%" height={13} />
             <div className="mt-3 flex flex-col gap-2">
               <Skeleton height={12} />
               <Skeleton width="70%" height={12} />
             </div>
-          </SkeletonCard>
+          </Card>
         ))}
       </div>
     </SkeletonRegion>
