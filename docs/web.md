@@ -35,8 +35,19 @@ web/app/
                         signed-in users to /dashboard on mount; builds its own t()
   (app)/layout.tsx      AppStateProvider + Shell + biometric lock overlay + paywall gate
   (app)/dashboard, transactions{,/new,/edit}, housing{,/new,/edit}, budgets, goals,
-        settings{,/household,/linked-banks}, plaid-oauth
+        settings{,/household,/linked-banks,/data}, plaid-oauth
 ```
+
+- **Settings › Data (spec 032)** — download household data (transactions + housing) as a dual-layer
+  PDF and re-import it. Logic is the self-contained `web/lib/dataFile/` module: a versioned
+  section-registry envelope (`envelope.ts`/`registry.ts`), per-section serialize/read/dedupe/apply/
+  render (`sections/{transactions,housing}.ts`), PDF generation via `pdf-lib` + `@pdf-lib/fontkit`
+  with a per-language font seam (`pdf/*`), and read-back of the embedded `ortho-export.json`
+  attachment via `unpdf` `getAttachments()` (`readPdf.ts`). Export/import orchestration in
+  `export.ts`/`import.ts`; UI in `components/settings/Data{Export,Import}Panel.tsx`. Amounts in the
+  payload are always canonical USD cents (display currency is visible-layer only); import is additive
+  + idempotent with two-tier dedup (canonical id, then the CSV fuzzy matcher). Payload round-trip +
+  dedup are headlessly tested (`test/dataFile/*`); glyph rendering is on-device QA.
 
 - **Four destinations only** (Dashboard/Transactions/Housing/Settings) — identical TABS arrays
   duplicated in `components/Sidebar.tsx` and `components/TabBar.tsx`. `/budgets` and `/goals` are

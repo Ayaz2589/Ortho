@@ -6,9 +6,12 @@ Reports views) with calm, motionless placeholder skeletons matching each route's
 list/table surfaces (Transactions/Goals/Housing/Reports rows) are sized from the previous successful
 load's item count, persisted in `localStorage` (`ortho.skeletonCounts`). Adds a token-only `Skeleton`
 primitive (no shimmer — constitution Principle IV), `lib/skeletonCounts.ts`, and a pathname-keyed
-`RouteSkeleton` dispatcher. Prior in-flight sibling: spec 031 — category & subcategory expansion
-(`feat/031-category-subcategory-expansion`). Prior shipped: spec 030 — holistic seed system
-(`specs/030-holistic-seed-auth/plan.md`). Each shipped spec keeps its `plan.md` for reference.
+`RouteSkeleton` dispatcher.
+Prior shipped (also numbered 032, parallel branch): **PDF data export & import**
+(`specs/032-pdf-data-export/plan.md`) — download household data as a dual-layer PDF (human-readable +
+embedded machine-readable payload) in any of 6 languages × 7 currencies and re-import it with two-tier
+dedup; `web/lib/dataFile/` + Settings → Data. Prior: spec 031 — category & subcategory expansion
+(`specs/031-category-subcategory-expansion/plan.md`). Each shipped spec keeps its `plan.md` for reference.
 <!-- SPECKIT END -->
 
 ## Project documentation
