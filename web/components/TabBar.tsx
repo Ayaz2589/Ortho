@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { BarChart3, ArrowUpDown, House, Settings } from 'lucide-react'
 import { useApp } from '@/lib/store'
+import { useTabBarHidden } from '@/lib/tabBarVisibility'
 import { cn } from '@/lib/utils'
 
 const TABS = [
@@ -16,6 +17,10 @@ const TABS = [
 export function TabBar() {
   const pathname = usePathname()
   const { t } = useApp()
+  // Full-screen task surfaces (new/edit form pages, the transaction detail view)
+  // hide the tab bar so the flow owns the screen — see lib/tabBarVisibility.
+  const hidden = useTabBarHidden()
+  if (hidden) return null
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-30 flex justify-center border-t border-hairline backdrop-blur-xl sm:hidden"

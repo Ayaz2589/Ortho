@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { Search, Plus, X, ArrowUpDown, ChevronDown, ChevronLeft, SlidersHorizontal, FileSpreadsheet } from 'lucide-react'
+import { Search, Plus, X, ArrowUpDown, ChevronDown, SlidersHorizontal, FileSpreadsheet } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { PageHeader, IconButton, Card, EmptyState, Modal } from '@/components/ui'
 import { useIsExpanded } from '@/lib/useMediaQuery'
@@ -11,7 +11,7 @@ import { useMonthAccordion } from '@/lib/useMonthAccordion'
 import type { Transaction } from '@/lib/types'
 import { sortByName } from '@/lib/transaction'
 import { TransactionRow } from '@/components/transactions/TransactionRow'
-import { TransactionDetailBody } from '@/components/transactions/TransactionDetailBody'
+import { TransactionDetailView } from '@/components/transactions/TransactionDetailView'
 import { BalanceSummary } from '@/components/transactions/BalanceSummary'
 import { useRouter } from 'next/navigation'
 import type { TransferPrefill } from '@/components/web/TxForm'
@@ -36,13 +36,12 @@ const TransactionsDesktop = dynamic(
 export default function TransactionsPage() {
   const isExpanded = useIsExpanded()
   const router = useRouter()
-  const { transactions, formatMoney, deleteTransaction, resolveUser, currentHousehold, locale, t } = useApp()
+  const { transactions, formatMoney, deleteTransaction, resolveUser, locale, t } = useApp()
   const f = useTransactionFilters()
 
   const [searchActive, setSearchActive] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const [csvOpen, setCsvOpen] = useState(false)
 
   // Reopen the import tray after an accidental refresh if a review session was
@@ -79,82 +78,24 @@ export default function TransactionsPage() {
   // Desktop (≥1024px): the ledger table + detail drawer.
   if (isExpanded) return <TransactionsDesktop />
 
-  // Mobile: full-page detail view (replaces the slide-up modal).
+  // Mobile: full-page detail view (replaces the slide-up modal). `key` remounts
+  // per transaction so the confirm-delete toggle never carries between rows.
   const detailTx = detailId ? transactions.find((tx) => tx.id === detailId) ?? null : null
   if (detailTx) {
-    const isIncome = detailTx.kind === 'income'
-    const kindLabel = detailTx.kind === 'transfer' ? t('Reimbursement') : isIncome ? t('Income') : t('Expense')
-    // Hero title: the merchant/source name (or "Reimbursement" for transfers).
-    // Subtitle: kind + household, mirroring the housing detail pattern.
-    const heroTitle = detailTx.kind === 'transfer' ? t('Reimbursement') : detailTx.merchant
-    const heroSubtitle =
-      currentHousehold && detailTx.household_id === currentHousehold.id
-        ? `${kindLabel} · ${currentHousehold.name}`
-        : kindLabel
-    function goBack() {
-      setDetailId(null)
-      setConfirmDelete(false)
-    }
     return (
-      <div className="mx-auto w-full max-w-[640px]">
-        <div className="mb-4 flex items-start gap-3 pt-2">
-          <IconButton onClick={goBack} ariaLabel={t('Back')}>
-            <ChevronLeft size={18} />
-          </IconButton>
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-[28px] font-light tracking-[-0.6px] text-text">{heroTitle}</h1>
-            <p className="text-[13px] text-text-2">{heroSubtitle}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setDetailId(null)
-              router.push(`/transactions/edit?id=${encodeURIComponent(detailTx.id)}`)
-            }}
-            className="pt-2 text-[15px] font-normal text-accent"
-          >
-            {t('Edit')}
-          </button>
-        </div>
-        <div className="flex flex-col gap-5 px-4">
-          <TransactionDetailBody tx={detailTx} />
-          {confirmDelete ? (
-            <div className="flex flex-col gap-2 rounded-2xl bg-surface p-4">
-              <p className="text-center text-[14px] text-text-2">
-                {t('Delete this transaction?')} {t("This can't be undone.")}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setConfirmDelete(false)}
-                  className="flex-1 rounded-full py-2.5 text-[15px] font-normal text-text"
-                  style={{ background: 'var(--chip-bg)' }}
-                >
-                  {t('Cancel')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    deleteTransaction(detailTx.id)
-                    goBack()
-                  }}
-                  className="flex-1 rounded-full bg-destructive py-2.5 text-[15px] font-normal text-white"
-                >
-                  {t('Delete')}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setConfirmDelete(true)}
-              className="rounded-2xl bg-surface py-3.5 text-center text-[15px] font-normal text-destructive"
-            >
-              {t('Delete transaction')}
-            </button>
-          )}
-        </div>
-      </div>
+      <TransactionDetailView
+        key={detailTx.id}
+        tx={detailTx}
+        onBack={() => setDetailId(null)}
+        onEdit={() => {
+          setDetailId(null)
+          router.push(`/transactions/edit?id=${encodeURIComponent(detailTx.id)}`)
+        }}
+        onDelete={() => {
+          deleteTransaction(detailTx.id)
+          setDetailId(null)
+        }}
+      />
     )
   }
 
@@ -303,7 +244,7 @@ export default function TransactionsPage() {
                           <TransactionRow
                             key={tx.id}
                             tx={tx}
-                            onOpen={() => { setDetailId(tx.id); setConfirmDelete(false) }}
+                            onOpen={() => setDetailId(tx.id)}
                             onCopy={() => openCopy(tx)}
                             onDelete={() => deleteTransaction(tx.id)}
                           />
