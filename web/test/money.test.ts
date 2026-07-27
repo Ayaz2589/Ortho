@@ -85,6 +85,40 @@ describe('locale-aware formatting (FR-004)', () => {
   })
 })
 
+describe('currency symbol is always a prefix, regardless of locale (symbol + amount)', () => {
+  // Intl's `style: 'currency'` places the symbol wherever the locale dictates
+  // (e.g. "1.234,56 US$" in de-DE). We instead always render our own configured
+  // symbol before the amount, keeping only the locale's digit grouping/decimals.
+  it('USD stays "$" prefix in a locale that would otherwise suffix "US$"', () => {
+    // de-DE would natively render USD as "1.234,56 US$"; we force "$" up front.
+    expect(formatMoney(123456, 'usd', 1, false, 'de-DE')).toBe('$1.234,56')
+  })
+  it('USD stays "$" prefix in pt-BR (native would be "US$")', () => {
+    expect(formatMoney(100000, 'usd', 1, false, 'pt-BR')).toBe('$1.000,00')
+  })
+  it('EUR stays "€" prefix in de-DE (native would suffix "€")', () => {
+    expect(formatMoney(123456, 'eur', 1, false, 'de-DE')).toBe('€1.234,56')
+  })
+  it('keeps the disambiguated CA$ symbol even where the locale drops the country prefix', () => {
+    // fr-CA natively renders CAD as just "10,00 $"; we always keep "CA$".
+    expect(formatMoney(1000, 'cad', 1, false, 'fr-CA')).toBe('CA$10,00')
+  })
+  it('negatives keep the Unicode minus before the symbol', () => {
+    expect(formatMoney(-123456, 'usd', 1, false, 'de-DE')).toBe('−$1.234,56')
+  })
+  it('leadingPlus keeps the "+" before the symbol', () => {
+    expect(formatMoney(123456, 'usd', 1, true, 'de-DE')).toBe('+$1.234,56')
+  })
+  // The বাংলা language option maps to `bn-BD-u-nu-latn` (Latin digits). Native
+  // Intl currency style suffixes here: USD → "1,234.56 US$", BDT → "1,234.56৳".
+  it('USD stays "$" prefix under the Bangla app locale (bn-BD-u-nu-latn)', () => {
+    expect(formatMoney(123456, 'usd', 1, false, 'bn-BD-u-nu-latn')).toBe('$1,234.56')
+  })
+  it('BDT stays "৳" prefix under the Bangla app locale (bn-BD-u-nu-latn)', () => {
+    expect(formatMoney(123456, 'bdt', 1, false, 'bn-BD-u-nu-latn')).toBe('৳1,234.56')
+  })
+})
+
 describe('toUSDCents', () => {
   it('round-trips with formatMoney divisor logic for USD', () => {
     // 12.34 dollars -> 1234 USD cents

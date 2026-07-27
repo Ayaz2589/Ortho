@@ -44,25 +44,33 @@ export function toDisplayAmount(
  * @param currency - Currency key (default: 'usd')
  * @param rate - Exchange rate from USD to the target currency (1 USD = rate units; default: 1)
  * @param leadingPlus - Whether to prefix positive values with '+' (default: false)
- * @param locale - BCP-47 locale driving symbol placement / grouping / digits (default: 'en-US')
+ * @param locale - BCP-47 locale driving digit grouping / decimal separators (default: 'en-US').
+ *   Symbol placement is NOT locale-driven: the configured symbol is always a prefix.
  */
+// We deliberately format the *number* only (decimal style) and prepend our own
+// configured currency symbol, rather than letting `style: 'currency'` place the
+// locale's symbol. Intl positions the symbol per-locale (e.g. "1.234,56 US$" in
+// de-DE) and picks its own symbol (dropping the CA/CN disambiguators), which
+// broke the "symbol + amount" rule. Prefixing CURRENCY_CONFIG.symbol keeps
+// placement and the shared-symbol country prefix (CA$, CN¥) constant everywhere,
+// while the decimal formatter still honours each locale's grouping/decimals.
+//
 // Constructing an Intl.NumberFormat is one of the heaviest routine JS ops, and
 // formatMoney runs per ledger row (hundreds per render). Cache one formatter per
-// (locale, currency code, fractionDigits) tuple — the only inputs that affect
+// (locale, fractionDigits) tuple — the only inputs that affect the decimal
 // output — so the result is byte-identical while the formatter is built once
 // (spec 023 P2).
-const currencyFormatters = new Map<string, Intl.NumberFormat>()
-function currencyFormatter(locale: string, code: string, fractionDigits: number): Intl.NumberFormat {
-  const key = `${locale}|${code}|${fractionDigits}`
-  let fmt = currencyFormatters.get(key)
+const decimalFormatters = new Map<string, Intl.NumberFormat>()
+function decimalFormatter(locale: string, fractionDigits: number): Intl.NumberFormat {
+  const key = `${locale}|${fractionDigits}`
+  let fmt = decimalFormatters.get(key)
   if (!fmt) {
     fmt = new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: code,
+      style: 'decimal',
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits,
     })
-    currencyFormatters.set(key, fmt)
+    decimalFormatters.set(key, fmt)
   }
   return fmt
 }
@@ -78,11 +86,12 @@ export function formatMoney(
   // USD-cents storage invariant: always divide by 100, then apply the FX rate.
   const amount = (cents / 100) * rate
 
-  const formatted = currencyFormatter(locale, config.code, config.fractionDigits).format(Math.abs(amount))
+  const formatted = decimalFormatter(locale, config.fractionDigits).format(Math.abs(amount))
 
   // Unicode minus (U+2212) for shown negatives, per the constitution's money rules.
+  // Always "symbol + amount": sign, then the configured symbol, then the number.
   const sign = amount < 0 ? '−' : leadingPlus && amount > 0 ? '+' : ''
-  return `${sign}${formatted}`
+  return `${sign}${config.symbol}${formatted}`
 }
 
 /**
