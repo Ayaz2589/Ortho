@@ -54,7 +54,12 @@ export function TxFormPageClient({
           }}
         />
       )}
-      <div className="flex-1 px-6 pb-10 pt-2">
+      {/* No horizontal padding here: every child of TxFormBody already carries
+          its own ~20px inset (each `ow-card` has `margin: '0 20px'`, the amount
+          hero/footers use their own padding) — exactly how the desktop drawer
+          renders the same body. Adding px-6 stacked on top of that, doubling the
+          side inset to ~44px on mobile. */}
+      <div className="flex-1 pb-10 pt-2">
         {picking ? (
           <TxCopyList
             onPick={(tx) => {

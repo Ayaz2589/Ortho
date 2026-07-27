@@ -89,6 +89,10 @@ export function TransactionDetailBody({ tx }: { tx: Transaction }) {
   const shares = effectiveShares(tx)
   const multi = tx.owner_ids.length > 1
   const payer = tx.paid_by ? resolveUser(tx.paid_by) : null
+  // "Paid by" is redundant on a solo expense — the single owner row already names
+  // that person as the one who paid. Show it only when it adds information: a
+  // split (multiple owners) or a payer who isn't the sole owner.
+  const showPaidBy = !!payer && !(tx.owner_ids.length === 1 && tx.paid_by === tx.owner_ids[0])
 
   return (
     <div className="flex flex-col gap-5">
@@ -141,7 +145,7 @@ export function TransactionDetailBody({ tx }: { tx: Transaction }) {
 
       {/* Meta */}
       <FormGroup>
-        {!isIncome && payer && (
+        {!isIncome && showPaidBy && payer && (
           <FieldRow label={t('Paid by')}>
             <span className="flex items-center gap-2 text-[15px] font-normal text-text">
               <Avatar user={payer} size={22} />

@@ -9,6 +9,7 @@ import { applyAppearance, readAppearance } from '@/components/settings/appearanc
 import { useTranslate } from '@/lib/i18n'
 import { asLanguage, DEFAULT_LANGUAGE, type Language } from '@/lib/language'
 import { TabBar } from '@/components/TabBar'
+import { TabBarVisibilityProvider } from '@/lib/tabBarVisibility'
 import { Sidebar } from '@/components/Sidebar'
 import { Paywall } from '@/components/Paywall'
 import { PlaidHandBack } from '@/components/PlaidHandBack'
@@ -173,7 +174,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   // 'unlocked' and never shows it.
   return (
     <AppStateProvider>
-      <Shell active={unlocked}>{children}</Shell>
+      <TabBarVisibilityProvider>
+        <Shell active={unlocked}>{children}</Shell>
+      </TabBarVisibilityProvider>
       {!unlocked && (
         <BiometricLockScreen locked={gate.state === 'locked'} onRetry={() => void gate.retry()} />
       )}
