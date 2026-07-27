@@ -117,14 +117,40 @@ function resolveOwnership(
     owner_ids.push(me)
     shares[me] = r.amount_cents
   }
+  // Guarantee the shares-sum invariant even for a hand-crafted/older envelope
+  // whose `shares` are missing or don't total `amount_cents`: fall back to an
+  // even split (deterministic remainder to the leading owners).
+  const total = owner_ids.reduce((sum, id) => sum + (shares[id] ?? 0), 0)
+  if (total !== r.amount_cents) {
+    const n = owner_ids.length
+    const base = Math.floor(r.amount_cents / n)
+    const rem = r.amount_cents - base * n
+    owner_ids.forEach((id, i) => {
+      shares[id] = base + (i < rem ? 1 : 0)
+    })
+  }
   const paid_by = r.paid_by == null ? null : map(r.paid_by)
   return { paid_by, owner_ids, shares }
 }
 
 function apply(plan: SectionDedupePlan<TxRecord>, store: DataStore, ctx: ApplyCtx): void {
   const householdId = store.currentHousehold?.id ?? ''
+  // Resolve each tag name to an id at most once per import batch. The store's
+  // addTag reads its `tags` snapshot, which doesn't update synchronously within
+  // one loop — calling it twice for the same new name would create duplicate
+  // tag rows. Cache by trimmed/case-insensitive name (addTag's own identity).
+  const tagIdByName = new Map<string, string>()
+  const resolveTag = (name: string): string => {
+    const key = name.trim().toLowerCase()
+    let id = tagIdByName.get(key)
+    if (!id) {
+      id = store.addTag(name).id
+      tagIdByName.set(key, id)
+    }
+    return id
+  }
   for (const r of plan.add) {
-    const tagIds = r.tags.map((name) => store.addTag(name).id)
+    const tagIds = r.tags.map(resolveTag)
     const tx: Transaction = {
       id: r.id, // preserve → re-import is a tier-1 no-op (idempotent)
       household_id: householdId,

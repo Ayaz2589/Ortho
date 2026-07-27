@@ -98,7 +98,7 @@ export function DataImportPanel() {
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={busy}
-        className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-[15px] text-accent disabled:opacity-40"
+        className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-[15px] text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40"
         style={{ background: 'var(--chip-bg)' }}
       >
         <Upload size={16} />

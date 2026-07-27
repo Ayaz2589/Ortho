@@ -47,6 +47,21 @@ describe('pdf payload round-trip (headless)', () => {
     if (read.ok) expect(read.envelope.sections.every((s) => s.records.length === 0)).toBe(true)
   })
 
+  it('does not crash on cells with control/undefined-WinAnsi characters', async () => {
+    // A merchant name carrying a C1 control char (<=0xFF but undefined in
+    // WinAnsi) must not abort generation via a double-throw in the fallback.
+    const env = envelope()
+    const nastyDoc = {
+      ...doc,
+      sections: [
+        { title: 'Transactions', columns: ['Merchant'], rows: [['Caf \u{1F600}']], emptyLabel: 'x' },
+      ],
+    }
+    const bytes = await buildPdf({ envelope: env, doc: nastyDoc, font: { kind: 'standard' } })
+    const read = await readEnvelope(bytes)
+    expect(read.ok).toBe(true)
+  })
+
   it('rejects a random PDF (no ortho attachment) as not-ortho-file', async () => {
     const { PDFDocument } = await import('pdf-lib')
     const pdf = await PDFDocument.create()

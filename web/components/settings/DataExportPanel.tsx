@@ -26,7 +26,9 @@ function downloadBlob(bytes: Uint8Array, filename: string) {
   document.body.appendChild(a)
   a.click()
   a.remove()
-  URL.revokeObjectURL(url)
+  // Defer revoke so the download isn't cancelled mid-flight in browsers that
+  // read the blob asynchronously after the click.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }
 
 const selectClass =

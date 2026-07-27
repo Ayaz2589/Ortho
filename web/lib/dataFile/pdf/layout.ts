@@ -24,12 +24,15 @@ const GRAPHITE = rgb(0.15, 0.15, 0.15)
 const GRAY = rgb(0.45, 0.45, 0.45)
 const HAIRLINE = rgb(0.85, 0.85, 0.85)
 
-/** Replace any non-WinAnsi-safe code point so a standard font can always draw it. */
+/** Replace any code point a standard (WinAnsi) font can't reliably encode with
+ *  '?'. Only the printable ASCII range and the printable upper-WinAnsi range are
+ *  kept; control chars and the C1 range (0x80–0x9F, several undefined in WinAnsi)
+ *  are dropped so the fallback draw can never itself throw. */
 function winAnsiSafe(s: string): string {
   let out = ''
   for (const ch of s) {
     const code = ch.codePointAt(0) ?? 0
-    out += code <= 0xff ? ch : '?'
+    out += (code >= 0x20 && code <= 0x7e) || (code >= 0xa0 && code <= 0xff) ? ch : '?'
   }
   return out
 }
@@ -39,7 +42,13 @@ function safeDraw(page: PDFPage, font: PDFFont, s: string, x: number, y: number,
   try {
     page.drawText(text, { x, y, size, font, color })
   } catch {
-    page.drawText(winAnsiSafe(text), { x, y, size, font, color })
+    // Belt and suspenders: even the sanitized fallback is guarded, so an exotic
+    // cell degrades to blank rather than aborting the whole export.
+    try {
+      page.drawText(winAnsiSafe(text), { x, y, size, font, color })
+    } catch {
+      /* give up on this one cell */
+    }
   }
 }
 
@@ -77,23 +86,31 @@ export function drawDocument(doc: PDFDocument, font: PDFFont, model: DocModel): 
     const colX = sec.columns.map((_, i) => MARGIN + i * colW)
     const maxCharsPerCol = Math.max(6, Math.floor(colW / 5))
 
-    // header
-    sec.columns.forEach((c, i) => safeDraw(page, font, clip(c, maxCharsPerCol), colX[i], y, 9, GRAY))
-    y -= 4
-    page.drawLine({
-      start: { x: MARGIN, y },
-      end: { x: PAGE_W - MARGIN, y },
-      thickness: 0.5,
-      color: HAIRLINE,
-    })
-    y -= ROW_H
+    // The column header + hairline. Redrawn at the top of every continuation
+    // page so long sections never show bare, unlabelled rows.
+    const drawHeader = () => {
+      sec.columns.forEach((c, i) => safeDraw(page, font, clip(c, maxCharsPerCol), colX[i], y, 9, GRAY))
+      y -= 4
+      page.drawLine({
+        start: { x: MARGIN, y },
+        end: { x: PAGE_W - MARGIN, y },
+        thickness: 0.5,
+        color: HAIRLINE,
+      })
+      y -= ROW_H
+    }
+
+    drawHeader()
 
     if (sec.rows.length === 0) {
       safeDraw(page, font, sec.emptyLabel, MARGIN, y, 9, GRAY)
       y -= ROW_H
     } else {
       for (const row of sec.rows) {
-        ensure(ROW_H)
+        if (y - ROW_H < MARGIN) {
+          newPage()
+          drawHeader()
+        }
         row.forEach((cell, i) => safeDraw(page, font, clip(cell, maxCharsPerCol), colX[i], y, 9))
         y -= ROW_H
       }
