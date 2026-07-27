@@ -109,6 +109,14 @@ describe('currency symbol is always a prefix, regardless of locale (symbol + amo
   it('leadingPlus keeps the "+" before the symbol', () => {
     expect(formatMoney(123456, 'usd', 1, true, 'de-DE')).toBe('+$1.234,56')
   })
+  // The বাংলা language option maps to `bn-BD-u-nu-latn` (Latin digits). Native
+  // Intl currency style suffixes here: USD → "1,234.56 US$", BDT → "1,234.56৳".
+  it('USD stays "$" prefix under the Bangla app locale (bn-BD-u-nu-latn)', () => {
+    expect(formatMoney(123456, 'usd', 1, false, 'bn-BD-u-nu-latn')).toBe('$1,234.56')
+  })
+  it('BDT stays "৳" prefix under the Bangla app locale (bn-BD-u-nu-latn)', () => {
+    expect(formatMoney(123456, 'bdt', 1, false, 'bn-BD-u-nu-latn')).toBe('৳1,234.56')
+  })
 })
 
 describe('toUSDCents', () => {
