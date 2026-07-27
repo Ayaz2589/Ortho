@@ -354,7 +354,6 @@ const catalog: Record<string, string> = {
   "Filters ({0} active)": "ফিল্টার ({0}টি সক্রিয়)",
   "Household finance, in order.": "পরিবারের অর্থ, শৃঙ্খলায়।",
   "Initial is set automatically from the name. People you add can own and split transactions — no account needed.": "নাম থেকে স্বয়ংক্রিয়ভাবে আদ্যক্ষর সেট হয়। আপনি যাদের যোগ করেন তারা লেনদেনের মালিক হতে ও ভাগ করতে পারে — কোন অ্যাকাউন্ট লাগে না।",
-  "Loading…": "লোড হচ্ছে…",
   "Multifamily": "মাল্টিফ্যামিলি",
   "No cards yet": "এখনো কোন কার্ড নেই",
   "No payments logged yet.": "এখনো কোন পেমেন্ট লগ করা হয়নি।",

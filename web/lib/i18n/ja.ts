@@ -354,7 +354,6 @@ const catalog: Record<string, string> = {
   "Filters ({0} active)": "フィルター（{0}件適用中）",
   "Household finance, in order.": "世帯のお金を、整然と。",
   "Initial is set automatically from the name. People you add can own and split transactions — no account needed.": "イニシャルは名前から自動的に設定されます。追加した人は取引の所有と分割ができます — アカウントは不要です。",
-  "Loading…": "読み込み中…",
   "Multifamily": "集合住宅",
   "No cards yet": "カードはまだありません",
   "No payments logged yet.": "支払いの記録はまだありません。",

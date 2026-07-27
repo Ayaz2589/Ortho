@@ -354,7 +354,6 @@ const catalog: Record<string, string> = {
   "Filters ({0} active)": "筛选（{0}项生效）",
   "Household finance, in order.": "家庭财务，井然有序。",
   "Initial is set automatically from the name. People you add can own and split transactions — no account needed.": "首字母会从名字自动设置。您添加的人可以拥有和拆分交易 — 无需账户。",
-  "Loading…": "加载中…",
   "Multifamily": "多户住宅",
   "No cards yet": "暂无卡片",
   "No payments logged yet.": "尚未记录付款。",

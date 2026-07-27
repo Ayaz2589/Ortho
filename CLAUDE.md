@@ -1,12 +1,14 @@
 <!-- SPECKIT START -->
-Active feature: **spec 031 — category & subcategory expansion**. Plan:
-`specs/031-category-subcategory-expansion/plan.md` (spec/plan/data-model/quickstart/contracts alongside it).
-Expands the flat 11-category `transaction_category` Postgres enum to a two-level grouped taxonomy:
-8 expense parent groups with 28 subcategories, plus 10 income subcategories (9 new + legacy `income`).
-Touches: DB migration, `web/lib/types.ts`, `web/lib/categories.ts`, TxForm, FilterPanel, BudgetDrawer,
-GoalForm, CSV categoriser, seed data, and `docs/finance.md`. All existing slugs are kept; additive-only.
-Prior: spec 030 — holistic seed system (`specs/030-holistic-seed-auth/plan.md`, shipped). Each shipped
-spec keeps its `plan.md` for reference.
+Active feature: **spec 032 — content-shaped loading skeletons**. Plan:
+`specs/032-loading-skeletons/plan.md` (spec/plan/data-model/quickstart/contracts alongside it).
+Replaces the bare "Loading…" strings (whole-shell bootstrap gate in `web/app/(app)/layout.tsx` and the
+Reports views) with calm, motionless placeholder skeletons matching each route's shape; dynamic
+list/table surfaces (Transactions/Goals/Housing/Reports rows) are sized from the previous successful
+load's item count, persisted in `localStorage` (`ortho.skeletonCounts`). Adds a token-only `Skeleton`
+primitive (no shimmer — constitution Principle IV), `lib/skeletonCounts.ts`, and a pathname-keyed
+`RouteSkeleton` dispatcher. Prior in-flight sibling: spec 031 — category & subcategory expansion
+(`feat/031-category-subcategory-expansion`). Prior shipped: spec 030 — holistic seed system
+(`specs/030-holistic-seed-auth/plan.md`). Each shipped spec keeps its `plan.md` for reference.
 <!-- SPECKIT END -->
 
 ## Project documentation
