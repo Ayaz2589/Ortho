@@ -13,6 +13,7 @@ const SECTIONS = [
   { href: '/settings/currency', label: 'Currency' },
   { href: '/settings/language', label: 'Language' },
   { href: '/settings/appearance', label: 'Appearance' },
+  { href: '/settings/data', label: 'Data' },
   { href: '/settings/account', label: 'Account' },
 ] as const
 
