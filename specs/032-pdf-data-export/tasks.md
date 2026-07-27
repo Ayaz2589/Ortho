@@ -161,7 +161,7 @@
 - [X] T044 [P] Update `docs/web.md` (settings route tree + the new `web/lib/dataFile/` module) and `docs/index.md`/`docs/shared.md` (new `data-file-dedup.json` vector). Note the client-side pdf-lib/unpdf stack.
 - [X] T045 Run full gate: `cd web && npx tsc --noEmit` (zero errors) and `npm test` (all green), then `npm run gen:vectors && git diff --exit-code shared/test-vectors`.
 - [X] T046 Verify `web/lib/csv/duplicateMatch.ts` and `web/lib/share.ts` are unchanged/reused (no regression to CSV import or existing share).
-- [ ] T047 **[FOLLOW-UP, not a merge gate]** Provision the large CJK/Bengali TTF binaries (`NotoSansJP/KR/SC/Bengali-Regular.ttf`) into `web/public/fonts/` and perform on-device / real-browser glyph QA per `quickstart.md` manual steps (Linux sandbox cannot render/verify glyphs). Track as a separate PR/issue if font binaries aren't provisioned in this branch.
+- [X] T047 **Done:** provisioned `NotoSans{JP,KR,SC,Bengali}-Regular.ttf` into `web/public/fonts/` as static glyf Regular instances (`fontTools.varLib.instancer`) of Google's variable Noto families (~22 MB total). Embed + subset + script-draw verified headlessly in `test/dataFile/fonts-embed.test.ts` (incl. Bengali complex shaping via a lazy `regenerator-runtime` polyfill on the custom-font path). **Remaining follow-up:** pixel-level on-device / real-browser glyph QA (no-tofu, correct conjuncts) — the one thing a Linux sandbox can't check.
 
 ---
 

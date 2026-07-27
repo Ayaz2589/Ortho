@@ -11,8 +11,9 @@
 //
 // A missing/failed font asset degrades to the Latin standard font rather than
 // hard-failing the export (glyphs for that run render in Latin; the machine-
-// readable payload is unaffected). CJK/Bengali binary provisioning + on-device
-// glyph QA is a tracked follow-up (see specs/032-pdf-data-export/tasks.md T047).
+// readable payload is unaffected). The JP/KR/SC/Bengali TTFs are provisioned as
+// static glyf Noto instances under /public/fonts (embed+subset verified in
+// test/dataFile/fonts-embed.test.ts); pixel-level rendering is still on-device QA.
 
 import type { Language } from '../../language'
 

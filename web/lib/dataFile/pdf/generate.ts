@@ -29,6 +29,11 @@ export async function buildPdf({ envelope, doc, font }: BuildPdfInput): Promise<
 
   let pdfFont: PDFFont
   if (font.kind === 'custom') {
+    // @pdf-lib/fontkit's complex-script shaper (Bengali and other Indic scripts:
+    // conjunct/reordering via GSUB) runs through regenerator-transpiled code that
+    // needs a global `regeneratorRuntime`. Load the polyfill lazily — only on the
+    // non-Latin embedded-font path, so the common bundle is unaffected.
+    await import('regenerator-runtime/runtime.js')
     pdf.registerFontkit(fontkit)
     pdfFont = await pdf.embedFont(font.bytes, { subset: true })
   } else {
