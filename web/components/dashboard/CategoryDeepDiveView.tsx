@@ -9,6 +9,8 @@ import { categoryMeta } from '@/lib/categories'
 import type { RankedCategory } from '@/lib/reports/categories'
 import type { TransactionCategory } from '@/lib/types'
 import type { ReportsStatus } from '@/lib/useReportsData'
+import { ReportsSkeleton } from '@/components/skeletons/ReportsSkeleton'
+import { readSkeletonCount } from '@/lib/skeletonCounts'
 
 // Reuse the existing donut leaf (spec 022) — recharts stays behind next/dynamic.
 const CategoryPie = dynamic(() => import('./charts/CategoryPie').then((m) => m.CategoryPie), {
@@ -71,7 +73,7 @@ export function CategoryDeepDiveView({
     return (
       <Card className="p-5">
         <SectionLabel>{t('Spending by category')}</SectionLabel>
-        <p className="py-5 text-[13px] text-text-3">{t('Loading…')}</p>
+        <ReportsSkeleton testId="skeleton-reports-categories" rows={readSkeletonCount('reportsCategories', MAX_ROWS)} />
       </Card>
     )
   }

@@ -5,6 +5,8 @@ import { useApp } from '@/lib/store'
 import { Card, SectionLabel } from '@/components/ui'
 import type { SavingsRateRow } from '@/lib/reports/savings'
 import type { ReportsStatus } from '@/lib/useReportsData'
+import { ReportsSkeleton } from '@/components/skeletons/ReportsSkeleton'
+import { readSkeletonCount } from '@/lib/skeletonCounts'
 
 // Deferred so recharts leaves the Dashboard initial-load bundle (spec 022 pattern).
 // The per-month money rows stay eager and paint immediately; the chart streams in.
@@ -53,7 +55,7 @@ export function SavingsRateView({
     return (
       <Card className="p-5">
         <SectionLabel>{t('Savings rate')}</SectionLabel>
-        <p className="py-5 text-[13px] text-text-3">{t('Loading…')}</p>
+        <ReportsSkeleton testId="skeleton-reports-savings" rows={readSkeletonCount('reportsSavings', 6)} />
       </Card>
     )
   }

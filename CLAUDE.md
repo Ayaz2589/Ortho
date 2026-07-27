@@ -1,13 +1,16 @@
 <!-- SPECKIT START -->
-Active feature: **spec 032 — PDF data export & import**. Plan:
-`specs/032-pdf-data-export/plan.md` (spec/plan/research/data-model/quickstart/contracts alongside it).
-Download household data (transactions + housing) as a dual-layer PDF — human-readable pages in any of
-6 languages × 7 currencies (default = current) plus an embedded machine-readable JSON payload that is
-the source of truth for lossless re-import. Extensible versioned section-registry envelope (future:
-widgets/budgets/goals). Import is additive + idempotent with two-tier dedup (canonical id, then the
-CSV fuzzy matcher). No schema changes. Stack: `pdf-lib` + `@pdf-lib/fontkit` (generate + attach),
-`unpdf` getAttachments (read back), lazy per-language TTF Noto fonts. Payload round-trip + dedup are
-headlessly tested; glyph rendering is on-device QA. Prior: spec 031 — category & subcategory expansion
+Active feature: **spec 032 — content-shaped loading skeletons**. Plan:
+`specs/032-loading-skeletons/plan.md` (spec/plan/data-model/quickstart/contracts alongside it).
+Replaces the bare "Loading…" strings (whole-shell bootstrap gate in `web/app/(app)/layout.tsx` and the
+Reports views) with calm, motionless placeholder skeletons matching each route's shape; dynamic
+list/table surfaces (Transactions/Goals/Housing/Reports rows) are sized from the previous successful
+load's item count, persisted in `localStorage` (`ortho.skeletonCounts`). Adds a token-only `Skeleton`
+primitive (no shimmer — constitution Principle IV), `lib/skeletonCounts.ts`, and a pathname-keyed
+`RouteSkeleton` dispatcher.
+Prior shipped (also numbered 032, parallel branch): **PDF data export & import**
+(`specs/032-pdf-data-export/plan.md`) — download household data as a dual-layer PDF (human-readable +
+embedded machine-readable payload) in any of 6 languages × 7 currencies and re-import it with two-tier
+dedup; `web/lib/dataFile/` + Settings → Data. Prior: spec 031 — category & subcategory expansion
 (`specs/031-category-subcategory-expansion/plan.md`). Each shipped spec keeps its `plan.md` for reference.
 <!-- SPECKIT END -->
 
