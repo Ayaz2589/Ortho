@@ -27,7 +27,8 @@ The output of `mostCommonTransactions(transactions, limit)` — a `Transaction[]
 - Only entries with a non-blank `merchant` are considered (transfers/blank excluded).
 - Grouped by **normalized** merchant (`normalizeMerchant`) so case/spacing variants merge.
 - Each group is represented by its **most-recent** transaction (max `date`).
-- Groups are ordered by **count desc**, then by the representative's **date desc** (tie-break).
+- Membership is **selected** by **count desc**, then representative **date desc**, then normalized name asc, truncated to `limit`.
+- The selected survivors are then **presented** ordered by **category slug asc**, then **merchant name asc** (case-insensitive) within each category.
 - Truncated to `limit` (default 40).
 
 Validation / invariants:
@@ -57,7 +58,8 @@ This list feeds:
 // web/lib/txSuggest.ts
 import type { Transaction, TransactionKind } from '@/lib/types'
 
-/** Most-common merchants as representative (most-recent) transactions, freq desc. */
+/** Most-common merchants (freq-selected) as representative most-recent transactions,
+ *  presented by category slug asc then merchant name asc within each category. */
 export function mostCommonTransactions(
   transactions: Transaction[],
   limit?: number, // default 40
