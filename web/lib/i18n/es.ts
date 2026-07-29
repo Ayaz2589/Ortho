@@ -354,7 +354,6 @@ const catalog: Record<string, string> = {
   "Filters ({0} active)": "Filtros ({0} activos)",
   "Household finance, in order.": "Las finanzas del hogar, en orden.",
   "Initial is set automatically from the name. People you add can own and split transactions — no account needed.": "La inicial se establece automáticamente desde el nombre. Las personas que añades pueden poseer y dividir transacciones — sin necesidad de cuenta.",
-  "Loading…": "Cargando…",
   "Multifamily": "Multifamiliar",
   "No cards yet": "Aún no hay tarjetas",
   "No payments logged yet.": "Aún no hay pagos registrados.",

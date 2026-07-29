@@ -14,6 +14,7 @@ import { App } from '@capacitor/app'
 import { createClient } from './supabase/client'
 import { isTestBuild } from './test-build'
 import { readFlags } from './flags'
+import { writeSkeletonCount } from './skeletonCounts'
 import { autoLoginEnabled, autoLoginCreds } from './auth/autoLogin'
 import { signInHref } from './nav'
 import { hapticConfirm, hapticDestructive } from './haptics'
@@ -736,7 +737,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const txRows = (txRes.data ?? []) as TransactionRow[]
     const shareRows = (sharesRes.data ?? []) as TransactionShareRow[]
     const tagJoin = tagsByTransaction((txTagsRes.data ?? []) as TransactionTagRow[])
-    setTransactions(rehydrateTransactions(txRows, shareRows, personForUser, tagJoin))
+    const txns = rehydrateTransactions(txRows, shareRows, personForUser, tagJoin)
+    setTransactions(txns)
     setTags((tagsRes.data ?? []) as TagRow[])
     setCards((cardsRes.data ?? []) as CardRow[])
 
@@ -778,6 +780,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setGoalContributions((goalContribRes.data ?? []) as GoalContributionRow[])
     setLinkedInstitutions((linkedInstRes.data ?? []) as LinkedInstitutionRow[])
     setLinkedAccounts((linkedAcctRes.data ?? []) as LinkedAccountRow[])
+
+    // spec 032: remember each dynamic collection's size so the NEXT load renders
+    // a correctly-sized loading skeleton. Best-effort — writeSkeletonCount
+    // swallows any storage error, so this never affects bootstrap.
+    writeSkeletonCount('transactions', txns.length)
+    writeSkeletonCount('goals', ((goalsRes.data ?? []) as GoalRow[]).length)
+    writeSkeletonCount('housing', props.length)
+    writeSkeletonCount('tags', ((tagsRes.data ?? []) as TagRow[]).length)
   }
 
   // ---- FX ----

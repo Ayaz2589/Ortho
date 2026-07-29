@@ -8,8 +8,16 @@ suggestions (a native `<datalist>`) to the form's name input on Add + Edit, expe
 module `web/lib/txSuggest.ts` reuses the tested `rankedMerchants`/`suggestMerchants` from
 `web/lib/csv/merchantSuggest.ts`. Touches: `TxForm.tsx`, `TxFormPageClient.tsx`, 5 i18n catalogs; no
 DB/schema change; money/splits logic untouched. Fully TDD.
-Prior: spec 031 — category/subcategory expansion (`specs/031-category-subcategory-expansion/plan.md`,
-shipped). Each shipped spec keeps its `plan.md` for reference.
+(Note: three parallel branches took the "032" prefix — see also `specs/032-loading-skeletons/` and
+`specs/032-pdf-data-export/`, both shipped on main.)
+Prior shipped: **spec 032 — content-shaped loading skeletons** (`specs/032-loading-skeletons/plan.md`):
+calm motionless placeholder skeletons matching each route's shape, sized from the previous load's item
+count (`localStorage` `ortho.skeletonCounts`); token-only `Skeleton` primitive + `RouteSkeleton`.
+**spec 032 — PDF data export & import** (`specs/032-pdf-data-export/plan.md`): download household data as
+a dual-layer PDF (human-readable + embedded machine-readable payload) in 6 languages × 7 currencies and
+re-import with two-tier dedup; `web/lib/dataFile/` + Settings → Data. Prior: spec 031 — category &
+subcategory expansion (`specs/031-category-subcategory-expansion/plan.md`). Each shipped spec keeps its
+`plan.md` for reference.
 <!-- SPECKIT END -->
 
 ## Project documentation

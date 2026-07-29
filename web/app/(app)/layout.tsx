@@ -13,6 +13,7 @@ import { TabBarVisibilityProvider } from '@/lib/tabBarVisibility'
 import { Sidebar } from '@/components/Sidebar'
 import { Paywall } from '@/components/Paywall'
 import { PlaidHandBack } from '@/components/PlaidHandBack'
+import { RouteSkeleton } from '@/components/skeletons/RouteSkeleton'
 
 /** spec 021, FR-011 — shown while `useBiometricGate()` is 'checking' or
  *  'locked'. Never rendered on a device with no biometric enrollment (the
@@ -135,9 +136,11 @@ function Shell({ children, active }: { children: ReactNode; active: boolean }) {
             it regardless of breakpoint. */}
         <div className="px-4 pt-2 pb-[calc(6rem+var(--safe-bottom))] sm:px-8 sm:pb-12 sm:pt-4 lg:px-10">
           {loading ? (
-            <div className="flex flex-1 items-center justify-center py-32 text-sm text-text-3">
-              {t('Loading…')}
-            </div>
+            // spec 032: a route-shaped, motionless skeleton replaces the bare
+            // "Loading…" string. Paywall (lapsed), biometric lock (!active), and
+            // the error banner + Retry above still take precedence — a skeleton
+            // never masks a lapsed/locked/failed state.
+            <RouteSkeleton />
           ) : gateState === 'lapsed' ? (
             // Spec 018: a successfully loaded, lapsed entitlement blocks the whole
             // shell — every route, tab, and deep link lands here (FR-006). A null

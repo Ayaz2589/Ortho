@@ -35,8 +35,19 @@ web/app/
                         signed-in users to /dashboard on mount; builds its own t()
   (app)/layout.tsx      AppStateProvider + Shell + biometric lock overlay + paywall gate
   (app)/dashboard, transactions{,/new,/edit}, housing{,/new,/edit}, budgets, goals,
-        settings{,/household,/linked-banks}, plaid-oauth
+        settings{,/household,/linked-banks,/data}, plaid-oauth
 ```
+
+- **Settings › Data (spec 032)** — download household data (transactions + housing) as a dual-layer
+  PDF and re-import it. Logic is the self-contained `web/lib/dataFile/` module: a versioned
+  section-registry envelope (`envelope.ts`/`registry.ts`), per-section serialize/read/dedupe/apply/
+  render (`sections/{transactions,housing}.ts`), PDF generation via `pdf-lib` + `@pdf-lib/fontkit`
+  with a per-language font seam (`pdf/*`), and read-back of the embedded `ortho-export.json`
+  attachment via `unpdf` `getAttachments()` (`readPdf.ts`). Export/import orchestration in
+  `export.ts`/`import.ts`; UI in `components/settings/Data{Export,Import}Panel.tsx`. Amounts in the
+  payload are always canonical USD cents (display currency is visible-layer only); import is additive
+  + idempotent with two-tier dedup (canonical id, then the CSV fuzzy matcher). Payload round-trip +
+  dedup are headlessly tested (`test/dataFile/*`); glyph rendering is on-device QA.
 
 - **Four destinations only** (Dashboard/Transactions/Housing/Settings) — identical TABS arrays
   duplicated in `components/Sidebar.tsx` and `components/TabBar.tsx`. `/budgets` and `/goals` are
@@ -145,6 +156,17 @@ for extensionless paths, which infinite-loops signed-out native launches.
 - Splash (`launchAutoHide:false`) hidden by three coordinated owners: Shell on first `loading`
   resolution, lock screen when 'locked', sign-in on mount.
 - One sticky error banner in Shell; `bootstrapFailed` adds Retry (`retryBootstrap`).
+- **Loading skeletons (spec 032):** while `loading` is true the Shell renders
+  `components/skeletons/RouteSkeleton.tsx` — a `usePathname()`-keyed dispatcher that shows a
+  route-shaped, **motionless** placeholder (dashboard cards / ledger rows / housing cards / budgets
+  / goals / settings; generic fallback otherwise) instead of the old centered "Loading…" string.
+  The primitive is `components/ui/Skeleton.tsx` (a static `var(--chip-bg)` block — **no shimmer/
+  pulse/gradient**, per constitution IV) wrapped in a `role="status"` busy region. Paywall/lock/
+  error precedence is unchanged — a skeleton never masks a lapsed/locked/failed state. List/table
+  surfaces are sized from the previous successful load's item count via `lib/skeletonCounts.ts`
+  (`readSkeletonCount`/`writeSkeletonCount`, validated + capped at 24); the store records
+  `transactions`/`goals`/`housing`/`tags` after `loadAll`, and `useReportsData` records
+  `reportsSavings`/`reportsCategories` on `ready` (the two Reports views also render skeletons).
 
 ## 6. Responsive vs desktop composition
 
@@ -188,7 +210,8 @@ before wiring (also recorded in `PARITY.md`).
   initial bundle); `useTranslate` returns English identity until the catalog resolves. `'System'`
   resolves via `navigator.language` prefix. `Language` values are native names (`'Español'`…).
 - localStorage keys: `currency`, `language`, `appearance`, `dashboardRange`, `fxRates`,
-  `fxRatesFetchedAt`, `ortho.flags`, `ortho.plaid.pendingLinkSession`, legacy `localUsers`
+  `fxRatesFetchedAt`, `ortho.flags`, `ortho.plaid.pendingLinkSession`, `ortho.skeletonCounts`
+  (spec 032 — remembered per-collection sizes for loading skeletons), legacy `localUsers`
   (consumed once at bootstrap).
 
 ## 9. Design tokens — `web/app/globals.css`

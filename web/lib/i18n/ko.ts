@@ -354,7 +354,6 @@ const catalog: Record<string, string> = {
   "Filters ({0} active)": "필터 ({0}개 활성)",
   "Household finance, in order.": "세대 재정을 가지런히.",
   "Initial is set automatically from the name. People you add can own and split transactions — no account needed.": "이니셜은 이름에서 자동으로 설정됩니다. 추가한 사람은 거래를 소유하고 분할할 수 있습니다 — 계정이 필요 없습니다.",
-  "Loading…": "불러오는 중…",
   "Multifamily": "다세대",
   "No cards yet": "카드가 없습니다",
   "No payments logged yet.": "아직 결제 기록이 없습니다.",

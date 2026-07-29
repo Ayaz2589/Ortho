@@ -6,6 +6,7 @@ import type { Interval } from '@/components/dashboard/range'
 import { monthsInInterval } from '@/lib/reports/months'
 import { buildSavingsSeries, type SavingsRateRow } from '@/lib/reports/savings'
 import { rankCategories, type RankedCategory } from '@/lib/reports/categories'
+import { writeSkeletonCount } from '@/lib/skeletonCounts'
 
 export type ReportsStatus = 'loading' | 'ready' | 'error'
 
@@ -52,9 +53,18 @@ export function useReportsData(householdId: string, interval: Interval): Reports
           Promise.all(windows.map((w) => fetchMonthSummary(householdId, w.start, w.end))),
         ])
         if (cancelled) return
-        setSavings(buildSavingsSeries(windows, summaries))
-        setCategories(rankCategories(totals))
+        const savingsSeries = buildSavingsSeries(windows, summaries)
+        const ranked = rankCategories(totals)
+        setSavings(savingsSeries)
+        setCategories(ranked)
         setStatus('ready')
+        // spec 032: remember the row counts so the NEXT Reports open renders a
+        // correctly-sized skeleton. Best-effort — never throws. The category view
+        // only ever DISPLAYS up to 6 ranked rows + one "Other" bucket
+        // (CategoryDeepDiveView MAX_ROWS), so record the displayed cap — not the
+        // full ranked length — or the skeleton would be far taller than the content.
+        writeSkeletonCount('reportsSavings', savingsSeries.length)
+        writeSkeletonCount('reportsCategories', Math.min(ranked.length, 7))
       } catch {
         if (cancelled) return
         setStatus('error')
