@@ -284,7 +284,12 @@ statement). The Merchant field autocompletes from the household's own merchant n
 "you've used" chips (`lib/csv/merchantSuggest.ts`: `rankedMerchants` by frequency + `suggestMerchants`
 via the same normalize/similar logic as duplicate detection) so a messy descriptor like
 "UBER EATS 8005928996 CA" can be normalized to the "Uber Eats" the household already uses. (Adding
-`list=` makes the input a `combobox`, not a `textbox` — query it by label in tests.) "Skip this
+`list=` makes the input a `combobox`, not a `textbox` — query it by label in tests.) The same
+primitives — plus a most-common ranking — also power the regular add/edit transaction form via
+`lib/txSuggest.ts` (spec 032): `TxForm`'s "Copy from most common" shortcut ranks the ledger by
+merchant frequency (`mostCommonTransactions`, one representative most-recent entry each), and the
+form's Merchant/Source field gets the same kind-aware `<datalist>` suggestions
+(`knownNamesForKind` — expense merchants vs income payers). "Skip this
 transaction" sets `skipped:true` on the draft, which drops it out of the review list entirely (not
 just unchecked). On upload each draft is seeded with the importing user as its default owner
 (`parsedTransactionToDraft(tx, dup, defaultOwnerId)`; `defaultOwnerId` threaded through the
