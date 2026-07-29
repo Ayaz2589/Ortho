@@ -71,7 +71,7 @@ const catalog: Record<string, string> = {
   "Closing date": "成交日期",
   "Coffee": "咖啡",
   "Color": "颜色",
-  "Copy from recent": "从最近复制",
+  "Copy from most common": "从常用交易复制",
   "Currency": "货币",
   "Daily trend": "每日趋势",
   "Dark": "深色",

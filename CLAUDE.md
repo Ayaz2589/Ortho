@@ -1,12 +1,15 @@
 <!-- SPECKIT START -->
-Active feature: **spec 031 — category & subcategory expansion**. Plan:
-`specs/031-category-subcategory-expansion/plan.md` (spec/plan/data-model/quickstart/contracts alongside it).
-Expands the flat 11-category `transaction_category` Postgres enum to a two-level grouped taxonomy:
-8 expense parent groups with 28 subcategories, plus 10 income subcategories (9 new + legacy `income`).
-Touches: DB migration, `web/lib/types.ts`, `web/lib/categories.ts`, TxForm, FilterPanel, BudgetDrawer,
-GoalForm, CSV categoriser, seed data, and `docs/finance.md`. All existing slugs are kept; additive-only.
-Prior: spec 030 — holistic seed system (`specs/030-holistic-seed-auth/plan.md`, shipped). Each shipped
-spec keeps its `plan.md` for reference.
+Active feature: **spec 032 — most-common copy + merchant name suggestions**. Plan:
+`specs/032-common-copy-name-suggest/plan.md` (spec/plan/data-model/quickstart/contracts alongside it).
+Two additive, client-side improvements to the shared add/edit transaction form: (1) re-rank the New-form
+copy shortcut (`TxCopyList`) from newest-first to merchant-frequency-first (one representative most-recent
+entry per merchant) and relabel it "Copy from most common"; (2) add kind-aware merchant/payer name
+suggestions (a native `<datalist>`) to the form's name input on Add + Edit, expense + income. New pure
+module `web/lib/txSuggest.ts` reuses the tested `rankedMerchants`/`suggestMerchants` from
+`web/lib/csv/merchantSuggest.ts`. Touches: `TxForm.tsx`, `TxFormPageClient.tsx`, 5 i18n catalogs; no
+DB/schema change; money/splits logic untouched. Fully TDD.
+Prior: spec 031 — category/subcategory expansion (`specs/031-category-subcategory-expansion/plan.md`,
+shipped). Each shipped spec keeps its `plan.md` for reference.
 <!-- SPECKIT END -->
 
 ## Project documentation

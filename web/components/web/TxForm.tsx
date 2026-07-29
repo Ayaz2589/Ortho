@@ -1,11 +1,11 @@
 'use client'
 
-import { useMemo, useState, type ReactNode } from 'react'
+import { useId, useMemo, useState, type ReactNode } from 'react'
 import { useApp } from '@/lib/store'
 import { CATEGORY_GROUPS, categoryMeta } from '@/lib/categories'
 import { currencySymbol, fractionDigits } from '@/lib/finance/currency'
 import { toUSDCents } from '@/lib/finance/money'
-import { groupByDay, dayLabel } from '@/lib/format'
+import { mostCommonTransactions, knownNamesForKind } from '@/lib/txSuggest'
 import { parseMoney, DatePicker } from '@/components/inputs'
 import { Avatar } from '@/components/ui'
 import { computeShares, validateSplit, orderedOwnerIds, seedSplit, type SplitInput, type SplitMethod } from '@/lib/splits'
@@ -501,7 +501,17 @@ function MemberSelect({
 /** The shared field stack (amount hero, toggles, rows) used by both the modal and the drawer. */
 export function TxFormFields({ form }: { form: TxFormApi }) {
   const { currency, isIncome, isTransfer } = form
-  const { formatMoney, t } = useApp()
+  const { formatMoney, t, transactions } = useApp()
+  // Merchant/payer name suggestions from the household's own ledger — kind-aware
+  // (income payers vs expense merchants never mix) and a convenience only, so
+  // free-form typing still works (spec 032).
+  const nameSuggestions = useMemo(
+    () => knownNamesForKind(transactions ?? [], isIncome ? 'income' : 'expense'),
+    [transactions, isIncome]
+  )
+  // A per-instance id keeps the input↔datalist binding unambiguous even if two
+  // form surfaces ever co-mount (mobile page / desktop drawer / ScanFlow).
+  const merchantListId = useId()
   // Owner / payer pickers appear whenever the household has more than one person.
   const showOwners = form.members.length > 1
   const multi = form.owners.length >= 2
@@ -561,8 +571,13 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
           {/* Merchant + category */}
           <div className="ow-card" style={{ margin: '0 20px 14px' }}>
             <Row label={isIncome ? t('Source') : t('Merchant')} first>
-              <input className="ow-row-input" value={form.merchant} onChange={(e) => form.setMerchant(e.target.value)} placeholder={isIncome ? t('e.g. Acme Co. payroll') : t('e.g. Whole Foods')} />
+              <input className="ow-row-input" value={form.merchant} onChange={(e) => form.setMerchant(e.target.value)} placeholder={isIncome ? t('e.g. Acme Co. payroll') : t('e.g. Whole Foods')} list={merchantListId} autoComplete="off" />
             </Row>
+            <datalist id={merchantListId}>
+              {nameSuggestions.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
             {isIncome ? (
               <Row label={t('Category')}>
                 <CatTile category={form.incomeCategory} size={22} />
@@ -783,8 +798,8 @@ export function SaveAndAddAnotherButton({ form }: { form: TxFormApi }) {
   )
 }
 
-/** "Copy from recent" pill shown at the top of the New form. */
-export function CopyFromRecentButton({ onClick }: { onClick: () => void }) {
+/** "Copy from most common" pill shown at the top of the New form. */
+export function CopyFromCommonButton({ onClick }: { onClick: () => void }) {
   const { t } = useApp()
   return (
     <div style={{ padding: '0 20px 16px' }}>
@@ -797,23 +812,19 @@ export function CopyFromRecentButton({ onClick }: { onClick: () => void }) {
           <rect x="5" y="5" width="8.5" height="8.5" rx="2" stroke="currentColor" strokeWidth="1.4" />
           <path d="M3 11V4.5A1.5 1.5 0 014.5 3H11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
-        {t('Copy from recent')}
+        {t('Copy from most common')}
       </button>
     </div>
   )
 }
 
-/** A recent-transactions list shown as a sub-view of the New form. Picking a row
- *  loads its values into the form (keeping today's date). */
+/** A most-common-merchants list shown as a sub-view of the New form: the
+ *  household's merchants ranked by how often they appear, one representative
+ *  (most-recent) entry each. Picking a row loads its values into the form
+ *  (keeping today's date). */
 export function TxCopyList({ onPick, onBack }: { onPick: (tx: Transaction) => void; onBack: () => void }) {
-  const { transactions, formatMoney, ownersDisplay, locale, t } = useApp()
-  const groups = useMemo(
-    () =>
-      groupByDay(
-        [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 40)
-      ),
-    [transactions]
-  )
+  const { transactions, formatMoney, ownersDisplay, t } = useApp()
+  const common = useMemo(() => mostCommonTransactions(transactions ?? []), [transactions])
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 20px 14px', borderBottom: '0.5px solid var(--hairline)', flexShrink: 0 }}>
@@ -822,38 +833,31 @@ export function TxCopyList({ onPick, onBack }: { onPick: (tx: Transaction) => vo
             <path d="M7.5 2L3.5 6l4 4" stroke="var(--text-2)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
-        <div style={{ fontSize: 15, fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.3px' }}>{t('Copy from recent')}</div>
+        <div style={{ fontSize: 15, fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.3px' }}>{t('Copy from most common')}</div>
       </div>
       <div style={{ overflow: 'auto' }}>
-        {transactions.length === 0 ? (
+        {common.length === 0 ? (
           <p style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>{t('Nothing to copy yet')}</p>
         ) : (
-          groups.map((g) => (
-            <div key={g.day.getTime()}>
-              <div style={{ padding: '14px 20px 6px', fontSize: 13, fontWeight: 400, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-2)' }}>
-                {dayLabel(g.day, locale)}
-              </div>
-              {g.items.map((tx) => {
-                const owners = ownersDisplay(tx)
-                const isIncome = tx.kind === 'income'
-                return (
-                  <button key={tx.id} className="ow-btn ow-row" onClick={() => onPick(tx)} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '10px 20px', textAlign: 'left' }}>
-                    <CatTile category={tx.category} size={34} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14.5, fontWeight: 400, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.merchant || (tx.kind === 'transfer' ? t('Transfer') : '')}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, fontSize: 12.5, color: 'var(--text-3)' }}>
-                        <SourceDot size={6} />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{owners.label}{tx.source ? ` · ${tx.source}` : ''}</span>
-                      </div>
-                    </div>
-                    <span style={{ fontSize: 14.5, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
-                      {formatMoney(tx.amount_cents, { leadingPlus: isIncome })}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          ))
+          common.map((tx) => {
+            const owners = ownersDisplay(tx)
+            const isIncome = tx.kind === 'income'
+            return (
+              <button key={tx.id} className="ow-btn ow-row" onClick={() => onPick(tx)} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '10px 20px', textAlign: 'left' }}>
+                <CatTile category={tx.category} size={34} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 400, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.merchant || (tx.kind === 'transfer' ? t('Transfer') : '')}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, fontSize: 12.5, color: 'var(--text-3)' }}>
+                    <SourceDot size={6} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{owners.label}{tx.source ? ` · ${tx.source}` : ''}</span>
+                  </div>
+                </div>
+                <span style={{ fontSize: 14.5, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
+                  {formatMoney(tx.amount_cents, { leadingPlus: isIncome })}
+                </span>
+              </button>
+            )
+          })
         )}
       </div>
     </>
@@ -863,9 +867,9 @@ export function TxCopyList({ onPick, onBack }: { onPick: (tx: Transaction) => vo
 /**
  * Drawer form content (header + fields). Rendered inside the shared `ow-drawer`
  * panel so New/Edit live in the same slide-out as the transaction detail.
- * In New mode it offers "Copy from recent" (a sub-view of this panel).
+ * In New mode it offers "Copy from most common" (a sub-view of this panel).
  */
-/** The shared New/Edit form body — the copy-from-recent affordance, the fields,
+/** The shared New/Edit form body — the copy-from-most-common affordance, the fields,
  *  and (New only) save-and-add-another — rendered identically by the modal
  *  (mobile) and the drawer (desktop). Each surface keeps its own chrome (header)
  *  and copy-picker wrapper, which legitimately differ; only this inner assembly
@@ -883,7 +887,7 @@ export function TxFormBody({
 }) {
   return (
     <>
-      {allowCopy && <CopyFromRecentButton onClick={onPick} />}
+      {allowCopy && <CopyFromCommonButton onClick={onPick} />}
       <TxFormFields form={form} />
       {showAddAnother && <SaveAndAddAnotherButton form={form} />}
     </>

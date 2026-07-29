@@ -12,7 +12,7 @@ import { useTxForm, TxFormBody, TxCopyList, type TransferPrefill } from './TxFor
  * the desktop drawer (TxFormContent) — `useTxForm` + `TxFormBody` — only the
  * chrome differs: a sticky FormPageHeader (Cancel · title · Save) in normal page
  * flow instead of a portalled modal. This page REPLACES the old mobile centered
- * modal. "Copy from recent" stays an in-page sub-view; "Save and add another"
+ * modal. "Copy from most common" stays an in-page sub-view; "Save and add another"
  * resets in place (inside TxFormBody). `onDone` is the page's navigation back to
  * the list (called on Save and Cancel).
  */

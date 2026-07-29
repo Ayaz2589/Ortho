@@ -1,0 +1,71 @@
+// Spec 032 — pure suggestion logic for the add/edit transaction form.
+//
+// Two views derived from the household's own ledger, both reusing the tested
+// merchant primitives from lib/csv/merchantSuggest.ts (they operate on plain
+// `{ merchant }` rows and are not actually CSV-specific):
+//   1. mostCommonTransactions — powers the "Copy from most common" shortcut.
+//   2. knownNamesForKind      — the kind-aware vocabulary for name suggestions.
+//
+// No I/O, no clock: pure and deterministic so the ordering can be locked by unit
+// tests (Constitution VI). See specs/032-common-copy-name-suggest/.
+import type { Transaction, TransactionKind } from '@/lib/types'
+import { rankedMerchants } from '@/lib/csv/merchantSuggest'
+import { normalizeMerchant } from '@/lib/csv/duplicateMatch'
+
+const DEFAULT_LIMIT = 40
+
+function txTime(tx: Transaction): number {
+  const t = new Date(tx.date).getTime()
+  // Guard an unparseable date so it can't poison the sort comparator with NaN
+  // (unreachable with DB-sourced ISO dates, but keeps ordering total & stable).
+  return Number.isNaN(t) ? 0 : t
+}
+
+/**
+ * The household's MOST COMMON transactions: distinct merchants ranked by how
+ * often they appear, each represented by that merchant's most-recent entry (so a
+ * picked row prefills a real amount / category / source / splits). Entries with
+ * no merchant (transfers, blanks) are excluded.
+ *
+ * Deterministic order: frequency desc → most-recent representative date desc →
+ * normalized merchant asc. Truncated to `limit` (default 40).
+ */
+export function mostCommonTransactions(
+  transactions: Transaction[],
+  limit: number = DEFAULT_LIMIT,
+): Transaction[] {
+  const groups = new Map<string, { rep: Transaction; count: number }>()
+  for (const tx of transactions) {
+    const key = normalizeMerchant(tx.merchant)
+    if (!key) continue // transfers / blank merchants drop out here
+    const group = groups.get(key)
+    if (!group) {
+      groups.set(key, { rep: tx, count: 1 })
+    } else {
+      group.count++
+      if (txTime(tx) > txTime(group.rep)) group.rep = tx
+    }
+  }
+  return [...groups.entries()]
+    .sort(([keyA, a], [keyB, b]) => {
+      if (b.count !== a.count) return b.count - a.count
+      const byDate = txTime(b.rep) - txTime(a.rep)
+      if (byDate !== 0) return byDate
+      return keyA < keyB ? -1 : keyA > keyB ? 1 : 0
+    })
+    .slice(0, Math.max(0, limit))
+    .map(([, group]) => group.rep)
+}
+
+/**
+ * Distinct known names for a given kind — expense merchants vs income payers —
+ * most-frequent first. The suggestion vocabulary for the form's name input:
+ * keeping the pools separate means a payroll payer never leaks into shopping
+ * suggestions (and vice-versa). Blank names are excluded (via rankedMerchants).
+ */
+export function knownNamesForKind(
+  transactions: Transaction[],
+  kind: Extract<TransactionKind, 'expense' | 'income'>,
+): string[] {
+  return rankedMerchants(transactions.filter((tx) => tx.kind === kind))
+}

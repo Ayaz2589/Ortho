@@ -71,7 +71,7 @@ const catalog: Record<string, string> = {
   "Closing date": "ক্লোজিং তারিখ",
   "Coffee": "কফি",
   "Color": "রঙ",
-  "Copy from recent": "সম্প্রতি থেকে কপি",
+  "Copy from most common": "সবচেয়ে সাধারণ থেকে কপি",
   "Currency": "মুদ্রা",
   "Daily trend": "দৈনিক ট্রেন্ড",
   "Dark": "গাঢ়",

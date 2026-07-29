@@ -70,7 +70,7 @@ const catalog: Record<string, string> = {
   "Close search": "Cerrar búsqueda",
   "Closing date": "Fecha de cierre",
   "Coffee": "Café",
-  "Copy from recent": "Copiar de recientes",
+  "Copy from most common": "Copiar de los más frecuentes",
   "Currency": "Moneda",
   "Daily trend": "Tendencia diaria",
   "Dark": "Oscuro",
