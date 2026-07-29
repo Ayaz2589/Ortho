@@ -31,7 +31,7 @@ prefilled with a real Whole Foods entry. Delivers value on its own without Story
 
 **Acceptance Scenarios**:
 
-1. **Given** a ledger with several merchants of differing frequency, **When** the member opens the copy shortcut on the New form, **Then** merchants are listed ordered by how often they appear (most-frequent first), not by date.
+1. **Given** a ledger with several merchants across different categories, **When** the member opens the copy shortcut on the New form, **Then** the most-frequently-logged merchants are listed (frequency selects membership), grouped by category and alphabetically by merchant within each category — not by date.
 2. **Given** the same merchant logged multiple times with different amounts, **When** it is shown in the copy list, **Then** it appears **once**, represented by that merchant's **most recent** entry.
 3. **Given** the member picks a row from the copy list, **When** the pick completes, **Then** the form is prefilled with that entry's merchant, amount, category, source, owners/splits, tags and notes — and the date defaults to **today** (not the copied entry's date).
 4. **Given** an empty ledger (no transactions yet), **When** the member opens the New form, **Then** the copy shortcut communicates there is nothing to copy yet (and never errors).
@@ -79,7 +79,7 @@ income and confirm suggestions are drawn from income payers, not expense merchan
 
 ### Functional Requirements
 
-- **FR-001**: The New-transaction copy shortcut MUST rank candidate entries by **merchant frequency** across the household's ledger (most-frequently-logged merchant first), replacing the previous newest-first ordering.
+- **FR-001**: The New-transaction copy shortcut MUST **select** candidate entries by **merchant frequency** across the household's ledger (the most-frequently-logged merchants make the list), replacing the previous newest-first ordering, and MUST **present** them **grouped by category, alphabetically by merchant within each category**.
 - **FR-002**: Each distinct merchant MUST appear **at most once** in the copy list, represented by that merchant's **most recent** transaction (so the prefill carries real amount/category/source/splits).
 - **FR-003**: Selecting a copy-list row MUST prefill the form exactly as the current copy behavior does (all contextual fields), with the date defaulting to **today**; the underlying prefill/load behavior MUST NOT change.
 - **FR-004**: The copy affordance's user-facing text (button, sub-view title, empty state) MUST read "Copy from most common" (and its localized equivalents) instead of "Copy from recent".
@@ -110,7 +110,7 @@ income and confirm suggestions are drawn from income payers, not expense merchan
 
 ## Assumptions
 
-- **"Most common" means most-frequent merchant.** Ranking is by how often a merchant appears in the household ledger, de-duplicated to one representative (most-recent) entry per merchant. (Alternative readings — e.g. most-frequent exact amount+merchant pair — were considered and rejected as less intuitive.)
+- **"Most common" means most-frequent merchant.** Frequency (how often a merchant appears, de-duplicated to one representative most-recent entry per merchant) decides **which** merchants make the list. The list is then **displayed grouped by category (slug ascending) and alphabetically by merchant within each category** — the frequency ranking gates membership, not display order. (Alternative readings — e.g. most-frequent exact amount+merchant pair, or frequency-ordered display — were considered and rejected.)
 - **Reuse of existing ranking/suggestion logic.** The frequency ranking and similar-name suggestion behavior already exist and are tested for the bank-statement import review; this feature reuses that logic rather than inventing new matching rules.
 - **Kind-aware vocabulary.** Expense and income names are kept in separate suggestion pools because a payroll payer is not a shopping merchant.
 - **Client-side only.** All ranking and suggestion happens from ledger data already loaded into the form context; no new API, storage, or schema.

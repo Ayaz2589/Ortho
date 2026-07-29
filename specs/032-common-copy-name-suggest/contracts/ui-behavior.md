@@ -8,13 +8,15 @@ Behavioral contracts for the two touch points. These are the assertions the test
 
 | Given | Then |
 |-------|------|
-| merchant "Whole Foods" ×5, "Airport Parking" ×1 (parking most recent) | result[0].merchant === "Whole Foods"; "Airport Parking" appears **after** it |
+| "Blue Bottle" (coffee), "Chipotle" (dining), "Aldi"+"Whole Foods" (groceries) | ordered by **category slug asc** then **merchant name asc**: `["Blue Bottle","Chipotle","Aldi","Whole Foods"]` |
+| within one category, merchants "zabar","Aldi","Bravo" | sorted **case-insensitively**: `["Aldi","Bravo","zabar"]` |
+| freq 5 / 3 / 1 across categories, `limit=2` | freq **selects** the top 2 (the freq-1 merchant drops); survivors shown in category order |
 | "Whole Foods" logged 3× with different amounts/dates | appears **once**, as the entry with the max `date` |
 | variants "whole foods" / "Whole Foods" / "WHOLE FOODS" | merged into one group; display name = a real prior entry's `merchant` |
 | a `transfer` entry (no merchant) or a blank-merchant entry | **excluded** from the result |
-| two merchants with equal counts | ordered by most-recent representative `date` (deterministic) |
+| two equal-count merchants, `limit=1` | the more-recent one is **selected** (frequency tie broken by representative `date` desc) |
 | `[]` (empty ledger) | `[]` |
-| ledger with 50 distinct merchants | result length === 40 (capped) |
+| ledger with 50 distinct merchants | result length === 40 (capped by frequency selection) |
 
 ### `knownNamesForKind(transactions, kind)`
 
@@ -29,7 +31,7 @@ Behavioral contracts for the two touch points. These are the assertions the test
 
 | Given | When | Then |
 |-------|------|------|
-| a ledger with varied merchant frequencies | New form's copy shortcut opened | rows are ordered most-common-first (uses `mostCommonTransactions`), not date-first |
+| a ledger with merchants across categories | New form's copy shortcut opened | rows are ordered by category then alphabetically by merchant (uses `mostCommonTransactions`), not date-first |
 | the copy button/sub-view is rendered | — | its label reads "Copy from most common" (button, sub-view title) |
 | a row is clicked | pick completes | `form.loadFrom(tx)` is called with that representative tx; date defaults to today (existing behavior, unchanged) |
 | empty ledger | copy shortcut opened | shows the existing "Nothing to copy yet" empty state; no error |

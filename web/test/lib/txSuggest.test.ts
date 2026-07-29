@@ -7,19 +7,40 @@ import { mostCommonTransactions, knownNamesForKind } from '@/lib/txSuggest'
 import { makeTx } from '../helpers/fixtures'
 
 describe('mostCommonTransactions', () => {
-  it('ranks by merchant frequency, not recency', () => {
+  it('orders results by category, then alphabetically by merchant within a category', () => {
     const txs = [
-      // one-off but MOST RECENT — must NOT lead
-      makeTx({ merchant: 'Airport Parking', date: '2026-06-25T12:00:00.000Z' }),
-      ...Array.from({ length: 5 }, (_, i) =>
-        makeTx({ merchant: 'Whole Foods', date: `2026-06-1${i}T12:00:00.000Z` })
-      ),
+      makeTx({ merchant: 'Whole Foods', category: 'groceries' }),
+      makeTx({ merchant: 'Aldi', category: 'groceries' }),
+      makeTx({ merchant: 'Chipotle', category: 'dining' }),
+      makeTx({ merchant: 'Blue Bottle', category: 'coffee' }),
     ]
-    const result = mostCommonTransactions(txs)
-    expect(result[0].merchant).toBe('Whole Foods')
-    const names = result.map((t) => t.merchant)
-    expect(names).toContain('Airport Parking')
-    expect(names.indexOf('Whole Foods')).toBeLessThan(names.indexOf('Airport Parking'))
+    // category slug asc (coffee < dining < groceries), then merchant name asc.
+    expect(mostCommonTransactions(txs).map((t) => t.merchant)).toEqual([
+      'Blue Bottle', // coffee
+      'Chipotle', // dining
+      'Aldi', // groceries — A before W
+      'Whole Foods', // groceries
+    ])
+  })
+
+  it('sorts merchants case-insensitively within a category', () => {
+    const txs = [
+      makeTx({ merchant: 'zabar', category: 'groceries' }),
+      makeTx({ merchant: 'Aldi', category: 'groceries' }),
+      makeTx({ merchant: 'Bravo', category: 'groceries' }),
+    ]
+    expect(mostCommonTransactions(txs).map((t) => t.merchant)).toEqual(['Aldi', 'Bravo', 'zabar'])
+  })
+
+  it('still SELECTS by frequency — least-common merchants drop off at the cap, survivors shown in category order', () => {
+    const txs = [
+      ...Array.from({ length: 5 }, () => makeTx({ merchant: 'Common Mart', category: 'groceries' })),
+      ...Array.from({ length: 3 }, () => makeTx({ merchant: 'Sometimes Cafe', category: 'coffee' })),
+      makeTx({ merchant: 'Rare Shop', category: 'dining' }), // freq 1 → excluded at limit 2
+    ]
+    // freq gates membership (Common Mart, Sometimes Cafe); Rare Shop drops.
+    // The survivors are then displayed in category order (coffee < groceries).
+    expect(mostCommonTransactions(txs, 2).map((t) => t.merchant)).toEqual(['Sometimes Cafe', 'Common Mart'])
   })
 
   it('represents each merchant exactly once, by its most-recent entry', () => {
@@ -51,22 +72,13 @@ describe('mostCommonTransactions', () => {
     expect(mostCommonTransactions(txs).map((t) => t.merchant)).toEqual(['Subway'])
   })
 
-  it('breaks frequency ties by most-recent representative date (deterministic)', () => {
+  it('breaks the frequency SELECTION tie by most-recent representative date', () => {
+    // Both freq 1; with limit 1 the more-recent merchant is the one kept.
     const txs = [
-      makeTx({ merchant: 'Alpha', date: '2026-06-01T12:00:00.000Z' }),
-      makeTx({ merchant: 'Beta', date: '2026-06-20T12:00:00.000Z' }),
+      makeTx({ merchant: 'Older', category: 'dining', date: '2026-06-01T12:00:00.000Z' }),
+      makeTx({ merchant: 'Newer', category: 'dining', date: '2026-06-20T12:00:00.000Z' }),
     ]
-    expect(mostCommonTransactions(txs).map((t) => t.merchant)).toEqual(['Beta', 'Alpha'])
-  })
-
-  it('breaks a full frequency+date tie by normalized merchant name (deterministic)', () => {
-    // Same count (1) AND same representative date → falls through to the final
-    // normalized-key asc tiebreak, so ordering is stable regardless of input order.
-    const day = '2026-06-10T12:00:00.000Z'
-    const forward = [makeTx({ merchant: 'Zebra', date: day }), makeTx({ merchant: 'Apple', date: day })]
-    const reversed = [makeTx({ merchant: 'Apple', date: day }), makeTx({ merchant: 'Zebra', date: day })]
-    expect(mostCommonTransactions(forward).map((t) => t.merchant)).toEqual(['Apple', 'Zebra'])
-    expect(mostCommonTransactions(reversed).map((t) => t.merchant)).toEqual(['Apple', 'Zebra'])
+    expect(mostCommonTransactions(txs, 1).map((t) => t.merchant)).toEqual(['Newer'])
   })
 
   it('returns an empty array for an empty ledger', () => {

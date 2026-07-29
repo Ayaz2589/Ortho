@@ -22,13 +22,16 @@ function txTime(tx: Transaction): number {
 }
 
 /**
- * The household's MOST COMMON transactions: distinct merchants ranked by how
- * often they appear, each represented by that merchant's most-recent entry (so a
- * picked row prefills a real amount / category / source / splits). Entries with
- * no merchant (transfers, blanks) are excluded.
+ * The household's MOST COMMON transactions: distinct merchants, each represented
+ * by that merchant's most-recent entry (so a picked row prefills a real amount /
+ * category / source / splits). Entries with no merchant (transfers, blanks) are
+ * excluded.
  *
- * Deterministic order: frequency desc → most-recent representative date desc →
- * normalized merchant asc. Truncated to `limit` (default 40).
+ * Two-stage and deterministic:
+ *   1. SELECT which merchants make the list, by frequency (count desc → most-recent
+ *      representative date desc → normalized merchant asc), truncated to `limit`.
+ *   2. PRESENT the survivors grouped by category (slug asc), then alphabetically
+ *      by merchant name (case-insensitive) within each category.
  */
 export function mostCommonTransactions(
   transactions: Transaction[],
@@ -46,7 +49,8 @@ export function mostCommonTransactions(
       if (txTime(tx) > txTime(group.rep)) group.rep = tx
     }
   }
-  return [...groups.entries()]
+  // Stage 1 — frequency decides membership (which merchants make the list).
+  const selected = [...groups.entries()]
     .sort(([keyA, a], [keyB, b]) => {
       if (b.count !== a.count) return b.count - a.count
       const byDate = txTime(b.rep) - txTime(a.rep)
@@ -55,6 +59,17 @@ export function mostCommonTransactions(
     })
     .slice(0, Math.max(0, limit))
     .map(([, group]) => group.rep)
+  // Stage 2 — present grouped by category, alphabetical by merchant within each.
+  return selected.sort(byCategoryThenName)
+}
+
+/** Category slug asc, then merchant name asc (case-insensitive; stable final tiebreak). */
+function byCategoryThenName(a: Transaction, b: Transaction): number {
+  if (a.category !== b.category) return a.category < b.category ? -1 : 1
+  const an = a.merchant.toLowerCase()
+  const bn = b.merchant.toLowerCase()
+  if (an !== bn) return an < bn ? -1 : 1
+  return a.merchant < b.merchant ? -1 : a.merchant > b.merchant ? 1 : 0
 }
 
 /**

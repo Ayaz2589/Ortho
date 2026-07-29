@@ -1,9 +1,10 @@
 <!-- SPECKIT START -->
 Active feature: **spec 032 — most-common copy + merchant name suggestions**. Plan:
 `specs/032-common-copy-name-suggest/plan.md` (spec/plan/data-model/quickstart/contracts alongside it).
-Two additive, client-side improvements to the shared add/edit transaction form: (1) re-rank the New-form
-copy shortcut (`TxCopyList`) from newest-first to merchant-frequency-first (one representative most-recent
-entry per merchant) and relabel it "Copy from most common"; (2) add kind-aware merchant/payer name
+Two additive, client-side improvements to the shared add/edit transaction form: (1) rework the New-form
+copy shortcut (`TxCopyList`) — frequency selects the most-common merchants (one representative most-recent
+entry each), presented grouped by category then alphabetically by merchant within each — and relabel it
+"Copy from most common"; (2) add kind-aware merchant/payer name
 suggestions (a native `<datalist>`) to the form's name input on Add + Edit, expense + income. New pure
 module `web/lib/txSuggest.ts` reuses the tested `rankedMerchants`/`suggestMerchants` from
 `web/lib/csv/merchantSuggest.ts`. Touches: `TxForm.tsx`, `TxFormPageClient.tsx`, 5 i18n catalogs; no

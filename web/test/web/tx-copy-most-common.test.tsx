@@ -29,19 +29,19 @@ function rowButtons(): HTMLElement[] {
 }
 
 describe('Copy from most common — TxCopyList', () => {
-  it('orders rows by merchant frequency, not recency', () => {
+  it('orders rows by category, then alphabetically by merchant within a category', () => {
     store.transactions = [
-      // a single, MOST-RECENT one-off — must not lead
-      makeTx({ merchant: 'Airport Parking', date: '2026-06-25T12:00:00.000Z' }),
-      makeTx({ merchant: 'Whole Foods', date: '2026-06-01T12:00:00.000Z' }),
-      makeTx({ merchant: 'Whole Foods', date: '2026-06-05T12:00:00.000Z' }),
-      makeTx({ merchant: 'Whole Foods', date: '2026-06-10T12:00:00.000Z' }),
+      makeTx({ merchant: 'Whole Foods', category: 'groceries' }),
+      makeTx({ merchant: 'Aldi', category: 'groceries' }),
+      makeTx({ merchant: 'Chipotle', category: 'dining' }),
     ]
     render(<TxCopyList onPick={vi.fn()} onBack={vi.fn()} />)
     const rows = rowButtons()
-    expect(rows).toHaveLength(2) // one representative per merchant
-    expect(rows[0]).toHaveTextContent('Whole Foods')
-    expect(rows[1]).toHaveTextContent('Airport Parking')
+    expect(rows).toHaveLength(3) // one representative per merchant
+    // category slug asc (dining < groceries), then merchant name asc within groceries
+    expect(rows[0]).toHaveTextContent('Chipotle') // dining
+    expect(rows[1]).toHaveTextContent('Aldi') // groceries — A before W
+    expect(rows[2]).toHaveTextContent('Whole Foods') // groceries
   })
 
   it('is titled "Copy from most common"', () => {
