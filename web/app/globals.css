@@ -204,6 +204,25 @@ button,
   touch-action: manipulation;
 }
 
+/* iOS Safari (and the Capacitor WKWebView) zooms the viewport IN whenever a
+   focused text-entry control has a font-size below 16px — and the zoomed layout
+   then overflows the screen, forcing an unwanted horizontal scroll the user has
+   to swipe back after every tap. The form fields here are 14–15px for the calm
+   desktop design, so on touch devices we hold every text-entry control at 16px;
+   at 16px iOS no longer zooms. Desktop (fine pointer) keeps its tighter sizing.
+   `!important` is needed to beat inline-styled controls (e.g. the "Paid by"
+   select). The oversized amount hero is already well above 16px and is excluded
+   so the floor never shrinks it. This is deliberately a font-size fix, NOT a
+   locked viewport (maximum-scale/user-scalable) — pinch-to-zoom must stay
+   available for accessibility. */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not(.ow-amount-input):not([class*='text-[40px]']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* ---- Desktop interaction states (tokens only) ---- */
 
 /* Visible keyboard focus ring — sand accent, per the design system. Discrete
