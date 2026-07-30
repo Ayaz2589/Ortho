@@ -170,7 +170,9 @@ export const INCOME_CATEGORIES: TransactionCategory[] = CATEGORY_GROUPS.income.f
 )
 
 export function categoryMeta(c: TransactionCategory): CategoryMeta {
-  return CATEGORIES[c]
+  // Unknown/legacy slugs (e.g. pre-migration DB rows) fall back to 'transfer' so
+  // callers that immediately access .icon or .tint don't crash at runtime.
+  return CATEGORIES[c] ?? CATEGORIES.transfer
 }
 
 /** Severity → CSS color token. Lower rawValue sorts first. */

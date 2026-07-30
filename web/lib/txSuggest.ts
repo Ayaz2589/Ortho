@@ -8,8 +8,7 @@
 //
 // No I/O, no clock: pure and deterministic so the ordering can be locked by unit
 // tests (Constitution VI). See specs/032-common-copy-name-suggest/.
-import type { Transaction, TransactionKind } from '@/lib/types'
-import type { TransactionCategory } from '@/lib/types'
+import type { Transaction, TransactionCategory, TransactionKind } from '@/lib/types'
 import { rankedMerchants } from '@/lib/csv/merchantSuggest'
 import { normalizeMerchant } from '@/lib/csv/duplicateMatch'
 import { CATEGORIES } from '@/lib/categories'

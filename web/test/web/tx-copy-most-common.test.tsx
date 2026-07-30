@@ -137,4 +137,16 @@ describe('Copy from most common — category section headers', () => {
     // No other category headers
     expect(screen.queryByText('Coffee')).not.toBeInTheDocument()
   })
+
+  it('does not crash when a transaction carries an unknown/legacy category slug', () => {
+    // Simulates a DB row with a pre-migration slug not present in CATEGORIES.
+    // groupByCategory falls back to the raw slug as the label; TxCopyList must not
+    // throw on categoryMeta returning undefined for it.
+    store.transactions = [
+      makeTx({ merchant: 'Old Shop', category: 'legacy_slug' as unknown as import('@/lib/types').TransactionCategory }),
+    ]
+    expect(() => render(<TxCopyList onPick={vi.fn()} onBack={vi.fn()} />)).not.toThrow()
+    // The row still renders; label falls back to the raw slug
+    expect(screen.getByText('Old Shop')).toBeInTheDocument()
+  })
 })
