@@ -48,10 +48,7 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
   const handleClose = () => {
     reset()
     setEditingId(null)
-    // Clear the session imperatively here rather than relying on the
-    // useEffect(() => saveCsvSession(state), [state]) in useCsvImport — that
-    // effect races with the unmount triggered by onClose() and loses, so
-    // sessionStorage would retain the list-view data and auto-reopen the panel.
+    // clearCsvSession() must be called here — the useEffect in useCsvImport races with unmount and loses.
     clearCsvSession()
     onClose()
   }

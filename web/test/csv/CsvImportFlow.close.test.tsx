@@ -29,7 +29,6 @@ vi.mock('@/components/csv/CsvRowEditModal', () => ({
 
 // Drive the phase via a stubbed hook — pinned to list-view so the close button
 // (rendered by DrawerHeader in that branch) is always present.
-const { reset } = vi.hoisted(() => ({ reset: vi.fn() }))
 vi.mock('@/lib/csv/useCsvImport', () => ({
   useCsvImport: () => ({
     phase: 'list-view',
@@ -41,7 +40,7 @@ vi.mock('@/lib/csv/useCsvImport', () => ({
     updateDraft: vi.fn(),
     skipDraft: vi.fn(),
     startImport: vi.fn(),
-    reset,
+    reset: vi.fn(),
   }),
 }))
 
@@ -60,7 +59,6 @@ const SESSION: CsvImportState = {
 
 beforeEach(() => {
   sessionStorage.clear()
-  reset.mockClear()
 })
 
 describe('CsvImportFlow — close clears sessionStorage', () => {
