@@ -196,6 +196,21 @@ These shape which rows exist and what the app displays, but have no regression-v
 - **Frozen native app:** `ios-ci.yml`, `workflow_dispatch`-only, build-only — an on-demand "does it
   still compile" check, not an enforcement mechanism.
 
+## Deliberate behavior changes vs. the frozen iOS app
+
+These are intentional product improvements where the current web behavior **differs** from what the
+frozen native app (`iOS/Ortho-iOS/`) once did. Because the Capacitor iOS shell ships the same web
+bundle (spec 021), the new behavior applies on all surfaces.
+
+- **"Save and add another" keeps all fields (feat/save-add-another-keep, 2026-07-30).** The
+  `SaveAndAddAnotherButton` (add-transaction form) previously called `resetForAnother()` after
+  saving, which cleared merchant, amount, notes, category, and splits while keeping kind/source/
+  date/owners/tags — mirroring the frozen app's `resetFormForAnotherEntry`. The new behavior:
+  `resetForAnother()` is a no-op; every field is preserved exactly as submitted so the form is
+  fully pre-filled for the next entry. `submit()` already generates a fresh `crypto.randomUUID()`
+  id on each call, so successive saves are always distinct transactions. Covered by
+  `web/test/tx-form-save-add-another.test.tsx`.
+
 ## Surface-specific by design (not parity gaps)
 
 - **web only:** Dashboard, Insights, Budgets, Housing/mortgage UI, Settings, navigation (bottom tab

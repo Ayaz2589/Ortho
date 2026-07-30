@@ -3,7 +3,7 @@
 //   - knownNamesForKind: the kind-aware merchant/payer name vocabulary (Contract A)
 // See specs/032-common-copy-name-suggest/contracts/ui-behavior.md
 import { describe, expect, it } from 'vitest'
-import { mostCommonTransactions, knownNamesForKind } from '@/lib/txSuggest'
+import { mostCommonTransactions, knownNamesForKind, groupByCategory } from '@/lib/txSuggest'
 import { makeTx } from '../helpers/fixtures'
 
 describe('mostCommonTransactions', () => {
@@ -125,5 +125,45 @@ describe('knownNamesForKind', () => {
 
   it('returns an empty array for empty input', () => {
     expect(knownNamesForKind([], 'expense')).toEqual([])
+  })
+})
+
+describe('groupByCategory', () => {
+  it('groups a category-sorted list into sections with the correct label', () => {
+    const txs = [
+      makeTx({ merchant: 'Blue Bottle', category: 'coffee' }),
+      makeTx({ merchant: 'Chipotle', category: 'dining' }),
+      makeTx({ merchant: 'Aldi', category: 'groceries' }),
+      makeTx({ merchant: 'Whole Foods', category: 'groceries' }),
+    ]
+    const groups = groupByCategory(txs)
+    expect(groups).toHaveLength(3)
+    expect(groups[0]).toMatchObject({ category: 'coffee', label: 'Coffee', rows: [txs[0]] })
+    expect(groups[1]).toMatchObject({ category: 'dining', label: 'Dining', rows: [txs[1]] })
+    expect(groups[2]).toMatchObject({ category: 'groceries', label: 'Groceries', rows: [txs[2], txs[3]] })
+  })
+
+  it('returns a single group for a single-category list', () => {
+    const txs = [makeTx({ merchant: 'Aldi', category: 'groceries' })]
+    const groups = groupByCategory(txs)
+    expect(groups).toHaveLength(1)
+    expect(groups[0].category).toBe('groceries')
+    expect(groups[0].label).toBe('Groceries')
+    expect(groups[0].rows).toHaveLength(1)
+  })
+
+  it('returns one group per distinct run of a category (order preserved)', () => {
+    // Three distinct categories → three groups
+    const txs = [
+      makeTx({ merchant: 'Transit Co', category: 'transit' }),
+      makeTx({ merchant: 'Fuel Stop', category: 'fuel' }),
+      makeTx({ merchant: 'Home Depot', category: 'home_improvement' }),
+    ]
+    const groups = groupByCategory(txs)
+    expect(groups.map((g) => g.category)).toEqual(['transit', 'fuel', 'home_improvement'])
+  })
+
+  it('returns an empty array for an empty list', () => {
+    expect(groupByCategory([])).toEqual([])
   })
 })

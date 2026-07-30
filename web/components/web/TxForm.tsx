@@ -5,7 +5,7 @@ import { useApp } from '@/lib/store'
 import { CATEGORY_GROUPS, categoryMeta } from '@/lib/categories'
 import { currencySymbol, fractionDigits } from '@/lib/finance/currency'
 import { toUSDCents } from '@/lib/finance/money'
-import { mostCommonTransactions, knownNamesForKind } from '@/lib/txSuggest'
+import { mostCommonTransactions, knownNamesForKind, groupByCategory } from '@/lib/txSuggest'
 import { parseMoney, DatePicker } from '@/components/inputs'
 import { Avatar } from '@/components/ui'
 import { computeShares, validateSplit, orderedOwnerIds, seedSplit, type SplitInput, type SplitMethod } from '@/lib/splits'
@@ -362,16 +362,14 @@ export function useTxForm({
     resetSplitsToEven()
   }
 
-  /** After "Save and add another": clear the transaction-specific fields
-   *  (merchant, amount, category, splits) and keep the contextual ones
-   *  (kind, source, date, owners) — mirrors iOS `resetFormForAnotherEntry`. */
-  function resetForAnother() {
-    setMerchant('')
-    setAmount('')
-    setNotes('') // notes are transaction-specific; tags stay (contextual, like source)
-    if (direction === 'expense') setCategory('groceries')
-    resetSplitsToEven()
-  }
+  /** After "Save and add another": keep every field exactly as submitted so the
+   *  form is pre-filled for the next entry. submit() generates a fresh id on
+   *  each call, so every save is a distinct new transaction regardless.
+   *
+   *  Deliberate divergence from the prior iOS-mirrored `resetFormForAnotherEntry`
+   *  clear behavior — recorded in PARITY.md. */
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  function resetForAnother() {}
 
   function submit(): boolean {
     if (!canSave || !cents) return false
@@ -840,23 +838,35 @@ export function TxCopyList({ onPick, onBack }: { onPick: (tx: Transaction) => vo
         {common.length === 0 ? (
           <p style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>{t('Nothing to copy yet')}</p>
         ) : (
-          common.map((tx) => {
-            const owners = ownersDisplay(tx)
-            const isIncome = tx.kind === 'income'
+          groupByCategory(common).map(({ category, label, rows }) => {
+            const meta = categoryMeta(category)
+            const Icon = meta.icon
             return (
-              <button key={tx.id} className="ow-btn ow-row" onClick={() => onPick(tx)} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '10px 20px', textAlign: 'left' }}>
-                <CatTile category={tx.category} size={34} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14.5, fontWeight: 400, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.merchant || (tx.kind === 'transfer' ? t('Transfer') : '')}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, fontSize: 12.5, color: 'var(--text-3)' }}>
-                    <SourceDot size={6} />
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{owners.label}{tx.source ? ` · ${tx.source}` : ''}</span>
-                  </div>
+              <div key={category}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px 3px', color: 'var(--text-2)', fontSize: 12, fontWeight: 500, letterSpacing: '-0.1px' }}>
+                  <Icon size={13} color={meta.tint} strokeWidth={2.2} />
+                  <span>{label}</span>
                 </div>
-                <span style={{ fontSize: 14.5, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
-                  {formatMoney(tx.amount_cents, { leadingPlus: isIncome })}
-                </span>
-              </button>
+                {rows.map((tx) => {
+                  const owners = ownersDisplay(tx)
+                  const isIncome = tx.kind === 'income'
+                  return (
+                    <button key={tx.id} className="ow-btn ow-row" onClick={() => onPick(tx)} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '10px 20px', textAlign: 'left' }}>
+                      <CatTile category={tx.category} size={34} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14.5, fontWeight: 400, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.merchant || (tx.kind === 'transfer' ? t('Transfer') : '')}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, fontSize: 12.5, color: 'var(--text-3)' }}>
+                          <SourceDot size={6} />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{owners.label}{tx.source ? ` · ${tx.source}` : ''}</span>
+                        </div>
+                      </div>
+                      <span style={{ fontSize: 14.5, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: isIncome ? 'var(--positive)' : 'var(--text)' }}>
+                        {formatMoney(tx.amount_cents, { leadingPlus: isIncome })}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
             )
           })
         )}
