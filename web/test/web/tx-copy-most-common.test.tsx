@@ -88,3 +88,53 @@ describe('Copy from most common — button', () => {
     expect(screen.getByRole('button', { name: 'Copy from most common' })).toBeInTheDocument()
   })
 })
+
+describe('Copy from most common — category section headers', () => {
+  it('renders one section header per distinct category', () => {
+    store.transactions = [
+      makeTx({ merchant: 'Blue Bottle', category: 'coffee' }),
+      makeTx({ merchant: 'Chipotle', category: 'dining' }),
+      makeTx({ merchant: 'Aldi', category: 'groceries' }),
+      makeTx({ merchant: 'Whole Foods', category: 'groceries' }),
+    ]
+    render(<TxCopyList onPick={vi.fn()} onBack={vi.fn()} />)
+    // Three distinct categories → three headers
+    expect(screen.getByText('Coffee')).toBeInTheDocument()
+    expect(screen.getByText('Dining')).toBeInTheDocument()
+    expect(screen.getByText('Groceries')).toBeInTheDocument()
+  })
+
+  it('places merchant rows under their category header', () => {
+    store.transactions = [
+      makeTx({ merchant: 'Blue Bottle', category: 'coffee' }),
+      makeTx({ merchant: 'Aldi', category: 'groceries' }),
+      makeTx({ merchant: 'Whole Foods', category: 'groceries' }),
+    ]
+    render(<TxCopyList onPick={vi.fn()} onBack={vi.fn()} />)
+    const rows = rowButtons()
+    // Two groceries rows, one coffee row
+    expect(rows.filter((r) => r.textContent?.includes('Blue Bottle'))).toHaveLength(1)
+    expect(rows.filter((r) => r.textContent?.includes('Aldi'))).toHaveLength(1)
+    expect(rows.filter((r) => r.textContent?.includes('Whole Foods'))).toHaveLength(1)
+    // Groceries header appears once even with two rows
+    expect(screen.getAllByText('Groceries')).toHaveLength(1)
+  })
+
+  it('renders no section headers on an empty list (empty state only)', () => {
+    store.transactions = []
+    render(<TxCopyList onPick={vi.fn()} onBack={vi.fn()} />)
+    expect(screen.getByText('Nothing to copy yet')).toBeInTheDocument()
+    expect(screen.queryByText('Coffee')).not.toBeInTheDocument()
+  })
+
+  it('renders exactly one header when all rows share the same category', () => {
+    store.transactions = [
+      makeTx({ merchant: 'Aldi', category: 'groceries' }),
+      makeTx({ merchant: 'Whole Foods', category: 'groceries' }),
+    ]
+    render(<TxCopyList onPick={vi.fn()} onBack={vi.fn()} />)
+    expect(screen.getAllByText('Groceries')).toHaveLength(1)
+    // No other category headers
+    expect(screen.queryByText('Coffee')).not.toBeInTheDocument()
+  })
+})
