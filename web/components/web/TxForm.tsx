@@ -361,16 +361,14 @@ export function useTxForm({
     resetSplitsToEven()
   }
 
-  /** After "Save and add another": clear the transaction-specific fields
-   *  (merchant, amount, category, splits) and keep the contextual ones
-   *  (kind, source, date, owners) — mirrors iOS `resetFormForAnotherEntry`. */
-  function resetForAnother() {
-    setMerchant('')
-    setAmount('')
-    setNotes('') // notes are transaction-specific; tags stay (contextual, like source)
-    if (direction === 'expense') setCategory('groceries')
-    resetSplitsToEven()
-  }
+  /** After "Save and add another": keep every field exactly as submitted so the
+   *  form is pre-filled for the next entry. submit() generates a fresh id on
+   *  each call, so every save is a distinct new transaction regardless.
+   *
+   *  Deliberate divergence from the prior iOS-mirrored `resetFormForAnotherEntry`
+   *  clear behavior — recorded in PARITY.md. */
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  function resetForAnother() {}
 
   function submit(): boolean {
     if (!canSave || !cents) return false
