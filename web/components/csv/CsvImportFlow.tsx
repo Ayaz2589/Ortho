@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { FileSpreadsheet, Upload } from 'lucide-react'
 import { useCsvImport } from '@/lib/csv/useCsvImport'
+import { clearCsvSession } from '@/lib/csv/csvImportPersistence'
 import { Drawer, DrawerHeader } from '@/components/web/Drawer'
 import { CsvImportList } from './CsvImportList'
 import { CsvImportSummary } from './CsvImportSummary'
@@ -47,6 +48,11 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
   const handleClose = () => {
     reset()
     setEditingId(null)
+    // Clear the session imperatively here rather than relying on the
+    // useEffect(() => saveCsvSession(state), [state]) in useCsvImport — that
+    // effect races with the unmount triggered by onClose() and loses, so
+    // sessionStorage would retain the list-view data and auto-reopen the panel.
+    clearCsvSession()
     onClose()
   }
 
