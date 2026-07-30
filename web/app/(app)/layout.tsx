@@ -93,14 +93,14 @@ function Shell({ children, active }: { children: ReactNode; active: boolean }) {
     // the covered household data behind the opaque overlay (FR-011). The z-index
     // overlay only occludes visually; `inert` removes the content from the tab
     // order and the accessibility tree. React 19 emits the attribute only when true.
-    <div className="sm:flex sm:h-screen sm:overflow-hidden" inert={!active}>
+    <div className="flex h-dvh overflow-hidden sm:h-screen" inert={!active}>
       {/* spec 024: completes a pending Hosted Plaid Link session on the
           Capacitor shell (ortho://plaid-done hand-back + foreground poll).
           Renders nothing; no-op on desktop/mobile web. */}
       <PlaidHandBack />
       <Sidebar />
       <main
-        className="relative flex-1 sm:min-w-0 sm:overflow-y-auto sm:[scrollbar-gutter:stable]"
+        className="relative flex-1 overflow-y-auto sm:min-w-0 sm:[scrollbar-gutter:stable]"
         // spec 021: clears the status bar/notch/Dynamic Island on the
         // Capacitor iOS shell — resolves to 0 on any context without a safe
         // area (desktop browsers, older devices), so this is harmless there.
