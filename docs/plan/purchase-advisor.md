@@ -18,13 +18,18 @@ Ortho already has:
 - Category-level budgets with rollover (`web/lib/finance/budgets.ts`)
 - Insights engine with 8 rules operating on real transaction history (`web/lib/finance/insights.ts`)
 - Category taxonomy (41 values across 12 groups, `web/lib/categories.ts`)
-- 6-month+ transaction history for established users
 - Savings rate insight (Rule 4 in insights engine)
 
 What we're adding on top:
 - **User financial profile** — questionnaire answered at onboarding: income, fixed costs, household setup, savings targets, category importance sliders
 - **Purchase Advisor algorithm** — blends budget signal + savings signal + affordability signal + category importance + spending trend into a single 0–100 score → verdict
 - **Verdict screen** — 4 charts + a score badge + 2–3 insight bullets
+
+### New user reality
+
+**The primary user of this feature has zero transaction history.** The onboarding questionnaire runs immediately after account creation, before any transactions exist. The algorithm is therefore designed profile-first: 60% of the score weight (signals 2, 3, 4) comes from questionnaire answers alone. The remaining 40% (signals 1, 5) uses transaction history when available and falls back to neutral (50) when it isn't.
+
+This means the advisor gives useful verdicts from day one — the profile is the data, not a supplement to historical data. History makes the score more precise over time, but is never a prerequisite.
 
 ---
 
@@ -204,7 +209,7 @@ Same fields as the New Transaction form for expenses, but framed differently:
 
 1. **Category budget bar** — horizontal progress bar showing category spend this month, the monthly budget (if set), and this purchase overlaid in a distinct color. If no budget set: shows vs 3-month average instead. Label: "X budget used (Y remaining)"
 
-2. **6-month category trend** — sparkline or bar chart: one bar per month for the last 6 months showing spend in this category. Current month bar split: logged spend vs this purchase. Helps user see trajectory.
+2. **Category spend history** — sparkline or bar chart: one bar per month for available history (up to 6 months). Current month bar split: logged spend vs this purchase. **New user state:** if fewer than 2 months of data exist, replace with a plain text callout: "You'll see your spending trend here as you log more transactions." Do not show an empty chart.
 
 3. **Monthly income waterfall** — stacked horizontal bar:
    `[Income] → [Housing + Fixed] → [Other spending this month] → [This purchase] → [Remaining]`
@@ -318,9 +323,25 @@ score = round(
 
 Weights and cutoffs live in `web/lib/finance/purchase-advisor-thresholds.ts` (same pattern as `insights-thresholds.ts`) so they can be tuned without touching algorithm logic.
 
+### New user mode (no transaction history)
+
+This is the **expected initial state** — not an edge case. A brand-new user who just completed the onboarding questionnaire has:
+
+| Signal | Source | New user behavior |
+|---|---|---|
+| 1 — Budget | Transaction history + budgets | No budgets set, no history → neutral (50) |
+| 2 — Savings | Profile income + this month's spend | Month spend = $0, full capacity → works from day 1 |
+| 3 — Affordability | Profile discretionary income | No history needed → works from day 1 |
+| 4 — Category importance | Profile preferences | No history needed → works from day 1 |
+| 5 — Spend trend | Transaction history | No prior window → neutral (50) |
+
+**New user composite:** `50 × 0.30 + savings × 0.25 + affordability × 0.25 + importance × 0.10 + 50 × 0.10` = profile-driven with neutral anchors. The advisor is fully operational from the first use.
+
+As the user logs transactions, signals 1 and 5 become live (budgets set → signal 1 sharpens; 60 days of history → signal 5 sharpens). No code change needed — the fallbacks simply stop triggering.
+
 ### Reduced-accuracy mode (no profile)
 
-When `profile` is null, signals 2, 3, and 4 fall back to 50 (neutral). Only signals 1 (budget) and 5 (trend) use real data. Score is still produced but the verdict screen shows a banner: "Add your financial profile in Settings for a more accurate assessment."
+When `profile` is null (user skipped onboarding), signals 2, 3, and 4 fall back to 50 (neutral). Only signals 1 (budget) and 5 (trend) use real data. For a brand-new user with no profile *and* no history this produces a score of 50 — effectively no verdict. The verdict screen shows a banner: "Complete your financial profile for a meaningful assessment." This is intentionally a worse experience to encourage profile completion.
 
 ---
 
@@ -483,7 +504,7 @@ These decisions block spec/tasks generation and need user input:
 
 8. **Verdict copy ownership**: Who writes the insight bullet templates? They need to feel natural in 6 languages. Placeholder strings go in the spec; final copy should be reviewed before launch.
 
-9. **No-history fallback for new users**: < 1 month of transaction history means signals 1 and 5 are weak. Should we show the advisor at all until there's 2+ weeks of data? Or is the profile-only version (signals 2, 3, 4) sufficient to give useful guidance immediately?
+9. ~~**No-history fallback for new users**~~ — **Resolved:** The advisor runs from day 1. Signals 2, 3, 4 are profile-driven and require no history. Signals 1 and 5 neutral-fallback when history is absent. Do not gate the feature behind a transaction count. See §6 "New user mode".
 
 10. **Transaction flow after "Log purchase"**: Should "Log purchase" go to the full TxForm (pre-filled) so the user can edit splits, tags, notes — or should it bypass the form and directly save the transaction with the advisor's data? The former is safer but adds a step.
 
