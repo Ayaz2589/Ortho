@@ -122,6 +122,7 @@ no generated types. Add a Postgres enum value ⇒ update both.
 - `transaction_tags` — PK `(transaction_id, tag_id)`; a set, no sum invariant; tag write failure
   never rolls back the parent tx.
 - `cards` — household-scoped payment-source names.
+- `deposit_accounts` — household-scoped income deposit account names (spec 033); mirrors `cards`; shown in "Deposit to" picker on income transactions.
 - `budgets` — UNIQUE `(household_id, category)`, `monthly_limit_cents` ≥0, `budget_type` (default
   `'fixed'`), `rollover_cap_cents` nullable ≥0 (flex-only). Rollover **carry is never stored** —
   derived from ledger history in `web/lib/finance/budgets.ts` at render time.
@@ -203,7 +204,7 @@ RLS is enabled on **every** table. Four postures:
 | Posture | Tables |
 |---|---|
 | Self-only | `users` (own row + peers-in-shared-household SELECT), `platform_locks` |
-| Member read/write | `households` (owner-only update/delete), `cards`, `budgets`, `properties` + housing sub-tables (via `is_property_household_member`), `household_people`, `tags`, `goals` |
+| Member read/write | `households` (owner-only update/delete), `cards`, `deposit_accounts`, `budgets`, `properties` + housing sub-tables (via `is_property_household_member`), `household_people`, `tags`, `goals` |
 | Parent-piggyback `EXISTS` | `transaction_shares`, `transaction_tags`, `goal_contributions`, `linked_accounts` (select-only) |
 | Service-role-only | `entitlements` (single `entitlements_select_own` policy, **no client write** — "a client that can write its own entitlement is a paywall that doesn't exist"), `billing_events` (RLS on, **zero policies**), `linked_institutions`/`linked_accounts` (member SELECT only), `linked_institution_secrets` + `plaid_link_sessions` (zero policies AND no `authenticated` grant at all) |
 

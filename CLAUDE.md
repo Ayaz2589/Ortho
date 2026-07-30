@@ -1,17 +1,16 @@
 <!-- SPECKIT START -->
-Active feature: **spec 032 — most-common copy + merchant name suggestions**. Plan:
-`specs/032-common-copy-name-suggest/plan.md` (spec/plan/data-model/quickstart/contracts alongside it).
-Two additive, client-side improvements to the shared add/edit transaction form: (1) rework the New-form
-copy shortcut (`TxCopyList`) — frequency selects the most-common merchants (one representative most-recent
-entry each), presented grouped by category then alphabetically by merchant within each — and relabel it
-"Copy from most common"; (2) add kind-aware merchant/payer name
-suggestions (a native `<datalist>`) to the form's name input on Add + Edit, expense + income. New pure
-module `web/lib/txSuggest.ts` reuses the tested `rankedMerchants`/`suggestMerchants` from
-`web/lib/csv/merchantSuggest.ts`. Touches: `TxForm.tsx`, `TxFormPageClient.tsx`, 5 i18n catalogs; no
-DB/schema change; money/splits logic untouched. Fully TDD.
-(Note: three parallel branches took the "032" prefix — see also `specs/032-loading-skeletons/` and
-`specs/032-pdf-data-export/`, both shipped on main.)
-Prior shipped: **spec 032 — content-shaped loading skeletons** (`specs/032-loading-skeletons/plan.md`):
+Active feature: **spec 033 — income deposit accounts**. Plan:
+`specs/033-income-deposit-accounts/plan.md` (spec/plan/data-model/quickstart/contracts alongside it).
+Replaces hardcoded `INCOME_SOURCES` constant in `TxForm.tsx` with user-configurable `deposit_accounts`
+table (mirrors `cards`). Users add/delete named deposit accounts in Settings → Deposit Accounts. The
+"Deposit to" dropdown on income transactions shows configured accounts. No transactions schema change —
+`source` already stores the string name. Touches: new migration, `web/lib/store.tsx`, `TxForm.tsx`,
+`AddDepositAccountModal.tsx`, `settings/deposit-accounts/page.tsx`, `settings/page.tsx`, 5 i18n catalogs.
+Fully TDD.
+Prior shipped: **spec 032 — most-common copy + merchant name suggestions** (`specs/032-common-copy-name-suggest/plan.md`):
+rework the New-form copy shortcut (frequency-selects most-common merchants, grouped by category then
+alphabetically), relabeled "Copy from most common"; kind-aware merchant/payer name suggestions via
+`<datalist>` on Add + Edit. Also: **spec 032 — content-shaped loading skeletons** (`specs/032-loading-skeletons/plan.md`):
 calm motionless placeholder skeletons matching each route's shape, sized from the previous load's item
 count (`localStorage` `ortho.skeletonCounts`); token-only `Skeleton` primitive + `RouteSkeleton`.
 **spec 032 — PDF data export & import** (`specs/032-pdf-data-export/plan.md`): download household data as

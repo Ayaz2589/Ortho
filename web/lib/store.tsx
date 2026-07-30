@@ -39,6 +39,7 @@ import type {
   Transaction,
   Tag,
   Card,
+  DepositAccount,
   Property,
   MortgageInfo,
   LeaseInfo,
@@ -59,6 +60,7 @@ import type {
   TagRow,
   TransactionTagRow,
   CardRow,
+  DepositAccountRow,
   PropertyRow,
   MortgageInfoRow,
   LeaseInfoRow,
@@ -99,6 +101,8 @@ interface AppStateValue {
   /** Household free-form tag roster (spec 027). */
   tags: Tag[]
   cards: Card[]
+  /** Household deposit account names for income transactions (spec 033). */
+  depositAccounts: DepositAccount[]
   properties: Property[]
   rentalPayments: RentalPayment[]
   budgets: Budget[]
@@ -160,6 +164,8 @@ interface AppStateValue {
   addTag: (name: string) => Tag
   addCard: (name: string) => void
   deleteCard: (id: string) => void
+  addDepositAccount: (name: string) => void
+  deleteDepositAccount: (id: string) => void
   addProperty: (p: Property) => void
   updateProperty: (p: Property) => void
   deleteProperty: (id: string) => void
@@ -295,6 +301,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [tags, setTags] = useState<Tag[]>([])
   const [cards, setCards] = useState<Card[]>([])
+  const [depositAccounts, setDepositAccounts] = useState<DepositAccount[]>([])
   const [properties, setProperties] = useState<Property[]>([])
   const [rentalPayments, setRentalPayments] = useState<RentalPayment[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
@@ -658,6 +665,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       linkedAcctRes,
       tagsRes,
       txTagsRes,
+      depositAccountsRes,
     ] = await Promise.all([
       // Column projection (US6/P5): the three highest-volume reads fetch only the
       // fields the app uses — never select('*'). Keep these lists in lockstep with
@@ -692,6 +700,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       // feature must never take the whole bootstrap down.
       supabase.from('tags').select('*').eq('household_id', householdId).order('created_at', { ascending: true }),
       supabase.from('transaction_tags').select('transaction_id, tag_id'),
+      // Deposit accounts (spec 033): fail-open like tags/linked banks.
+      supabase.from('deposit_accounts').select('*').order('created_at', { ascending: true }),
     ])
 
     // A failed read must surface as an error, not render as a real-looking
@@ -706,7 +716,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // window. Any OTHER error stays fail-loud like every bootstrap read.
     const missingTable = (e: { code?: string } | null | undefined) =>
       e?.code === 'PGRST205' || e?.code === '42P01'
-    for (const res of [goalsRes, goalContribRes, linkedInstRes, linkedAcctRes, tagsRes, txTagsRes]) {
+    for (const res of [goalsRes, goalContribRes, linkedInstRes, linkedAcctRes, tagsRes, txTagsRes, depositAccountsRes]) {
       if (res.error && missingTable(res.error as { code?: string })) {
         res.data = []
         res.error = null
@@ -741,6 +751,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setTransactions(txns)
     setTags((tagsRes.data ?? []) as TagRow[])
     setCards((cardsRes.data ?? []) as CardRow[])
+    setDepositAccounts((depositAccountsRes.data ?? []) as DepositAccountRow[])
 
     // stitch properties
     const mort = new Map<string, MortgageInfo>(
@@ -1084,6 +1095,42 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const { error: e } = await supabase.from('cards').delete().eq('id', id)
       if (e && removed) {
         setCards((prev) => [...prev, removed!])
+        setError(e.message)
+      }
+    })()
+  }
+
+  // Deposit accounts (spec 033) — mirrors addCard/deleteCard exactly.
+  const addDepositAccount = (name: string) => {
+    if (!household) return
+    const account: DepositAccount = {
+      id: uuid(),
+      household_id: household.id,
+      name,
+      created_at: new Date().toISOString(),
+    }
+    setDepositAccounts((prev) => [...prev, account])
+    ;(async () => {
+      const { error: e } = await supabase
+        .from('deposit_accounts')
+        .insert({ id: account.id, household_id: account.household_id, name: account.name })
+      if (e) {
+        setDepositAccounts((prev) => prev.filter((a) => a.id !== account.id))
+        setError(e.message)
+      }
+    })()
+  }
+
+  const deleteDepositAccount = (id: string) => {
+    let removed: DepositAccount | undefined
+    setDepositAccounts((prev) => {
+      removed = prev.find((a) => a.id === id)
+      return prev.filter((a) => a.id !== id)
+    })
+    ;(async () => {
+      const { error: e } = await supabase.from('deposit_accounts').delete().eq('id', id)
+      if (e && removed) {
+        setDepositAccounts((prev) => [...prev, removed!])
         setError(e.message)
       }
     })()
@@ -1486,6 +1533,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     transactions,
     tags,
     cards,
+    depositAccounts,
     properties,
     rentalPayments,
     budgets,
@@ -1515,6 +1563,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     addTag,
     addCard,
     deleteCard,
+    addDepositAccount,
+    deleteDepositAccount,
     addProperty,
     updateProperty,
     deleteProperty,

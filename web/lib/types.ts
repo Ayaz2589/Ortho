@@ -68,6 +68,13 @@ export interface Card {
   created_at: string
 }
 
+export interface DepositAccount {
+  id: string
+  household_id: string
+  name: string
+  created_at: string
+}
+
 export interface Transaction {
   id: string
   household_id: string
