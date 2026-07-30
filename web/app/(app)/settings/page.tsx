@@ -29,6 +29,7 @@ export default function SettingsPage() {
           )}
           <LinkRow href="/settings/planning" label={t('Planning')} />
           <LinkRow href="/settings/cards" label={t('Cards')} />
+          <LinkRow href="/settings/deposit-accounts" label={t('Deposit Accounts')} />
           <LinkRow href="/settings/subscription" label={t('Subscription')} />
         </SectionCard>
         <SectionCard>

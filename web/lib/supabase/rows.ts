@@ -75,6 +75,13 @@ export interface CardRow {
   created_at: string
 }
 
+export interface DepositAccountRow {
+  id: string
+  household_id: string
+  name: string
+  created_at: string
+}
+
 export interface PropertyRow {
   id: string
   household_id: string

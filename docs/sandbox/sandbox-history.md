@@ -12,6 +12,7 @@
 | Sandbox | Branch | Feature | Mode | Created | Last seen |
 |---|---|---|---|---|---|
 | claude-Ortho | main | pre-existing dev sandbox — **direct-mode (host-mounted)**, not skill-managed | direct | _(unknown)_ | stopped |
+| mobile-scroll-nav-fix | feat/income-deposit-accounts | spec 033 — income deposit accounts | clone | 2026-07-30 | 2026-07-30 |
 
 ## Killed (history)
 

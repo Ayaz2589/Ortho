@@ -27,6 +27,7 @@ vi.mock('@/lib/store', () => {
       currency: 'usd',
       rate: () => 1,
       cards: [{ id: 'c1', household_id: 'h1', name: 'Visa', created_at: '2026-01-01' }],
+      depositAccounts: [],
       currentHousehold: { id: 'h1', owner_id: 'u1', name: 'Home', created_at: '2026-01-01' },
       currentUserId: 'u1',
       currentPersonId: 'u1',

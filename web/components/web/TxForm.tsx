@@ -16,7 +16,6 @@ import { Seg, CatTile, SourceDot, FormRow as Row } from './kit'
 import { TagEditor } from './TagEditor'
 import { resolveDefaultOwnerId } from '@/lib/defaultOwner'
 
-const INCOME_SOURCES = ['ACH · Checking', 'ACH · Joint', 'Wire']
 
 /** Prefill for opening the form directly in transfer ("Settle up") mode. */
 export interface TransferPrefill {
@@ -74,6 +73,7 @@ export function useTxForm({
     currency,
     rate,
     cards,
+    depositAccounts,
     currentHousehold,
     currentUserId,
     currentPersonId,
@@ -158,8 +158,9 @@ export function useTxForm({
     return otherMember(defaultOwner)
   })
   const expenseSources = useMemo(() => cards.map((c) => c.name), [cards])
+  const incomeSources = useMemo(() => depositAccounts.map((a) => a.name), [depositAccounts])
   const [source, setSource] = useState(
-    src?.source ?? (initialKind === 'income' ? INCOME_SOURCES[0] : expenseSources[0] ?? '')
+    src?.source ?? (initialKind === 'income' ? incomeSources[0] ?? '' : expenseSources[0] ?? '')
   )
   // Tags + notes (spec 027). Seed from the edit/copy source; both are optional.
   const [tags, setTags] = useState<string[]>(src?.tags ?? [])
@@ -194,7 +195,7 @@ export function useTxForm({
 
   const isIncome = direction === 'income'
   const isTransfer = direction === 'transfer'
-  const sources = isIncome ? INCOME_SOURCES : expenseSources
+  const sources = isIncome ? incomeSources : expenseSources
   const cents = parseMoney(amount, currency, r)
 
   function buildSplit(): SplitInput {
@@ -265,7 +266,7 @@ export function useTxForm({
   function setDir(d: TransactionKind) {
     setDirection(d)
     if (d === 'income') {
-      setSource((s) => (INCOME_SOURCES.includes(s) ? s : INCOME_SOURCES[0]))
+      setSource((s) => (incomeSources.includes(s) ? s : incomeSources[0] ?? ''))
       setIncomeCategory((c) => (c === 'groceries' ? 'salary' : c))
     } else if (d === 'expense') {
       setSource((s) => (expenseSources.includes(s) ? s : expenseSources[0] ?? ''))
@@ -711,7 +712,7 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
           <div className="ow-card" style={{ margin: '0 20px 14px' }}>
             <Row label={isIncome ? t('Deposit to') : t('Paid with')} first>
               {form.sources.length === 0 ? (
-                <span style={{ color: 'var(--text-3)' }}>{t('No cards yet')}</span>
+                <span style={{ color: 'var(--text-3)' }}>{isIncome ? t('No accounts yet') : t('No cards yet')}</span>
               ) : (
                 <select value={form.source} onChange={(e) => form.setSource(e.target.value)} style={selectStyle()}>
                   {/* An imported (or old) row may carry no source, or one whose
