@@ -9,8 +9,10 @@
 // No I/O, no clock: pure and deterministic so the ordering can be locked by unit
 // tests (Constitution VI). See specs/032-common-copy-name-suggest/.
 import type { Transaction, TransactionKind } from '@/lib/types'
+import type { TransactionCategory } from '@/lib/types'
 import { rankedMerchants } from '@/lib/csv/merchantSuggest'
 import { normalizeMerchant } from '@/lib/csv/duplicateMatch'
+import { CATEGORIES } from '@/lib/categories'
 
 const DEFAULT_LIMIT = 40
 
@@ -70,6 +72,35 @@ function byCategoryThenName(a: Transaction, b: Transaction): number {
   const bn = b.merchant.toLowerCase()
   if (an !== bn) return an < bn ? -1 : 1
   return a.merchant < b.merchant ? -1 : a.merchant > b.merchant ? 1 : 0
+}
+
+export interface TxCategoryGroup {
+  category: TransactionCategory
+  label: string
+  rows: Transaction[]
+}
+
+/**
+ * Chunk an already-category-sorted list of transactions into ordered groups, one
+ * per distinct category run. Preserves the existing sort order (category slug
+ * asc, merchant asc within each category as produced by mostCommonTransactions).
+ * Used by TxCopyList to render a section header per category.
+ */
+export function groupByCategory(sorted: Transaction[]): TxCategoryGroup[] {
+  const groups: TxCategoryGroup[] = []
+  for (const tx of sorted) {
+    const last = groups[groups.length - 1]
+    if (last && last.category === tx.category) {
+      last.rows.push(tx)
+    } else {
+      groups.push({
+        category: tx.category,
+        label: CATEGORIES[tx.category]?.label ?? tx.category,
+        rows: [tx],
+      })
+    }
+  }
+  return groups
 }
 
 /**
