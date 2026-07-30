@@ -23,10 +23,13 @@ const TABBAR = readFileSync(
 )
 
 describe('mobile scroll + nav guard', () => {
-  it('shell outer div uses dynamic-viewport height (h-dvh) so the layout is clamped on mobile', () => {
-    // Must contain h-dvh (not only sm:h-screen) — the dvh unit tracks the
-    // collapsing iOS URL bar so the container is always exactly the visual viewport.
-    expect(/className="[^"]*\bh-dvh\b/.test(SHELL)).toBe(true)
+  it('shell outer div has h-dvh AND overflow-hidden in the same className (both required for mobile scroll containment)', () => {
+    // h-dvh clamps the container to the dynamic viewport; overflow-hidden prevents
+    // body-level scroll from returning. Both must be on the SAME element — checking
+    // the same className string ensures neither is silently moved to a child.
+    const sameCls =
+      /className="[^"]*(?:\bh-dvh\b[^"]*\boverflow-hidden\b|\boverflow-hidden\b[^"]*\bh-dvh\b)/
+    expect(sameCls.test(SHELL)).toBe(true)
   })
 
   it('shell <main> has overflow-y-auto without a sm: breakpoint prefix (mobile scrolls inside main)', () => {
