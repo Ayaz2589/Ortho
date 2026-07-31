@@ -496,7 +496,7 @@ These decisions block spec/tasks generation and need user input:
 
 4. **Profile updates after onboarding**: Settings → Financial Profile lets users update answers. Should changes immediately re-score any saved evaluations (`purchase_evaluations`)? Or are verdicts point-in-time snapshots (simpler)?
 
-5. **Charting library**: What library does the project currently use for charts? Check the dashboard widgets — if one exists, use it. If none, we need to pick one (Recharts, Nivo, Chart.js, or hand-rolled SVG). This affects P4 significantly.
+5. ~~**Charting library**~~ — **Resolved:** **Recharts** (`recharts@^3.8.1`) is already in use for `SpendByCategoryCard` (pie/donut) and `DailySpendTrendCard` (line) in the dashboard. Use it for verdict screen charts. Dynamically import via `next/dynamic` to keep initial bundle small, same as dashboard.
 
 6. **"Save for later" in v1 or v2**: Is the watchlist/pending evaluation feature in scope for this spec, or deferred? (See §9.)
 
@@ -521,3 +521,440 @@ These decisions block spec/tasks generation and need user input:
 | Modal/sheet pattern | `AddDepositAccountModal.tsx`, `AddCardModal.tsx` | Purchase input sheet uses same pattern |
 | `loadAll` fail-open pattern | `web/lib/store.tsx` (~line 700+) | New tables loaded with same PGRST205 guard |
 | `InsightTranslate` (`tr()`) | `web/lib/finance/insights.ts` | Insight bullet templates use same tr() hook |
+
+---
+
+## 14. Database Layer
+
+### Migration file
+
+Single file: `supabase/migrations/20260731120000_purchase_advisor_profile.sql`
+
+Contains all four tables in order. Naming follows the repo's `YYYYMMDDHHMMSS_description.sql` convention; timestamp must exceed the latest migration (`20260730120000`).
+
+### RLS strategy — per-user, not per-household
+
+`cards`, `deposit_accounts`, and `budgets` are **household-scoped** (RLS via `is_household_member(household_id)`). Financial profile tables are **user-scoped** — one profile per Ortho account, not per household. RLS policy: `user_id = auth.uid()`.
+
+```sql
+-- Example for user_financial_profile (same pattern repeated for all three tables)
+alter table public.user_financial_profile enable row level security;
+
+create policy "profile_select" on public.user_financial_profile
+  for select using (user_id = auth.uid());
+
+create policy "profile_insert" on public.user_financial_profile
+  for insert with check (user_id = auth.uid());
+
+create policy "profile_update" on public.user_financial_profile
+  for update using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+create policy "profile_delete" on public.user_financial_profile
+  for delete using (user_id = auth.uid());
+```
+
+`purchase_evaluations` (save-for-later, v2) follows the same per-user RLS pattern.
+
+### Row types — `web/lib/supabase/rows.ts`
+
+Added alongside `CardRow`, `DepositAccountRow` (mirror their column-for-column approach):
+
+```typescript
+export interface UserFinancialProfileRow {
+  id: string
+  user_id: string
+  monthly_income_cents: number
+  income_is_variable: boolean
+  income_low_estimate_cents: number | null
+  housing_type: 'rent' | 'own' | 'family' | 'none'
+  housing_cost_cents: number | null
+  housing_share_fraction: number       // numeric(5,4) → number
+  savings_target_fraction: number      // numeric(5,4) → number
+  emergency_fund_level: 'none' | 'under_1m' | '1_3m' | '3_6m' | '6m_plus'
+  created_at: string
+  updated_at: string
+}
+
+export interface UserFixedCostRow {
+  id: string
+  user_id: string
+  label: string
+  amount_cents: number
+  created_at: string
+}
+
+export interface UserCategoryPreferenceRow {
+  id: string
+  user_id: string
+  category_group: string   // CategoryGroupKey — typed at domain layer
+  importance: number       // smallint → number; validated 1–5 in domain type
+  created_at: string
+}
+```
+
+### Domain types — `web/lib/types.ts`
+
+Added alongside `Card`, `DepositAccount`, `Budget`:
+
+```typescript
+export interface UserFinancialProfile {
+  id: string
+  user_id: string
+  monthly_income_cents: number
+  income_is_variable: boolean
+  income_low_estimate_cents: number | null
+  housing_type: 'rent' | 'own' | 'family' | 'none'
+  housing_cost_cents: number | null
+  housing_share_fraction: number
+  savings_target_fraction: number
+  emergency_fund_level: 'none' | 'under_1m' | '1_3m' | '3_6m' | '6m_plus'
+  created_at: string
+  updated_at: string
+}
+
+export interface UserFixedCost {
+  id: string
+  user_id: string
+  label: string
+  amount_cents: number
+  created_at: string
+}
+
+export interface UserCategoryPreference {
+  id: string
+  user_id: string
+  category_group: CategoryGroupKey   // from categories.ts
+  importance: 1 | 2 | 3 | 4 | 5
+  created_at: string
+}
+```
+
+`CategoryGroupKey` is already exported from `web/lib/categories.ts` — no new type needed.
+
+### Column projection
+
+The `loadAll` reads for these tables use `select('*')` (acceptable — these are small, bounded tables: 1 profile row, ≤10 fixed cost rows, ≤8 preference rows per user). No column projection needed. Contrast with high-volume `transactions` which projects only needed columns.
+
+### Fail-open group membership
+
+All three new tables join the fail-open group (alongside `goals`, `tags`, `deposit_accounts`). They won't exist on Vercel during the deploy-before-migrate window. The `user_financial_profile` read uses `.maybeSingle()` (returns `null | row`, not an array) so its fail-open assignment is `res.data = null`.
+
+---
+
+## 15. Store / Backend Layer
+
+### New state declarations
+
+After `depositAccounts` state (~line 304 in `web/lib/store.tsx`):
+
+```typescript
+const [userFinancialProfile, setUserFinancialProfile] = useState<UserFinancialProfile | null>(null)
+const [userFixedCosts, setUserFixedCosts] = useState<UserFixedCost[]>([])
+const [userCategoryPreferences, setUserCategoryPreferences] = useState<UserCategoryPreference[]>([])
+```
+
+### loadAll additions
+
+Three new reads added to the `Promise.all` array. They are **user-scoped** — use `ownerId` (the `loadAll` parameter that maps to the authenticated user's ID), not `householdId`:
+
+```typescript
+// Inside the Promise.all([...]) array:
+supabase
+  .from('user_financial_profile')
+  .select('*')
+  .eq('user_id', ownerId)
+  .maybeSingle(),                          // returns row | null, not []
+
+supabase
+  .from('user_fixed_costs')
+  .select('*')
+  .eq('user_id', ownerId)
+  .order('created_at', { ascending: true }),
+
+supabase
+  .from('user_category_preferences')
+  .select('*')
+  .eq('user_id', ownerId),
+```
+
+All three join the fail-open loop. The profile uses `res.data = null` (not `[]`) as its missing-table default:
+
+```typescript
+for (const res of [...existing..., userProfileRes, userFixedCostsRes, userCategoryPrefsRes]) {
+  if (res.error && missingTable(res.error as { code?: string })) {
+    res.data = res === userProfileRes ? null : []
+    res.error = null
+  }
+  orThrow(res)
+}
+
+setUserFinancialProfile(userProfileRes.data as UserFinancialProfileRow | null)
+setUserFixedCosts((userFixedCostsRes.data ?? []) as UserFixedCostRow[])
+setUserCategoryPreferences((userCategoryPrefsRes.data ?? []) as UserCategoryPreferenceRow[])
+```
+
+### New actions
+
+**`saveFinancialProfile`** — async upsert, no optimistic update (deliberate form submission, user expects a spinner):
+
+```typescript
+const saveFinancialProfile = async (data: Omit<UserFinancialProfile, 'id' | 'created_at' | 'updated_at'>) => {
+  const { data: saved, error: e } = await supabase
+    .from('user_financial_profile')
+    .upsert(
+      { ...data, user_id: currentUserId, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' }
+    )
+    .select()
+    .single()
+  if (e) { setError(e.message); return }
+  setUserFinancialProfile(saved as UserFinancialProfileRow)
+}
+```
+
+Pattern mirror: `addOrUpdateBudget` (lines ~1253–1285 in store.tsx) — same upsert + `.select().single()` + setError flow.
+
+**`saveUserFixedCosts`** — replace-all (delete existing rows, insert new batch). Sequential awaits — NOT fire-and-forget because the two operations must be atomic:
+
+```typescript
+const saveUserFixedCosts = async (costs: Array<{ label: string; amount_cents: number }>) => {
+  const { error: delErr } = await supabase
+    .from('user_fixed_costs')
+    .delete()
+    .eq('user_id', currentUserId)
+  if (delErr) { setError(delErr.message); return }
+
+  if (costs.length === 0) { setUserFixedCosts([]); return }
+
+  const rows = costs.map(c => ({ id: uuid(), user_id: currentUserId, ...c, created_at: new Date().toISOString() }))
+  const { error: insErr } = await supabase.from('user_fixed_costs').insert(rows)
+  if (insErr) { setError(insErr.message); return }
+  setUserFixedCosts(rows as UserFixedCostRow[])
+}
+```
+
+**`saveCategoryPreferences`** — batch upsert on `(user_id, category_group)` unique constraint:
+
+```typescript
+const saveCategoryPreferences = async (prefs: Array<{ category_group: CategoryGroupKey; importance: number }>) => {
+  const rows = prefs.map(p => ({ id: uuid(), user_id: currentUserId, ...p, created_at: new Date().toISOString() }))
+  const { error: e } = await supabase
+    .from('user_category_preferences')
+    .upsert(rows, { onConflict: 'user_id,category_group' })
+  if (e) { setError(e.message); return }
+  setUserCategoryPreferences(rows as UserCategoryPreferenceRow[])
+}
+```
+
+### AppStateValue interface additions
+
+```typescript
+// State (added to AppData, alongside cards, depositAccounts)
+userFinancialProfile: UserFinancialProfile | null
+userFixedCosts: UserFixedCost[]
+userCategoryPreferences: UserCategoryPreference[]
+
+// Actions (added to AppData mutations)
+saveFinancialProfile: (data: ProfileInput) => Promise<void>
+saveUserFixedCosts: (costs: FixedCostInput[]) => Promise<void>
+saveCategoryPreferences: (prefs: CategoryPrefInput[]) => Promise<void>
+```
+
+### Algorithm is NOT in the store
+
+`scorePurchase()` is a **pure function** in `web/lib/finance/purchase-advisor.ts`. It is called from the verdict UI component, not from the store. Pattern mirrors `generateInsights()` in `insights.ts` — pure, no side effects, no DB access. The store supplies the data; the component runs the algorithm via `useMemo`.
+
+```typescript
+// web/components/purchase-advisor/VerdictStep.tsx
+const { userFinancialProfile, userFixedCosts, userCategoryPreferences, transactions, budgets } = useApp()
+
+const derivedProfile = useMemo(
+  () => deriveProfile(userFinancialProfile, userFixedCosts, userCategoryPreferences),
+  [userFinancialProfile, userFixedCosts, userCategoryPreferences]
+)
+
+const result = useMemo(
+  () => scorePurchase({ purchaseAmountCents, purchaseCategory, profile: derivedProfile, transactions, budgets, now }),
+  [purchaseAmountCents, purchaseCategory, derivedProfile, transactions, budgets]
+)
+```
+
+This keeps the algorithm vector-lockable and independently testable with no React dependency.
+
+---
+
+## 16. Frontend Layer
+
+### Route structure
+
+The onboarding flow runs before the user has meaningful app data, but it does require authentication. Two approaches:
+
+**Option A (recommended for v1): In-app prompt**
+No new route group. When `userFinancialProfile === null`, the Purchase Advisor modal shows a setup screen first. From there, the user taps through to `/settings/financial-profile` (a new settings subpage with the full questionnaire). This reuses the existing `(app)` shell and avoids building a standalone onboarding layout.
+
+**Option B (richer): Dedicated onboarding routes**
+A new `(onboarding)` route group with its own layout (no nav bar, progress indicator at top). Redirected to automatically post-signup. More work but a better first-run experience.
+
+Recommendation: **Option A for v1**, Option B as a polish pass once the feature is validated.
+
+### New pages
+
+All under `web/app/(app)/` — client components (`'use client'`), `useApp()` for data, `ReadingColumn` + `PageHeader` layout:
+
+**`web/app/(app)/settings/financial-profile/page.tsx`**
+
+The questionnaire as an update form (not a stepper — single scrollable page when accessed from settings). Structure mirrors `deposit-accounts/page.tsx` but renders form sections instead of a list. Sections match the 5 onboarding screens: Income, Housing, Fixed Costs, Savings, Category Importance.
+
+CTA: "Save profile" → calls `saveFinancialProfile` + `saveUserFixedCosts` + `saveCategoryPreferences` in sequence, shows a spinner during save, navigates back to `/settings` on success.
+
+**`web/app/(app)/settings/page.tsx` addition**
+
+New `LinkRow` entry below "Deposit Accounts":
+```tsx
+<LinkRow href="/settings/financial-profile" label={t('Financial Profile')} />
+```
+
+### New components
+
+All under `web/components/purchase-advisor/`:
+
+**`PurchaseAdvisorCard.tsx`** — home screen entry card
+
+Rendered on the dashboard page between `MonthSummaryCard` and `InsightsCardStack`. Manages `[open, setOpen]` state for the modal. Profile-null state shows a "Set up your profile" CTA instead of "Check a purchase":
+
+```tsx
+export function PurchaseAdvisorCard() {
+  const { userFinancialProfile, t } = useApp()
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <Card className="p-4">
+        <button onClick={() => setOpen(true)} className="w-full text-left ...">
+          {userFinancialProfile ? t('Should I buy this?') : t('Set up your financial profile')}
+        </button>
+      </Card>
+      <PurchaseCheckModal open={open} onClose={() => setOpen(false)} />
+    </>
+  )
+}
+```
+
+**`PurchaseCheckModal.tsx`** — two-step modal (input → verdict)
+
+Extends the existing `Modal` primitive from `web/components/ui.tsx`. Controls an internal `step: 'input' | 'verdict'` state and holds the draft purchase data between steps:
+
+```tsx
+export function PurchaseCheckModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [step, setStep] = useState<'input' | 'verdict'>('input')
+  const [draft, setDraft] = useState<PurchaseDraft | null>(null)
+
+  useEffect(() => { if (open) { setStep('input'); setDraft(null) } }, [open])
+
+  return (
+    <Modal open={open} onClose={onClose} title={step === 'input' ? t('Check a purchase') : t('Purchase check')}>
+      {step === 'input'
+        ? <PurchaseInputStep onCheck={(d) => { setDraft(d); setStep('verdict') }} />
+        : <VerdictStep draft={draft!} onLog={onClose} onPass={onClose} onBack={() => setStep('input')} />
+      }
+    </Modal>
+  )
+}
+```
+
+**`PurchaseInputStep.tsx`** — form fields (item name, amount, category)
+
+Pattern mirrors `AddDepositAccountModal.tsx` — `FormGroup` + `FieldRow` + `TextInput`. Category picker reuses the same category picker component as TxForm. Item name field uses the same `<datalist>` autocomplete pattern from spec 032 (`txSuggest.ts`), scoped to the selected category.
+
+**`VerdictStep.tsx`** — score + charts + bullets + actions
+
+Calls `scorePurchase()` via `useMemo`. Renders:
+1. `VerdictBadge` — large score + verdict label
+2. `CategoryBudgetBar` — chart 1 (see below)
+3. `SpendHistoryChart` — chart 2 (Recharts `BarChart`, dynamically imported)
+4. `MonthlyWaterfall` — chart 3 (Recharts stacked `BarChart`, dynamically imported)
+5. `SavingsRateIndicator` — chart 4 (text-based, no chart library needed)
+6. `InsightBullets` — 2–3 generated sentences
+7. Action buttons: "Log purchase" / "Pass on it"
+
+**`VerdictBadge.tsx`**
+
+```tsx
+const VERDICTS = {
+  go:           { label: 'Looks good',         color: 'text-green-600',  bg: 'bg-green-50' },
+  caution:      { label: 'Proceed with care',  color: 'text-yellow-600', bg: 'bg-yellow-50' },
+  think_twice:  { label: 'Think twice',        color: 'text-orange-600', bg: 'bg-orange-50' },
+  hold_off:     { label: 'Hold off',           color: 'text-red-600',    bg: 'bg-red-50' },
+}
+```
+
+Score (0–100 integer) shown prominently; verdict label below.
+
+**`CategoryBudgetBar.tsx`** — chart 1
+
+Pure CSS — no Recharts needed. A horizontal progress bar (like `BudgetProgressCard` already uses on the dashboard):
+- Gray fill: `spent_so_far / budget_limit` 
+- Accent fill overlay: `purchase_amount / budget_limit` (shows how the purchase extends the bar)
+- When no budget set: same bar but against 3-month average (`avg_monthly_spend`)
+- Label: "You've spent $X of your $Y budget. This purchase uses $Z more."
+
+**`SpendHistoryChart.tsx`** — chart 2
+
+```tsx
+import dynamic from 'next/dynamic'
+const BarChart = dynamic(() => import('recharts').then(m => m.BarChart), { ssr: false })
+// ... ResponsiveContainer, Bar, XAxis, YAxis, Tooltip imported same way
+```
+
+One `Bar` per month (up to 6). Current month split into two bars: `spent` (filled) and `this_purchase` (accent/dashed border). X-axis: month abbreviations. Empty state (< 2 months): plain text callout "You'll see your spending trend here as you log more transactions."
+
+**`MonthlyWaterfall.tsx`** — chart 3
+
+Horizontal stacked `BarChart` (single row). Segments:
+1. Housing + fixed costs (muted)
+2. Other spending this month (neutral)
+3. This purchase (accent)
+4. Remaining discretionary income (light green)
+
+Requires `userFinancialProfile` for total income. When profile is null: omit this chart entirely (show nothing — the reduced-accuracy banner already explains why some data is missing).
+
+**`SavingsRateIndicator.tsx`** — chart 4
+
+No chart library. Two numbers side by side:
+
+```
+Current rate    →    After this purchase
+   18%          →       12%  (below your 15% target)
+```
+
+Color codes the right number: green if above target, amber if within 5pp, red if below.
+
+**`InsightBullets.tsx`**
+
+Renders 2–3 strings generated by `scorePurchase()`. Uses the same `tr()` pattern as `insights.ts` — template strings with `{0}`, `{1}` positional placeholders, passed through `t()` in the component. Example output:
+
+- `t('You\'ve spent {0} on {1} this month — {2} under your {3} budget.', '$340', 'Groceries', '$60', '$400')`
+
+### Dashboard page wiring
+
+`web/app/(app)/dashboard/page.tsx` mobile stack gets `PurchaseAdvisorCard` inserted:
+
+```tsx
+// Mobile layout (current order → new order):
+<PageHeader title={t('Dashboard')} />
+<ModeSwitch />
+<MonthSummaryCard />
+<PurchaseAdvisorCard />          {/* NEW */}
+<InsightsCardStack />
+<BudgetProgressCard />
+// ... rest unchanged
+```
+
+Desktop (`DashboardDesktop`) gets a matching widget placement — exact position TBD pending the desktop grid layout review (open question §8).
+
+### i18n
+
+All new `t()` calls follow the identity pattern — the English string is the key. No separate key file. New strings added to `web/lib/i18n/bn.ts`, `es.ts`, `ja.ts`, `ko.ts`, `zh.ts`. English falls back automatically (no `en.ts` catalog exists — identity function).
+
+Estimated new keys: ~35 strings covering onboarding screen copy, verdict labels, chart labels, insight templates, action button labels, and settings entry labels. Template strings use `{0}`, `{1}` positional placeholders matching the existing `tr()` shape.
