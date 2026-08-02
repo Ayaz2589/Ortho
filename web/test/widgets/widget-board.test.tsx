@@ -32,11 +32,13 @@ describe('WidgetBoard', () => {
     }
   })
 
-  it('renders the widgets inside a labelled board region', async () => {
+  it('renders the widgets as a labelled list', async () => {
     render(<WidgetBoard />)
     await waitFor(() => {
-      expect(screen.getByRole('region', { name: 'Dashboard widgets' })).toBeTruthy()
+      expect(screen.getByRole('list', { name: 'Dashboard widgets' })).toBeTruthy()
     })
+    // Each enabled widget is a list item (no nested landmark region).
+    expect(screen.getAllByRole('listitem').length).toBe(defaultEnabledTitles.length)
   })
 
   it('shows a calm empty state and no widgets when everything is disabled', async () => {

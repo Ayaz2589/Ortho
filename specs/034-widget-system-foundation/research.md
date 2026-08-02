@@ -11,37 +11,44 @@
 2. **Ghost gaps** — conditional cards render `null` (InsightsCardStack, BudgetProgressCard when
    empty), collapsing to zero height and leaving holes / making the row below float up.
 
-**Decision**: A CSS-grid board with:
+**Decision**: A **CSS column masonry** board (chosen after an adversarial review of a first,
+grid-based attempt — see below):
 
-- `grid-template-columns: repeat(var(--cols), minmax(0, 1fr))` where `--cols` steps by breakpoint
-  (1 on compact, 2 on medium, up to 3–4 on expanded), width-capped and centered.
-- `grid-auto-flow: row dense` — the browser backfills earlier gaps with later, smaller items, so a
-  mixed-size set never leaves an empty cell (kills ghost gaps structurally).
-- `grid-auto-rows: 1fr` + each widget frame `height: 100%` with a flex-column body that `flex: 1` —
-  so every widget **fills its cell** and short content is centered/backfilled by a placeholder,
-  never a blank band (kills blank bands).
-- Widgets **never render null**: an empty/placeholder widget still renders a complete filled box, so
-  the grid cell is always occupied.
+- `columns: 1 → 2 → 3` by breakpoint, `column-gap: 16px`, width-capped at 1080px and centered.
+- `.ow-board > * { break-inside: avoid; margin-bottom: 16px }` — each widget stays intact in one
+  column and stacks flush below the previous one.
+- Size is a **height tier** (`min-height` for sm/md/lg); `wide` is `column-span: all`. Widths are
+  uniform (one column), so there is no width-varying span to strand a hole.
+- Each widget frame is a flex column whose body `flex: 1`, so a widget fills its own height tier
+  (no blank band); widgets **never render null** (the cell is always occupied).
 
-**Rejected**: JS masonry libraries (extra dependency, non-token, layout-shift on load) and the fixed
-`ow-s*` spans (the very source of the dead space). CSS `dense` packing is zero-dependency,
-token-friendly, and SSR-stable.
+**Why not a fixed multi-column grid (the first attempt, rejected):** a `repeat(N, 1fr)` grid with
+`grid-auto-flow: dense` and width spans (`sm`=1, `md`=2, `lg`=2×2, `wide`=full) packs the *default*
+set cleanly, but `dense` can only backfill a hole with a *later, smaller* item. Because widgets are
+freely user-toggleable, hole-producing subsets are trivially reachable — a lone `lg` leaves the side
+columns blank; `lg` + one `md` leaves a cell empty; a `wide` after a partial row strands an interior
+gap. That directly violates FR-003 for real toggle states, not just the default. A uniform-width
+masonry has neither failure mode for *any* subset. **Rejected within masonry**: JS masonry libraries
+(extra dependency, non-token, layout-shift on load) — CSS multicol is zero-dependency, token-friendly,
+and SSR-stable. Tradeoff accepted: masonry reading order is column-major (DOM order is preserved, so
+the a11y list order is unchanged); only a trailing partial column may remain, which reads as the board
+simply ending. Locked by `test/widgets/board-packing.test.ts`.
 
 ## R2. Size vocabulary
 
-**Decision**: a small closed vocabulary mapping to column/row spans the dense grid can pack:
+**Decision**: a small closed vocabulary. In the masonry model (R1) widths are uniform (one column),
+so size is a **height tier** plus a full-width option:
 
-| `WidgetSize` | Desktop span (of up-to-4 cols) | Intent |
-|--------------|-------------------------------|--------|
-| `sm`         | 1 col × 1 row                 | compact stat / summary |
-| `md`         | 2 col × 1 row                 | list / chart-shaped |
-| `lg`         | 2 col × 2 row                 | hero / tall |
-| `wide`       | full row × 1 row              | full-width strip |
+| `WidgetSize` | Footprint            | Intent |
+|--------------|----------------------|--------|
+| `sm`         | short (min 150px)    | compact stat / summary |
+| `md`         | medium (min 200px)   | list / chart-shaped |
+| `lg`         | tall (min 290px)     | hero / tall |
+| `wide`       | spans every column   | full-width strip |
 
-On compact (phone) every size collapses to a single full-width column (1 row min-height), so the
-vocabulary only differentiates layout on medium/expanded. Spans are expressed as CSS classes
-(`.ow-w-sm/md/lg/wide`) driven off tokens; the grid's `dense` flow handles the packing. This is
-enough to exercise mixed-size packing without inventing a 12-unit design language.
+Expressed as CSS classes (`.ow-w-sm/md/lg/wide`). Height tiers give visual rhythm without any
+width-varying span (which is what stranded holes in the grid attempt). This exercises mixed footprints
+without a 12-unit design language.
 
 **Rationale**: keeps the registry declarative (author picks a T-shirt size, not raw spans) and keeps
 packing correctness in one place (the board CSS), satisfying FR-002/FR-003/FR-008.

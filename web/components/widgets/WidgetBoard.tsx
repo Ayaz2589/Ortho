@@ -26,7 +26,7 @@ export function WidgetBoard() {
   }
 
   return (
-    <div className="ow-board" role="region" aria-label={t('Dashboard widgets')}>
+    <div className="ow-board" role="list" aria-label={t('Dashboard widgets')}>
       {enabled.map((def) => (
         <Widget key={def.id} definition={def} />
       ))}

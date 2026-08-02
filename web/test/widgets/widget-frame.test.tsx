@@ -27,18 +27,18 @@ describe('Widget frame', () => {
     expect(screen.getByTestId('demo-body')).toBeTruthy()
   })
 
-  it('is a labelled region carrying the size-span class and the calm card class', () => {
-    const { container } = render(<Widget definition={definition} />)
-    const section = container.querySelector('section')!
-    expect(section.getAttribute('aria-label')).toBe('Demo widget')
-    expect(section.className).toContain('ow-w-md')
-    expect(section.className).toContain('ow-card')
-    // Fills the cell: full height + a flex column so the body can grow.
-    expect(section.className).toContain('h-full')
-    expect(section.className).toContain('flex-col')
+  it('is a list item carrying the size class and the calm card class', () => {
+    render(<Widget definition={definition} />)
+    const item = screen.getByRole('listitem')
+    expect(item.className).toContain('ow-w-md')
+    expect(item.className).toContain('ow-card')
+    // Fills its tier: a flex column so the body can grow to the card height.
+    expect(item.className).toContain('flex-col')
+    // Named by its heading, not a duplicated aria-label region.
+    expect(item.getAttribute('aria-label')).toBeNull()
   })
 
-  it('applies the correct span class per size', () => {
+  it('applies the correct size class per size', () => {
     const sizes = [
       ['sm', 'ow-w-sm'],
       ['lg', 'ow-w-lg'],
@@ -46,8 +46,8 @@ describe('Widget frame', () => {
     ] as const
     for (const [size, cls] of sizes) {
       cleanup()
-      const { container } = render(<Widget definition={{ ...definition, size }} />)
-      expect(container.querySelector('section')!.className).toContain(cls)
+      render(<Widget definition={{ ...definition, size }} />)
+      expect(screen.getByRole('listitem').className).toContain(cls)
     }
   })
 })

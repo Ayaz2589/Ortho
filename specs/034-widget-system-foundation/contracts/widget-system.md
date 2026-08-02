@@ -104,20 +104,30 @@ export function WidgetEmptyState(): JSX.Element
 
 ## CSS (`web/app/globals.css`, `ow-*` block) — tokens only
 
+The board is a **column masonry**, not a fixed column grid. A fixed multi-column
+grid with width-varying spans strands interior holes when the user toggles widgets
+off (e.g. a lone `lg`, or `lg` + one `md`, leaves empty tracks — dense flow can
+only backfill with *later smaller* items, which a toggled subset may lack). A
+masonry of uniform-width columns has neither failure mode: widgets stack flush, so
+any enabled subset packs with no interior gap (only a possible trailing partial
+column, which reads as the board ending). Size is a **height tier**; `wide` spans
+all columns.
+
 ```
-.ow-board        display:grid; gap:16px; grid-auto-flow:row dense; grid-auto-rows:1fr;
-                 grid-template-columns:repeat(var(--ow-board-cols,1),minmax(0,1fr));
-                 max-width:1080px; margin-inline:auto;
-  @media ≥640px  --ow-board-cols:2
-  @media ≥1024px --ow-board-cols:4     /* sm=1, md=2, lg=2, wide=4 spans pack into 4 tracks */
-.ow-w-sm         grid-column: span 1;
-.ow-w-md         grid-column: span 2;
-.ow-w-lg         grid-column: span 2; grid-row: span 2;
-.ow-w-wide       grid-column: 1 / -1;
-  (on compact, all .ow-w-* collapse to span 1 / full width)
+.ow-board        max-width:1080px; margin-inline:auto; columns:1; column-gap:16px;
+  @media ≥640px  columns:2
+  @media ≥1024px columns:3
+.ow-board > *    break-inside:avoid; margin-bottom:16px;
+.ow-w-wide       column-span:all;
+.ow-w-sm         min-height:150px;
+.ow-w-md         min-height:200px;
+.ow-w-lg         min-height:290px;
 ```
 
-**Invariant**: no hardcoded colors; gap matches `.ow-grid` (16px); board caps at 1080px and centers.
+**Invariant** (locked by `test/widgets/board-packing.test.ts`): the board declares
+`columns` (masonry) and NOT `grid-template-columns`; `.ow-w-{sm,md,lg}` are
+`min-height` tiers with no width span; `.ow-w-wide` is `column-span: all`. No
+hardcoded colors; gap matches `.ow-grid` (16px); board caps at 1080px and centers.
 
 ## Settings: `web/app/(app)/settings/widgets/page.tsx`
 

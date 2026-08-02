@@ -295,47 +295,42 @@ button,
 .ow-s12 { grid-column: span 12; }
 
 /* -------------------------------------------------------------------------
-   Widget board (spec 034) — one composition for phone → desktop. The column
-   count steps by breakpoint; `grid-auto-flow: dense` backfills gaps so a mixed-
-   size set never leaves an empty cell, and `grid-auto-rows: 1fr` gives equal-
-   height rows that widgets fill (no blank bands). Widths cap + center per the
-   responsive contract. Tokens only — gap matches `.ow-grid` (16px).
-   ------------------------------------------------------------------------- */
+   Widget board (spec 034) — one composition for phone → desktop, built as a
+   COLUMN MASONRY so it packs with no dead space for ANY enabled subset (not just
+   the default one). Widgets are uniform-width and stack flush within each column
+   (`break-inside: avoid` + a bottom gap), so there is never an interior empty
+   cell or a leftover column beside a lone widget — the two failure modes a fixed
+   multi-column grid has when the user toggles widgets off. The column count steps
+   1 → 2 → 3 by breakpoint; width caps + centers per the responsive contract.
+   Size is a HEIGHT tier (sm/md/lg) — each widget is exactly its own height, so a
+   short widget never shows an equal-height-row blank band — plus `wide`, which
+   spans every column. Tokens only; the 16px gap matches `.ow-grid`. -------- */
 .ow-board {
-  display: grid;
-  gap: 16px;
-  grid-auto-flow: row dense;
-  grid-auto-rows: minmax(140px, 1fr);
-  grid-template-columns: repeat(var(--ow-board-cols, 1), minmax(0, 1fr));
   max-width: 1080px;
   margin-inline: auto;
-  width: 100%;
+  columns: 1;
+  column-gap: 16px;
 }
-/* Compact (phone): a single full-width column — every size collapses to span 1,
-   so widgets stack cleanly with no horizontal overflow. */
-.ow-w-sm,
-.ow-w-md,
-.ow-w-lg,
-.ow-w-wide {
-  grid-column: auto;
-  grid-row: auto;
-}
-/* Medium (≥640): two tracks. */
 @media (min-width: 640px) {
-  .ow-board { --ow-board-cols: 2; }
-  .ow-w-sm { grid-column: span 1; }
-  .ow-w-md { grid-column: span 2; }
-  .ow-w-lg { grid-column: span 2; grid-row: span 2; }
-  .ow-w-wide { grid-column: 1 / -1; }
+  .ow-board { columns: 2; }
 }
-/* Expanded (≥1024): four tracks — sm=1, md=2, lg=2×2, wide=full. */
 @media (min-width: 1024px) {
-  .ow-board { --ow-board-cols: 4; }
-  .ow-w-sm { grid-column: span 1; }
-  .ow-w-md { grid-column: span 2; }
-  .ow-w-lg { grid-column: span 2; grid-row: span 2; }
-  .ow-w-wide { grid-column: 1 / -1; }
+  .ow-board { columns: 3; }
 }
+.ow-board > * {
+  break-inside: avoid;
+  margin-bottom: 16px;
+}
+/* Full-width widget: spans every column, breaking the masonry flow cleanly with
+   no hole above or below it. */
+.ow-w-wide {
+  column-span: all;
+}
+/* Height tiers give visual rhythm; the widget's flex body fills the tier so the
+   card is always fully occupied (no blank band inside it). */
+.ow-w-sm { min-height: 150px; }
+.ow-w-md { min-height: 200px; }
+.ow-w-lg { min-height: 290px; }
 
 .ow-card {
   background: var(--surface);
