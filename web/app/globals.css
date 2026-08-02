@@ -294,6 +294,49 @@ button,
 .ow-s7 { grid-column: span 7; }
 .ow-s12 { grid-column: span 12; }
 
+/* -------------------------------------------------------------------------
+   Widget board (spec 034) — one composition for phone → desktop. The column
+   count steps by breakpoint; `grid-auto-flow: dense` backfills gaps so a mixed-
+   size set never leaves an empty cell, and `grid-auto-rows: 1fr` gives equal-
+   height rows that widgets fill (no blank bands). Widths cap + center per the
+   responsive contract. Tokens only — gap matches `.ow-grid` (16px).
+   ------------------------------------------------------------------------- */
+.ow-board {
+  display: grid;
+  gap: 16px;
+  grid-auto-flow: row dense;
+  grid-auto-rows: minmax(140px, 1fr);
+  grid-template-columns: repeat(var(--ow-board-cols, 1), minmax(0, 1fr));
+  max-width: 1080px;
+  margin-inline: auto;
+  width: 100%;
+}
+/* Compact (phone): a single full-width column — every size collapses to span 1,
+   so widgets stack cleanly with no horizontal overflow. */
+.ow-w-sm,
+.ow-w-md,
+.ow-w-lg,
+.ow-w-wide {
+  grid-column: auto;
+  grid-row: auto;
+}
+/* Medium (≥640): two tracks. */
+@media (min-width: 640px) {
+  .ow-board { --ow-board-cols: 2; }
+  .ow-w-sm { grid-column: span 1; }
+  .ow-w-md { grid-column: span 2; }
+  .ow-w-lg { grid-column: span 2; grid-row: span 2; }
+  .ow-w-wide { grid-column: 1 / -1; }
+}
+/* Expanded (≥1024): four tracks — sm=1, md=2, lg=2×2, wide=full. */
+@media (min-width: 1024px) {
+  .ow-board { --ow-board-cols: 4; }
+  .ow-w-sm { grid-column: span 1; }
+  .ow-w-md { grid-column: span 2; }
+  .ow-w-lg { grid-column: span 2; grid-row: span 2; }
+  .ow-w-wide { grid-column: 1 / -1; }
+}
+
 .ow-card {
   background: var(--surface);
   border-radius: var(--radius-card, 14px);

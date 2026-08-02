@@ -172,9 +172,14 @@ for extensionless paths, which infinite-loops signed-out native launches.
 
 - Tailwind `sm` flips TabBar→Sidebar; **≥1024px = "expanded"** via `useIsExpanded()`
   (`lib/useMediaQuery.ts`, resolved synchronously on first render — no wrong-layout flash).
-- Dashboard/Transactions/Housing pages branch: `if (isExpanded) return <XDesktop/>` where the
-  desktop compositions (`components/web/{Dashboard,Transactions,Housing}Desktop.tsx`) are
+- Transactions/Housing pages branch: `if (isExpanded) return <XDesktop/>` where the
+  desktop compositions (`components/web/{Transactions,Housing}Desktop.tsx`) are
   `next/dynamic` `{ssr:false, loading:()=>null}` so mobile/iOS never downloads the desktop chunk.
+- **Dashboard is the exception (spec 034)**: its Overview is a single responsive `WidgetBoard`
+  (`components/widgets/WidgetBoard.tsx`) — one composition for phone → desktop, so there is no
+  `DashboardDesktop` chunk and no `useIsExpanded` branch. Responsiveness is pure CSS (`.ow-board`
+  steps its column count by breakpoint; `grid-auto-flow: dense` + equal-height rows so widgets pack
+  with no empty cells or blank bands). See §9.
 - Dialog vocabulary: desktop `components/web/Drawer.tsx` (right slide-out, portal, scrim + Escape +
   focus trap via `lib/useFocusTrap.ts`, scroll lock). Opt-in props: `fullBleedOnMobile` (full-screen
   panel with no scrim below 1024px, for surfaces that mirror the full-page mobile form — e.g. CSV

@@ -12,8 +12,7 @@ const h = vi.hoisted(() => ({ mock: null as SupabaseMock | null }))
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => h.mock!.client }))
 
 import { AppStateProvider, useApp } from '@/lib/store'
-import { useDashboardScope } from '@/lib/useDashboardRange'
-import { DashboardDesktop } from '@/components/web/DashboardDesktop'
+import DashboardPage from '@/app/(app)/dashboard/page'
 import { TransactionsDesktop } from '@/components/web/TransactionsDesktop'
 import es from '@/lib/i18n/es'
 import ja from '@/lib/i18n/ja'
@@ -67,11 +66,13 @@ function Capture() {
   return null
 }
 function DashboardHarness() {
-  const scope = useDashboardScope()
+  // Spec 034: the Dashboard overview is the widget board; render the real page so
+  // the always-present chrome (title + Overview/Reports mode switch + default
+  // widget titles) is exercised in the active locale.
   return (
     <>
       <Capture />
-      <DashboardDesktop scope={scope} />
+      <DashboardPage />
     </>
   )
 }
@@ -86,8 +87,10 @@ afterEach(() => {
   localStorage.clear()
 })
 
-// Always-rendered dashboard chrome keys (see DashboardDesktop.tsx).
-const DASH_KEYS = ['Dashboard', 'Income', 'Expenses', 'Housing'] as const
+// Always-rendered dashboard chrome keys: the page title, the Overview/Reports
+// mode switch, and two default-enabled widget titles (spec 034). All exist in
+// every catalog.
+const DASH_KEYS = ['Dashboard', 'Overview', 'Reports', 'Budgets', 'Goals'] as const
 
 for (const [language, catalog] of [
   ['Español', es],

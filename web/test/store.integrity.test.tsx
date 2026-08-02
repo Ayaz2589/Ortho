@@ -18,7 +18,7 @@ vi.mock('@/lib/supabase/client', () => ({ createClient: () => h.mock!.client }))
 
 // Import AFTER the mock is registered.
 import { AppStateProvider, useApp } from '@/lib/store'
-import { housingSummary } from '@/components/web/DashboardDesktop'
+import { housingSummary } from '@/lib/finance/housing-summary'
 import { monthlyPaymentCents } from '@/lib/finance/mortgage'
 import { netRentalCents, rentUnitsFrom } from '@/lib/finance/housing'
 import type { Property } from '@/lib/types'

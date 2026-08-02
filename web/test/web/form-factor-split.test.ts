@@ -9,8 +9,10 @@ import { fileURLToPath } from 'node:url'
 // wrong-layout flash. Behavior of the compositions themselves is covered by
 // test/desktop-parity.test.tsx (which imports them directly, unaffected by this split).
 
+// Dashboard is intentionally absent: spec 034 replaced its two hand-composed
+// layouts with a single responsive <WidgetBoard/> (one composition, pure-CSS
+// responsiveness), so there is no desktop-only chunk to code-split there anymore.
 const ROUTES: Array<{ page: string; desktop: string }> = [
-  { page: 'app/(app)/dashboard/page.tsx', desktop: 'DashboardDesktop' },
   { page: 'app/(app)/transactions/page.tsx', desktop: 'TransactionsDesktop' },
   { page: 'app/(app)/housing/page.tsx', desktop: 'HousingDesktop' },
 ]

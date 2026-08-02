@@ -41,7 +41,8 @@ describe('recharts is never eagerly imported (spec 022 US1 guard)', () => {
   it('the charts/ leaves DO import recharts (proving the import moved, not vanished)', () => {
     const leaves = [
       'components/dashboard/charts/CategoryPie.tsx',
-      'components/dashboard/charts/DailyTrendChart.tsx',
+      // DailyTrendChart removed in spec 034 (its only consumer, the overview
+      // DailySpendTrendCard, was replaced by the widget framework).
       'components/dashboard/charts/SavingsRateChart.tsx',
       'components/housing/charts/AmortizationChart.tsx',
     ]

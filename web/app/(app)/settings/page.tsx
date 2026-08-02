@@ -36,6 +36,7 @@ export default function SettingsPage() {
           <LinkRow href="/settings/currency" label={t('Currency')} />
           <LinkRow href="/settings/language" label={t('Language')} />
           <LinkRow href="/settings/appearance" label={t('Appearance')} />
+          <LinkRow href="/settings/widgets" label={t('Widgets')} />
         </SectionCard>
         <SectionCard>
           <LinkRow href="/settings/data" label={t('Data')} />
