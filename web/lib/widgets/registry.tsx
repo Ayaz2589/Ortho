@@ -41,10 +41,27 @@ export interface WidgetDefinition {
 }
 
 /**
- * The shipped widgets. Declaration order is the board order (deterministic). The
- * set deliberately spans every `WidgetSize` so the packing logic is exercised.
+ * The shipped widgets. Declaration order is the board order (deterministic), and
+ * the set spans every `WidgetSize` so packing is genuinely exercised.
+ *
+ * Ordering/default rationale (keeps the board interior-gap-free): a full-width
+ * `wide` widget is declared FIRST so, when enabled, it forms a leading full-row
+ * strip that can never leave a hole beside it. The remaining default-enabled
+ * widgets are sized to tile the 4-track desktop grid — lg (2×2) + md + md fill
+ * the first two rows, then sm + sm — so `grid-auto-flow: dense` leaves no cell
+ * between widgets (only a possible trailing partial row, which reads as the board
+ * simply ending). `activity` (wide) ships default-off so the first-run board is a
+ * clean tile; turning it on adds the leading strip without introducing a gap.
  */
 export const WIDGETS: readonly WidgetDefinition[] = [
+  {
+    id: 'activity',
+    title: 'Recent activity',
+    description: 'Your latest transactions across the household.',
+    size: 'wide',
+    defaultEnabled: false,
+    Body: ActivityPlaceholder,
+  },
   {
     id: 'net-summary',
     title: 'Net summary',
@@ -82,16 +99,8 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     title: 'Top merchants',
     description: 'Where you spend the most, most often.',
     size: 'sm',
-    defaultEnabled: false,
-    Body: TopMerchantsPlaceholder,
-  },
-  {
-    id: 'activity',
-    title: 'Recent activity',
-    description: 'Your latest transactions across the household.',
-    size: 'wide',
     defaultEnabled: true,
-    Body: ActivityPlaceholder,
+    Body: TopMerchantsPlaceholder,
   },
 ]
 
