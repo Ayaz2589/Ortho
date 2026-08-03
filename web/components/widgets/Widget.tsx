@@ -36,7 +36,7 @@ export function Widget({
         type="button"
         aria-label={t('Open {0}', t(title))}
         onClick={() => onOpen(definition)}
-        className="ortho-interactive absolute inset-0 rounded-[inherit]"
+        className="ortho-interactive absolute inset-0 rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
       />
     </div>
   )
