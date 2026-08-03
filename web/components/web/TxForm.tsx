@@ -1,6 +1,7 @@
 'use client'
 
 import { useId, useMemo, useState, type ReactNode } from 'react'
+import { readCollapsedCategories, writeCollapsedCategories } from '@/lib/txCopyCollapse'
 import { useApp } from '@/lib/store'
 import { CATEGORY_GROUPS, categoryMeta } from '@/lib/categories'
 import { currencySymbol, fractionDigits } from '@/lib/finance/currency'
@@ -824,6 +825,19 @@ export function CopyFromCommonButton({ onClick }: { onClick: () => void }) {
 export function TxCopyList({ onPick, onBack }: { onPick: (tx: Transaction) => void; onBack: () => void }) {
   const { transactions, formatMoney, ownersDisplay, t } = useApp()
   const common = useMemo(() => mostCommonTransactions(transactions ?? []), [transactions])
+  // Which category sections the user last left collapsed — remembered per browser
+  // so re-opening the panel restores the same layout. Read lazily (SSR-safe: the
+  // helper returns an empty set when storage is unavailable).
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => readCollapsedCategories())
+  const toggleCategory = (category: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (next.has(category)) next.delete(category)
+      else next.add(category)
+      writeCollapsedCategories(next)
+      return next
+    })
+  }
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 20px 14px', borderBottom: '0.5px solid var(--hairline)', flexShrink: 0 }}>
@@ -841,12 +855,25 @@ export function TxCopyList({ onPick, onBack }: { onPick: (tx: Transaction) => vo
           groupByCategory(common).map(({ category, label, rows }) => {
             const meta = categoryMeta(category)
             const Icon = meta.icon
+            const isCollapsed = collapsed.has(category)
+            const rowsId = `txcopy-rows-${category}`
             return (
               <div key={category}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 20px 3px', color: 'var(--text-2)', fontSize: 12, fontWeight: 500, letterSpacing: '-0.1px' }}>
+                <button
+                  type="button"
+                  className="ow-btn"
+                  onClick={() => toggleCategory(category)}
+                  aria-expanded={!isCollapsed}
+                  aria-controls={rowsId}
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', padding: '10px 20px 3px', textAlign: 'left', color: 'var(--text-2)', fontSize: 12, fontWeight: 500, letterSpacing: '-0.1px' }}
+                >
                   <Icon size={13} color={meta.tint} strokeWidth={2.2} />
-                  <span>{label}</span>
-                </div>
+                  <span style={{ flex: 1 }}>{label}</span>
+                  <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true" style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 120ms ease', flexShrink: 0 }}>
+                    <path d="M2.5 4.5L6 8l3.5-3.5" stroke="var(--text-3)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+                <div id={rowsId} hidden={isCollapsed}>
                 {rows.map((tx) => {
                   const owners = ownersDisplay(tx)
                   const isIncome = tx.kind === 'income'
@@ -866,6 +893,7 @@ export function TxCopyList({ onPick, onBack }: { onPick: (tx: Transaction) => vo
                     </button>
                   )
                 })}
+                </div>
               </div>
             )
           })
