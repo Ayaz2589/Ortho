@@ -7,13 +7,15 @@ import { CATEGORY_GROUPS, categoryMeta } from '@/lib/categories'
 import { currencySymbol, fractionDigits } from '@/lib/finance/currency'
 import { toUSDCents } from '@/lib/finance/money'
 import { mostCommonTransactions, knownNamesForKind, groupByCategory } from '@/lib/txSuggest'
-import { parseMoney, DatePicker } from '@/components/inputs'
+import { parseMoney, CalendarPanel } from '@/components/inputs'
+import { mediumDate } from '@/lib/format'
 import { Avatar } from '@/components/ui'
 import { computeShares, validateSplit, orderedOwnerIds, seedSplit, type SplitInput, type SplitMethod } from '@/lib/splits'
 import { evenPercentStrings, evenValueStrings, rebalancePercents } from '@/lib/splitFields'
 import type { Transaction, TransactionCategory, TransactionKind } from '@/lib/types'
 import type { ParsedCandidate } from '@/lib/scan/scanModels'
-import { Seg, CatTile, SourceDot, FormRow as Row } from './kit'
+import { Seg, CatTile, SourceDot, FormRow as Row, AccordionRow } from './kit'
+import type { CategoryGroup } from '@/lib/categories'
 import { TagEditor } from './TagEditor'
 import { resolveDefaultOwnerId } from '@/lib/defaultOwner'
 
@@ -42,6 +44,64 @@ function localDayString(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${d.getFullYear()}-${m}-${day}`
+}
+
+/** Parse a "YYYY-MM-DD" form value into a *local* Date (no UTC shift), for
+ *  formatting the collapsed date-accordion label. */
+function isoToLocalDate(iso: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso)
+  if (!m) return null
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  return isNaN(d.getTime()) ? null : d
+}
+
+/** The grouped category list shown inside the category accordion — one calm
+ *  selectable row per subcategory, grouped under its parent's label, the active
+ *  one softly highlighted. Picking a row calls `onPick`. */
+function CategoryPanel({
+  groups,
+  value,
+  onPick,
+}: {
+  groups: CategoryGroup[]
+  value: TransactionCategory
+  onPick: (c: TransactionCategory) => void
+}) {
+  const { t } = useApp()
+  return (
+    <div style={{ maxHeight: 264, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+      {groups.map((group) => (
+        <div key={group.key}>
+          <div style={{ padding: '8px 8px 4px', fontSize: 11.5, fontWeight: 500, letterSpacing: '0.4px', textTransform: 'uppercase', color: 'var(--text-3)' }}>
+            {t(group.label)}
+          </div>
+          {group.children.map((c) => {
+            const on = c === value
+            return (
+              <button
+                key={c}
+                type="button"
+                className="ow-btn"
+                aria-pressed={on}
+                onClick={() => onPick(c)}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '7px 8px', borderRadius: 9, textAlign: 'left', background: on ? 'var(--chip-bg)' : 'transparent' }}
+              >
+                <CatTile category={c} size={26} />
+                <span style={{ flex: 1, fontSize: 14.5, fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.1px' }}>
+                  {t(categoryMeta(c).label)}
+                </span>
+                {on && (
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                    <path d="M3.5 8.5l3 3 6-6.5" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function selectStyle(): React.CSSProperties {
@@ -501,7 +561,14 @@ function MemberSelect({
 /** The shared field stack (amount hero, toggles, rows) used by both the modal and the drawer. */
 export function TxFormFields({ form }: { form: TxFormApi }) {
   const { currency, isIncome, isTransfer } = form
-  const { formatMoney, t, transactions } = useApp()
+  const { formatMoney, t, transactions, locale } = useApp()
+  // Which in-card picker is expanded — category and the date(s) are mutually
+  // exclusive disclosure rows, so at most one is open at a time.
+  const [openField, setOpenField] = useState<null | 'category' | 'date' | 'transferDate'>(null)
+  const toggle = (f: 'category' | 'date' | 'transferDate') =>
+    setOpenField((cur) => (cur === f ? null : f))
+  const dateObj = isoToLocalDate(form.date)
+  const dateLabel = dateObj ? mediumDate(dateObj, locale) : t('Select date')
   // Merchant/payer name suggestions from the household's own ledger — kind-aware
   // (income payers vs expense merchants never mix) and a convenience only, so
   // free-form typing still works (spec 032).
@@ -556,9 +623,21 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
             <Row label={t('To')}>
               <MemberSelect value={form.transferTo} onChange={form.setTransferTo} members={form.members} ariaLabel={t('Transfer to')} />
             </Row>
-            <Row label={t('Date')}>
-              <DatePicker value={form.date} onChange={form.setDate} ariaLabel={t('Transfer date')} />
-            </Row>
+            <AccordionRow
+              label={t('Date')}
+              ariaLabel={t('Transfer date')}
+              value={dateLabel}
+              open={openField === 'transferDate'}
+              onToggle={() => toggle('transferDate')}
+            >
+              <CalendarPanel
+                value={form.date}
+                onChange={(iso) => {
+                  form.setDate(iso)
+                  setOpenField(null)
+                }}
+              />
+            </AccordionRow>
           </div>
           <div style={{ padding: '2px 28px 16px', fontSize: 12.5, lineHeight: 1.45, color: 'var(--text-3)' }}>
             {form.transferFrom === form.transferTo
@@ -578,47 +657,30 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
                 <option key={name} value={name} />
               ))}
             </datalist>
-            {isIncome ? (
-              <Row label={t('Category')}>
-                <CatTile category={form.incomeCategory} size={22} />
-                <select
-                  aria-label={t('Category')}
-                  value={form.incomeCategory}
-                  onChange={(e) => form.setIncomeCategory(e.target.value as TransactionCategory)}
-                  style={selectStyle()}
-                >
-                  {CATEGORY_GROUPS.income.map((group) => (
-                    <optgroup key={group.key} label={t(group.label)}>
-                      {group.children.map((c) => (
-                        <option key={c} value={c}>
-                          {t(categoryMeta(c).label)}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </Row>
-            ) : (
-              <Row label={t('Category')}>
-                <CatTile category={form.category} size={22} />
-                <select
-                  aria-label={t('Category')}
-                  value={form.category}
-                  onChange={(e) => form.setCategory(e.target.value as TransactionCategory)}
-                  style={selectStyle()}
-                >
-                  {CATEGORY_GROUPS.expense.map((group) => (
-                    <optgroup key={group.key} label={t(group.label)}>
-                      {group.children.map((c) => (
-                        <option key={c} value={c}>
-                          {t(categoryMeta(c).label)}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </Row>
-            )}
+            <AccordionRow
+              label={t('Category')}
+              ariaLabel={t('Category')}
+              open={openField === 'category'}
+              onToggle={() => toggle('category')}
+              value={
+                <>
+                  <CatTile category={isIncome ? form.incomeCategory : form.category} size={22} />
+                  <span style={{ letterSpacing: '-0.2px' }}>
+                    {t(categoryMeta(isIncome ? form.incomeCategory : form.category).label)}
+                  </span>
+                </>
+              }
+            >
+              <CategoryPanel
+                groups={isIncome ? CATEGORY_GROUPS.income : CATEGORY_GROUPS.expense}
+                value={isIncome ? form.incomeCategory : form.category}
+                onPick={(c) => {
+                  if (isIncome) form.setIncomeCategory(c)
+                  else form.setCategory(c)
+                  setOpenField(null)
+                }}
+              />
+            </AccordionRow>
           </div>
 
           {/* Owners + who paid */}
@@ -730,9 +792,21 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
                 </select>
               )}
             </Row>
-            <Row label={t('Date')}>
-              <DatePicker value={form.date} onChange={form.setDate} ariaLabel={t('Transaction date')} />
-            </Row>
+            <AccordionRow
+              label={t('Date')}
+              ariaLabel={t('Transaction date')}
+              value={dateLabel}
+              open={openField === 'date'}
+              onToggle={() => toggle('date')}
+            >
+              <CalendarPanel
+                value={form.date}
+                onChange={(iso) => {
+                  form.setDate(iso)
+                  setOpenField(null)
+                }}
+              />
+            </AccordionRow>
           </div>
 
           {/* Tags + notes (spec 027) — orthogonal to category, additive metadata. */}

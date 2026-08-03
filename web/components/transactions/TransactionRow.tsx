@@ -37,7 +37,6 @@ function TransactionRowImpl({
   const meta = categoryMeta(tx.category)
   const Icon = meta.icon
   const ownerUsers = tx.owner_ids.map(resolveUser)
-  const ownerLabel = ownerUsers.map((u) => u.name).join(', ')
   const isIncome = tx.kind === 'income'
   const isTransfer = tx.kind === 'transfer'
   const parties = transferParties(tx)
@@ -88,12 +87,10 @@ function TransactionRowImpl({
           <div className="mt-0.5 flex items-center gap-1.5 truncate text-[13px] text-text-3">
             {isTransfer ? (
               <span className="truncate">{t('Reimbursement')}</span>
+            ) : tx.source ? (
+              <span className="truncate">{tx.source}</span>
             ) : (
-              <>
-                <span className="truncate">{ownerLabel}</span>
-                <span className="opacity-50">·</span>
-                {tx.source ? <span className="truncate">{tx.source}</span> : <NoSourceTag />}
-              </>
+              <NoSourceTag />
             )}
           </div>
         </div>
