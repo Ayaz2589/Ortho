@@ -6,8 +6,8 @@ import { categoryMeta } from '@/lib/categories'
 import { shortDate } from '@/lib/format'
 
 /** Most-recent transactions to show. A short live feed reads better than a
- *  windowed one (O-2), and 6 fits the `wide` tier without scrolling. */
-const RECENT_LIMIT = 6
+ *  windowed one (O-2); 5 rows fit the uniform widget height without clipping. */
+const RECENT_LIMIT = 5
 
 /**
  * Activity widget body (spec 041 — Section 6). A live feed of the most-recent
