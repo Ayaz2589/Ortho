@@ -457,6 +457,11 @@ const catalog: Record<string, string> = {
   "Savings trends": "저축 추이",
   "Your savings rate over recent months.": "최근 몇 개월간의 저축률.",
   "Not enough data yet.": "아직 데이터가 충분하지 않습니다.",
+
+  // Widget detail panel + spend heatmap (spec 037)
+  "Open {0}": "{0} 열기",
+  "Details coming soon.": "세부 정보가 곧 제공됩니다.",
+  "Daily spending": "일일 지출",
 }
 
 export default catalog

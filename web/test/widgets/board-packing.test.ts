@@ -3,45 +3,39 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 // Spec 034 FR-003/FR-005 — "no dead space" packing invariant, locked at the CSS
-// level (jsdom can't measure real column layout). A fixed multi-column grid with
-// width-varying spans strands interior holes for user-toggled subsets; the board
-// must instead be a COLUMN MASONRY (uniform-width columns, height tiers, wide =
-// span-all) which packs with no interior gap for ANY enabled subset. This guard
-// fails if the board regresses to width spans.
+// level (jsdom can't measure real layout). Spec 037 makes every widget the SAME
+// height on a UNIFORM grid: equal columns + a single `grid-auto-rows` height and
+// no per-item width spans. Uniform cells cannot strand an interior hole for any
+// toggled subset, so this is the model that replaces the old height-tier masonry.
+// This guard fails if the board regresses to per-item sizes (height tiers or
+// width spans), which is what reintroduces dead space.
 
 const css = readFileSync(
   fileURLToPath(new URL('../../app/globals.css', import.meta.url)),
   'utf8'
 )
 
-/** The `.ow-board { ... }` (and immediately-following widget-size) declarations. */
+/** The `.ow-board { ... }` (and immediately-following) declarations. */
 function boardBlock(): string {
   const start = css.indexOf('.ow-board')
   expect(start).toBeGreaterThan(-1)
-  // Grab a generous slice covering the board + its size-tier rules.
   return css.slice(start, start + 1200)
 }
 
 describe('widget board packing model (FR-003/FR-005)', () => {
   const block = boardBlock()
 
-  it('is a column masonry, not a fixed column grid', () => {
-    expect(block).toMatch(/\.ow-board\s*\{[^}]*columns\s*:/)
-    // Must NOT pin a fixed multi-column grid on the board (the hole-prone model).
-    expect(block).not.toMatch(/\.ow-board\s*\{[^}]*grid-template-columns/)
+  it('is a uniform grid with equal columns', () => {
+    expect(block).toMatch(/\.ow-board\s*\{[^}]*display\s*:\s*grid/)
+    expect(block).toMatch(/\.ow-board\s*\{[^}]*grid-template-columns/)
   })
 
-  it('sizes are height tiers, never multi-track width spans', () => {
-    for (const size of ['sm', 'md', 'lg']) {
-      const rule = new RegExp(`\\.ow-w-${size}\\s*\\{([^}]*)\\}`).exec(block)?.[1] ?? ''
-      expect(rule).toMatch(/min-height/)
-      // A width span > 1 track is exactly what strands interior holes.
-      expect(rule).not.toMatch(/grid-column|column-span/)
-    }
+  it('gives every widget the same height (a single grid-auto-rows track)', () => {
+    expect(block).toMatch(/\.ow-board\s*\{[^}]*grid-auto-rows\s*:/)
   })
 
-  it('the wide widget spans every column', () => {
-    const rule = /\.ow-w-wide\s*\{([^}]*)\}/.exec(block)?.[1] ?? ''
-    expect(rule).toMatch(/column-span\s*:\s*all/)
+  it('declares no per-widget size classes (no height tiers, no width spans)', () => {
+    expect(block).not.toMatch(/\.ow-w-(sm|md|lg|wide)/)
+    expect(block).not.toMatch(/column-span/)
   })
 })

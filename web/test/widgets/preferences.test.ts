@@ -20,7 +20,6 @@ const def = (over: Partial<WidgetDefinition>): WidgetDefinition => ({
   id: 'x',
   title: 'X',
   description: 'x',
-  size: 'sm',
   defaultEnabled: true,
   Body: () => null,
   ...over,
