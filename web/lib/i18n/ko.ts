@@ -433,7 +433,6 @@ const catalog: Record<string, string> = {
   "Choose which widgets appear on your dashboard.": "대시보드에 표시할 위젯을 선택하세요.",
   "Your dashboard is empty": "대시보드가 비어 있습니다",
   "Choose widgets": "위젯 선택",
-  "Preview": "미리보기",
   "Net summary": "순수지 요약",
   "Spending pace": "지출 속도",
   "Recent activity": "최근 활동",
@@ -443,6 +442,24 @@ const catalog: Record<string, string> = {
   "Progress toward your savings goals.": "저축 목표를 향한 진행 상황.",
   "Where you spend the most, most often.": "가장 많이, 가장 자주 지출하는 곳.",
   "Your latest transactions across the household.": "가구의 최신 거래 내역.",
+
+  // Dashboard widget data (spec 036–041)
+  "Net": "순액",
+  "Day {0} of {1}": "{1}일 중 {0}일",
+  "Last 30 days": "최근 30일",
+  "Daily trend": "일별 추이",
+  "Avg / day": "일 평균",
+  "vs. prior 30": "이전 30일 대비",
+  "No expenses in the last 30 days.": "최근 30일간 지출이 없습니다.",
+  "{0} left": "{0} 남음",
+  "{0} over": "{0} 초과",
+  "{0} rolled over": "{0} 이월됨",
+  "{0} carried shortfall": "{0} 부족분 이월",
+  "No budgets yet.": "아직 예산이 없습니다.",
+  "No goals yet.": "아직 목표가 없습니다.",
+  "{0} visits": "{0}회 방문",
+  "1 visit": "1회 방문",
+  "No transactions yet.": "아직 거래가 없습니다.",
 }
 
 export default catalog

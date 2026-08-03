@@ -2,6 +2,7 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import { WidgetBoard } from '@/components/widgets/WidgetBoard'
+import { DashboardScopeProvider } from '@/lib/widgets/DashboardScopeContext'
 import { WIDGETS } from '@/lib/widgets/registry'
 import { WIDGETS_STORAGE_KEY } from '@/lib/widgets/preferences'
 
@@ -9,7 +10,31 @@ import { WIDGETS_STORAGE_KEY } from '@/lib/widgets/preferences'
 // them with no empty cell, and shows a calm empty state when none are enabled.
 // FR-003, FR-009. The board is a pure function of the registry + prefs (FR-008).
 
-vi.mock('@/lib/store', () => ({ useApp: () => ({ t: (k: string) => k }) }))
+// The widget bodies are now data-wired (spec 036–041): they read useApp() for data
+// and the shared scope through useDashboardScopeContext(). Supply the full data
+// surface (empty collections → calm empty states) and render inside the provider,
+// exactly as the real overview does. This suite is about the board chrome (which
+// widgets render, in what order), not any body's content.
+vi.mock('@/lib/store', () => ({
+  useApp: () => ({
+    t: (k: string, ...a: unknown[]) => k.replace(/\{(\d+)\}/g, (_, i) => String(a[Number(i)] ?? '')),
+    locale: 'en-US',
+    formatMoney: (c: number) => `$${c}`,
+    transactions: [],
+    budgets: [],
+    goals: [],
+    goalContributions: [],
+    ownersDisplay: () => ({ avatarUser: {}, label: '—', count: 0 }),
+  }),
+}))
+
+function renderBoard() {
+  return render(
+    <DashboardScopeProvider>
+      <WidgetBoard />
+    </DashboardScopeProvider>
+  )
+}
 
 beforeEach(() => localStorage.clear())
 afterEach(cleanup)
@@ -19,7 +44,7 @@ const defaultDisabled = WIDGETS.find((w) => !w.defaultEnabled)
 
 describe('WidgetBoard', () => {
   it('renders exactly the default-enabled widgets by default', async () => {
-    render(<WidgetBoard />)
+    renderBoard()
     await waitFor(() => {
       expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(defaultEnabledTitles.length)
     })
@@ -33,7 +58,7 @@ describe('WidgetBoard', () => {
   })
 
   it('renders the widgets as a labelled list', async () => {
-    render(<WidgetBoard />)
+    renderBoard()
     await waitFor(() => {
       expect(screen.getByRole('list', { name: 'Dashboard widgets' })).toBeTruthy()
     })
@@ -44,7 +69,7 @@ describe('WidgetBoard', () => {
   it('shows a calm empty state and no widgets when everything is disabled', async () => {
     const allOff = Object.fromEntries(WIDGETS.map((w) => [w.id, false]))
     localStorage.setItem(WIDGETS_STORAGE_KEY, JSON.stringify(allOff))
-    render(<WidgetBoard />)
+    renderBoard()
     await waitFor(() => {
       expect(screen.getByText('Your dashboard is empty')).toBeTruthy()
     })
@@ -57,13 +82,13 @@ describe('WidgetBoard', () => {
   it('re-adds a widget when its stored preference flips back on', async () => {
     const first = WIDGETS.find((w) => w.defaultEnabled)!
     localStorage.setItem(WIDGETS_STORAGE_KEY, JSON.stringify({ [first.id]: false }))
-    render(<WidgetBoard />)
+    renderBoard()
     await waitFor(() => {
       expect(screen.queryByRole('heading', { level: 2, name: first.title })).toBeNull()
     })
     cleanup()
     localStorage.setItem(WIDGETS_STORAGE_KEY, JSON.stringify({ [first.id]: true }))
-    render(<WidgetBoard />)
+    renderBoard()
     await waitFor(() => {
       expect(screen.getByRole('heading', { level: 2, name: first.title })).toBeTruthy()
     })

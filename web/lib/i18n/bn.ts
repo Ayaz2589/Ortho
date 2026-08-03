@@ -433,7 +433,6 @@ const catalog: Record<string, string> = {
   "Choose which widgets appear on your dashboard.": "আপনার ড্যাশবোর্ডে কোন উইজেট দেখাবে তা বেছে নিন।",
   "Your dashboard is empty": "আপনার ড্যাশবোর্ড খালি",
   "Choose widgets": "উইজেট বেছে নিন",
-  "Preview": "প্রিভিউ",
   "Net summary": "নিট সারাংশ",
   "Spending pace": "খরচের গতি",
   "Recent activity": "সাম্প্রতিক কার্যকলাপ",
@@ -443,6 +442,24 @@ const catalog: Record<string, string> = {
   "Progress toward your savings goals.": "আপনার সঞ্চয় লক্ষ্যের অগ্রগতি।",
   "Where you spend the most, most often.": "আপনি কোথায় সবচেয়ে বেশি ও ঘন ঘন খরচ করেন।",
   "Your latest transactions across the household.": "পরিবারের সর্বশেষ লেনদেনগুলো।",
+
+  // Dashboard widget data (spec 036–041)
+  "Net": "নিট",
+  "Day {0} of {1}": "{1} দিনের মধ্যে {0} দিন",
+  "Last 30 days": "গত ৩০ দিন",
+  "Daily trend": "দৈনিক প্রবণতা",
+  "Avg / day": "গড় / দিন",
+  "vs. prior 30": "আগের ৩০ দিনের তুলনায়",
+  "No expenses in the last 30 days.": "গত ৩০ দিনে কোনো খরচ নেই।",
+  "{0} left": "{0} বাকি",
+  "{0} over": "{0} বেশি",
+  "{0} rolled over": "{0} স্থানান্তরিত",
+  "{0} carried shortfall": "{0} ঘাটতি স্থানান্তরিত",
+  "No budgets yet.": "এখনও কোনো বাজেট নেই।",
+  "No goals yet.": "এখনও কোনো লক্ষ্য নেই।",
+  "{0} visits": "{0} বার",
+  "1 visit": "১ বার",
+  "No transactions yet.": "এখনও কোনো লেনদেন নেই।",
 }
 
 export default catalog

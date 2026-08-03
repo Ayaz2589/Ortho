@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 // silently pull recharts back into a route's initial-load bundle — this test fails if so.
 
 const WEB_ROOT = fileURLToPath(new URL('../../', import.meta.url))
-const EAGER_DIRS = ['components/dashboard', 'components/housing']
+const EAGER_DIRS = ['components/dashboard', 'components/housing', 'components/widgets']
 
 function tsxFilesExcludingCharts(dir: string): string[] {
   const out: string[] = []
@@ -45,6 +45,8 @@ describe('recharts is never eagerly imported (spec 022 US1 guard)', () => {
       // DailySpendTrendCard, was replaced by the widget framework).
       'components/dashboard/charts/SavingsRateChart.tsx',
       'components/housing/charts/AmortizationChart.tsx',
+      // Spec 037 — the spending-pace widget's daily-expense area leaf.
+      'components/widgets/charts/SpendingPaceChart.tsx',
     ]
     const importers = leaves.filter((rel) => {
       try {

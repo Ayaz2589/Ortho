@@ -433,7 +433,6 @@ const catalog: Record<string, string> = {
   "Choose which widgets appear on your dashboard.": "选择在仪表板上显示哪些小组件。",
   "Your dashboard is empty": "您的仪表板是空的",
   "Choose widgets": "选择小组件",
-  "Preview": "预览",
   "Net summary": "净额概览",
   "Spending pace": "消费节奏",
   "Recent activity": "近期活动",
@@ -443,6 +442,24 @@ const catalog: Record<string, string> = {
   "Progress toward your savings goals.": "储蓄目标的进展。",
   "Where you spend the most, most often.": "您花费最多、最频繁的地方。",
   "Your latest transactions across the household.": "家庭的最新交易。",
+
+  // Dashboard widget data (spec 036–041)
+  "Net": "净额",
+  "Day {0} of {1}": "第 {0} 天 / 共 {1} 天",
+  "Last 30 days": "最近 30 天",
+  "Daily trend": "每日趋势",
+  "Avg / day": "日均",
+  "vs. prior 30": "对比前 30 天",
+  "No expenses in the last 30 days.": "最近 30 天没有支出。",
+  "{0} left": "剩余 {0}",
+  "{0} over": "超支 {0}",
+  "{0} rolled over": "结转 {0}",
+  "{0} carried shortfall": "结转赤字 {0}",
+  "No budgets yet.": "还没有预算。",
+  "No goals yet.": "还没有目标。",
+  "{0} visits": "{0} 次",
+  "1 visit": "1 次",
+  "No transactions yet.": "还没有交易。",
 }
 
 export default catalog
