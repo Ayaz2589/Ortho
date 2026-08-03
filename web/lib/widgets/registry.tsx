@@ -1,10 +1,10 @@
 import { type ComponentType } from 'react'
-import { NetSummaryBody } from '@/components/widgets/bodies/NetSummaryBody'
 import { SpendingPaceBody } from '@/components/widgets/bodies/SpendingPaceBody'
 import { BudgetsBody } from '@/components/widgets/bodies/BudgetsBody'
 import { GoalsBody } from '@/components/widgets/bodies/GoalsBody'
 import { TopMerchantsBody } from '@/components/widgets/bodies/TopMerchantsBody'
 import { ActivityBody } from '@/components/widgets/bodies/ActivityBody'
+import { SavingsTrendsBody } from '@/components/widgets/bodies/SavingsTrendsBody'
 
 /**
  * Widget registry (spec 034 — foundation). The SINGLE source of truth for the
@@ -40,33 +40,26 @@ export interface WidgetDefinition {
 
 /**
  * The shipped widgets. Declaration order is the board order (deterministic), and
- * the set spans every `WidgetSize` so packing is genuinely exercised.
+ * the set spans every `WidgetSize`. The board is a CSS multi-column masonry
+ * (`.ow-board`, `columns: 1/2/3` by breakpoint) with `break-inside: avoid`, so
+ * heights are per-widget tiers and packing flows automatically — there is no
+ * fixed-grid tiling to satisfy.
  *
- * Ordering/default rationale (keeps the board interior-gap-free): a full-width
- * `wide` widget is declared FIRST so, when enabled, it forms a leading full-row
- * strip that can never leave a hole beside it. The remaining default-enabled
- * widgets are sized to tile the 4-track desktop grid — lg (2×2) + md + md fill
- * the first two rows, then sm + sm — so `grid-auto-flow: dense` leaves no cell
- * between widgets (only a possible trailing partial row, which reads as the board
- * simply ending). `activity` (wide) ships default-off so the first-run board is a
- * clean tile; turning it on adds the leading strip without introducing a gap.
+ * Net summary is NOT here: it is baked into the overview as a prominent hero
+ * (`components/dashboard/NetSummaryHero.tsx`), always shown, never toggleable.
+ * `savings-trends` (spec 036 follow-up) replaces the removed Reports mode — the
+ * savings rate over recent months, computed locally like every other widget.
+ * `activity` is `lg` (was `wide` — full-width left an empty middle) and ships
+ * default-off so the first-run board stays a clean tile.
  */
 export const WIDGETS: readonly WidgetDefinition[] = [
   {
-    id: 'activity',
-    title: 'Recent activity',
-    description: 'Your latest transactions across the household.',
-    size: 'wide',
-    defaultEnabled: false,
-    Body: ActivityBody,
-  },
-  {
-    id: 'net-summary',
-    title: 'Net summary',
-    description: 'Income minus spending for the month at a glance.',
+    id: 'savings-trends',
+    title: 'Savings trends',
+    description: 'Your savings rate over recent months.',
     size: 'lg',
     defaultEnabled: true,
-    Body: NetSummaryBody,
+    Body: SavingsTrendsBody,
   },
   {
     id: 'spending-pace',
@@ -99,6 +92,14 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     size: 'sm',
     defaultEnabled: true,
     Body: TopMerchantsBody,
+  },
+  {
+    id: 'activity',
+    title: 'Recent activity',
+    description: 'Your latest transactions across the household.',
+    size: 'lg',
+    defaultEnabled: false,
+    Body: ActivityBody,
   },
 ]
 

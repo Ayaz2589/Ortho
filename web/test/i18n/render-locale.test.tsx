@@ -87,10 +87,10 @@ afterEach(() => {
   localStorage.clear()
 })
 
-// Always-rendered dashboard chrome keys: the page title, the Overview/Reports
-// mode switch, and two default-enabled widget titles (spec 034). All exist in
-// every catalog.
-const DASH_KEYS = ['Dashboard', 'Overview', 'Reports', 'Budgets', 'Goals'] as const
+// Always-rendered dashboard chrome keys: the page title and two default-enabled
+// widget titles (spec 034; the Overview/Reports mode switch was removed in spec
+// 036 when Reports became the savings-trends widget). All exist in every catalog.
+const DASH_KEYS = ['Dashboard', 'Budgets', 'Goals'] as const
 
 for (const [language, catalog] of [
   ['Español', es],

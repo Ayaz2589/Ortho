@@ -6,10 +6,11 @@ import { DashboardScopeProvider } from '@/lib/widgets/DashboardScopeContext'
 import { WIDGETS } from '@/lib/widgets/registry'
 import { WIDGETS_STORAGE_KEY } from '@/lib/widgets/preferences'
 
-// Section 7 (integration): all six data-wired widgets compose under ONE
-// DashboardScopeProvider against a realistic store, each reading the same window.
-// Dates are anchored to the real "now" so they land in the default "This month"
-// scope regardless of when the suite runs.
+// Integration: all data-wired widgets compose under ONE DashboardScopeProvider
+// against a realistic store, each reading the same window. Net summary is now the
+// baked-in hero (tested separately), not a board widget. Dates are anchored to the
+// real "now" so they land in the default "This month" scope regardless of when the
+// suite runs.
 
 const now = new Date()
 const day = Math.min(now.getDate(), 28)
@@ -55,11 +56,9 @@ describe('dashboard board — all widgets wired to one scope', () => {
       expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(WIDGETS.length)
     })
 
-    // net-summary: net = 300000 − (120000 + 45000) = 135000, income 300000.
-    expect(screen.getByText('Net')).toBeTruthy()
-    expect(screen.getByText('$135000')).toBeTruthy()
-    // $300000 (income) shows in both net-summary and the activity feed row.
-    expect(screen.getAllByText('$300000').length).toBeGreaterThanOrEqual(1)
+    // savings-trends: rate = (income 300000 − expense 165000) / 300000 = 45%.
+    expect(screen.getByText('Savings rate')).toBeTruthy()
+    expect(screen.getByText('45%')).toBeTruthy()
 
     // budgets: 200000 − 120000 = 80000 left on Groceries.
     expect(screen.getByText('Groceries')).toBeTruthy()
