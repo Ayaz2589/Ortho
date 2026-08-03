@@ -19,8 +19,9 @@ import {
  * and every widget below reflect the same window.
  */
 function DashboardScopeBar() {
-  const { t } = useApp()
   const scope = useDashboardScopeContext()
+  // The active period is shown by the net-summary hero below, so the bar carries
+  // only the controls (no duplicate period caption).
   return (
     <div className="mb-4 mx-auto flex max-w-[1080px] flex-wrap items-center gap-2">
       <RangePicker options={scope.rangeOptions} value={scope.range} onChange={scope.setRange} />
@@ -30,7 +31,6 @@ function DashboardScopeBar() {
         onSelectMonth={scope.setMonth}
         onClear={scope.clearMonth}
       />
-      <p className="ml-auto text-[13px] tabular-nums text-text-2">{t(scope.periodLabel)}</p>
     </div>
   )
 }

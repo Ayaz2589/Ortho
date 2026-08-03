@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { useApp } from '@/lib/store'
 import { useDashboardScopeContext } from '@/lib/widgets/DashboardScopeContext'
+import { SpendHeatmap } from '@/components/dashboard/SpendHeatmap'
 
 /**
  * Net-summary HERO (spec 036 follow-up). Income minus expenses over the shared
@@ -50,46 +51,56 @@ export function NetSummaryHero() {
 
   return (
     <section aria-label={t('Net summary')} className="mb-7">
-      <div className="flex items-baseline justify-between">
-        <span className="text-[13px] uppercase tracking-[0.6px] text-text-2">{t('Net')}</span>
-        <span className="text-[13px] tabular-nums text-text-3">{t(periodLabel)}</span>
-      </div>
-
-      <p
-        className="mt-1 truncate text-[44px] font-light leading-none tracking-[-1px] tabular-nums sm:text-[56px]"
-        style={{ color: net >= 0 ? 'var(--positive)' : 'var(--text)' }}
-      >
-        {formatMoney(net)}
-      </p>
-
-      {/* Income vs expense proportion — sage income fill on a neutral track;
-          expense is the remainder and is never drawn red. */}
-      <div
-        className="mt-5 h-2 w-full max-w-[420px] overflow-hidden rounded-full"
-        style={{ background: 'var(--chip-bg)' }}
-        aria-hidden
-      >
-        <div className="h-full rounded-full" style={{ width: `${incomePct}%`, background: 'var(--positive)' }} />
-      </div>
-
-      <div className="mt-3 flex items-baseline gap-8">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs text-text-2">{t('Income')}</span>
-          <span className="text-[17px] tabular-nums" style={{ color: 'var(--positive)' }}>
-            {formatMoney(income)}
-          </span>
-        </div>
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs text-text-2">{t('Expenses')}</span>
-          <span className="text-[17px] tabular-nums text-text">{formatMoney(expenses)}</span>
-        </div>
-        {isCurrentMonthWindow ? (
-          <div className="ml-auto self-end">
-            <span className="text-xs tabular-nums text-text-3">
-              {t('Day {0} of {1}', dayOfMonth, daysInMonth)}
-            </span>
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+        {/* Left: the net figure + income/expense split. */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[13px] uppercase tracking-[0.6px] text-text-2">{t('Net')}</span>
+            <span className="text-[13px] tabular-nums text-text-3">{t(periodLabel)}</span>
           </div>
-        ) : null}
+
+          <p
+            className="mt-1 truncate text-[44px] font-light leading-none tracking-[-1px] tabular-nums sm:text-[56px]"
+            style={{ color: net >= 0 ? 'var(--positive)' : 'var(--text)' }}
+          >
+            {formatMoney(net)}
+          </p>
+
+          {/* Income vs expense proportion — sage income fill on a neutral track;
+              expense is the remainder and is never drawn red. */}
+          <div
+            className="mt-5 h-2 w-full max-w-[420px] overflow-hidden rounded-full"
+            style={{ background: 'var(--chip-bg)' }}
+            aria-hidden
+          >
+            <div className="h-full rounded-full" style={{ width: `${incomePct}%`, background: 'var(--positive)' }} />
+          </div>
+
+          <div className="mt-3 flex items-baseline gap-8">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-text-2">{t('Income')}</span>
+              <span className="text-[17px] tabular-nums" style={{ color: 'var(--positive)' }}>
+                {formatMoney(income)}
+              </span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs text-text-2">{t('Expenses')}</span>
+              <span className="text-[17px] tabular-nums text-text">{formatMoney(expenses)}</span>
+            </div>
+            {isCurrentMonthWindow ? (
+              <div className="ml-auto self-end">
+                <span className="text-xs tabular-nums text-text-3">
+                  {t('Day {0} of {1}', dayOfMonth, daysInMonth)}
+                </span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Right: daily-spending heatmap for the same window. */}
+        <div className="shrink-0">
+          <SpendHeatmap interval={interval} />
+        </div>
       </div>
     </section>
   )

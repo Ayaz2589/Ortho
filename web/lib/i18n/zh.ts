@@ -457,6 +457,11 @@ const catalog: Record<string, string> = {
   "Savings trends": "储蓄趋势",
   "Your savings rate over recent months.": "近几个月的储蓄率。",
   "Not enough data yet.": "数据还不够。",
+
+  // Widget detail panel + spend heatmap (spec 037)
+  "Open {0}": "打开{0}",
+  "Details coming soon.": "详情即将推出。",
+  "Daily spending": "每日支出",
 }
 
 export default catalog

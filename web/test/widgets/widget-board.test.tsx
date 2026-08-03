@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { render, screen, cleanup, waitFor } from '@testing-library/react'
+import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react'
 import { WidgetBoard } from '@/components/widgets/WidgetBoard'
 import { DashboardScopeProvider } from '@/lib/widgets/DashboardScopeContext'
 import { WIDGETS } from '@/lib/widgets/registry'
@@ -92,5 +92,20 @@ describe('WidgetBoard', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { level: 2, name: first.title })).toBeTruthy()
     })
+  })
+
+  it('opens a detail panel when a widget is clicked, and closes it (spec 037)', async () => {
+    renderBoard()
+    const first = defaultEnabledTitles[0]
+    await waitFor(() => expect(screen.getByRole('button', { name: `Open ${first}` })).toBeTruthy())
+    // No panel until a widget is clicked.
+    expect(screen.queryByRole('dialog')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: `Open ${first}` }))
+    // The shared drawer opens, labelled by the widget title, with a placeholder.
+    expect(screen.getByRole('dialog', { name: first })).toBeTruthy()
+    expect(screen.getByText('Details coming soon.')).toBeTruthy()
+    // The standard close button dismisses it.
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 })

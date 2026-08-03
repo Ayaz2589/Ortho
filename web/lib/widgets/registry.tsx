@@ -10,18 +10,13 @@ import { SavingsTrendsBody } from '@/components/widgets/bodies/SavingsTrendsBody
  * Widget registry (spec 034 — foundation). The SINGLE source of truth for the
  * dashboard's widget board. A future widget author adds one entry here and the
  * widget automatically appears in Settings → Widgets (toggleable) and, when
- * enabled, on the board at its declared size — no board or settings code changes
- * required (FR-002, FR-008).
+ * enabled, on the board — no board or settings code changes required
+ * (FR-002, FR-008).
  *
- * This foundation ships calm PLACEHOLDER widgets (no live data); wiring real
- * household figures into individual widgets is future work layered on top.
+ * Every widget renders at the SAME height (spec 037): the board is a uniform CSS
+ * grid, so there is no per-widget size/footprint — the declaration is just id +
+ * copy + default + body.
  */
-
-/** Cell footprint. Maps to grid spans in `globals.css` (`.ow-w-*`); on compact
- *  (phone) every size collapses to a single full-width column. */
-export type WidgetSize = 'sm' | 'md' | 'lg' | 'wide'
-
-export const WIDGET_SIZES: readonly WidgetSize[] = ['sm', 'md', 'lg', 'wide']
 
 export interface WidgetDefinition {
   /** Stable, unique, kebab-case id. Persisted in preferences — never rename/reuse. */
@@ -30,34 +25,28 @@ export interface WidgetDefinition {
   title: string
   /** One-line description shown in the Settings toggle list. */
   description: string
-  /** Cell footprint used by the board to size + pack the widget. */
-  size: WidgetSize
   /** Enabled state for a member who has never toggled this widget. */
   defaultEnabled: boolean
-  /** Calm placeholder body. No props in the foundation (no live data yet). */
+  /** Propless body — reads data via `useApp()` + `useDashboardScopeContext()`. */
   Body: ComponentType
 }
 
 /**
- * The shipped widgets. Declaration order is the board order (deterministic), and
- * the set spans every `WidgetSize`. The board is a CSS multi-column masonry
- * (`.ow-board`, `columns: 1/2/3` by breakpoint) with `break-inside: avoid`, so
- * heights are per-widget tiers and packing flows automatically — there is no
- * fixed-grid tiling to satisfy.
+ * The shipped widgets. Declaration order is the board order (deterministic). Every
+ * widget is the same height on a uniform grid (spec 037), so there are no size
+ * footprints to balance.
  *
  * Net summary is NOT here: it is baked into the overview as a prominent hero
  * (`components/dashboard/NetSummaryHero.tsx`), always shown, never toggleable.
- * `savings-trends` (spec 036 follow-up) replaces the removed Reports mode — the
- * savings rate over recent months, computed locally like every other widget.
- * `activity` is `lg` (was `wide` — full-width left an empty middle) and ships
- * default-off so the first-run board stays a clean tile.
+ * `savings-trends` (spec 036) replaces the removed Reports mode — the savings rate
+ * over recent months, computed locally like every other widget. `activity` ships
+ * default-off so the first-run board stays a clean set of tiles.
  */
 export const WIDGETS: readonly WidgetDefinition[] = [
   {
     id: 'savings-trends',
     title: 'Savings trends',
     description: 'Your savings rate over recent months.',
-    size: 'lg',
     defaultEnabled: true,
     Body: SavingsTrendsBody,
   },
@@ -65,7 +54,6 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     id: 'spending-pace',
     title: 'Spending pace',
     description: 'How your spending is tracking against the month.',
-    size: 'md',
     defaultEnabled: true,
     Body: SpendingPaceBody,
   },
@@ -73,7 +61,6 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     id: 'budgets',
     title: 'Budgets',
     description: 'Category budgets and what is left in each.',
-    size: 'md',
     defaultEnabled: true,
     Body: BudgetsBody,
   },
@@ -81,7 +68,6 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     id: 'goals',
     title: 'Goals',
     description: 'Progress toward your savings goals.',
-    size: 'sm',
     defaultEnabled: true,
     Body: GoalsBody,
   },
@@ -89,7 +75,6 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     id: 'top-merchants',
     title: 'Top merchants',
     description: 'Where you spend the most, most often.',
-    size: 'sm',
     defaultEnabled: true,
     Body: TopMerchantsBody,
   },
@@ -97,7 +82,6 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     id: 'activity',
     title: 'Recent activity',
     description: 'Your latest transactions across the household.',
-    size: 'lg',
     defaultEnabled: false,
     Body: ActivityBody,
   },

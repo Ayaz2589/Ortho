@@ -47,11 +47,11 @@ describe('dashboard scope bar', () => {
     expect(screen.getByText('1Y')).toBeTruthy()
   })
 
-  it('shows the active period caption', () => {
+  it('does NOT duplicate the period caption in the bar (the hero shows it)', () => {
     render(<DashboardPage />)
-    // Default relative range → the long label; the caption, not the segmented
-    // control (which shows the compact "Month").
-    expect(screen.getByText('This month')).toBeTruthy()
+    // Spec 037: the period label lives on the net-summary hero only, so the bar
+    // carries controls without a redundant "This month" caption.
+    expect(screen.queryByText('This month')).toBeNull()
   })
 
   it('renders the net-summary hero above the board', () => {

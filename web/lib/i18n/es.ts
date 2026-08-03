@@ -457,6 +457,11 @@ const catalog: Record<string, string> = {
   "Savings trends": "Tendencias de ahorro",
   "Your savings rate over recent months.": "Tu tasa de ahorro en los últimos meses.",
   "Not enough data yet.": "Aún no hay suficientes datos.",
+
+  // Widget detail panel + spend heatmap (spec 037)
+  "Open {0}": "Abrir {0}",
+  "Details coming soon.": "Detalles próximamente.",
+  "Daily spending": "Gasto diario",
 }
 
 export default catalog

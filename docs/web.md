@@ -179,9 +179,11 @@ for extensionless paths, which infinite-loops signed-out native launches.
   `next/dynamic` `{ssr:false, loading:()=>null}` so mobile/iOS never downloads the desktop chunk.
 - **Dashboard is the exception (spec 034)**: its Overview is a single responsive `WidgetBoard`
   (`components/widgets/WidgetBoard.tsx`) — one composition for phone → desktop, so there is no
-  `DashboardDesktop` chunk and no `useIsExpanded` branch. Responsiveness is pure CSS (`.ow-board`
-  steps its column count by breakpoint; `grid-auto-flow: dense` + equal-height rows so widgets pack
-  with no empty cells or blank bands). See §9.
+  `DashboardDesktop` chunk and no `useIsExpanded` branch. Responsiveness is pure CSS: `.ow-board` is a
+  **uniform grid** (spec 037) — equal columns (1→2→3 by breakpoint) and a single `grid-auto-rows`
+  height, so **every widget is the same height** and any toggled subset tiles with no interior hole.
+  There is no per-widget `size` (the old sm/md/lg/wide tiers are gone). Guard:
+  `test/widgets/board-packing.test.ts`.
 - **Widgets are data-wired with a shared time scope (specs 035–036)**: the registry
   (`lib/widgets/registry.tsx`) is the single source of truth; each widget has a **propless** body
   under `components/widgets/bodies/<Name>Body.tsx` that reads household data from `useApp()` and the
@@ -192,11 +194,15 @@ for extensionless paths, which infinite-loops signed-out native launches.
   `components/widgets/charts/SpendingPaceChart.tsx` via `next/dynamic`), `budgets`, `goals`,
   `top-merchants`, and `activity` (a most-recent-6 live feed that ignores the scope window). Bodies
   reuse named money helpers (`budgetStatusForMonth`, `goalProgress`/`goalPacing`, `savingsRate`)
-  rather than re-implementing math; loss is never red.
+  rather than re-implementing math; loss is never red. Every widget card is a **click target** (spec
+  037): a full-bleed overlay `<button>` opens the shared right-side `Drawer` with the widget's title
+  and the standard close button — the panel body is a placeholder for the future drill-down.
 - **Net summary is baked into the overview, not a widget** (`components/dashboard/NetSummaryHero.tsx`):
   the most prominent element — income − expenses over the shared window, rendered card-less above the
-  board, always shown (not toggleable). Bundle guard (`test/bundle/no-eager-recharts.test.ts`) covers
-  `components/widgets`.
+  board, always shown (not toggleable). To its right sits the **daily-spending heatmap**
+  (`components/dashboard/SpendHeatmap.tsx` + the pure `lib/dashboard/spendHeatmap.ts`): a GitHub-style
+  calendar of per-day expense intensity (sand `--accent` ramp, never red). Bundle guard
+  (`test/bundle/no-eager-recharts.test.ts`) covers `components/widgets`.
 - Dialog vocabulary: desktop `components/web/Drawer.tsx` (right slide-out, portal, scrim + Escape +
   focus trap via `lib/useFocusTrap.ts`, scroll lock). Opt-in props: `fullBleedOnMobile` (full-screen
   panel with no scrim below 1024px, for surfaces that mirror the full-page mobile form — e.g. CSV

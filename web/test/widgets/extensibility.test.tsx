@@ -10,13 +10,11 @@ import { render, screen, cleanup, waitFor } from '@testing-library/react'
 vi.mock('@/lib/store', () => ({ useApp: () => ({ t: (k: string) => k }) }))
 
 vi.mock('@/lib/widgets/registry', () => ({
-  WIDGET_SIZES: ['sm', 'md', 'lg', 'wide'],
   WIDGETS: [
     {
       id: 'sentinel-widget',
       title: 'Sentinel Widget',
       description: 'A widget added purely by declaring a registry entry.',
-      size: 'sm',
       defaultEnabled: true,
       Body: () => null,
     },

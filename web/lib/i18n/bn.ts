@@ -457,6 +457,11 @@ const catalog: Record<string, string> = {
   "Savings trends": "সঞ্চয়ের প্রবণতা",
   "Your savings rate over recent months.": "সাম্প্রতিক মাসগুলোতে আপনার সঞ্চয়ের হার।",
   "Not enough data yet.": "এখনও যথেষ্ট তথ্য নেই।",
+
+  // Widget detail panel + spend heatmap (spec 037)
+  "Open {0}": "{0} খুলুন",
+  "Details coming soon.": "বিস্তারিত শীঘ্রই আসছে।",
+  "Daily spending": "দৈনিক খরচ",
 }
 
 export default catalog

@@ -295,42 +295,27 @@ button,
 .ow-s12 { grid-column: span 12; }
 
 /* -------------------------------------------------------------------------
-   Widget board (spec 034) — one composition for phone → desktop, built as a
-   COLUMN MASONRY so it packs with no dead space for ANY enabled subset (not just
-   the default one). Widgets are uniform-width and stack flush within each column
-   (`break-inside: avoid` + a bottom gap), so there is never an interior empty
-   cell or a leftover column beside a lone widget — the two failure modes a fixed
-   multi-column grid has when the user toggles widgets off. The column count steps
-   1 → 2 → 3 by breakpoint; width caps + centers per the responsive contract.
-   Size is a HEIGHT tier (sm/md/lg) — each widget is exactly its own height, so a
-   short widget never shows an equal-height-row blank band — plus `wide`, which
-   spans every column. Tokens only; the 16px gap matches `.ow-grid`. -------- */
+   Widget board (spec 034; spec 037 — uniform grid) — one composition for phone →
+   desktop. Every widget is the SAME height (`grid-auto-rows`) and one track wide,
+   so the enabled subset always tiles cleanly with no interior hole for ANY toggled
+   combination — the uniform-cell grid has none of the stranded-hole failure modes
+   a width-varying-span grid has. The column count steps 1 → 2 → 3 by breakpoint;
+   width caps + centers per the responsive contract. Tokens only; 16px gap matches
+   `.ow-grid`. -------- */
 .ow-board {
   max-width: 1080px;
   margin-inline: auto;
-  columns: 1;
-  column-gap: 16px;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-auto-rows: 280px;
+  gap: 16px;
 }
 @media (min-width: 640px) {
-  .ow-board { columns: 2; }
+  .ow-board { grid-template-columns: repeat(2, 1fr); }
 }
 @media (min-width: 1024px) {
-  .ow-board { columns: 3; }
+  .ow-board { grid-template-columns: repeat(3, 1fr); }
 }
-.ow-board > * {
-  break-inside: avoid;
-  margin-bottom: 16px;
-}
-/* Full-width widget: spans every column, breaking the masonry flow cleanly with
-   no hole above or below it. */
-.ow-w-wide {
-  column-span: all;
-}
-/* Height tiers give visual rhythm; the widget's flex body fills the tier so the
-   card is always fully occupied (no blank band inside it). */
-.ow-w-sm { min-height: 150px; }
-.ow-w-md { min-height: 200px; }
-.ow-w-lg { min-height: 290px; }
 
 .ow-card {
   background: var(--surface);
