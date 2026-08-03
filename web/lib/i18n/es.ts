@@ -433,7 +433,6 @@ const catalog: Record<string, string> = {
   "Choose which widgets appear on your dashboard.": "Elige qué widgets aparecen en tu panel.",
   "Your dashboard is empty": "Tu panel está vacío",
   "Choose widgets": "Elegir widgets",
-  "Preview": "Vista previa",
   "Net summary": "Resumen neto",
   "Spending pace": "Ritmo de gasto",
   "Recent activity": "Actividad reciente",
@@ -443,6 +442,24 @@ const catalog: Record<string, string> = {
   "Progress toward your savings goals.": "Progreso hacia tus metas de ahorro.",
   "Where you spend the most, most often.": "Dónde gastas más y con más frecuencia.",
   "Your latest transactions across the household.": "Tus últimas transacciones del hogar.",
+
+  // Dashboard widget data (spec 036–041)
+  "Net": "Neto",
+  "Day {0} of {1}": "Día {0} de {1}",
+  "Last 30 days": "Últimos 30 días",
+  "Daily trend": "Tendencia diaria",
+  "Avg / day": "Prom. / día",
+  "vs. prior 30": "vs. 30 previos",
+  "No expenses in the last 30 days.": "Sin gastos en los últimos 30 días.",
+  "{0} left": "Quedan {0}",
+  "{0} over": "{0} de más",
+  "{0} rolled over": "{0} acumulados",
+  "{0} carried shortfall": "{0} de déficit arrastrado",
+  "No budgets yet.": "Aún no hay presupuestos.",
+  "No goals yet.": "Aún no hay metas.",
+  "{0} visits": "{0} visitas",
+  "1 visit": "1 visita",
+  "No transactions yet.": "Aún no hay transacciones.",
 }
 
 export default catalog

@@ -433,7 +433,6 @@ const catalog: Record<string, string> = {
   "Choose which widgets appear on your dashboard.": "ダッシュボードに表示するウィジェットを選びます。",
   "Your dashboard is empty": "ダッシュボードは空です",
   "Choose widgets": "ウィジェットを選ぶ",
-  "Preview": "プレビュー",
   "Net summary": "収支サマリー",
   "Spending pace": "支出ペース",
   "Recent activity": "最近のアクティビティ",
@@ -443,6 +442,24 @@ const catalog: Record<string, string> = {
   "Progress toward your savings goals.": "貯蓄目標への進捗。",
   "Where you spend the most, most often.": "最も多く、最も頻繁に使う店。",
   "Your latest transactions across the household.": "世帯全体の最新の取引。",
+
+  // Dashboard widget data (spec 036–041)
+  "Net": "収支",
+  "Day {0} of {1}": "{1}日中{0}日目",
+  "Last 30 days": "過去30日間",
+  "Daily trend": "日次の推移",
+  "Avg / day": "1日平均",
+  "vs. prior 30": "前30日比",
+  "No expenses in the last 30 days.": "過去30日間に支出はありません。",
+  "{0} left": "残り {0}",
+  "{0} over": "{0} 超過",
+  "{0} rolled over": "{0} 繰り越し",
+  "{0} carried shortfall": "{0} 不足繰り越し",
+  "No budgets yet.": "まだ予算がありません。",
+  "No goals yet.": "まだ目標がありません。",
+  "{0} visits": "{0} 回",
+  "1 visit": "1 回",
+  "No transactions yet.": "まだ取引がありません。",
 }
 
 export default catalog

@@ -180,6 +180,18 @@ for extensionless paths, which infinite-loops signed-out native launches.
   `DashboardDesktop` chunk and no `useIsExpanded` branch. Responsiveness is pure CSS (`.ow-board`
   steps its column count by breakpoint; `grid-auto-flow: dense` + equal-height rows so widgets pack
   with no empty cells or blank bands). See §9.
+- **Widgets are data-wired with a shared time scope (specs 035–041)**: the registry
+  (`lib/widgets/registry.tsx`) is the single source of truth; each of the six widgets has a
+  **propless** body under `components/widgets/bodies/<Name>Body.tsx` that reads household data from
+  `useApp()` and the active window from `useDashboardScopeContext()`
+  (`lib/widgets/DashboardScopeContext.tsx` wraps the overview and calls `useDashboardScope()` ONCE, so
+  the revived `MonthPicker` + `RangePicker` and every widget share one month/range — no desync). Bodies
+  reuse the named money helpers (`budgetStatusForMonth`, `goalProgress`/`goalPacing`,
+  `contributionsByGoal`) rather than re-implementing math; loss is never red. Only **spending-pace**
+  charts — a lazy recharts area leaf (`components/widgets/charts/SpendingPaceChart.tsx` via
+  `next/dynamic`); every other widget is CSS-only. `activity` is a most-recent-6 live feed that ignores
+  the scope window. Bundle guard (`test/bundle/no-eager-recharts.test.ts`) now also covers
+  `components/widgets`.
 - Dialog vocabulary: desktop `components/web/Drawer.tsx` (right slide-out, portal, scrim + Escape +
   focus trap via `lib/useFocusTrap.ts`, scroll lock). Opt-in props: `fullBleedOnMobile` (full-screen
   panel with no scrim below 1024px, for surfaces that mirror the full-page mobile form — e.g. CSV
