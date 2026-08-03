@@ -2,10 +2,17 @@
 /**
  * Tests for the two-level grouped category picker in TxForm.
  * Covers US1 (expense subcategories), US2 (income subcategories), and US5 (backward compat).
+ *
+ * The picker is an in-card accordion (spec: dashboard UI fixes): the "Category"
+ * row expands the card in place to reveal grouped, selectable category rows.
+ * Each subcategory is a button labeled with its display name; picking one closes
+ * the accordion and stores that slug.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { categoryMeta } from '@/lib/categories'
+import type { TransactionCategory } from '@/lib/types'
 
 const H = vi.hoisted(() => ({
   addTransaction: vi.fn(),
@@ -25,6 +32,7 @@ vi.mock('@/lib/store', () => {
     useApp: () => ({
       currency: 'usd',
       rate: () => 1,
+      locale: 'en-US',
       cards: [{ id: 'c1', household_id: 'h1', name: 'Visa', created_at: '2026-01-01' }],
       depositAccounts: [],
       currentHousehold: { id: 'h1', owner_id: 'u1', name: 'Home', created_at: '2026-01-01' },
@@ -46,8 +54,21 @@ import NewTransactionPage from '@/app/(app)/transactions/new/page'
 
 const amountInput = () => document.querySelector('.ow-amount-input') as HTMLInputElement
 const merchantInput = () => screen.getByPlaceholderText('e.g. Whole Foods') as HTMLInputElement
-// Category select has aria-label="Category" (added in spec 031 implementation)
-const categorySelect = () => screen.getByLabelText('Category') as HTMLSelectElement
+
+// The category disclosure row (aria-label="Category"). Clicking it toggles the
+// in-card picker open/closed.
+const categoryToggle = () => screen.getByRole('button', { name: 'Category' })
+const openCategory = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(categoryToggle())
+}
+// An individual subcategory option is a button whose accessible name is its
+// display label (the toggle's own name is "Category", so there's no collision).
+const label = (slug: TransactionCategory) => categoryMeta(slug).label
+const catOption = (slug: TransactionCategory) => screen.getByRole('button', { name: label(slug) })
+const catOptionQuery = (slug: TransactionCategory) => screen.queryByRole('button', { name: label(slug) })
+// A group header renders its label as plain text (possibly alongside a same-named
+// option button, e.g. "Education"), so tolerate ≥1 match.
+const groupShown = (groupLabel: string) => screen.getAllByText(groupLabel).length > 0
 
 beforeEach(() => {
   H.addTransaction.mockClear()
@@ -65,53 +86,36 @@ afterEach(() => {
 })
 
 describe('US1 + US5: Expense category picker — grouped structure', () => {
-  it('renders the category select with optgroup elements for each expense group', async () => {
+  it('renders a group header for each expense group when opened', async () => {
+    const user = userEvent.setup()
     render(<NewTransactionPage />)
     await screen.findByText('New transaction')
+    await openCategory(user)
 
-    const select = categorySelect()
-    const groups = select.querySelectorAll('optgroup')
-    const groupLabels = Array.from(groups).map((g) => g.label)
-
-    expect(groupLabels).toContain('Food & Drink')
-    expect(groupLabels).toContain('Transport')
-    expect(groupLabels).toContain('Home')
-    expect(groupLabels).toContain('Health & Wellness')
-    expect(groupLabels).toContain('Entertainment')
-    expect(groupLabels).toContain('Shopping')
-    expect(groupLabels).toContain('Subscriptions')
-    expect(groupLabels).toContain('Education')
+    for (const g of ['Food & Drink', 'Transport', 'Home', 'Health & Wellness', 'Entertainment', 'Shopping', 'Subscriptions', 'Education']) {
+      expect(groupShown(g), `group "${g}" missing from picker`).toBe(true)
+    }
   })
 
-  it('Food & Drink optgroup contains both original and new subcategories', async () => {
+  it('Food & Drink group contains both original and new subcategories', async () => {
+    const user = userEvent.setup()
     render(<NewTransactionPage />)
     await screen.findByText('New transaction')
+    await openCategory(user)
 
-    const select = categorySelect()
-    const foodGroup = Array.from(select.querySelectorAll('optgroup')).find(
-      (g) => g.label === 'Food & Drink'
-    )
-    expect(foodGroup).toBeDefined()
-
-    const optionValues = Array.from(foodGroup!.querySelectorAll('option')).map((o) => o.value)
-    expect(optionValues).toContain('coffee')
-    expect(optionValues).toContain('groceries')
-    expect(optionValues).toContain('dining')
-    expect(optionValues).toContain('fast_food')
-    expect(optionValues).toContain('alcohol')
-    expect(optionValues).toContain('takeout')
+    for (const slug of ['coffee', 'groceries', 'dining', 'fast_food', 'alcohol', 'takeout'] as TransactionCategory[]) {
+      expect(catOption(slug)).toBeInTheDocument()
+    }
   })
 
   it('US5: original slugs still present as selectable options', async () => {
+    const user = userEvent.setup()
     render(<NewTransactionPage />)
     await screen.findByText('New transaction')
+    await openCategory(user)
 
-    const select = categorySelect()
-    const allOptionValues = Array.from(select.querySelectorAll('option')).map((o) => o.value)
-
-    // All original expense slugs must still be present
-    for (const slug of ['coffee', 'groceries', 'dining', 'subs', 'fuel', 'rent', 'health', 'transit', 'utilities', 'entertainment']) {
-      expect(allOptionValues, `original slug "${slug}" missing from picker`).toContain(slug)
+    for (const slug of ['coffee', 'groceries', 'dining', 'subs', 'fuel', 'rent', 'health', 'transit', 'utilities', 'entertainment'] as TransactionCategory[]) {
+      expect(catOptionQuery(slug), `original slug "${slug}" missing from picker`).not.toBeNull()
     }
   })
 
@@ -122,7 +126,8 @@ describe('US1 + US5: Expense category picker — grouped structure', () => {
 
     await user.type(amountInput(), '1200')
     await user.type(merchantInput(), 'McDonalds')
-    await user.selectOptions(categorySelect(), 'fast_food')
+    await openCategory(user)
+    await user.click(catOption('fast_food'))
 
     await user.click(screen.getByRole('button', { name: 'Add' }))
 
@@ -140,7 +145,8 @@ describe('US1 + US5: Expense category picker — grouped structure', () => {
 
     await user.type(amountInput(), '2800')
     await user.type(merchantInput(), 'Lyft')
-    await user.selectOptions(categorySelect(), 'rideshare')
+    await openCategory(user)
+    await user.click(catOption('rideshare'))
 
     await user.click(screen.getByRole('button', { name: 'Add' }))
 
@@ -149,28 +155,37 @@ describe('US1 + US5: Expense category picker — grouped structure', () => {
       kind: 'expense',
     })
   })
-})
 
-describe('US2: Income category picker — income subcategories', () => {
-  it('switches to income category picker when kind = income', async () => {
+  it('picking a category closes the accordion and reflects it in the row', async () => {
     const user = userEvent.setup()
     render(<NewTransactionPage />)
     await screen.findByText('New transaction')
 
-    // Switch to income
+    await openCategory(user)
+    await user.click(catOption('dining'))
+
+    // Accordion collapsed → options gone, row shows the chosen category.
+    expect(catOptionQuery('fast_food')).toBeNull()
+    expect(categoryToggle()).toHaveTextContent('Dining')
+  })
+})
+
+describe('US2: Income category picker — income subcategories', () => {
+  it('switches to income category groups when kind = income', async () => {
+    const user = userEvent.setup()
+    render(<NewTransactionPage />)
+    await screen.findByText('New transaction')
+
     await user.click(screen.getByRole('tab', { name: 'Income' }))
+    await openCategory(user)
 
-    // Income picker should have income optgroups, not expense optgroups
-    const select = categorySelect()
-    const groupLabels = Array.from(select.querySelectorAll('optgroup')).map((g) => g.label)
-
-    expect(groupLabels).toContain('Employment & Business')
-    expect(groupLabels).toContain('Investment & Assets')
-    expect(groupLabels).toContain('Other Income')
+    expect(groupShown('Employment & Business')).toBe(true)
+    expect(groupShown('Investment & Assets')).toBe(true)
+    expect(groupShown('Other Income')).toBe(true)
 
     // Must NOT contain expense groups
-    expect(groupLabels).not.toContain('Food & Drink')
-    expect(groupLabels).not.toContain('Transport')
+    expect(screen.queryByText('Food & Drink')).toBeNull()
+    expect(screen.queryByText('Transport')).toBeNull()
   })
 
   it('income picker defaults to salary', async () => {
@@ -180,7 +195,7 @@ describe('US2: Income category picker — income subcategories', () => {
 
     await user.click(screen.getByRole('tab', { name: 'Income' }))
 
-    expect(categorySelect().value).toBe('salary')
+    expect(categoryToggle()).toHaveTextContent('Salary')
   })
 
   it('saving income with freelance stores category = freelance (not "income")', async () => {
@@ -191,7 +206,8 @@ describe('US2: Income category picker — income subcategories', () => {
     await user.click(screen.getByRole('tab', { name: 'Income' }))
     await user.type(amountInput(), '50000')
     await user.type(screen.getByPlaceholderText('e.g. Acme Co. payroll'), 'Client project')
-    await user.selectOptions(categorySelect(), 'freelance')
+    await openCategory(user)
+    await user.click(catOption('freelance'))
 
     await user.click(screen.getByRole('button', { name: 'Add' }))
 
@@ -208,24 +224,22 @@ describe('US2: Income category picker — income subcategories', () => {
     await screen.findByText('New transaction')
 
     await user.click(screen.getByRole('tab', { name: 'Income' }))
+    await openCategory(user)
 
-    const select = categorySelect()
-    const allOptionValues = Array.from(select.querySelectorAll('option')).map((o) => o.value)
-
-    for (const slug of ['salary', 'bonus', 'freelance', 'business_income', 'dividends', 'rental_income', 'gift_received', 'refund', 'other_income', 'income']) {
-      expect(allOptionValues, `income slug "${slug}" missing from income picker`).toContain(slug)
+    for (const slug of ['salary', 'bonus', 'freelance', 'business_income', 'dividends', 'rental_income', 'gift_received', 'refund', 'other_income', 'income'] as TransactionCategory[]) {
+      expect(catOptionQuery(slug), `income slug "${slug}" missing from income picker`).not.toBeNull()
     }
   })
 
   it('expense category picker does not contain income slugs', async () => {
+    const user = userEvent.setup()
     render(<NewTransactionPage />)
     await screen.findByText('New transaction')
 
-    const select = categorySelect()
-    const allOptionValues = Array.from(select.querySelectorAll('option')).map((o) => o.value)
+    await openCategory(user)
 
-    for (const slug of ['salary', 'bonus', 'freelance', 'business_income', 'dividends']) {
-      expect(allOptionValues, `income slug "${slug}" must not be in expense picker`).not.toContain(slug)
+    for (const slug of ['salary', 'bonus', 'freelance', 'business_income', 'dividends'] as TransactionCategory[]) {
+      expect(catOptionQuery(slug), `income slug "${slug}" must not be in expense picker`).toBeNull()
     }
   })
 })
