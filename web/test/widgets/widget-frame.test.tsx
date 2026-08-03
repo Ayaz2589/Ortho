@@ -5,8 +5,8 @@ import { Widget } from '@/components/widgets/Widget'
 import type { WidgetDefinition } from '@/lib/widgets/registry'
 
 // Spec 034 + 037: the widget frame fills its (uniform-height) cell using the calm
-// `.ow-card` vocabulary (no shadow), and the whole card is a click target that
-// opens the widget's detail panel. FR-004, FR-010.
+// `.ow-card` vocabulary (soft shadow), scrolls its body on overflow, and the whole
+// card is a click target that opens the widget's detail panel. FR-004, FR-010.
 
 vi.mock('@/lib/store', () => ({
   useApp: () => ({ t: (k: string, ...a: unknown[]) => k.replace(/\{(\d+)\}/g, (_, i) => String(a[Number(i)] ?? '')) }),
