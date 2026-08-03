@@ -1,7 +1,7 @@
 // Spec 018 — live plan/price lookup for the paywalls (contracts/billing-functions.md §4).
 // Prices exist ONLY in Stripe (FR-011/SC-008): this function is how the apps learn
 // the operator-configured amounts. Short in-function cache keeps the paywall snappy.
-import Stripe from 'npm:stripe@22'
+import Stripe from 'npm:stripe@22.4.0'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { errorResponse, json, preflight, requiredEnv } from '../_shared/http.ts'
 
@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
   if (cached && Date.now() - cached.at < CACHE_MS) return json(200, cached.body)
 
   try {
-    const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-06-24.dahlia' })
+    const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-07-29.dahlia' })
     const [monthlyPrice, yearlyPrice] = await Promise.all([
       stripe.prices.retrieve(env.STRIPE_PRICE_MONTHLY),
       stripe.prices.retrieve(env.STRIPE_PRICE_YEARLY),

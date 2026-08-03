@@ -2,7 +2,7 @@
 // Deployed with verify_jwt = false (supabase/config.toml): the Stripe signature
 // IS the auth. Deno REQUIRES the async verification path — sync constructEvent()
 // throws "SubtleCryptoProvider cannot be used in a synchronous context".
-import Stripe from 'npm:stripe@22'
+import Stripe from 'npm:stripe@22.4.0'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { applyBillingEvent } from '../_shared/billing/machine.ts'
 import type { EntitlementRow } from '../_shared/billing/normalize.ts'
@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
   // shapes are version-dependent, and an unpinned client would drift under a
   // future npm:stripe bump. Keep in lockstep with the webhook ENDPOINT's pinned
   // version (quickstart.md §2.5) and the fixtures in services/billing/test.
-  const stripe = new Stripe(stripeKey, { apiVersion: '2026-06-24.dahlia' })
+  const stripe = new Stripe(stripeKey, { apiVersion: '2026-07-29.dahlia' })
   const cryptoProvider = Stripe.createSubtleCryptoProvider()
 
   // Signature verification on the RAW body — never parse first.
