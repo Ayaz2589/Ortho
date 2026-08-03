@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, cleanup, fireEvent } from '@testing-library/react'
+import { render, screen, cleanup } from '@testing-library/react'
 import DashboardPage from '@/app/(app)/dashboard/page'
 
-// Spec 035 (Section 0): the OVERVIEW gains a shared time-scope bar — the revived
-// MonthPicker plus the relative-range segmented control (decision O-1 = include
-// both) plus the active period caption. Reports mode is untouched: it shows no
-// scope bar. The board itself is stubbed here; this suite is about the chrome the
-// foundation wires in.
+// Spec 035 + 036: the dashboard is a single view (the Overview/Reports mode toggle
+// was removed when Reports became the savings-trends widget). It always shows the
+// shared time-scope bar — the revived MonthPicker + relative-range control + the
+// active period caption. The heavy children (hero + board) are stubbed; this suite
+// is about the scope chrome the overview wires in.
 
 // ~13 months of data so every relative range is available and the month picker
 // has months to list.
@@ -25,20 +25,20 @@ vi.mock('@/lib/store', () => ({
 vi.mock('@/components/widgets/WidgetBoard', () => ({
   WidgetBoard: () => <div data-testid="widget-board" />,
 }))
-vi.mock('@/components/dashboard/ReportsView', () => ({
-  ReportsView: () => <div data-testid="reports-view" />,
+vi.mock('@/components/dashboard/NetSummaryHero', () => ({
+  NetSummaryHero: () => <div data-testid="net-hero" />,
 }))
 
 beforeEach(() => localStorage.clear())
 afterEach(cleanup)
 
-describe('dashboard overview scope bar', () => {
-  it('renders the MonthPicker on the overview', () => {
+describe('dashboard scope bar', () => {
+  it('renders the MonthPicker', () => {
     render(<DashboardPage />)
     expect(screen.getByText('Pick a month')).toBeTruthy()
   })
 
-  it('renders the relative-range control on the overview (O-1)', () => {
+  it('renders the relative-range control (O-1)', () => {
     render(<DashboardPage />)
     // The segmented range control shows its compact labels; several distinct
     // options prove it is the range control, not incidental text.
@@ -54,15 +54,9 @@ describe('dashboard overview scope bar', () => {
     expect(screen.getByText('This month')).toBeTruthy()
   })
 
-  it('does NOT render the scope bar in Reports mode', () => {
+  it('renders the net-summary hero above the board', () => {
     render(<DashboardPage />)
-    // Sanity: overview shows it first.
-    expect(screen.getByText('Pick a month')).toBeTruthy()
-    fireEvent.click(screen.getByText('Reports'))
-    // Reports mode: the board and its scope bar are gone.
-    expect(screen.getByTestId('reports-view')).toBeTruthy()
-    expect(screen.queryByText('Pick a month')).toBeNull()
-    expect(screen.queryByText('3M')).toBeNull()
-    expect(screen.queryByText('This month')).toBeNull()
+    expect(screen.getByTestId('net-hero')).toBeTruthy()
+    expect(screen.getByTestId('widget-board')).toBeTruthy()
   })
 })

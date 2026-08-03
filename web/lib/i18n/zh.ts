@@ -167,7 +167,6 @@ const catalog: Record<string, string> = {
   "Optional": "可选",
   "Original loan": "原始贷款",
   "Original loan · {0}": "原始贷款 · {0}",
-  "Other": "其他",
   "Over budget on {0}": "{0}超出预算",
   "Owner": "所有者",
   "Owners": "所有者",
@@ -419,13 +418,7 @@ const catalog: Record<string, string> = {
   "{0} is behind pace": "{0} 进度落后",
   "{0} of {1} saved — about {2} behind. Set aside {3}/mo to reach it by {4}.": "已储蓄 {1} 中的 {0} — 落后约 {2}。每月存入 {3} 即可在 {4} 前达成。",
   // spec 027 — reports
-  "Overview": "概览",
-  "Reports": "报告",
-  "Dashboard view": "仪表板视图",
   "Savings rate": "储蓄率",
-  "Spending by category": "按类别支出",
-  "No income or spending in this period yet.": "此期间还没有收入或支出。",
-  "Couldn’t load reports.": "无法加载报告。",
 
   // Widget system (spec 034)
   "Widgets": "小组件",
@@ -436,7 +429,6 @@ const catalog: Record<string, string> = {
   "Net summary": "净额概览",
   "Spending pace": "消费节奏",
   "Recent activity": "近期活动",
-  "Income minus spending for the month at a glance.": "一眼看清本月收入减去支出。",
   "How your spending is tracking against the month.": "本月支出的进展情况。",
   "Category budgets and what is left in each.": "各类别预算及每项剩余额度。",
   "Progress toward your savings goals.": "储蓄目标的进展。",
@@ -460,6 +452,11 @@ const catalog: Record<string, string> = {
   "{0} visits": "{0} 次",
   "1 visit": "1 次",
   "No transactions yet.": "还没有交易。",
+
+  // Savings-trends widget (spec 036 follow-up)
+  "Savings trends": "储蓄趋势",
+  "Your savings rate over recent months.": "近几个月的储蓄率。",
+  "Not enough data yet.": "数据还不够。",
 }
 
 export default catalog

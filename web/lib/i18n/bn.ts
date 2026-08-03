@@ -167,7 +167,6 @@ const catalog: Record<string, string> = {
   "Optional": "ঐচ্ছিক",
   "Original loan": "মূল ঋণ",
   "Original loan · {0}": "মূল ঋণ · {0}",
-  "Other": "অন্যান্য",
   "Over budget on {0}": "{0}-এ বাজেট অতিক্রান্ত",
   "Owner": "মালিক",
   "Owners": "মালিকগণ",
@@ -419,13 +418,7 @@ const catalog: Record<string, string> = {
   "{0} is behind pace": "{0} গতিতে পিছিয়ে",
   "{0} of {1} saved — about {2} behind. Set aside {3}/mo to reach it by {4}.": "{1}-এর মধ্যে {0} সঞ্চিত — প্রায় {2} পিছিয়ে। {4}-এর মধ্যে পৌঁছাতে মাসে {3} আলাদা রাখুন।",
   // spec 027 — reports
-  "Overview": "সারসংক্ষেপ",
-  "Reports": "রিপোর্ট",
-  "Dashboard view": "ড্যাশবোর্ড ভিউ",
   "Savings rate": "সঞ্চয়ের হার",
-  "Spending by category": "বিভাগ অনুযায়ী খরচ",
-  "No income or spending in this period yet.": "এই সময়ে এখনও কোনও আয় বা খরচ নেই।",
-  "Couldn’t load reports.": "রিপোর্ট লোড করা যায়নি।",
 
   // Widget system (spec 034)
   "Widgets": "উইজেট",
@@ -436,7 +429,6 @@ const catalog: Record<string, string> = {
   "Net summary": "নিট সারাংশ",
   "Spending pace": "খরচের গতি",
   "Recent activity": "সাম্প্রতিক কার্যকলাপ",
-  "Income minus spending for the month at a glance.": "এক নজরে মাসের আয় বিয়োগ ব্যয়।",
   "How your spending is tracking against the month.": "মাসের সাপেক্ষে আপনার খরচ কেমন চলছে।",
   "Category budgets and what is left in each.": "বিভাগভিত্তিক বাজেট এবং প্রতিটিতে কত বাকি।",
   "Progress toward your savings goals.": "আপনার সঞ্চয় লক্ষ্যের অগ্রগতি।",
@@ -460,6 +452,11 @@ const catalog: Record<string, string> = {
   "{0} visits": "{0} বার",
   "1 visit": "১ বার",
   "No transactions yet.": "এখনও কোনো লেনদেন নেই।",
+
+  // Savings-trends widget (spec 036 follow-up)
+  "Savings trends": "সঞ্চয়ের প্রবণতা",
+  "Your savings rate over recent months.": "সাম্প্রতিক মাসগুলোতে আপনার সঞ্চয়ের হার।",
+  "Not enough data yet.": "এখনও যথেষ্ট তথ্য নেই।",
 }
 
 export default catalog

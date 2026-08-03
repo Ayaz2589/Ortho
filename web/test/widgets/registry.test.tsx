@@ -3,8 +3,9 @@ import { describe, it, expect } from 'vitest'
 import { WIDGETS, WIDGET_SIZES, getWidget } from '@/lib/widgets/registry'
 
 // Spec 034: the registry is the single source of truth. These invariants keep it
-// safe to persist by id and guarantee the shipped set exercises every size (so the
-// board's packing is genuinely tested).
+// safe to persist by id and guarantee the shipped set exercises the height tiers
+// (so the board's packing is genuinely tested). `wide` remains a supported size in
+// the vocabulary but is intentionally unused since spec 036 (activity moved to lg).
 
 describe('widget registry', () => {
   it('is non-empty', () => {
@@ -29,9 +30,9 @@ describe('widget registry', () => {
     for (const w of WIDGETS) expect(WIDGET_SIZES).toContain(w.size)
   })
 
-  it('exercises every size at least once', () => {
+  it('exercises the shipped height tiers (sm/md/lg)', () => {
     const used = new Set(WIDGETS.map((w) => w.size))
-    for (const size of WIDGET_SIZES) expect(used).toContain(size)
+    for (const size of ['sm', 'md', 'lg'] as const) expect(used).toContain(size)
   })
 
   it('getWidget finds by id and returns undefined for unknown', () => {

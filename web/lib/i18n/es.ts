@@ -165,7 +165,6 @@ const catalog: Record<string, string> = {
   "Optional": "Opcional",
   "Original loan": "Préstamo original",
   "Original loan · {0}": "Préstamo original · {0}",
-  "Other": "Otro",
   "Over budget on {0}": "Presupuesto superado en {0}",
   "Owner": "Propietario",
   "Owners": "Propietarios",
@@ -419,13 +418,7 @@ const catalog: Record<string, string> = {
   "{0} is behind pace": "{0} va atrasada",
   "{0} of {1} saved — about {2} behind. Set aside {3}/mo to reach it by {4}.": "{0} de {1} ahorrado — unos {2} por detrás. Aparta {3}/mes para alcanzarla antes del {4}.",
   // spec 027 — reports
-  "Overview": "Resumen",
-  "Reports": "Informes",
-  "Dashboard view": "Vista del panel",
   "Savings rate": "Tasa de ahorro",
-  "Spending by category": "Gastos por categoría",
-  "No income or spending in this period yet.": "Aún no hay ingresos ni gastos en este período.",
-  "Couldn’t load reports.": "No se pudieron cargar los informes.",
 
   // Widget system (spec 034)
   "Widgets": "Widgets",
@@ -436,7 +429,6 @@ const catalog: Record<string, string> = {
   "Net summary": "Resumen neto",
   "Spending pace": "Ritmo de gasto",
   "Recent activity": "Actividad reciente",
-  "Income minus spending for the month at a glance.": "Ingresos menos gastos del mes de un vistazo.",
   "How your spending is tracking against the month.": "Cómo va tu gasto en lo que va del mes.",
   "Category budgets and what is left in each.": "Presupuestos por categoría y lo que queda en cada uno.",
   "Progress toward your savings goals.": "Progreso hacia tus metas de ahorro.",
@@ -460,6 +452,11 @@ const catalog: Record<string, string> = {
   "{0} visits": "{0} visitas",
   "1 visit": "1 visita",
   "No transactions yet.": "Aún no hay transacciones.",
+
+  // Savings-trends widget (spec 036 follow-up)
+  "Savings trends": "Tendencias de ahorro",
+  "Your savings rate over recent months.": "Tu tasa de ahorro en los últimos meses.",
+  "Not enough data yet.": "Aún no hay suficientes datos.",
 }
 
 export default catalog

@@ -167,7 +167,6 @@ const catalog: Record<string, string> = {
   "Optional": "선택 사항",
   "Original loan": "원금",
   "Original loan · {0}": "원래 대출 · {0}",
-  "Other": "기타",
   "Over budget on {0}": "{0} 예산 초과",
   "Owner": "소유자",
   "Owners": "소유자",
@@ -419,13 +418,7 @@ const catalog: Record<string, string> = {
   "{0} is behind pace": "{0} 진행이 늦어요",
   "{0} of {1} saved — about {2} behind. Set aside {3}/mo to reach it by {4}.": "{1} 중 {0} 저축 — 약 {2} 뒤처짐. {4}까지 달성하려면 매월 {3}씩 적립하세요.",
   // spec 027 — reports
-  "Overview": "개요",
-  "Reports": "리포트",
-  "Dashboard view": "대시보드 보기",
   "Savings rate": "저축률",
-  "Spending by category": "카테고리별 지출",
-  "No income or spending in this period yet.": "이 기간에 아직 수입이나 지출이 없습니다.",
-  "Couldn’t load reports.": "리포트를 불러오지 못했습니다.",
 
   // Widget system (spec 034)
   "Widgets": "위젯",
@@ -436,7 +429,6 @@ const catalog: Record<string, string> = {
   "Net summary": "순수지 요약",
   "Spending pace": "지출 속도",
   "Recent activity": "최근 활동",
-  "Income minus spending for the month at a glance.": "한눈에 보는 이달의 수입에서 지출을 뺀 값.",
   "How your spending is tracking against the month.": "이달 지출이 어떻게 진행되고 있는지.",
   "Category budgets and what is left in each.": "카테고리별 예산과 각 항목의 잔액.",
   "Progress toward your savings goals.": "저축 목표를 향한 진행 상황.",
@@ -460,6 +452,11 @@ const catalog: Record<string, string> = {
   "{0} visits": "{0}회 방문",
   "1 visit": "1회 방문",
   "No transactions yet.": "아직 거래가 없습니다.",
+
+  // Savings-trends widget (spec 036 follow-up)
+  "Savings trends": "저축 추이",
+  "Your savings rate over recent months.": "최근 몇 개월간의 저축률.",
+  "Not enough data yet.": "아직 데이터가 충분하지 않습니다.",
 }
 
 export default catalog

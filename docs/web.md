@@ -52,8 +52,10 @@ web/app/
 - **Four destinations only** (Dashboard/Transactions/Housing/Settings) — identical TABS arrays
   duplicated in `components/Sidebar.tsx` and `components/TabBar.tsx`. `/budgets` and `/goals` are
   reached from Settings › Planning, not tabs. `/plaid-oauth` is the web bank-OAuth return route.
-- **Reports (spec 027) is a Dashboard MODE, not a route** — `ModeSwitch` overview↔reports inside
-  `dashboard/page.tsx`; state lives in the page so it survives toggles.
+- **Reports mode was removed (spec 036)** — the Overview/Reports toggle (`ModeSwitch`) and the
+  fetched `ReportsView`/`useReportsData` UI are gone; the savings-rate view now lives on the board as
+  the local-compute `savings-trends` widget. The Dashboard is a single view. (The pure aggregate/
+  reports helpers under `lib/api/aggregates.ts` + `lib/reports/*` are retained + still tested.)
 
 ## 3. Data layer — `web/lib/store.tsx` (~1500 lines, the whole client data layer)
 
@@ -180,17 +182,20 @@ for extensionless paths, which infinite-loops signed-out native launches.
   `DashboardDesktop` chunk and no `useIsExpanded` branch. Responsiveness is pure CSS (`.ow-board`
   steps its column count by breakpoint; `grid-auto-flow: dense` + equal-height rows so widgets pack
   with no empty cells or blank bands). See §9.
-- **Widgets are data-wired with a shared time scope (specs 035–041)**: the registry
-  (`lib/widgets/registry.tsx`) is the single source of truth; each of the six widgets has a
-  **propless** body under `components/widgets/bodies/<Name>Body.tsx` that reads household data from
-  `useApp()` and the active window from `useDashboardScopeContext()`
-  (`lib/widgets/DashboardScopeContext.tsx` wraps the overview and calls `useDashboardScope()` ONCE, so
-  the revived `MonthPicker` + `RangePicker` and every widget share one month/range — no desync). Bodies
-  reuse the named money helpers (`budgetStatusForMonth`, `goalProgress`/`goalPacing`,
-  `contributionsByGoal`) rather than re-implementing math; loss is never red. Only **spending-pace**
-  charts — a lazy recharts area leaf (`components/widgets/charts/SpendingPaceChart.tsx` via
-  `next/dynamic`); every other widget is CSS-only. `activity` is a most-recent-6 live feed that ignores
-  the scope window. Bundle guard (`test/bundle/no-eager-recharts.test.ts`) now also covers
+- **Widgets are data-wired with a shared time scope (specs 035–036)**: the registry
+  (`lib/widgets/registry.tsx`) is the single source of truth; each widget has a **propless** body
+  under `components/widgets/bodies/<Name>Body.tsx` that reads household data from `useApp()` and the
+  active window from `useDashboardScopeContext()` (`lib/widgets/DashboardScopeContext.tsx` wraps the
+  overview and calls `useDashboardScope()` ONCE, so the `MonthPicker` + `RangePicker` and every widget
+  share one month/range — no desync). Shipped widgets: `savings-trends` (savings rate/month, reuses
+  `savingsRate` + the `SavingsRateChart` leaf), `spending-pace` (the one recharts area leaf,
+  `components/widgets/charts/SpendingPaceChart.tsx` via `next/dynamic`), `budgets`, `goals`,
+  `top-merchants`, and `activity` (a most-recent-6 live feed that ignores the scope window). Bodies
+  reuse named money helpers (`budgetStatusForMonth`, `goalProgress`/`goalPacing`, `savingsRate`)
+  rather than re-implementing math; loss is never red.
+- **Net summary is baked into the overview, not a widget** (`components/dashboard/NetSummaryHero.tsx`):
+  the most prominent element — income − expenses over the shared window, rendered card-less above the
+  board, always shown (not toggleable). Bundle guard (`test/bundle/no-eager-recharts.test.ts`) covers
   `components/widgets`.
 - Dialog vocabulary: desktop `components/web/Drawer.tsx` (right slide-out, portal, scrim + Escape +
   focus trap via `lib/useFocusTrap.ts`, scroll lock). Opt-in props: `fullBleedOnMobile` (full-screen

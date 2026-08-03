@@ -167,7 +167,6 @@ const catalog: Record<string, string> = {
   "Optional": "任意",
   "Original loan": "ローン元本",
   "Original loan · {0}": "ローン元本 · {0}",
-  "Other": "その他",
   "Over budget on {0}": "{0}で予算超過",
   "Owner": "オーナー",
   "Owners": "所有者",
@@ -419,13 +418,7 @@ const catalog: Record<string, string> = {
   "{0} is behind pace": "{0}はペースが遅れています",
   "{0} of {1} saved — about {2} behind. Set aside {3}/mo to reach it by {4}.": "{1}のうち{0}を貯蓄 — 約{2}遅れています。{4}までに達成するには月{3}を積み立ててください。",
   // spec 027 — reports
-  "Overview": "概要",
-  "Reports": "レポート",
-  "Dashboard view": "ダッシュボード表示",
   "Savings rate": "貯蓄率",
-  "Spending by category": "カテゴリ別支出",
-  "No income or spending in this period yet.": "この期間の収入も支出もまだありません。",
-  "Couldn’t load reports.": "レポートを読み込めませんでした。",
 
   // Widget system (spec 034)
   "Widgets": "ウィジェット",
@@ -436,7 +429,6 @@ const catalog: Record<string, string> = {
   "Net summary": "収支サマリー",
   "Spending pace": "支出ペース",
   "Recent activity": "最近のアクティビティ",
-  "Income minus spending for the month at a glance.": "今月の収入から支出を差し引いた概要。",
   "How your spending is tracking against the month.": "今月の支出の進み具合。",
   "Category budgets and what is left in each.": "カテゴリー別の予算と各残額。",
   "Progress toward your savings goals.": "貯蓄目標への進捗。",
@@ -460,6 +452,11 @@ const catalog: Record<string, string> = {
   "{0} visits": "{0} 回",
   "1 visit": "1 回",
   "No transactions yet.": "まだ取引がありません。",
+
+  // Savings-trends widget (spec 036 follow-up)
+  "Savings trends": "貯蓄の推移",
+  "Your savings rate over recent months.": "近数か月の貯蓄率。",
+  "Not enough data yet.": "まだ十分なデータがありません。",
 }
 
 export default catalog
