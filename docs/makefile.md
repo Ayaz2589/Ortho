@@ -41,8 +41,11 @@ Orchestrated by `web/scripts/import/cli.ts` (301 lines):
 `extract → detect → parse → reconcile → review → dedupe → confirm → persist`. Pure engine modules
 in `web/scripts/import/engine/` (18: args, categorize, csv, dates, dedupe, detectBank, exclusions,
 extractText, filters, money, ownerMatch, readInput, reconcile, render, split, toTransaction, types,
-validate); bank profiles in `profiles/` (`td-bank.ts`, `apple-card.ts`, `amex-gold.ts` — PDF;
-`chase-csv.ts` — CSV; registry `profiles/index.ts` exports `PROFILES`).
+validate); bank profiles in `profiles/` (12 files). Two registries: `profiles/index.ts` exports
+`PROFILES = [tdBank, chaseCsv, appleCard, amexGold]` — the CLI's `make ingest` set (PDF `td-bank`/
+`apple-card`/`amex-gold` + CSV `chase-csv`); `profiles/csv-index.ts` exports `CSV_PROFILES` (7 banks:
+`chase`, `amex`, `citi`, `capital-one`, `bofa`, `wells-fargo`, `td`), a **browser-only** registry
+consumed by `web/lib/csv/useCsvImport.ts` (spec 029), **not** by `make ingest`.
 
 - **Detection** (`detectBank.ts`): every profile's `detect(text)` runs; exactly one match wins.
   Zero → exit 2 "unknown"; many → exit 2 "ambiguous"; bad `--bank` override → exit 1.
@@ -120,15 +123,15 @@ Features move `specify → plan → tasks → implement` (skills `speckit-specif
 taskstoissues/agent-context-update` — 10 total), producing `specs/NNN-short-name/` with spec.md,
 plan.md, research.md, data-model.md, quickstart.md, tasks.md, contracts/, checklists/.
 
-- **32 spec dirs**: 001–026 (016/017 skipped; two dirs share prefix 025) plus **seven** `027-*`
-  features — numbering is no longer strictly unique. Spec `**Status**` headers are unreliable
+- **42 spec dirs**: 001–035 (016/017 skipped; two dirs share prefix 025, three share prefix 032)
+  plus **seven** `027-*` features — numbering is no longer strictly unique. Spec `**Status**` headers are unreliable
   (most shipped specs still say "Draft"); derive ship state from merge commits/PRs.
 - **Constitution gate**: every `plan.md` checks `.specify/memory/constitution.md` — **v2.0.0**
   (amended 2026-07-09): web/TS is the single canonical implementation; principles I tokens-only
   design, II calm-over-dense (NON-NEGOTIABLE), III right form factor per canvas, IV plainspoken
   voice/money formatting, V accessible, VI test-driven & regression-safe (NON-NEGOTIABLE — money/
   date math never ships uncovered; golden vectors are a single-implementation regression suite).
-- `.specify/feature.json` = `{"feature_directory":"specs/027-transaction-tags"}` (last-run
+- `.specify/feature.json` = `{"feature_directory":"specs/035-dashboard-scope-foundation"}` (last-run
   feature; nothing is currently in-flight). `init-options.json`: speckit `0.10.3.dev0`,
   integration claude, `script: sh`. `scripts/bash/`: create-new-feature.sh, setup-plan.sh,
   setup-tasks.sh, check-prerequisites.sh, common.sh. `templates/`: 5 (spec/plan/tasks/checklist/
@@ -137,11 +140,11 @@ plan.md, research.md, data-model.md, quickstart.md, tasks.md, contracts/, checkl
 
 ## 7. `.claude/` and root files
 
-- `.claude/skills/` (tracked) — **16 skills**: the 10 `speckit-*`, `ortho-web` (web design-system
-  guide — read before web UI work), `remember` + `get-up-to-speed` (session continuity pair),
-  `docker-sandbox` (SKILL.md + bootstrap-sandbox.sh + set-github-secret.sh), `kill-sandbox`,
-  `create-pr` (templated PR bodies via `.claude/scripts/pr-build-body.sh`; saves prefs to
-  `.claude/pr-config.md` on first run).
+- `.claude/skills/` (tracked) — **17 skills**: the 10 `speckit-*`, `ortho-web` (web design-system
+  guide — read before web UI work), `explain` (code/concept walkthrough), `remember` +
+  `get-up-to-speed` (session continuity pair), `docker-sandbox` (SKILL.md + bootstrap-sandbox.sh +
+  set-github-secret.sh), `kill-sandbox`, `create-pr` (templated PR bodies via
+  `.claude/scripts/pr-build-body.sh`; saves prefs to `.claude/pr-config.md` on first run).
 - `.claude/research/` — 3 memos dated 2026-07-16 (bank-aggregation feasibility,
   bank-statement-upload, plaid-connect).
 - `.claude/context-summaries/` — gitignored session handoffs (`latest.md` = most recent); a fresh

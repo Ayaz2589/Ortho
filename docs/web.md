@@ -35,7 +35,8 @@ web/app/
                         signed-in users to /dashboard on mount; builds its own t()
   (app)/layout.tsx      AppStateProvider + Shell + biometric lock overlay + paywall gate
   (app)/dashboard, transactions{,/new,/edit}, housing{,/new,/edit}, budgets, goals,
-        settings{,/household,/linked-banks,/data}, plaid-oauth
+        settings{,/household,/planning,/cards,/deposit-accounts,/subscription,/currency,
+                 /language,/appearance,/widgets,/data,/account,/linked-banks}, plaid-oauth
 ```
 
 - **Settings › Data (spec 032)** — download household data (transactions + housing) as a dual-layer
@@ -70,19 +71,21 @@ ensure `users` profile row (insert-if-absent, never upsert) → find-or-create h
 account-holder Person row + one-time fold of legacy localStorage `localUsers` → `ensure_entitlement`
 RPC kicked off eagerly in parallel → `loadAll`.
 
-**`loadAll`**: one `Promise.all` of **17 reads** (users, household_people, transactions,
+**`loadAll`**: one `Promise.all` of **18 reads** (users, household_people, transactions,
 transaction_shares, cards, properties, mortgage_info, lease_info, units, rental_payments, budgets,
-goals, goal_contributions, linked_institutions, linked_accounts, tags, transaction_tags).
+goals, goal_contributions, linked_institutions, linked_accounts, tags, transaction_tags,
+deposit_accounts).
 - Column projection on the 3 high-volume reads (users/transactions/shares) — never `select('*')`
   there. The test memory client ignores column lists, so a missing column only surfaces at runtime.
 - **Fail-loud vs fail-open**: the 11 core reads throw (error banner + `bootstrapFailed` ⇒ Retry);
-  the 6 newer reads (goals, goal_contributions, linked_*, tags, transaction_tags) treat
+  the 7 newer reads (goals, goal_contributions, linked_*, tags, transaction_tags, deposit_accounts)
+  treat
   missing-table errors (`PGRST205`/`42P01`) as empty — the deploy-before-migrate window (Vercel
   ships `main` before migrations apply). `ensure_entitlement` similarly fails OPEN on `PGRST202`
   (missing RPC) with a null entitlement. **New additive tables must join the fail-open list** or
   they take bootstrap down.
 - **Typed seam**: every read is asserted to a hand-written `*Row` type in `lib/supabase/rows.ts`
-  (17 row types; `supabase gen types` not runnable in sandboxes) then assigned to domain types
+  (18 row types; `supabase gen types` not runnable in sandboxes) then assigned to domain types
   (`lib/types.ts`). Keep `rows.ts`, the projection lists, and `types.ts` in lockstep.
 - **Rehydration**: shares → `owner_ids` + per-person `shares` map. A shareless transfer gets EMPTY
   owners (directional, never creator-owns-all); shareless non-transfer falls back to the creator at
@@ -102,6 +105,13 @@ goals, goal_contributions, linked_institutions, linked_accounts, tags, transacti
   then re-insert, each `orThrow`'d; caller rolls back optimistic state).
 - Budgets upsert on `(household_id, category)`; people soft-delete via `removed_at`;
   `hapticConfirm`/`hapticDestructive` fire on tap, before server ack (by design, spec 021 FR-012).
+- **Deposit accounts (spec 033)**: `depositAccounts` state + `addDepositAccount`/`deleteDepositAccount`
+  writes to the household-scoped `deposit_accounts` table (mirrors `cards`) in `store.tsx`. The income
+  **"Deposit to" dropdown** on the transaction form reads the configured account names
+  (`components/web/TxForm.tsx`, `incomeSources = depositAccounts.map(a => a.name)`); accounts are
+  managed in Settings › Deposit Accounts (`AddDepositAccountModal`). The old hardcoded
+  `INCOME_SOURCES` constant is gone; `transactions.source` still stores the chosen name (no tx schema
+  change).
 
 **Session lifecycle**: `onAuthStateChange` reacts only to `SIGNED_OUT` (clears all state incl.
 pending Plaid session, hard-navigates via `signInHref()`). On Capacitor, an `appStateChange`
@@ -167,8 +177,7 @@ for extensionless paths, which infinite-loops signed-out native launches.
   error precedence is unchanged — a skeleton never masks a lapsed/locked/failed state. List/table
   surfaces are sized from the previous successful load's item count via `lib/skeletonCounts.ts`
   (`readSkeletonCount`/`writeSkeletonCount`, validated + capped at 24); the store records
-  `transactions`/`goals`/`housing`/`tags` after `loadAll`, and `useReportsData` records
-  `reportsSavings`/`reportsCategories` on `ready` (the two Reports views also render skeletons).
+  `transactions`/`goals`/`housing`/`tags` after `loadAll`.
 
 ## 6. Responsive vs desktop composition
 
@@ -225,7 +234,6 @@ for extensionless paths, which infinite-loops signed-out native launches.
 | `lib/useDashboardRange.ts` | `useDashboardScope()` — single time-scope source, mobile + desktop; relative range persisted (`dashboardRange`), selected month transient; windows via vectored `monthBounds` |
 | `lib/useTransactionFilters.ts` | single filter-state source; pure engine `lib/transactionFilters.ts`; tag options exclude orphan tags |
 | `lib/useMonthAccordion.ts` | default-open = current month; any active filter force-expands all months |
-| `lib/useReportsData.ts` | spec 027 — first live consumer of `lib/api/aggregates.ts` (`fetchCategoryTotals` + per-month `fetchMonthSummary`); fetched only when Reports mode is open; errors never break Overview |
 | `lib/useMobileFormPage.ts` / `lib/useFocusTrap.ts` / `lib/useMediaQuery.ts` | see §6 |
 
 `lib/api/aggregates.ts`: dashboard widgets deliberately stay local-compute (spec 023 D15 — RPC
@@ -398,8 +406,10 @@ xcodebuild build -project ios/App/App.xcodeproj -scheme App \
 ## 13. Bundle discipline (spec 022)
 
 Deferred via `next/dynamic` so they leave the initial-load bundle: recharts charts (`CategoryPie`,
-`SavingsRateChart`, `DailyTrendChart`, `AmortizationChart` — guard
-`test/bundle/no-eager-recharts.test.ts`), the scan pipeline (loads on scan initiation — guard
+`SavingsRateChart`, `SpendingPaceChart` (`components/widgets/charts/`, spec 037), `AmortizationChart`
+— guard `test/bundle/no-eager-recharts.test.ts`; `DailyTrendChart` was removed in spec 034, and
+`CategoryPie` still exists but is no longer imported by any page), the scan pipeline (loads on scan
+initiation — guard
 `test/scan/scan-deferred.test.ts`), the 3 desktop compositions (guard
 `test/web/form-factor-split.test.ts`), i18n catalogs (guard `test/i18n/no-eager-catalog.test.ts`),
 and `EmbeddedPlaidLink`. Measure: `npm run build && npm run measure:bundle` (`--json`/`--baseline`
@@ -466,7 +476,7 @@ opaque). Contract: `specs/022-web-bundle-optimization/contracts/bundle-measureme
   td-bank, `toTransaction.test.ts` with the A4 sort-order lock).
 - CI: `.github/workflows/web-ci.yml` — job 1 typechecks + tests `services/billing`,
   `services/aggregation` (each incl. the `_shared/` byte-copy drift lock), then web `tsc --noEmit`
-  + `npm test` + the vector-drift gate; job 2 runs `deno check` + `deno test` on the 7 edge-function
+  + `npm test` + the vector-drift gate; job 2 runs `deno check` + `deno test` on the 10 edge-function
   entrypoints. Keep `npx tsc --noEmit` clean — a type error fails `next build` and there is no
   other build gate.
 
@@ -516,8 +526,8 @@ npx tsc --noEmit         # CI gate
   core, by contract).
 - No single-active-platform lock (feature 010): iOS + web sign-ins coexist; sessions age out at the
   30-day Supabase timebox.
-- `web/README.md` is untouched create-next-app boilerplate; the generated `web/coverage/`,
-  `web/out/`, `tsconfig.tsbuildinfo` are artifacts.
+- `web/README.md` is the Ortho web quick-start (scripts, architecture, route map — points here for
+  the deep dive); the generated `web/coverage/`, `web/out/`, `tsconfig.tsbuildinfo` are artifacts.
 
 ## 18. Cross-links
 

@@ -31,7 +31,7 @@ services/aggregation/src/            ← pure, runtime-agnostic core (zero deps,
 ├── normalize.ts     amountToCents (money!), dedupeKey, ledgerId, hashes
 ├── simplefin.ts     decodeSetupToken, deriveProviderItemId, buildAccountsQuery/Window,
 │                    parseSimpleFinAccounts, toUpsertPayload, institutionLabel
-├── simplefinClient.ts  FetchLike-injected client: parseAccessUrl, claim, getAccounts
+├── simplefinClient.ts  SimpleFinFetch-injected client: parseAccessUrl, claim, getAccounts
 ├── types.ts         LinkedProvider ('plaid'|'simplefin'), TransactionKind, SimpleFIN shapes
 ├── index.ts         the barrel (edge fns + web import from here)
 └── deprecated/      plaid.ts, plaidClient.ts (contained; re-exported from index.ts)
