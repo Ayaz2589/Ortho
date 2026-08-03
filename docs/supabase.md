@@ -5,7 +5,7 @@ secrets, or the migrations CI lane. Companion docs: [web.md](./web.md) (clients)
 [finance.md](./finance.md) (client-side money math), [ios.md](./ios.md) (Capacitor shell + deploy).
 
 `supabase/` is the single shared backend for all surfaces: versioned Postgres migrations, RLS as
-the real authorization layer (clients hold only the anon key), 11 RPCs, 7 Deno edge functions, and
+the real authorization layer (clients hold only the anon key), 13 RPCs, 10 Deno edge functions, and
 the CLI config. All money is integer **USD cents** (`bigint`, `>= 0` checks); display currency is
 client-only. The DB stores and aggregates; shared business math lives in `web/lib/finance/` pinned
 by `shared/test-vectors/`.
@@ -19,8 +19,8 @@ a public value (it appears in the client URL) — in CI it is a repo **Variable*
 supabase/
 ├── config.toml        # ports, auth, session timebox, [functions.stripe-webhook] verify_jwt=false
 ├── seed.sql           # intentionally EMPTY (db reset = migrations only, no data)
-├── migrations/        # 15 files — the entire schema in timestamp order (§3)
-├── functions/         # 7 Deno edge functions + _shared/ (§7)
+├── migrations/        # 19 files — the entire schema in timestamp order (§3)
+├── functions/         # 10 Deno edge functions + _shared/ (§7)
 └── tests/upsert_transaction_authz.sql   # SQL authz regression test for the money-write RPC (§9)
 ```
 
@@ -45,9 +45,9 @@ manually (Dashboard → Auth → Sessions → time-box = 720h, or `supabase conf
 config.toml == production.
 
 `[functions.stripe-webhook] verify_jwt = false` is the **only** JWT-off function — the Stripe
-signature is its auth. All 6 others keep `verify_jwt = true`.
+signature is its auth. All 9 others keep `verify_jwt = true`.
 
-## 3. Migrations — 15 files
+## 3. Migrations — 19 files
 
 | File | Effect |
 |---|---|
@@ -66,6 +66,10 @@ signature is its auth. All 6 others keep `verify_jwt = true`.
 | `20260718120001_transaction_tags.sql` | `transactions.notes`; `tags` + `transaction_tags`; member RLS; grants |
 | `20260718120002_upsert_transaction_atomic.sql` | `upsert_transaction(jsonb, jsonb)` — atomic tx+shares write, SQL-enforced shares-sum invariant |
 | `20260719120000_budget_rollover.sql` | `budget_type` enum; `budgets.budget_type` (default `'fixed'`) + nullable `rollover_cap_cents` |
+| `20260719130000_simplefin_provider_enum.sql` | `ALTER TYPE linked_provider ADD VALUE 'simplefin'` — isolated enum-add (spec 028; used in the next migration) |
+| `20260719130001_simplefin_sync.sql` | SimpleFIN sync state: `linked_institutions.last_synced_at`/`last_manual_refresh_at`/`sync_cursor` + `linked_accounts.currency`; the two SimpleFIN service-role RPCs `complete_simplefin_link()` + `mark_simplefin_synced()` |
+| `20260724120000_category_expansion.sql` | 28 idempotent `ADD VALUE` on `transaction_category` (spec 031 subcategories) |
+| `20260730120000_deposit_accounts.sql` | `deposit_accounts` table (mirrors `cards`), member RLS (spec 033) |
 
 **Conventions**: heavily-commented headers naming the spec; `snake_case`; unprefixed enum types;
 indexes `<table>_<cols>_idx`; `timestamptz` for transactions, plain `date` for housing/goals dates.
@@ -82,12 +86,14 @@ job (§8) now rejects duplicate prefixes and malformed filenames on every PR.
 
 - `role`: `owner | member` (`admin` deliberately deferred)
 - `transaction_kind`: `expense | income | transfer`
-- `transaction_category` (12): `coffee groceries dining subs fuel rent health income transit
-  utilities entertainment transfer`
+- `transaction_category` (40): 10 base (`coffee groceries dining subs fuel rent health income
+  transit utilities`) + `entertainment` (20260522) + `transfer` (20260618) + 28 spec-031
+  subcategories (20260724). The two-level display taxonomy (expense/income subcats grouped under
+  parents) is derived **client-side** in `web/lib/categories.ts` — the enum is a flat value list.
 - `property_kind`: `primary_home | multifamily | rental`
 - `entitlement_status`: `trialing | active | past_due | paused | unpaid | canceled | admin`
 - `billing_plan`: `monthly | yearly`
-- `linked_provider`: `plaid` · `linked_institution_status`: `active | disconnected` ·
+- `linked_provider`: `plaid | simplefin` (spec 028) · `linked_institution_status`: `active | disconnected` ·
   `link_session_status`: `pending | completed | abandoned` (no `expired` — derived from
   `expires_at` at read time)
 - `goal_kind`: `savings | debt_payoff` · `budget_type`: `fixed | flex | non_monthly`
@@ -96,7 +102,7 @@ job (§8) now rejects duplicate prefixes and malformed filenames on every PR.
 Clients hand-mirror these: `web/lib/types.ts` (domain) + `web/lib/supabase/rows.ts` (row seam) —
 no generated types. Add a Postgres enum value ⇒ update both.
 
-### Tables (25)
+### Tables (26)
 
 **Identity / household**
 - `users` — `id` PK = `auth.uid()` (FK `auth.users` cascade), `name`, `initial`, `color_key`;
@@ -146,11 +152,17 @@ no generated types. Add a Postgres enum value ⇒ update both.
 - `billing_events` — append-only; `event_id` UNIQUE = webhook idempotency key; `outcome`;
   raw `payload jsonb`.
 
-**Plaid (spec 024 — connect-only; no balances/transactions ever stored)**
+**Provider linking (Plaid spec 024 + SimpleFIN spec 028)** — `linked_institutions` /
+`linked_accounts` / `linked_institution_secrets` are **shared** by both providers (keyed on
+`provider`). Plaid is connect-only (no balances/transactions ever stored); **SimpleFIN DOES store
+transactions** — its sync writes through the same atomic `upsert_transaction` path (§5) as manual
+entry.
 - `linked_institutions` — UNIQUE `(provider, provider_item_id)` (idempotency anchor), `status`,
-  `disconnected_at`.
+  `disconnected_at`; SimpleFIN sync state `last_synced_at` (window watermark), `last_manual_refresh_at`
+  (manual-refresh cooldown clock), `sync_cursor` (reserved — SimpleFIN is date-window, no delta cursor today).
 - `linked_accounts` — UNIQUE `(institution_id, provider_account_id)`; display metadata only
-  (name, mask, type/subtype as text — never branched on).
+  (name, mask, type/subtype as text — never branched on), plus `currency` (SimpleFIN reports a
+  per-account ISO-4217 currency; display-only, ledger stays USD cents).
 - `linked_institution_secrets` — institution_id PK → `vault_secret_id` (row in `vault.secrets`).
 - `plaid_link_sessions` — `mode in ('embedded','hosted')`, `link_token` (server-side only),
   `status`, `expires_at` (~30 min).
@@ -161,7 +173,7 @@ no generated types. Add a Postgres enum value ⇒ update both.
   Progress = client-computed sum of contributions (`web/lib/finance/goals.ts`).
 - `goal_contributions` — `amount_cents > 0` (removal = row delete, never negative), `date`, `note`.
 
-## 5. RPCs (11, all `SECURITY DEFINER` + `set search_path = public`)
+## 5. RPCs (13, all `SECURITY DEFINER` + `set search_path = public`)
 
 **Client-callable** (EXECUTE revoked from public, granted to `authenticated`; each re-checks auth
 internally):
@@ -191,6 +203,17 @@ plus `complete_plaid_link(session_id, item_id, institution_id, name, access_toke
 upserts + session flip, in ONE transaction (the Plaid public token is single-use; a mid-persist
 crash would otherwise strand an unhealable half-linked institution).
 
+**service_role-only SimpleFIN** (spec 028; both revoke from public, grant EXECUTE to `service_role`
+— migration 20260719130001):
+- `complete_simplefin_link(household_id, created_by, provider_item_id, institution_name,
+  access_url, accounts jsonb) → uuid` — atomic institution upsert + Vault secret (the SimpleFIN
+  Access URL) + account upserts, in ONE transaction. No session row (unlike Plaid — the SimpleFIN
+  claim is synchronous); `ON CONFLICT (provider, provider_item_id)` reactivates + replaces the
+  secret + refreshes accounts, so re-claiming the same Access URL is safe.
+- `mark_simplefin_synced(institution_id, synced_at, manual boolean default false)` — advances
+  `last_synced_at` (the sync watermark / next window start); when `manual` also stamps
+  `last_manual_refresh_at` (the manual-refresh cooldown clock read by the edge function).
+
 **RLS helpers** (SECURITY DEFINER to break `household_members` self-referencing recursion — never
 inline a `household_members` subquery in its own policy): `is_household_member`,
 `is_household_owner`, `is_property_household_member`, `is_household_record_owner`. Plus
@@ -218,16 +241,22 @@ pre-fix policy let any authenticated user who learned a household UUID self-inse
 ownership check must be a SECURITY DEFINER helper — an inline subquery runs under the caller's RLS
 and breaks the household-creation bootstrap.
 
-**Vault**: the Plaid `access_token` lives only in `vault.secrets` (extension enabled in the
-plaid_connect migration); `linked_institution_secrets` maps institution → vault row. PostgREST does
-not expose the `vault` schema, and the 3 wrapper RPCs grant EXECUTE to `service_role` alone — a
-leaked anon key cannot reach a bank credential.
+**Vault**: the provider secret — Plaid `access_token` OR the SimpleFIN Access URL (with embedded
+Basic-Auth) — lives only in `vault.secrets` (extension enabled in the plaid_connect migration);
+`linked_institution_secrets` maps institution → vault row. The 3 wrapper RPCs are provider-agnostic
+(keyed on `institution_id`, reused as-is by SimpleFIN — migration 20260719130001). PostgREST does
+not expose the `vault` schema, and those wrappers grant EXECUTE to `service_role` alone — a leaked
+anon key cannot reach a bank credential.
 
 **Explicit table grants (regime shift)**: newer Supabase/PG17 stacks no longer auto-grant DML on
 new public tables to anon/authenticated/service_role (older hosted projects are permissive).
 Migrations 20260717120000 / 20260718120000 / 20260718120001 grant explicitly. **Every new table
 migration must include explicit grants** or it can pass locally-as-postgres and fail for real
-clients.
+clients. **Latent gap to verify (unverified):** the `deposit_accounts` migration (20260730120000)
+adds a table with RLS but **no explicit GRANT statements** — so this rule is currently aspirational,
+not enforced. It may work only because the hosted project still auto-grants (older permissive
+project) or because the CLI import path uses the service role; confirm real anon/authenticated DML
+on `deposit_accounts` before relying on it.
 
 ## 7. Edge functions (`supabase/functions/`, Deno)
 
@@ -258,6 +287,13 @@ not_household_member, provider_unreachable, session_not_found, session_not_owned
   answer `exchange_failed`. Helper `completion.ts` + co-located test.
 - `plaid-disconnect` — POST `{institutionId}` → revoke at Plaid FIRST, then mark disconnected
   locally; idempotent; unreachable provider changes nothing (no zombie connections).
+- `simplefin-claim` — POST → completes a SimpleFIN connection from a submitted Access URL via
+  `complete_simplefin_link` (synchronous; no session table). Household resolved server-side.
+- `simplefin-sync` — POST → date-window transaction sync through the atomic `upsert_transaction`
+  path; advances the watermark via `mark_simplefin_synced`. Helper `sync-logic.ts` + co-located
+  test (`sync-logic.test.ts`).
+- `simplefin-disconnect` — POST `{institutionId}` → mirrors `plaid-disconnect` (revoke/forget then
+  mark disconnected locally; idempotent).
 
 Stripe API version pinned `'2026-06-24.dahlia'` in checkout/portal/plans/webhook, in lockstep with the
 webhook endpoint config and `services/billing/test` fixtures. SDKs: `npm:stripe@22`,
@@ -275,6 +311,7 @@ Development was decommissioned 2024); plus platform-injected `SUPABASE_URL` / `S
 supabase functions deploy stripe-webhook --no-verify-jwt
 supabase functions deploy billing-checkout billing-portal billing-plans
 supabase functions deploy plaid-link-token plaid-exchange plaid-disconnect
+supabase functions deploy simplefin-claim simplefin-sync simplefin-disconnect
 ```
 
 ### `_shared/` sync + services cores
@@ -294,7 +331,8 @@ supabase/functions/_shared/
   throws; worst case `'unrecognized'`).
 - `services/aggregation` (`@ortho/aggregation-core`): `types.ts` (mirrors the Postgres enums),
   `plaid.ts` (request builders + null-returning parsers), `plaidClient.ts` (fetch-injected REST
-  client, no globals).
+  client, no globals); SimpleFIN adds `simplefin.ts` + `simplefinClient.ts` + `base64.ts` (Access
+  URL Basic-Auth). Same drift-lock (below) applies to all of them.
 - **Sync**: `npm run sync:functions` in each service dir (rm-and-recopy of `src/*.ts` into
   `_shared/<name>/`). Supabase's deploy bundler only reliably follows imports inside
   `supabase/functions/`; source of truth is always `services/*/src`.

@@ -9,7 +9,15 @@
 > Capacitor iOS shell of the same codebase. The frozen native app's
 > [`ios-ci.yml`](.github/workflows/ios-ci.yml) is manual-trigger-only (see below).
 
-> **Last reconciled: 2026-07-19, spec 027.** Spec 027 added several web-only surfaces: new vectored
+> **Last reconciled: 2026-08-03, spec 035.** Specs 030–035 are all **web-only** (no CLI path) and
+> deliberately unvectored: holistic seed data + env-gated bypass auth, the two-level category →
+> subcategory taxonomy (`web/lib/categories.ts`, spec 031), PDF data export/import (`web/lib/dataFile/`,
+> spec 032), user-configurable **deposit accounts** replacing the old hardcoded `INCOME_SOURCES`
+> constant (`deposit_accounts` table + `web/lib/store.tsx`, spec 033), the rebuilt **widget-system
+> dashboard** (spec 034 — the old "Overview | Reports" mode is gone), and the **shared dashboard
+> scope** every widget reads (spec 035). None add a golden vector or a CLI code path; see the
+> web-only matrix rows and "Surface-specific by design" below. Earlier, spec 027 added several
+> web-only surfaces: new vectored
 > money engines — **Budget rollover & bucket types** (`lib/finance/budgets.ts` →
 > `budget-rollover.json`; also makes the budget insight Rule 3 rollover-aware against the derived
 > effective limit, byte-identical for the `fixed` default) and **Savings & debt-payoff goals**
@@ -94,7 +102,7 @@ ever tracked between them, is in
 | Transaction + shares data contract | ✅ | ✅ | columns mirrored (incl. `paid_by`, `notes`) |
 | Member reimbursement / settle-up balance | ✅ | — | `lib/balances.ts` → `member-balance.json` (+ `paid_by`, `transfer` kind) |
 | Atomic parent+shares write | ✅ (RPC) | ✅ (RPC) | `upsert_transaction(p_tx, p_shares)` — a single-transaction Postgres RPC (`supabase/migrations/20260718120002_upsert_transaction_atomic.sql`, spec 027) with a DB-level guarantee that shares sum to the parent amount; execute granted only to `authenticated`/`service_role`. **Both** write paths call it: web `web/lib/store.tsx` and CLI `web/scripts/import/db/persist.ts` — the write path itself is now shared. Supersedes spec 023/B7's client-side compensation. The migration counts pre-existing share-less rows (NOTICE) but deliberately does not repair them. |
-| Category / kind / source taxonomy | ✅ | ✅ | Postgres `transaction_category`/`transaction_kind` enums (+ `transfer`) / `lib/types.ts` |
+| Category / kind / source taxonomy | ✅ | ✅ | Postgres `transaction_category` (40 values — 39 pickable + non-pickable `transfer`) / `transaction_kind` enums / `lib/types.ts` (`PICKABLE_CATEGORIES`); the two-level category → subcategory **display** taxonomy (29 expense + 10 income subcats, spec 031) lives in `lib/categories.ts` |
 | Date storage & timezone | ✅ | ✅ | noon-UTC transaction timestamps; date-only columns = local calendar day |
 | Full-UI localization (6 languages) | ✅ | — (English) | `web/lib/i18n/*` |
 | Transaction filtering / listing | ✅ | ✅ | `lib/transactionFilters.ts` → `transaction-filters.json` (CLI runs the same function in-process) |
@@ -103,6 +111,9 @@ ever tracked between them, is in
 | Insights engine | ✅ | — | `insights.json` (8/8 rules; Rule 3 rollover-aware since spec 027) |
 | Budget rollover & bucket types | ✅ | — | `lib/finance/budgets.ts` → `budget-rollover.json` (spec 027 — fixed/flex/non_monthly carry; the derived effective limit also drives the budget insight) |
 | Savings / debt-payoff goals | ✅ | — | `lib/finance/goals.ts` → `goals.json` (progress + off-track pacing; spec 027) |
+| Dashboard widget system (spec 034/035) | ✅ | — | toggleable widget board — registry `lib/widgets/registry.tsx`, shared month/range scope `lib/useDashboardRange.ts` + `lib/widgets/DashboardScopeContext.tsx`, spend heatmap `lib/dashboard/spendHeatmap.ts`; none vectored. `components/dashboard/range.ts` remains the vectored month engine underneath. |
+| Deposit accounts (spec 033) | ✅ | — | `deposit_accounts` table (household-scoped, mirrors `cards`) + `web/lib/store.tsx` drives the income "Deposit to" dropdown; CLI unaffected since `transactions.source` is still a text column. |
+| PDF data export / import (spec 032) | ✅ | — | dual-layer PDF (human-readable + embedded machine-readable payload) → `web/lib/dataFile/`; two-tier dedup on re-import; unvectored (no money/date engine). |
 | Mortgage / housing math | ✅ | — | `lib/finance/mortgage.ts` → `mortgage.json`; net rental `lib/finance/housing.ts` → `housing-net-rental.json`; lease date math → `lease.json` |
 | On-device receipt/statement scanning | ✅ (native Capacitor plugin) | — | `web/lib/scan/*` (parsing/heuristics, TS) + `web/ios/App/App/Plugins/Scan/` (capture/OCR/PDF, Swift) — see "Surface-specific" below |
 | Auth (email-OTP, 8-digit) | ✅ | ⚠️ | each calls the Supabase SDK; the CLI's OTP sign-in path differs by necessity (headless) |
@@ -218,18 +229,20 @@ bundle (spec 021), the new behavior applies on all surfaces.
   conversion, and Plaid **bank-account connection** (connect-only, spec 024 — `web/lib/aggregation.ts`
   over the `plaid-link-token` / `plaid-exchange` / `plaid-disconnect` edge functions; no transaction
   or money engine, hence no vector row). The CLI has no bank-linking path.
-- **web only — Reports (spec 027).** A calm "Reports" mode inside the Dashboard page (segmented
-  Overview | Reports; not a new route or a fifth destination) with a savings-rate-over-time view and
-  a category deep-dive over a chosen range. It is the **first product consumer of the aggregate RPC
-  wrappers** in `web/lib/api/aggregates.ts` (`household_month_summary`, `household_category_totals`,
-  fetched on demand only when Reports is open) — the documented cut-over case spec 023/D15 left open
-  (a new surface over a user-chosen window, not the per-widget wiring that would be a perf loss). The
-  savings-rate math (`web/lib/reports/savings.ts`) and category ranking (`web/lib/reports/categories.ts`)
-  are pure and unit-tested but deliberately **not golden vectors** (report-only ratio/share math, like
-  `entitlements.ts`), so no vector row. **Known divergence (unfixed):** `aggregates.ts`'s
+- **web only — Reports math (spec 027).** The segmented "Overview | Reports" **mode** inside the
+  Dashboard page is **gone** — spec 034/036 removed it (`web/app/(app)/dashboard/page.tsx`: "The
+  former Reports MODE (spec 027) is gone"). The savings-rate-over-time view now ships as the
+  toggleable **`savings-trends` widget** on the single-view widget board
+  (`web/components/widgets/bodies/SavingsTrendsBody.tsx`), per-browser in Settings → Widgets. The
+  underlying math is unchanged and still web-only: the savings-rate engine
+  (`web/lib/reports/savings.ts`) and the category deep-dive / ranking
+  (`web/lib/reports/categories.ts`) stay pure and unit-tested but deliberately **not golden vectors**
+  (report-only ratio/share math, like `entitlements.ts`), so no vector row. These remain consumers of
+  the aggregate RPC wrappers in `web/lib/api/aggregates.ts` (`household_month_summary`,
+  `household_category_totals`). **Known divergence (unfixed):** `aggregates.ts`'s
   `fetchOwnerSpend`/`OwnerSpendRow.person_id` does not match the `household_owner_spend` RPC's returned
-  `user_id` column; Reports avoids that wrapper (it needs only month-summary + category-totals), so the
-  mismatch is documented here for a future targeted fix, not exercised by this feature.
+  `user_id` column; the shipped surfaces avoid that wrapper (they need only month-summary +
+  category-totals), so the mismatch is documented here for a future targeted fix, not exercised.
 - **CSV bank-statement import** — web UI ships in spec 029 (`web/lib/csv/`, `web/components/csv/`).
   Supports Chase, Amex, Citi, Capital One, BofA, Wells Fargo, and TD Bank CSV formats.
   CLI retains PDF import + `--admin` service-role mode; web adds the browser file-picker CSV path.
