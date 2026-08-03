@@ -62,6 +62,11 @@ function tx(over: Partial<Transaction> & Pick<Transaction, 'id' | 'merchant' | '
 const JUNE = tx({ id: 'j1', merchant: 'June Groceries', date: '2026-06-10T12:00:00' })
 const MAY = tx({ id: 'm1', merchant: 'May Dinner', date: '2026-05-15T12:00:00' })
 const APRIL = tx({ id: 'a1', merchant: 'April Fuel', date: '2026-04-20T12:00:00' })
+const MARCH = tx({ id: 'mar1', merchant: 'March Rent', date: '2026-03-05T12:00:00' })
+// A "full" current month: ≥10 line items, past the collapse-previous threshold.
+const JUNE_MANY = Array.from({ length: 10 }, (_, i) =>
+  tx({ id: `jm${i}`, merchant: `June Item ${i}`, date: '2026-06-10T12:00:00' })
+)
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -82,15 +87,26 @@ describe('transactions month accordion (mobile)', () => {
     expect(screen.getByText('April 2026')).toBeInTheDocument()
   })
 
-  it('opens only the current month by default; other months are collapsed', () => {
+  it('keeps the previous month open too while the current month is sparse (<10 items)', () => {
     TRANSACTIONS = [JUNE, MAY, APRIL]
     render(<TransactionsPage />)
-    // Current month (June) is expanded -> its row is rendered.
+    // Current month (June) has a single item -> the prior month (May) stays open
+    // so the page doesn't read as near-empty.
     expect(screen.getByText('June Groceries')).toBeInTheDocument()
-    // Prior months are collapsed -> their rows are NOT in the DOM.
-    expect(screen.queryByText('May Dinner')).not.toBeInTheDocument()
+    expect(screen.getByText('May Dinner')).toBeInTheDocument()
+    // Only the ONE previous month opens — April remains collapsed.
     expect(screen.queryByText('April Fuel')).not.toBeInTheDocument()
-    // aria-expanded reflects state on the month header buttons.
+    expect(screen.getByRole('button', { name: /June 2026/ })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: /May 2026/ })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: /April 2026/ })).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('collapses the previous month once the current month has ≥10 items', () => {
+    TRANSACTIONS = [...JUNE_MANY, MAY, APRIL]
+    render(<TransactionsPage />)
+    // The current month now stands on its own, so only it is open by default.
+    expect(screen.getByText('June Item 0')).toBeInTheDocument()
+    expect(screen.queryByText('May Dinner')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /June 2026/ })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('button', { name: /May 2026/ })).toHaveAttribute('aria-expanded', 'false')
   })
@@ -102,22 +118,28 @@ describe('transactions month accordion (mobile)', () => {
     // here on use real timers so userEvent's internal delays resolve normally.
     vi.useRealTimers()
     const user = userEvent.setup()
-    expect(screen.queryByText('May Dinner')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /May 2026/ }))
-    expect(screen.getByText('May Dinner')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /May 2026/ })).toHaveAttribute('aria-expanded', 'true')
-    // June (the default) stays open and untouched.
+    // April is collapsed by default (June + May open on the sparse-month rule).
+    expect(screen.queryByText('April Fuel')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /April 2026/ }))
+    expect(screen.getByText('April Fuel')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /April 2026/ })).toHaveAttribute('aria-expanded', 'true')
+    // The defaults (June + May) stay open and untouched.
     expect(screen.getByText('June Groceries')).toBeInTheDocument()
+    expect(screen.getByText('May Dinner')).toBeInTheDocument()
   })
 
-  it('opens the most recent month with data when the current month is empty', () => {
-    // No June transactions -> default open falls back to the newest month (May).
-    TRANSACTIONS = [MAY, APRIL]
+  it('opens the most recent month with data (and its predecessor) when the current month is empty', () => {
+    // No June transactions -> the primary falls back to the newest month (May);
+    // May is sparse, so April opens alongside it, but March stays collapsed.
+    TRANSACTIONS = [MAY, APRIL, MARCH]
     render(<TransactionsPage />)
     expect(screen.queryByText('June 2026')).not.toBeInTheDocument()
     expect(screen.getByText('May Dinner')).toBeInTheDocument()
-    expect(screen.queryByText('April Fuel')).not.toBeInTheDocument()
+    expect(screen.getByText('April Fuel')).toBeInTheDocument()
+    expect(screen.queryByText('March Rent')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /May 2026/ })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: /April 2026/ })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: /March 2026/ })).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('expands every month while a search is active so matches are not hidden', async () => {
