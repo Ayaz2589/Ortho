@@ -182,8 +182,10 @@ for extensionless paths, which infinite-loops signed-out native launches.
   `DashboardDesktop` chunk and no `useIsExpanded` branch. Responsiveness is pure CSS: `.ow-board` is a
   **uniform grid** (spec 037) — equal columns (1→2→3 by breakpoint) and a single `grid-auto-rows`
   height, so **every widget is the same height** and any toggled subset tiles with no interior hole.
-  There is no per-widget `size` (the old sm/md/lg/wide tiers are gone). Guard:
-  `test/widgets/board-packing.test.ts`.
+  There is no per-widget `size` (the old sm/md/lg/wide tiers are gone). A widget whose content
+  exceeds the fixed height **scrolls** its body (`overflow-y-auto`) rather than clipping. `.ow-card`
+  carries a soft drop shadow in light mode (dropped in dark, where the hairline border does the work).
+  Guard: `test/widgets/board-packing.test.ts`.
 - **Widgets are data-wired with a shared time scope (specs 035–036)**: the registry
   (`lib/widgets/registry.tsx`) is the single source of truth; each widget has a **propless** body
   under `components/widgets/bodies/<Name>Body.tsx` that reads household data from `useApp()` and the
