@@ -1,30 +1,21 @@
 'use client'
 
 import { type ReactNode } from 'react'
-import {
-  Wallet,
-  Gauge,
-  Target,
-  PieChart,
-  Store,
-  ListOrdered,
-} from 'lucide-react'
-import { useApp } from '@/lib/store'
 
 /**
- * Calm placeholder bodies for the widget framework (spec 034 — foundation).
+ * Shared calm-placeholder scaffold for widget bodies.
  *
- * This feature builds the *foundations* of the widget system, so widgets render
- * quiet placeholder content, NOT live household data. Each placeholder is
- * token-only, carries no shadow, uses no red, and — critically — FILLS the cell
- * it is given (`h-full` + a `flex-1` filler) so no widget ever shows a blank
- * band or collapses to a sliver (FR-004). Real data is layered on later.
+ * Spec 034 introduced one placeholder per widget here. Spec 035 (Section 0) splits
+ * the per-widget bodies into their own files under `bodies/` so each later section
+ * can wire real data into exactly one file without colliding (decision D2); this
+ * module keeps only the SHARED scaffold those body files import.
+ *
+ * The scaffold is token-only, carries no shadow, uses no red, and — critically —
+ * FILLS the cell it is given (`h-full` + a `flex-1` filler) so no widget ever shows
+ * a blank band or collapses to a sliver (FR-004). Real data is layered on per
+ * section, replacing each body's `Placeholder` with live content.
  */
-
-/** Shared scaffold: an icon + caption header and a flexible filler that grows to
- *  fill whatever height the board's cell gives this widget. `rows` token blocks
- *  give the body visible, calm structure without inventing data. */
-function Placeholder({
+export function Placeholder({
   icon,
   note,
   rows = 3,
@@ -61,34 +52,4 @@ function Placeholder({
       </div>
     </div>
   )
-}
-
-export function NetSummaryPlaceholder() {
-  const { t } = useApp()
-  return <Placeholder icon={<Wallet size={15} />} note={t('Preview')} rows={4} />
-}
-
-export function SpendingPacePlaceholder() {
-  const { t } = useApp()
-  return <Placeholder icon={<Gauge size={15} />} note={t('Preview')} rows={3} />
-}
-
-export function BudgetsPlaceholder() {
-  const { t } = useApp()
-  return <Placeholder icon={<PieChart size={15} />} note={t('Preview')} rows={3} />
-}
-
-export function GoalsPlaceholder() {
-  const { t } = useApp()
-  return <Placeholder icon={<Target size={15} />} note={t('Preview')} rows={2} />
-}
-
-export function TopMerchantsPlaceholder() {
-  const { t } = useApp()
-  return <Placeholder icon={<Store size={15} />} note={t('Preview')} rows={2} />
-}
-
-export function ActivityPlaceholder() {
-  const { t } = useApp()
-  return <Placeholder icon={<ListOrdered size={15} />} note={t('Preview')} rows={3} />
 }

@@ -1,12 +1,10 @@
 import { type ComponentType } from 'react'
-import {
-  NetSummaryPlaceholder,
-  SpendingPacePlaceholder,
-  BudgetsPlaceholder,
-  GoalsPlaceholder,
-  TopMerchantsPlaceholder,
-  ActivityPlaceholder,
-} from '@/components/widgets/placeholders'
+import { NetSummaryBody } from '@/components/widgets/bodies/NetSummaryBody'
+import { SpendingPaceBody } from '@/components/widgets/bodies/SpendingPaceBody'
+import { BudgetsBody } from '@/components/widgets/bodies/BudgetsBody'
+import { GoalsBody } from '@/components/widgets/bodies/GoalsBody'
+import { TopMerchantsBody } from '@/components/widgets/bodies/TopMerchantsBody'
+import { ActivityBody } from '@/components/widgets/bodies/ActivityBody'
 
 /**
  * Widget registry (spec 034 — foundation). The SINGLE source of truth for the
@@ -60,7 +58,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'Your latest transactions across the household.',
     size: 'wide',
     defaultEnabled: false,
-    Body: ActivityPlaceholder,
+    Body: ActivityBody,
   },
   {
     id: 'net-summary',
@@ -68,7 +66,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'Income minus spending for the month at a glance.',
     size: 'lg',
     defaultEnabled: true,
-    Body: NetSummaryPlaceholder,
+    Body: NetSummaryBody,
   },
   {
     id: 'spending-pace',
@@ -76,7 +74,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'How your spending is tracking against the month.',
     size: 'md',
     defaultEnabled: true,
-    Body: SpendingPacePlaceholder,
+    Body: SpendingPaceBody,
   },
   {
     id: 'budgets',
@@ -84,7 +82,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'Category budgets and what is left in each.',
     size: 'md',
     defaultEnabled: true,
-    Body: BudgetsPlaceholder,
+    Body: BudgetsBody,
   },
   {
     id: 'goals',
@@ -92,7 +90,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'Progress toward your savings goals.',
     size: 'sm',
     defaultEnabled: true,
-    Body: GoalsPlaceholder,
+    Body: GoalsBody,
   },
   {
     id: 'top-merchants',
@@ -100,7 +98,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'Where you spend the most, most often.',
     size: 'sm',
     defaultEnabled: true,
-    Body: TopMerchantsPlaceholder,
+    Body: TopMerchantsBody,
   },
 ]
 
