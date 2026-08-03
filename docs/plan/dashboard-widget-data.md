@@ -173,6 +173,9 @@ Section 7 (Integration polish: skeleton, docs, sweep)              ← merge LAS
 `web/components/widgets/bodies/*Body.tsx`, and Section-0 tests.
 
 **Blocks:** all other sections. **Spec:** `specs/035-dashboard-scope-foundation/`.
+**Status: ✅ MERGED into the base (PR #79).** The gate is cleared — the scope context, revived
+`MonthPicker` + `RangePicker`, and the `bodies/*Body.tsx` split are all on `feat/dashboard-widget-data`.
+Widget sections (1–6) may now branch off the updated base and proceed.
 
 **Work:**
 1. **`DashboardScopeContext.tsx`** — a provider that calls `useDashboardScope()` **once** and supplies
@@ -212,7 +215,7 @@ Each widget section replaces the placeholder in its `bodies/<Name>Body.tsx` with
 
 | Widget | Data (`useApp`) | Window | Key helpers | Visual | Chart? | New i18n (examples) |
 |---|---|---|---|---|---|---|
-| **1 net-summary** | `transactions`, `formatMoney` | `interval` | sum income vs expense over `interval` | Big net figure + income/expense split + thin CSS proportion bar; when `isSpecificMonth` on the current month, optional "day X of Y" pace note | **No** (optional sparkline stretch only at `lg`) | `Income`, `Expenses`, `Net`, `Day {0} of {1}` |
+| **1 net-summary** | `transactions`, `formatMoney` | `interval` | sum income vs expense over `interval` | Big net figure + income/expense split + thin CSS proportion bar; when `isSpecificMonth` on the current month, optional "day X of Y" pace note | **No** — numbers-only, CSS-only (O-3 resolved; no recharts) | `Income`, `Expenses`, `Net`, `Day {0} of {1}` |
 | **2 spending-pace** | `transactions` | trailing 30 vs prior 30 days from `interval` end (or `now`) | daily expense buckets; avg/day; delta % | Area trend + readouts (avg/day, Δ vs prior 30) | **Yes** — recharts area leaf (recreate `DailyTrendChart` under `widgets/charts/`) | `Last 30 days`, `Daily trend`, `Avg / day`, `vs. prior 30`, `No expenses in the last 30 days.` |
 | **3 budgets** | `budgets`, `transactions` | `referenceDate` | `budgetStatusForMonth(b, txs, referenceDate)`; `categoryMeta(cat)` | Rows: icon + category + spend-vs-limit CSS bar + `{0} left`/`{0} over`/carry note | **No** (CSS bars) | `{0} left`, `{0} over`, `{0} rolled over`, `{0} carried shortfall`, `No budgets yet.` |
 | **4 goals** | `goals`, `goalContributions` | n/a (goal lifetime) | `contributionsByGoal`, `goalProgress`, `goalPacing` | Rows borrowed from `GoalCard`: name + saved-of-target + CSS progress bar + calm pace line | **No** (CSS bars) | `{0} to go`, `Reached`, `On pace · due {0}`, `Behind pace — set aside {0}/mo to reach it by {1}.`, `No goals yet.` |
@@ -247,8 +250,9 @@ base PR to `main`.
 - **O-2 (Section 6):** `activity` has no old reference. Scope = the **most recent N transactions**
   (household-wide, ignoring the scope window) or transactions **within the selected `interval`**?
   *Recommended: most-recent-N (a live feed reads better than a windowed one); N≈6 to fit the `wide` tier.*
-- **O-3 (Section 1):** Add an optional multi-month net sparkline when net-summary is at `lg`, or keep it
-  numbers-only? *Recommended: numbers-only for v1; sparkline is a Section-7 stretch.*
+- ~~**O-3 (Section 1)**~~ — **Resolved: net-summary is numbers-only for v1.** No sparkline / no recharts
+  in the net-summary body. A multi-month net sparkline is a possible Section-7 stretch, not part of
+  Section 1. (This keeps net-summary CSS-only and off the recharts path — only `spending-pace` charts.)
 - **O-4:** `net-summary` is `lg` and `spending-pace`/`budgets` are `md` in the registry. Confirm those
   sizes still suit the real content, or adjust in each section (size is a one-line registry field — but
   changing it is the **one** allowed registry edit, and must be coordinated to avoid S0 conflicts).
