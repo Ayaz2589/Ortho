@@ -23,7 +23,6 @@ import {
   AccentTextButton,
   PlusGlyph,
   CatTile,
-  SourceDot,
 } from './kit'
 import { hasCsvSession } from '@/lib/csv/csvImportPersistence'
 
@@ -133,14 +132,9 @@ function TxRowImpl({
             {title}
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }} title={single ? single.name : undefined}>
           {single ? (
-            <>
-              <Avatar user={single} size={20} />
-              <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {single.name}
-              </span>
-            </>
+            <Avatar user={single} size={20} />
           ) : ownerUsers.length === 0 ? (
             <span style={{ fontSize: 13, color: 'var(--text-3)' }}>—</span>
           ) : (
@@ -149,19 +143,13 @@ function TxRowImpl({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {isTransfer ? (
-            <>
-              <SourceDot />
-              <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {t('Reimbursement')}
-              </span>
-            </>
+            <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {t('Reimbursement')}
+            </span>
           ) : tx.source ? (
-            <>
-              <SourceDot />
-              <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {tx.source}
-              </span>
-            </>
+            <span style={{ fontSize: 13, color: 'var(--text-2)', letterSpacing: '-0.1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {tx.source}
+            </span>
           ) : (
             <NoSourceTag />
           )}
