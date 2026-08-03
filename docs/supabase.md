@@ -330,9 +330,12 @@ supabase/functions/_shared/
   gate-state with leeway — the ONE place leeway lives), `stripe.ts` (payload → normalized, never
   throws; worst case `'unrecognized'`).
 - `services/aggregation` (`@ortho/aggregation-core`): `types.ts` (mirrors the Postgres enums),
-  `plaid.ts` (request builders + null-returning parsers), `plaidClient.ts` (fetch-injected REST
-  client, no globals); SimpleFIN adds `simplefin.ts` + `simplefinClient.ts` + `base64.ts` (Access
-  URL Basic-Auth). Same drift-lock (below) applies to all of them.
+  `normalize.ts` (SimpleFIN → ledger normalization — sign→kind, cents, dedupe, deterministic id;
+  the most safety-critical module), `simplefin.ts` (request builders + null-returning parsers),
+  `simplefinClient.ts` (`SimpleFinFetch`-injected REST client, no globals), `base64.ts` (Access
+  URL Basic-Auth), and `index.ts` (the public surface). The older Plaid modules `plaid.ts` /
+  `plaidClient.ts` now live under `deprecated/` (spec 028 contained Plaid as connect-only, no
+  sync). Same drift-lock (below) applies to the active files.
 - **Sync**: `npm run sync:functions` in each service dir (rm-and-recopy of `src/*.ts` into
   `_shared/<name>/`). Supabase's deploy bundler only reliably follows imports inside
   `supabase/functions/`; source of truth is always `services/*/src`.

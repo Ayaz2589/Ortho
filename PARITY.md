@@ -230,7 +230,7 @@ bundle (spec 021), the new behavior applies on all surfaces.
   over the `plaid-link-token` / `plaid-exchange` / `plaid-disconnect` edge functions; no transaction
   or money engine, hence no vector row). The CLI has no bank-linking path.
 - **web only — Reports math (spec 027).** The segmented "Overview | Reports" **mode** inside the
-  Dashboard page is **gone** — spec 034/036 removed it (`web/app/(app)/dashboard/page.tsx`: "The
+  Dashboard page is **gone** — spec 036 removed it (`web/app/(app)/dashboard/page.tsx`: "The
   former Reports MODE (spec 027) is gone"). The savings-rate-over-time view now ships as the
   toggleable **`savings-trends` widget** on the single-view widget board
   (`web/components/widgets/bodies/SavingsTrendsBody.tsx`), per-browser in Settings → Widgets. The
