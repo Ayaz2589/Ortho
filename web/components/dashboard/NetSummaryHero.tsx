@@ -97,8 +97,10 @@ export function NetSummaryHero() {
           </div>
         </div>
 
-        {/* Right: daily-spending heatmap for the same window. */}
-        <div className="shrink-0">
+        {/* Right: daily-spending heatmap for the same window. Allowed to shrink and
+            scroll horizontally so a long range (e.g. 1Y ≈ 52 week-columns) never
+            overflows the hero on narrower desktops. */}
+        <div className="min-w-0 overflow-x-auto pb-1">
           <SpendHeatmap interval={interval} />
         </div>
       </div>

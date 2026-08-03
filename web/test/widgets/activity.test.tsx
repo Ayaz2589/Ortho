@@ -4,7 +4,7 @@ import { render, screen, cleanup } from '@testing-library/react'
 import { ActivityBody } from '@/components/widgets/bodies/ActivityBody'
 
 // Widget 6 (activity): a live feed of the most-recent-N transactions household-
-// wide, ignoring the scope window (O-2 = most-recent-N; N = 6). Each row shows the
+// wide, ignoring the scope window (O-2 = most-recent-N; N = 5). Each row shows the
 // merchant, owner, amount, and date, newest first.
 
 const h = vi.hoisted(() => ({
@@ -38,15 +38,16 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('ActivityBody', () => {
-  it('shows the six most-recent transactions, newest first', () => {
+  it('shows the five most-recent transactions, newest first', () => {
     render(<ActivityBody />)
     expect(screen.getByText('M8')).toBeTruthy()
-    expect(screen.getByText('M3')).toBeTruthy()
-    // The two oldest fall off.
+    expect(screen.getByText('M4')).toBeTruthy()
+    // The three oldest fall off.
     expect(screen.queryByText('M1')).toBeNull()
     expect(screen.queryByText('M2')).toBeNull()
+    expect(screen.queryByText('M3')).toBeNull()
     // Owner label is shown per row.
-    expect(screen.getAllByText('Maya').length).toBe(6)
+    expect(screen.getAllByText('Maya').length).toBe(5)
   })
 
   it('renders a calm empty state when there are no transactions', () => {
