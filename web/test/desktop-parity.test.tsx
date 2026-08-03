@@ -19,17 +19,13 @@ const h = vi.hoisted(() => ({ mock: null as SupabaseMock | null }))
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => h.mock!.client }))
 
 import { AppStateProvider, useApp } from '@/lib/store'
-import { useDashboardScope } from '@/lib/useDashboardRange'
 import { TransactionsDesktop } from '@/components/web/TransactionsDesktop'
-import { DashboardDesktop } from '@/components/web/DashboardDesktop'
 import { HousingDesktop } from '@/components/web/HousingDesktop'
 
-// DashboardDesktop now takes its time scope as a prop (lifted to the page so the
-// mobile/desktop layouts share one source). This harness supplies it from the hook.
-function DesktopDashboardHarness() {
-  const scope = useDashboardScope()
-  return <DashboardDesktop scope={scope} />
-}
+// Note: the desktop Dashboard composition was removed in spec 034 (the Dashboard
+// overview is now a single responsive <WidgetBoard/>); its parity checks moved to
+// test/widgets/*. This file still guards the Transactions and Housing desktop
+// compositions, which are unchanged.
 
 // A household with a 70/30 split expense in the CURRENT month (so the desktop
 // ledger leaves that month expanded by default and the row is clickable).
@@ -127,22 +123,6 @@ function baseTables() {
   const d = dataset(thisMonthISO())
   return d.tables
 }
-
-describe('desktop dashboard — Budget Progress widget (US4 / T021)', () => {
-  it('renders the Budget Progress card on the wide dashboard when budgets are set', async () => {
-    h.mock = makeSupabaseMock({
-      authUser: { id: 'u-me', email: 'maya@example.com' },
-      tables: {
-        ...baseTables(),
-        budgets: [{ id: 'b-groceries', household_id: 'hh-1', category: 'groceries', monthly_limit_cents: 50000 }],
-      },
-    })
-    render(<AppStateProvider><DesktopDashboardHarness /></AppStateProvider>)
-    // The shared BudgetProgressCard (its "Budgets" section label) is present on
-    // the ≥1024px layout — it used to be dropped by DashboardDesktop.
-    expect(await screen.findByText('Budgets')).toBeInTheDocument()
-  })
-})
 
 describe('desktop housing — lease-renewal banner (US4 / T021)', () => {
   it('shows the renewal banner on the wide housing view when a lease renews soon', async () => {
