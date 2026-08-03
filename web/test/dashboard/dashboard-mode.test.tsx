@@ -8,8 +8,11 @@ import userEvent from '@testing-library/user-event'
 // <WidgetBoard/> (one composition — no mobile/desktop branch). This test isolates
 // the page's mode-branching wiring; the board and reports surface are stubbed.
 
+// Spec 035: the overview now wraps the board in a DashboardScopeProvider, which
+// reads `transactions`/`locale` from the store — supply them (the real store
+// always does). This test still isolates the mode-branching wiring.
 vi.mock('@/lib/store', () => ({
-  useApp: () => ({ t: (k: string) => k }),
+  useApp: () => ({ t: (k: string) => k, locale: 'en-US', transactions: [] }),
 }))
 vi.mock('@/components/widgets/WidgetBoard', () => ({
   WidgetBoard: () => <div data-testid="widget-board">board</div>,
