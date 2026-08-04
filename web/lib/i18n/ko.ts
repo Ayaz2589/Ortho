@@ -474,6 +474,21 @@ const catalog: Record<string, string> = {
   "Open {0}": "{0} 열기",
   "Details coming soon.": "세부 정보가 곧 제공됩니다.",
   "Daily spending": "일일 지출",
+
+  // Housing widgets (spec 036)
+  "Housing costs": "주거 비용",
+  "Your total monthly housing cost across all properties.": "모든 부동산의 월 주거 비용 합계.",
+  "per month": "월",
+  "1 property": "부동산 1개",
+  "{0} properties": "부동산 {0}개",
+  "Net rental": "순 임대 수입",
+  "No properties yet.": "아직 부동산이 없습니다.",
+  "Home equity": "주택 순자산",
+  "Principal you've paid down across all mortgages.": "모든 주택담보대출에서 상환한 원금.",
+  "principal paid down": "상환한 원금",
+  "{0}% paid off": "{0}% 상환",
+  "of {0}": "/ {0}",
+  "No mortgages yet.": "아직 주택담보대출이 없습니다.",
 }
 
 export default catalog

@@ -34,6 +34,9 @@ vi.mock('@/lib/store', () => ({
       { id: 'g1', name: 'Emergency fund', kind: 'savings', target_cents: 100000, target_date: null, created_at: firstOfMonth },
     ],
     goalContributions: [{ id: 'c1', goal_id: 'g1', amount_cents: 60000, date: firstOfMonth }],
+    // No properties → the housing widgets (spec 036) render their calm empty states;
+    // their headings still count toward WIDGETS.length.
+    properties: [],
     ownersDisplay: () => ({ avatarUser: {}, label: 'Maya', count: 1 }),
   }),
 }))
