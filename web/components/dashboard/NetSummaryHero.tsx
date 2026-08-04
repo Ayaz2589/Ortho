@@ -35,8 +35,11 @@ export function NetSummaryHero() {
   }, [transactions, interval.start, interval.end])
 
   const net = income - expenses
-  const gross = income + expenses
-  const incomePct = gross > 0 ? (income / gross) * 100 : 0
+  // Share of this period's income that spending has consumed — the bar FILLS as
+  // the household runs down its income (expenses ÷ income), clamped at 100% and
+  // drawn in calm sand, never red. With no income, a full bar iff any spend.
+  const spentPct =
+    income > 0 ? Math.min(100, (expenses / income) * 100) : expenses > 0 ? 100 : 0
 
   // Day-of-month pace note only when the active window is a single calendar month
   // that contains `now` (this month, via the range or the month picker).
@@ -66,14 +69,19 @@ export function NetSummaryHero() {
             {formatMoney(net)}
           </p>
 
-          {/* Income vs expense proportion — sage income fill on a neutral track;
-              expense is the remainder and is never drawn red. */}
+          {/* Spend-against-income bar — a calm sand fill grows across a neutral
+              track as spending consumes the period's income; it is the remainder
+              of income and is never drawn red. */}
           <div
             className="mt-5 h-2 w-full max-w-[420px] overflow-hidden rounded-full"
             style={{ background: 'var(--chip-bg)' }}
             aria-hidden
           >
-            <div className="h-full rounded-full" style={{ width: `${incomePct}%`, background: 'var(--positive)' }} />
+            <div
+              data-testid="net-spend-fill"
+              className="h-full rounded-full"
+              style={{ width: `${spentPct}%`, background: 'var(--accent)' }}
+            />
           </div>
 
           <div className="mt-3 flex items-baseline gap-8">
@@ -97,10 +105,10 @@ export function NetSummaryHero() {
           </div>
         </div>
 
-        {/* Right: daily-spending heatmap for the same window. Allowed to shrink and
-            scroll horizontally so a long range (e.g. 1Y ≈ 52 week-columns) never
-            overflows the hero on narrower desktops. */}
-        <div className="min-w-0 overflow-x-auto pb-1">
+        {/* Right: daily-spending heatmap for the same window. The heatmap owns its
+            own horizontal scroll (scrollbar hidden) and click-to-pin tooltip, so
+            the wrapper just lets it shrink without clipping the tooltip. */}
+        <div className="min-w-0">
           <SpendHeatmap interval={interval} />
         </div>
       </div>

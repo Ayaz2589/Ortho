@@ -344,6 +344,71 @@ button,
   }
 }
 
+/* Interactive widget card — the whole card opens its detail panel, so it carries a
+   pointer cursor and a calm hover response (a small lift + a touch more shadow in
+   light mode; a surface tint in dark, where the shadow is dropped). Kept OFF the
+   shared `.ow-card` so static card surfaces (forms, housing, tx) never animate.
+   Honors reduced-motion. */
+.ow-widget {
+  cursor: pointer;
+  transition:
+    transform var(--duration-mid) var(--ease-out),
+    box-shadow var(--duration-mid) var(--ease-out),
+    background var(--duration-mid) var(--ease-out);
+}
+.ow-widget:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05), 0 10px 24px rgba(0, 0, 0, 0.09);
+}
+:root[data-appearance='dark'] .ow-widget:hover,
+.ow-widget.is-dark:hover {
+  box-shadow: none;
+  background: var(--surface-2);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-appearance='light']) .ow-widget:hover {
+    box-shadow: none;
+    background: var(--surface-2);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ow-widget { transition: none; }
+  .ow-widget:hover { transform: none; }
+}
+
+/* Hide the native scrollbar while keeping the element scrollable (widget bodies +
+   the heatmap strip). The content still scrolls by wheel/touch/keys. */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/* Edge fades for a scrollbar-hidden widget body — a cut-off row dissolves into the
+   card surface instead of hard-clipping. Toggled via opacity by `WidgetScroll`
+   from live scroll state, so a fade shows only where content is actually hidden. */
+.ow-fade-top,
+.ow-fade-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  pointer-events: none;
+  transition: opacity var(--duration-mid) var(--ease-out);
+}
+.ow-fade-top {
+  top: 0;
+  background: linear-gradient(to bottom, var(--surface), transparent);
+}
+.ow-fade-bottom {
+  bottom: 0;
+  background: linear-gradient(to top, var(--surface), transparent);
+}
+
 .ow-btn {
   appearance: none;
   border: 0;

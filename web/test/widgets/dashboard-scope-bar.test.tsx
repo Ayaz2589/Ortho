@@ -59,4 +59,19 @@ describe('dashboard scope bar', () => {
     expect(screen.getByTestId('net-hero')).toBeTruthy()
     expect(screen.getByTestId('widget-board')).toBeTruthy()
   })
+
+  it('places the scope controls inline with the title (right on desktop, own line on mobile)', () => {
+    render(<DashboardPage />)
+    // The header row stacks on phones (flex-col) and puts the controls to the
+    // right of the title on desktop (sm:flex-row + sm:justify-between).
+    const title = screen.getByRole('heading', { name: 'Dashboard' })
+    const header = title.parentElement!
+    expect(header.className).toContain('flex-col')
+    expect(header.className).toContain('sm:flex-row')
+    expect(header.className).toContain('sm:justify-between')
+    // Range + month controls share one non-wrapping row (both selectors on a line).
+    const controls = screen.getByText('Pick a month').closest('.shrink-0')
+    expect(controls).not.toBeNull()
+    expect(controls!.className).toContain('items-center')
+  })
 })
