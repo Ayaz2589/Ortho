@@ -38,6 +38,20 @@ describe('Widget frame', () => {
     expect(item.getAttribute('aria-label')).toBeNull()
   })
 
+  it('marks the card as an interactive widget (hover lift + pointer cursor)', () => {
+    render(<Widget definition={definition} onOpen={() => {}} />)
+    // `.ow-widget` carries the pointer cursor + hover animation; kept off the
+    // shared `.ow-card` so non-clickable card surfaces stay static.
+    expect(screen.getByRole('listitem').className).toContain('ow-widget')
+  })
+
+  it('scrolls the body in a scrollbar-hidden container (fade-on-overflow)', () => {
+    render(<Widget definition={definition} onOpen={() => {}} />)
+    const scroller = screen.getByTestId('demo-body').closest('.no-scrollbar')
+    expect(scroller).not.toBeNull()
+    expect(scroller!.className).toContain('overflow-y-auto')
+  })
+
   it('is a click target that opens the widget with its definition', () => {
     const onOpen = vi.fn()
     render(<Widget definition={definition} onOpen={onOpen} />)

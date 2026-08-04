@@ -1,6 +1,5 @@
 'use client'
 
-import { PageHeader } from '@/components/ui'
 import { useApp } from '@/lib/store'
 import { WidgetBoard } from '@/components/widgets/WidgetBoard'
 import { MonthPicker } from '@/components/dashboard/MonthPicker'
@@ -12,25 +11,30 @@ import {
 } from '@/lib/widgets/DashboardScopeContext'
 
 /**
- * The overview's shared time-scope bar (spec 035). Renders the relative-range
- * segmented control and the specific-month picker (mutually exclusive — choosing a
- * month overrides the range, "Latest" returns to it) plus the active period
- * caption. It reads the SINGLE shared scope from context, so the net-summary hero
- * and every widget below reflect the same window.
+ * The overview header (spec 035; dashboard polish). The "Dashboard" title and the
+ * shared time-scope controls (relative-range segmented control + specific-month
+ * picker — mutually exclusive, "Latest" returns to the range) share ONE row on
+ * desktop, controls right-aligned. On phones the controls drop to their own line
+ * below the title but stay on a single line together (`shrink-0`, no wrap). The
+ * controls read the SINGLE shared scope from context, so the hero and every widget
+ * below reflect the same window; the active period caption lives on the hero, so
+ * the header carries no duplicate.
  */
-function DashboardScopeBar() {
+function DashboardHeader() {
+  const { t } = useApp()
   const scope = useDashboardScopeContext()
-  // The active period is shown by the net-summary hero below, so the bar carries
-  // only the controls (no duplicate period caption).
   return (
-    <div className="mb-4 mx-auto flex max-w-[1080px] flex-wrap items-center gap-2">
-      <RangePicker options={scope.rangeOptions} value={scope.range} onChange={scope.setRange} />
-      <MonthPicker
-        availableMonths={scope.availableMonths}
-        selectedMonth={scope.selectedMonth}
-        onSelectMonth={scope.setMonth}
-        onClear={scope.clearMonth}
-      />
+    <div className="mb-4 flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+      <h1 className="text-[32px] font-light tracking-[-0.6px] text-text">{t('Dashboard')}</h1>
+      <div className="flex shrink-0 items-center gap-2">
+        <RangePicker options={scope.rangeOptions} value={scope.range} onChange={scope.setRange} />
+        <MonthPicker
+          availableMonths={scope.availableMonths}
+          selectedMonth={scope.selectedMonth}
+          onSelectMonth={scope.setMonth}
+          onClear={scope.clearMonth}
+        />
+      </div>
     </div>
   )
 }
@@ -50,12 +54,10 @@ function DashboardScopeBar() {
  * is a single view with no Overview/Reports toggle.
  */
 export default function DashboardPage() {
-  const { t } = useApp()
   return (
     <div className="mx-auto w-full max-w-[1080px]">
-      <PageHeader title={t('Dashboard')} />
       <DashboardScopeProvider>
-        <DashboardScopeBar />
+        <DashboardHeader />
         <NetSummaryHero />
         <WidgetBoard />
       </DashboardScopeProvider>
