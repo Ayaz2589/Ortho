@@ -6,6 +6,7 @@ import {
   monthElapsedFraction,
   paceState,
   incomeForMonth,
+  unbudgetedSpendForMonth,
   plannedGoalContributions,
   planHealth,
   rankAtRiskBudgets,
@@ -120,6 +121,40 @@ describe('incomeForMonth', () => {
   })
 })
 
+describe('unbudgetedSpendForMonth', () => {
+  const groceries = makeBudget({ id: 'b-g', category: 'groceries', monthly_limit_cents: 100000 })
+  const insurance = makeBudget({ id: 'b-i', category: 'insurance', budget_type: 'non_monthly', monthly_limit_cents: 20000 })
+
+  it('sums expenses in the month whose category has no budget', () => {
+    const txns = [
+      makeTx({ kind: 'expense', category: 'groceries', amount_cents: 30000, date: '2026-06-10T12:00:00.000Z' }), // budgeted → excluded
+      makeTx({ kind: 'expense', category: 'entertainment', amount_cents: 15000, date: '2026-06-12T12:00:00.000Z' }), // unbudgeted
+      makeTx({ kind: 'expense', category: 'clothing', amount_cents: 5000, date: '2026-06-20T12:00:00.000Z' }), // unbudgeted
+    ]
+    expect(unbudgetedSpendForMonth([groceries, insurance], txns, '2026-06')).toBe(20000)
+  })
+
+  it('counts a non_monthly (sinking-fund) category as budgeted', () => {
+    const txns = [makeTx({ kind: 'expense', category: 'insurance', amount_cents: 18000, date: '2026-06-08T12:00:00.000Z' })]
+    expect(unbudgetedSpendForMonth([groceries, insurance], txns, '2026-06')).toBe(0)
+  })
+
+  it('ignores income/transfers and out-of-month expenses', () => {
+    const txns = [
+      makeTx({ kind: 'income', category: 'income', amount_cents: 400000, date: '2026-06-05T12:00:00.000Z' }),
+      makeTx({ kind: 'expense', category: 'entertainment', amount_cents: 9999, date: '2026-05-30T12:00:00.000Z' }), // prior month
+      makeTx({ kind: 'expense', category: 'entertainment', amount_cents: 7000, date: '2026-06-15T12:00:00.000Z' }), // in month
+    ]
+    expect(unbudgetedSpendForMonth([groceries], txns, '2026-06')).toBe(7000)
+  })
+
+  it('a budget with a zero limit does not shelter its category', () => {
+    const zero = makeBudget({ id: 'b-z', category: 'entertainment', monthly_limit_cents: 0 })
+    const txns = [makeTx({ kind: 'expense', category: 'entertainment', amount_cents: 4000, date: '2026-06-11T12:00:00.000Z' })]
+    expect(unbudgetedSpendForMonth([zero], txns, '2026-06')).toBe(4000)
+  })
+})
+
 describe('plannedGoalContributions', () => {
   it('sums suggested monthly for dated goals, undated contribute nothing', () => {
     const dated = makeGoal({ id: 'g-dated', target_cents: 120000, created_at: '2026-01-01T00:00:00.000Z', target_date: '2026-12-31' })
@@ -150,7 +185,23 @@ describe('planHealth', () => {
     expect(health.incomeCents).toBe(400000)
     expect(health.budgetedCents).toBe(80000) // 50000 + 30000 base — NOT effective
     expect(health.goalContributionsCents).toBe(0)
-    expect(health.leftToPlanCents).toBe(400000 - 80000 - 0)
+    expect(health.unbudgetedSpentCents).toBe(0)
+    expect(health.leftToPlanCents).toBe(400000 - 80000 - 0 - 0)
+  })
+
+  it('subtracts money spent outside any budgeted category (spec 040)', () => {
+    const groceries = makeBudget({ id: 'b-g', category: 'groceries', monthly_limit_cents: 200000 })
+    const ref = planReferenceDate('2026-06', NOW)
+    const txns = [
+      makeTx({ kind: 'income', category: 'income', amount_cents: 1000000, date: '2026-06-05T12:00:00.000Z' }),
+      makeTx({ kind: 'expense', category: 'groceries', amount_cents: 120000, date: '2026-06-10T12:00:00.000Z' }), // in budget → not double-counted
+      makeTx({ kind: 'expense', category: 'entertainment', amount_cents: 500000, date: '2026-06-12T12:00:00.000Z' }), // unbudgeted
+    ]
+    const health = planHealth({ budgets: [groceries], goals: [], goalContributions: [], transactions: txns, monthKey: '2026-06' }, ref)
+    expect(health.budgetedCents).toBe(200000)
+    expect(health.unbudgetedSpentCents).toBe(500000)
+    // 1,000,000 income − 200,000 budgeted − 0 goals − 500,000 unbudgeted spend = 300,000.
+    expect(health.leftToPlanCents).toBe(300000)
   })
 
   it('can be negative when over-committed', () => {
@@ -279,7 +330,9 @@ describe('buildPlanSummary', () => {
     const b = buildPlanSummary(input, NOW)
     expect(a).toEqual(b)
     expect(a.monthKey).toBe('2026-06')
-    expect(a.health.leftToPlanCents).toBe(a.health.incomeCents - a.health.budgetedCents - a.health.goalContributionsCents)
+    expect(a.health.leftToPlanCents).toBe(
+      a.health.incomeCents - a.health.budgetedCents - a.health.goalContributionsCents - a.health.unbudgetedSpentCents,
+    )
     expect(a.budgets.budgetCount).toBe(1) // only the fixed groceries budget; the non_monthly one is a sinking fund
     expect(a.goals.goalCount).toBe(1)
     expect(a.sinkingFunds.map((f) => f.budgetId)).toEqual(['b-t'])

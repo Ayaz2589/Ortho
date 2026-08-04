@@ -4,10 +4,11 @@ import { useApp } from '@/lib/store'
 import type { PlanHealth } from '@/lib/planning/planSummary'
 
 /**
- * Plan-health HERO (spec 038 — US2). The single "Left to plan" figure for the
- * selected month = income − base monthly budget allowances − planned goal
- * contributions, with the three components shown beneath so the number is
- * trustworthy. Rendered card-less on the page background (like the dashboard's
+ * Plan-health HERO (spec 038 — US2; spec 040). The single "Left to plan" figure for
+ * the selected month = income − base monthly budget allowances − planned goal
+ * contributions − money already spent OUTSIDE any budget, with the components shown
+ * beneath so the number is trustworthy (the unbudgeted-spend term appears only when
+ * there is such spend). Rendered card-less on the page background (like the dashboard's
  * NetSummaryHero). An over-committed month is calm ATTENTION (sand `--accent`),
  * NEVER the destructive/red token (constitution I/II). Presentational — the page
  * computes the summary once and passes this slice in.
@@ -38,6 +39,9 @@ export function PlanHealthHero({ health }: { health: PlanHealth }) {
         <Term label={t('Income')} value={formatMoney(health.incomeCents)} tint="var(--positive)" />
         <Term label={t('Budgeted')} value={formatMoney(health.budgetedCents)} />
         <Term label={t('Goal contributions')} value={formatMoney(health.goalContributionsCents)} />
+        {health.unbudgetedSpentCents > 0 ? (
+          <Term label={t('Spent (unbudgeted)')} value={formatMoney(health.unbudgetedSpentCents)} />
+        ) : null}
       </dl>
     </section>
   )

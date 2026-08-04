@@ -24,9 +24,9 @@ export default function BudgetsPage() {
   return (
     <ReadingColumn>
       <div className="pt-2">
-        <Link href="/settings" className="inline-flex items-center gap-1 text-[15px] text-accent">
+        <Link href="/planning" className="inline-flex items-center gap-1 text-[15px] text-accent">
           <ChevronLeft size={18} />
-          {t('Settings')}
+          {t('Planning')}
         </Link>
       </div>
       <PageHeader title={t('Budgets')} />
