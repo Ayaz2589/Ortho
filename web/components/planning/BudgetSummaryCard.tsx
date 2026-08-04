@@ -1,11 +1,10 @@
 'use client'
 
-import { useMemo } from 'react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { categoryMeta } from '@/lib/categories'
-import { buildPlanSummary, type PaceState } from '@/lib/planning/planSummary'
+import type { BudgetSummary, PaceState } from '@/lib/planning/planSummary'
 import { PlanningSection } from './PlanningSection'
 
 /** Bar/label tint: sand `--accent` when at/over or ahead of pace, else sage
@@ -18,19 +17,10 @@ function paceColor(pace: PaceState): string {
  * Budget summary (spec 036 — US3). An overall spent-vs-budgeted pace bar plus the
  * few categories closest to or over their allowance, health judged by PACE (spend
  * vs. how far into the month), with rollover carry surfaced. Links out to the full
- * Budgets page. Reuses the BudgetsBody bar vocabulary.
+ * Budgets page. Presentational — the page passes the computed `BudgetSummary` in.
  */
-export function BudgetSummaryCard({ monthKey, now }: { monthKey: string; now: Date }) {
-  const { budgets, goals, goalContributions, transactions, formatMoney, t } = useApp()
-
-  const summary = useMemo(
-    () =>
-      buildPlanSummary(
-        { budgets, goals, goalContributions, transactions, monthKey },
-        now,
-      ).budgets,
-    [budgets, goals, goalContributions, transactions, monthKey, now],
-  )
+export function BudgetSummaryCard({ summary }: { summary: BudgetSummary }) {
+  const { formatMoney, t } = useApp()
 
   const viewAll = (
     <Link

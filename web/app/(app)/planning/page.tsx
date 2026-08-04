@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { PageHeader } from '@/components/ui'
 import { useApp } from '@/lib/store'
-import { currentMonthKey } from '@/lib/planning/planSummary'
+import { buildPlanSummary, currentMonthKey } from '@/lib/planning/planSummary'
 import { PlanningMonthBar } from '@/components/planning/PlanningMonthBar'
 import { PlanHealthHero } from '@/components/planning/PlanHealthHero'
 import { BudgetSummaryCard } from '@/components/planning/BudgetSummaryCard'
@@ -19,22 +19,29 @@ import { SinkingFundsPanel } from '@/components/planning/SinkingFundsPanel'
  *  - a goals summary (behind-first, with catch-up amounts),
  *  - a non-monthly sinking-funds panel.
  *
- * All figures are month-scoped via the pure `lib/planning/planSummary` engine with
- * an injected reference date, so changing the month recomputes everything.
+ * The whole summary is computed ONCE per render via the pure
+ * `lib/planning/planSummary` engine (injected reference date) and its slices are
+ * passed to the presentational cards, so the ledger is scanned once — not once per
+ * card. Selecting a month re-scopes everything.
  */
 export default function PlanningPage() {
-  const { t } = useApp()
+  const { budgets, goals, goalContributions, transactions, t } = useApp()
   const now = useMemo(() => new Date(), [])
   const [monthKey, setMonthKey] = useState(() => currentMonthKey(now))
+
+  const summary = useMemo(
+    () => buildPlanSummary({ budgets, goals, goalContributions, transactions, monthKey }, now),
+    [budgets, goals, goalContributions, transactions, monthKey, now],
+  )
 
   return (
     <div className="mx-auto w-full max-w-[720px]">
       <PageHeader title={t('Planning')} />
       <PlanningMonthBar monthKey={monthKey} now={now} onChange={setMonthKey} />
-      <PlanHealthHero monthKey={monthKey} now={now} />
-      <BudgetSummaryCard monthKey={monthKey} now={now} />
-      <GoalsSummaryCard monthKey={monthKey} now={now} />
-      <SinkingFundsPanel monthKey={monthKey} now={now} />
+      <PlanHealthHero health={summary.health} />
+      <BudgetSummaryCard summary={summary.budgets} />
+      <GoalsSummaryCard summary={summary.goals} />
+      <SinkingFundsPanel funds={summary.sinkingFunds} />
     </div>
   )
 }

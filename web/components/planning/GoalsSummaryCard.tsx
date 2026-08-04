@@ -1,30 +1,21 @@
 'use client'
 
-import { useMemo } from 'react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { parseLocalDate } from '@/lib/format'
-import { buildPlanSummary, type GoalRowSummary } from '@/lib/planning/planSummary'
+import type { GoalsSummary, GoalRowSummary } from '@/lib/planning/planSummary'
 import { PlanningSection } from './PlanningSection'
 
 /**
  * Goals summary (spec 036 — US4). Per goal: progress, saved-of-target, on/off-track
  * status, projected/due outlook, and — when behind — the suggested monthly
  * contribution to catch up. Off-track goals are listed first. Links out to the full
- * Goals page. Behind is calm sand `--accent`, reached is sage `--positive`, never red.
+ * Goals page. Behind is calm sand `--accent`, reached is sage `--positive`, never
+ * red. Presentational — the page passes the computed `GoalsSummary` in.
  */
-export function GoalsSummaryCard({ monthKey, now }: { monthKey: string; now: Date }) {
-  const { budgets, goals, goalContributions, transactions, t } = useApp()
-
-  const summary = useMemo(
-    () =>
-      buildPlanSummary(
-        { budgets, goals, goalContributions, transactions, monthKey },
-        now,
-      ).goals,
-    [budgets, goals, goalContributions, transactions, monthKey, now],
-  )
+export function GoalsSummaryCard({ summary }: { summary: GoalsSummary }) {
+  const { t } = useApp()
 
   const viewAll = (
     <Link

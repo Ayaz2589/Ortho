@@ -1,8 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
 import { useApp } from '@/lib/store'
-import { buildPlanSummary } from '@/lib/planning/planSummary'
+import type { PlanHealth } from '@/lib/planning/planSummary'
 
 /**
  * Plan-health HERO (spec 036 — US2). The single "Left to plan" figure for the
@@ -10,19 +9,11 @@ import { buildPlanSummary } from '@/lib/planning/planSummary'
  * contributions, with the three components shown beneath so the number is
  * trustworthy. Rendered card-less on the page background (like the dashboard's
  * NetSummaryHero). An over-committed month is calm ATTENTION (sand `--accent`),
- * NEVER the destructive/red token (constitution I/II).
+ * NEVER the destructive/red token (constitution I/II). Presentational — the page
+ * computes the summary once and passes this slice in.
  */
-export function PlanHealthHero({ monthKey, now }: { monthKey: string; now: Date }) {
-  const { budgets, goals, goalContributions, transactions, formatMoney, t } = useApp()
-
-  const health = useMemo(
-    () =>
-      buildPlanSummary(
-        { budgets, goals, goalContributions, transactions, monthKey },
-        now,
-      ).health,
-    [budgets, goals, goalContributions, transactions, monthKey, now],
-  )
+export function PlanHealthHero({ health }: { health: PlanHealth }) {
+  const { formatMoney, t } = useApp()
 
   const left = health.leftToPlanCents
   const color = left >= 0 ? 'var(--positive)' : 'var(--accent)'

@@ -9,6 +9,7 @@ import {
   plannedGoalContributions,
   planHealth,
   rankAtRiskBudgets,
+  budgetSummary,
   rankGoals,
   sinkingFunds,
   buildPlanSummary,
@@ -189,6 +190,19 @@ describe('rankAtRiskBudgets', () => {
   })
 })
 
+describe('budgetSummary', () => {
+  it('counts only fixed/flex budgets — a non_monthly-only household is empty here', () => {
+    // Only a sinking fund; the budget summary should report empty (count 0) so the
+    // card shows its empty state, not a zeroed "$0 of $0" card.
+    const sinking = makeBudget({ category: 'insurance', budget_type: 'non_monthly', monthly_limit_cents: 20000 })
+    const ref = planReferenceDate('2026-06', NOW)
+    const summary = budgetSummary([sinking], [], ref, monthElapsedFraction('2026-06', NOW))
+    expect(summary.budgetCount).toBe(0)
+    expect(summary.atRisk).toEqual([])
+    expect(summary.totalLimitCents).toBe(0)
+  })
+})
+
 describe('rankGoals', () => {
   it('off-track goals sort before on-track; undated is never off-track', () => {
     const behind = makeGoal({ id: 'g-behind', name: 'Behind', target_cents: 120000, created_at: '2026-01-01T00:00:00.000Z', target_date: '2026-07-01' })
@@ -215,6 +229,18 @@ describe('rankGoals', () => {
     expect(summary.rows[0].savedCents).toBe(25000)
     expect(summary.rows[0].targetCents).toBe(100000)
     expect(summary.rows[0].fraction).toBeCloseTo(0.25, 10)
+  })
+
+  it('a past-month view reflects the point-in-time saved balance, not today\'s total', () => {
+    const g = makeGoal({ id: 'g', target_cents: 100000, target_date: '2026-12-31', created_at: '2026-01-01T00:00:00.000Z' })
+    const by = contributionsByGoal([
+      contrib('g', 30000, '2026-02-15'),
+      contrib('g', 40000, '2026-05-20'), // made AFTER the viewed month
+    ])
+    const marchRef = planReferenceDate('2026-03', NOW) // a past month
+    expect(rankGoals([g], by, marchRef).rows[0].savedCents).toBe(30000) // excludes the May contribution
+    const juneRef = planReferenceDate('2026-06', NOW) // current month → both count
+    expect(rankGoals([g], by, juneRef).rows[0].savedCents).toBe(70000)
   })
 })
 
@@ -254,7 +280,7 @@ describe('buildPlanSummary', () => {
     expect(a).toEqual(b)
     expect(a.monthKey).toBe('2026-06')
     expect(a.health.leftToPlanCents).toBe(a.health.incomeCents - a.health.budgetedCents - a.health.goalContributionsCents)
-    expect(a.budgets.budgetCount).toBe(2)
+    expect(a.budgets.budgetCount).toBe(1) // only the fixed groceries budget; the non_monthly one is a sinking fund
     expect(a.goals.goalCount).toBe(1)
     expect(a.sinkingFunds.map((f) => f.budgetId)).toEqual(['b-t'])
   })

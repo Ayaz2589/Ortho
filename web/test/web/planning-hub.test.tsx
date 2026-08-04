@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import type { Budget, Goal, GoalContribution, Transaction } from '@/lib/types'
+import { buildPlanSummary, currentMonthKey, type SinkingFund } from '@/lib/planning/planSummary'
 
 // Reference "today": June 15 2026 (June has 30 days → half elapsed).
 const NOW = new Date(2026, 5, 15, 12, 0, 0, 0)
@@ -31,6 +32,7 @@ import { PlanHealthHero } from '@/components/planning/PlanHealthHero'
 import { BudgetSummaryCard } from '@/components/planning/BudgetSummaryCard'
 import { GoalsSummaryCard } from '@/components/planning/GoalsSummaryCard'
 import { SinkingFundsPanel } from '@/components/planning/SinkingFundsPanel'
+import { PlanningMonthBar } from '@/components/planning/PlanningMonthBar'
 import PlanningPage from '@/app/(app)/planning/page'
 import SettingsPlanningRedirect from '@/app/(app)/settings/planning/page'
 
@@ -87,6 +89,14 @@ function contrib(goal_id: string, amount_cents: number): GoalContribution {
 
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`
 
+/** Build the summary from the current mocked store, the way the page does. */
+function summaryFor(monthKey = '2026-06') {
+  return buildPlanSummary(
+    { budgets: store.budgets, goals: store.goals, goalContributions: store.goalContributions, transactions: store.transactions, monthKey },
+    NOW,
+  )
+}
+
 beforeEach(() => {
   replaceSpy.mockClear()
   store = {
@@ -105,7 +115,7 @@ describe('PlanHealthHero (US2)', () => {
   it('shows Left to plan and the income / budgeted / goals breakdown', () => {
     store.transactions = [makeTx({ kind: 'income', category: 'income', amount_cents: 400000, date: '2026-06-05T12:00:00.000Z' })]
     store.budgets = [makeBudget({ monthly_limit_cents: 100000 })]
-    render(<PlanHealthHero monthKey="2026-06" now={NOW} />)
+    render(<PlanHealthHero health={summaryFor().health} />)
 
     expect(screen.getByText(/Left to plan/i)).toBeInTheDocument()
     expect(screen.getByTestId('left-to-plan')).toHaveTextContent(money(300000))
@@ -117,16 +127,16 @@ describe('PlanHealthHero (US2)', () => {
   it('renders an over-committed month as attention, never using the destructive token', () => {
     store.transactions = [makeTx({ kind: 'income', category: 'income', amount_cents: 100000, date: '2026-06-05T12:00:00.000Z' })]
     store.budgets = [makeBudget({ monthly_limit_cents: 500000 })]
-    render(<PlanHealthHero monthKey="2026-06" now={NOW} />)
+    render(<PlanHealthHero health={summaryFor().health} />)
     const value = screen.getByTestId('left-to-plan')
     expect(value.getAttribute('style') ?? '').not.toContain('--destructive')
   })
 
-  it('recomputes when the selected month changes (FR-007)', () => {
+  it('reflects the selected month (FR-007): a month with no income shows zero income', () => {
     store.transactions = [makeTx({ kind: 'income', category: 'income', amount_cents: 400000, date: '2026-06-05T12:00:00.000Z' })]
-    const { rerender } = render(<PlanHealthHero monthKey="2026-06" now={NOW} />)
+    const { rerender } = render(<PlanHealthHero health={summaryFor('2026-06').health} />)
     expect(screen.getByTestId('plan-breakdown')).toHaveTextContent(money(400000))
-    rerender(<PlanHealthHero monthKey="2026-05" now={NOW} />)
+    rerender(<PlanHealthHero health={summaryFor('2026-05').health} />)
     expect(screen.getByTestId('plan-breakdown')).toHaveTextContent(money(0)) // no May income
   })
 })
@@ -140,7 +150,7 @@ describe('BudgetSummaryCard (US3)', () => {
       makeBudget({ id: 'b-t', category: 'insurance', budget_type: 'non_monthly', monthly_limit_cents: 50000 }),
     ]
     store.transactions = [makeTx({ category: 'groceries', amount_cents: 90000, date: '2026-06-10T12:00:00.000Z' })]
-    render(<BudgetSummaryCard monthKey="2026-06" now={NOW} />)
+    render(<BudgetSummaryCard summary={summaryFor().budgets} />)
 
     expect(screen.getByTestId('budget-overall-bar')).toBeInTheDocument()
     expect(screen.getByText('Groceries')).toBeInTheDocument()
@@ -157,14 +167,21 @@ describe('BudgetSummaryCard (US3)', () => {
   it('labels an over-limit category as over', () => {
     store.budgets = [makeBudget({ category: 'groceries', monthly_limit_cents: 100000 })]
     store.transactions = [makeTx({ category: 'groceries', amount_cents: 120000, date: '2026-06-10T12:00:00.000Z' })]
-    render(<BudgetSummaryCard monthKey="2026-06" now={NOW} />)
+    render(<BudgetSummaryCard summary={summaryFor().budgets} />)
     expect(screen.getByText(`${money(20000)} over`)).toBeInTheDocument()
   })
 
   it('shows a calm empty state with a link when there are no budgets', () => {
-    render(<BudgetSummaryCard monthKey="2026-06" now={NOW} />)
+    render(<BudgetSummaryCard summary={summaryFor().budgets} />)
     expect(screen.getByRole('link', { name: /budgets/i })).toHaveAttribute('href', '/budgets')
     expect(screen.getByTestId('budget-empty')).toBeInTheDocument()
+  })
+
+  it('shows the empty state (not a zeroed card) when the only budgets are non-monthly sinking funds', () => {
+    store.budgets = [makeBudget({ category: 'insurance', budget_type: 'non_monthly', monthly_limit_cents: 20000 })]
+    render(<BudgetSummaryCard summary={summaryFor().budgets} />)
+    expect(screen.getByTestId('budget-empty')).toBeInTheDocument()
+    expect(screen.queryByTestId('budget-overall-bar')).not.toBeInTheDocument()
   })
 })
 
@@ -177,7 +194,7 @@ describe('GoalsSummaryCard (US4)', () => {
       makeGoal({ id: 'g-behind', name: 'Behind Fund', target_cents: 120000, created_at: '2026-01-01T00:00:00.000Z', target_date: '2026-07-01' }),
     ]
     store.goalContributions = [contrib('g-on', 60000)]
-    render(<GoalsSummaryCard monthKey="2026-06" now={NOW} />)
+    render(<GoalsSummaryCard summary={summaryFor().goals} />)
 
     const rows = screen.getAllByTestId('goal-row')
     expect(within(rows[0]).getByText(/Behind Fund/)).toBeInTheDocument()
@@ -189,8 +206,8 @@ describe('GoalsSummaryCard (US4)', () => {
     expect(screen.getByRole('link', { name: /view all goals/i })).toHaveAttribute('href', '/goals')
   })
 
-  it('shows saved of target and a calm empty state with a link when there are no goals', () => {
-    render(<GoalsSummaryCard monthKey="2026-06" now={NOW} />)
+  it('shows a calm empty state with a link when there are no goals', () => {
+    render(<GoalsSummaryCard summary={summaryFor().goals} />)
     expect(screen.getByRole('link', { name: /goals/i })).toHaveAttribute('href', '/goals')
     expect(screen.getByTestId('goals-empty')).toBeInTheDocument()
   })
@@ -200,26 +217,45 @@ describe('GoalsSummaryCard (US4)', () => {
 describe('SinkingFundsPanel (US5)', () => {
   it('lists non-monthly categories with their set-aside amount', () => {
     store.budgets = [makeBudget({ id: 'b-t', category: 'insurance', budget_type: 'non_monthly', monthly_limit_cents: 20000, created_at: '2026-01-01T00:00:00.000Z' })]
-    render(<SinkingFundsPanel monthKey="2026-06" now={NOW} />)
+    render(<SinkingFundsPanel funds={summaryFor().sinkingFunds} />)
     expect(screen.getByTestId('sinking-funds')).toBeInTheDocument()
     expect(screen.getByText('Insurance')).toBeInTheDocument()
   })
 
+  it('shows a carried shortfall (not a negative "set aside") when a fund was overspent', () => {
+    const funds: SinkingFund[] = [{ budgetId: 'b-t', category: 'insurance', setAsideCents: -5000, baseLimitCents: 20000 }]
+    render(<SinkingFundsPanel funds={funds} />)
+    expect(screen.getByText(`${money(5000)} carried shortfall`)).toBeInTheDocument()
+    expect(screen.queryByText(/set aside/)).toBeNull()
+  })
+
   it('renders nothing when there are no non-monthly budgets', () => {
-    store.budgets = [makeBudget({ budget_type: 'fixed' })]
-    const { container } = render(<SinkingFundsPanel monthKey="2026-06" now={NOW} />)
+    const { container } = render(<SinkingFundsPanel funds={[]} />)
     expect(container).toBeEmptyDOMElement()
   })
 })
 
-// ── US1: hub page + old-link redirect ───────────────────────────────────────────
+// ── US1: month bar, hub page, old-link redirect ─────────────────────────────────
+describe('PlanningMonthBar (US1)', () => {
+  it('disables "Next" at the current month (no fabricated future income)', () => {
+    render(<PlanningMonthBar monthKey={currentMonthKey(NOW)} now={NOW} onChange={vi.fn()} />)
+    expect(screen.getByRole('button', { name: /next month/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /previous month/i })).not.toBeDisabled()
+  })
+
+  it('enables "Next" on a past month and offers a This month reset', () => {
+    render(<PlanningMonthBar monthKey="2026-04" now={NOW} onChange={vi.fn()} />)
+    expect(screen.getByRole('button', { name: /next month/i })).not.toBeDisabled()
+    expect(screen.getByRole('button', { name: /this month/i })).toBeInTheDocument()
+  })
+})
+
 describe('Planning hub page (US1)', () => {
   it('renders the Planning header, a month bar, and links out to Budgets and Goals', () => {
     render(<PlanningPage />)
     expect(screen.getByRole('heading', { name: 'Planning' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /view all budgets/i })).toHaveAttribute('href', '/budgets')
     expect(screen.getByRole('link', { name: /view all goals/i })).toHaveAttribute('href', '/goals')
-    // month stepper controls exist
     expect(screen.getByRole('button', { name: /previous month/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /next month/i })).toBeInTheDocument()
   })

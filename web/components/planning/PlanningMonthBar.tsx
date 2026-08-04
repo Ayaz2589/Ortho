@@ -6,9 +6,12 @@ import { monthLabel } from '@/lib/useDashboardRange'
 import { currentMonthKey, stepMonthKey } from '@/lib/planning/planSummary'
 
 /**
- * Planning month stepper (spec 036 — US1). A prev/next month control (future
- * months allowed, so users can plan ahead — unlike the dashboard's data-bounded
- * MonthPicker) plus a "This month" reset. Selecting a month re-scopes the whole hub.
+ * Planning month stepper (spec 036 — US1). A prev/next month control plus a "This
+ * month" reset. It scopes the hub to the current or a PAST month only — the app has
+ * no recurring/scheduled income, so a future month has no income data and a
+ * "Left to plan" figure there would just be a negative artifact (fabricating an
+ * income forecast is the deferred, out-of-scope work). "Next" is therefore disabled
+ * at the current month.
  */
 export function PlanningMonthBar({
   monthKey,
@@ -40,8 +43,9 @@ export function PlanningMonthBar({
       <button
         type="button"
         aria-label={t('Next month')}
+        disabled={isCurrent}
         onClick={() => onChange(stepMonthKey(monthKey, 'next'))}
-        className="flex h-10 w-10 items-center justify-center rounded-lg text-text-2 transition-colors hover:bg-[var(--chip-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+        className="flex h-10 w-10 items-center justify-center rounded-lg text-text-2 transition-colors hover:bg-[var(--chip-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:pointer-events-none disabled:text-text-3 disabled:opacity-40"
       >
         <ChevronRight size={18} />
       </button>

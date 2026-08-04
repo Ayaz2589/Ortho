@@ -7,8 +7,9 @@
 
 import type { Budget, Goal, GoalContribution, Transaction, TransactionCategory } from '../types'
 import { budgetStatusForMonth } from '../finance/budgets'
-import { goalProgress, goalPacing } from '../finance/goals'
+import { goalProgress, goalPacing, contributionsByGoal } from '../finance/goals'
 import { monthBounds } from '../transactionFilters'
+import { parseLocalDate } from '../format'
 import { PLANNING } from './thresholds'
 
 export type PaceState = 'under' | 'attention' | 'over'
@@ -164,7 +165,9 @@ export function incomeForMonth(transactions: Transaction[], monthKey: string): n
 }
 
 /** Σ suggested monthly contribution over goals (dated + unreached contribute;
- *  undated/reached contribute 0), as of `referenceDate`. */
+ *  undated/reached contribute 0), as of `referenceDate`. Only contributions made
+ *  on or before `referenceDate` count, so a past month reflects its point-in-time
+ *  saved balance rather than today's cumulative total. */
 export function plannedGoalContributions(
   goals: Goal[],
   contributionsByGoalId: Record<string, GoalContribution[]>,
@@ -172,7 +175,7 @@ export function plannedGoalContributions(
 ): number {
   let sum = 0
   for (const g of goals) {
-    const saved = sumContribs(contributionsByGoalId[g.id])
+    const saved = sumContribs(contribsAsOf(contributionsByGoalId[g.id], referenceDate))
     sum += goalPacing(g.target_cents, g.target_date, g.created_at, saved, referenceDate)
       .suggested_monthly_cents
   }
@@ -183,6 +186,16 @@ function sumContribs(list: GoalContribution[] | undefined): number {
   return (list ?? []).reduce((s, c) => s + c.amount_cents, 0)
 }
 
+/** Contributions made on or before `referenceDate` (local calendar), so a
+ *  past-month view reflects the point-in-time balance, not today's total. */
+function contribsAsOf(
+  list: GoalContribution[] | undefined,
+  referenceDate: Date,
+): GoalContribution[] {
+  const refMs = referenceDate.getTime()
+  return (list ?? []).filter((c) => parseLocalDate(c.date).getTime() <= refMs)
+}
+
 /** The "Left to plan" hero: income − BASE monthly allowances − planned goal
  *  contributions. Base (not rollover-effective) limits are used so a prior surplus
  *  never appears to reduce what's left to plan (FR-008). */
@@ -191,7 +204,7 @@ export function planHealth(input: PlanSummaryInput, referenceDate: Date): PlanHe
   const budgetedCents = input.budgets
     .filter((b) => b.monthly_limit_cents > 0)
     .reduce((s, b) => s + b.monthly_limit_cents, 0)
-  const by = groupContribs(input.goalContributions)
+  const by = contributionsByGoal(input.goalContributions)
   const goalContributionsCents = plannedGoalContributions(input.goals, by, referenceDate)
   return {
     incomeCents,
@@ -204,10 +217,11 @@ export function planHealth(input: PlanSummaryInput, referenceDate: Date): PlanHe
 /** Severity used to rank the at-risk list (over > attention > under). */
 const PACE_RANK: Record<PaceState, number> = { over: 2, attention: 1, under: 0 }
 
-/** `fixed`/`flex` budgets (with a positive limit) ranked ahead-of-pace first,
- *  capped at `PLANNING.topN`. `non_monthly` budgets are excluded — they appear in
- *  the sinking-funds panel instead. */
-export function rankAtRiskBudgets(
+/** Rollover-aware status of every `fixed`/`flex` budget (positive limit) for the
+ *  month — the shared basis for both the at-risk ranking and the overall totals,
+ *  so the transaction ledger is scanned once per budget, not twice. `non_monthly`
+ *  budgets are excluded (they appear in the sinking-funds panel). Unsorted. */
+function monthlyBudgetRows(
   budgets: Budget[],
   transactions: Transaction[],
   referenceDate: Date,
@@ -230,6 +244,11 @@ export function rankAtRiskBudgets(
         pace: paceState(status.spentCents, status.effectiveLimitCents, elapsedFraction),
       }
     })
+}
+
+/** Ahead-of-pace first, capped at `PLANNING.topN`. */
+function rankRows(rows: AtRiskBudget[]): AtRiskBudget[] {
+  return [...rows]
     .sort((a, b) => {
       const byPace = PACE_RANK[b.pace] - PACE_RANK[a.pace]
       if (byPace !== 0) return byPace
@@ -238,30 +257,40 @@ export function rankAtRiskBudgets(
     .slice(0, PLANNING.topN)
 }
 
-/** Overall + at-risk budget summary for the month. `budgetCount` counts all
- *  budgets with a positive limit (drives the empty state); `totalLimitCents` /
- *  `totalSpentCents` cover the `fixed`/`flex` set shown in the summary. */
+/** `fixed`/`flex` budgets ranked ahead-of-pace first, capped at `PLANNING.topN`.
+ *  `non_monthly` budgets are excluded — they appear in the sinking-funds panel. */
+export function rankAtRiskBudgets(
+  budgets: Budget[],
+  transactions: Transaction[],
+  referenceDate: Date,
+  elapsedFraction: number,
+): AtRiskBudget[] {
+  return rankRows(monthlyBudgetRows(budgets, transactions, referenceDate, elapsedFraction))
+}
+
+/** Overall + at-risk budget summary for the month. `budgetCount` counts only the
+ *  `fixed`/`flex` budgets this card summarizes — so a household whose only budgets
+ *  are `non_monthly` sinking funds gets the empty state here, not a zeroed card,
+ *  and still sees them in the sinking-funds panel. */
 export function budgetSummary(
   budgets: Budget[],
   transactions: Transaction[],
   referenceDate: Date,
   elapsedFraction: number,
 ): BudgetSummary {
-  const atRisk = rankAtRiskBudgets(budgets, transactions, referenceDate, elapsedFraction)
+  const rows = monthlyBudgetRows(budgets, transactions, referenceDate, elapsedFraction)
   let totalSpent = 0
   let totalLimit = 0
-  for (const b of budgets) {
-    if (b.budget_type === 'non_monthly' || b.monthly_limit_cents <= 0) continue
-    const status = budgetStatusForMonth(b, transactions, referenceDate)
-    totalSpent += status.spentCents
-    totalLimit += status.effectiveLimitCents
+  for (const r of rows) {
+    totalSpent += r.spentCents
+    totalLimit += r.effectiveLimitCents
   }
   return {
     totalSpentCents: totalSpent,
     totalLimitCents: totalLimit,
     overallPace: paceState(totalSpent, totalLimit, elapsedFraction),
-    atRisk,
-    budgetCount: budgets.filter((b) => b.monthly_limit_cents > 0).length,
+    atRisk: rankRows(rows),
+    budgetCount: rows.length,
   }
 }
 
@@ -272,7 +301,7 @@ export function rankGoals(
   referenceDate: Date,
 ): GoalsSummary {
   const rows: (GoalRowSummary & { _shortfall: number })[] = goals.map((g) => {
-    const contribs = contributionsByGoalId[g.id] ?? []
+    const contribs = contribsAsOf(contributionsByGoalId[g.id], referenceDate)
     const progress = goalProgress(g.target_cents, contribs)
     const pacing = goalPacing(g.target_cents, g.target_date, g.created_at, progress.saved_cents, referenceDate)
     return {
@@ -315,17 +344,11 @@ export function sinkingFunds(
     }))
 }
 
-function groupContribs(contributions: GoalContribution[]): Record<string, GoalContribution[]> {
-  const by: Record<string, GoalContribution[]> = {}
-  for (const c of contributions) (by[c.goal_id] ??= []).push(c)
-  return by
-}
-
 /** Assemble the whole hub view for the selected month. */
 export function buildPlanSummary(input: PlanSummaryInput, now: Date): PlanSummary {
   const referenceDate = planReferenceDate(input.monthKey, now)
   const elapsed = monthElapsedFraction(input.monthKey, now)
-  const by = groupContribs(input.goalContributions)
+  const by = contributionsByGoal(input.goalContributions)
   return {
     monthKey: input.monthKey,
     referenceDate,

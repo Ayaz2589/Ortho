@@ -187,8 +187,12 @@ panel does not appear.
   month-end without divide-by-zero or overflow artifacts (reference date is injected for tests).
 - **Goal with no target date**: shows progress and saved/target but a neutral status rather than a
   fabricated projection or catch-up figure.
-- **Selected month in the future**: the hub reflects that month's budgets/goals with no
-  month-to-date spend, and pace treats a future month as not-yet-started.
+- **Selected month in the future**: not reachable — forward stepping is disabled at the current
+  month (no future income data exists to plan against; see FR-006). Future-month planning is
+  deferred with cash-flow forecasting.
+- **Selected month in the past**: goal figures reflect the **point-in-time** balance (only
+  contributions made on or before that month count), so a historical month shows how the plan
+  actually stood then, not today's cumulative savings.
 - **Non-English language**: every label, status, and unit on the hub is translated in all supported
   languages; money is formatted per the member's currency and locale.
 - **Loading / error**: while household data loads the hub shows the app's standard calm placeholder
@@ -214,8 +218,11 @@ panel does not appear.
 
 **Month scope**
 
-- **FR-006**: The Planning hub MUST be scoped to a selectable month using the same month-selection
-  affordance the app already uses elsewhere, defaulting to the current month.
+- **FR-006**: The Planning hub MUST be scoped to a selectable month, defaulting to the current
+  month, with prev/next stepping and a "this month" reset. Scope is the current month or a **past**
+  month only — the app has no recurring/scheduled income, so a future month has no income to plan
+  against and its "Left to plan" figure would be a meaningless negative; fabricating a future income
+  forecast is the deferred, out-of-scope work. (Stepping forward is disabled at the current month.)
 - **FR-007**: Changing the selected month MUST recompute every figure on the hub (hero, budget
   summary, goals summary, sinking funds) for that month.
 
