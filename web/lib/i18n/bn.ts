@@ -474,6 +474,21 @@ const catalog: Record<string, string> = {
   "Open {0}": "{0} খুলুন",
   "Details coming soon.": "বিস্তারিত শীঘ্রই আসছে।",
   "Daily spending": "দৈনিক খরচ",
+
+  // Housing widgets (spec 036)
+  "Housing costs": "বাসস্থান খরচ",
+  "Your total monthly housing cost across all properties.": "সব সম্পত্তি জুড়ে আপনার মোট মাসিক বাসস্থান খরচ।",
+  "per month": "প্রতি মাসে",
+  "1 property": "১টি সম্পত্তি",
+  "{0} properties": "{0}টি সম্পত্তি",
+  "Net rental": "নিট ভাড়া",
+  "No properties yet.": "এখনো কোনো সম্পত্তি নেই।",
+  "Home equity": "বাড়ির ইকুইটি",
+  "Principal you've paid down across all mortgages.": "সব বন্ধকে আপনি যে মূল পরিশোধ করেছেন।",
+  "principal paid down": "মূল পরিশোধিত",
+  "{0}% paid off": "{0}% পরিশোধিত",
+  "of {0}": "{0} এর মধ্যে",
+  "No mortgages yet.": "এখনো কোনো বন্ধক নেই।",
 }
 
 export default catalog

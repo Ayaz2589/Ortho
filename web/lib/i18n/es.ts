@@ -474,6 +474,21 @@ const catalog: Record<string, string> = {
   "Open {0}": "Abrir {0}",
   "Details coming soon.": "Detalles próximamente.",
   "Daily spending": "Gasto diario",
+
+  // Housing widgets (spec 036)
+  "Housing costs": "Costos de vivienda",
+  "Your total monthly housing cost across all properties.": "Tu costo mensual total de vivienda en todas las propiedades.",
+  "per month": "al mes",
+  "1 property": "1 propiedad",
+  "{0} properties": "{0} propiedades",
+  "Net rental": "Alquiler neto",
+  "No properties yet.": "Aún no hay propiedades.",
+  "Home equity": "Capital de la vivienda",
+  "Principal you've paid down across all mortgages.": "Capital que has amortizado en todas tus hipotecas.",
+  "principal paid down": "capital amortizado",
+  "{0}% paid off": "{0}% pagado",
+  "of {0}": "de {0}",
+  "No mortgages yet.": "Aún no hay hipotecas.",
 }
 
 export default catalog

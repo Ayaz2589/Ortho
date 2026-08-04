@@ -474,6 +474,21 @@ const catalog: Record<string, string> = {
   "Open {0}": "打开{0}",
   "Details coming soon.": "详情即将推出。",
   "Daily spending": "每日支出",
+
+  // Housing widgets (spec 036)
+  "Housing costs": "住房支出",
+  "Your total monthly housing cost across all properties.": "您所有房产的每月住房支出总额。",
+  "per month": "每月",
+  "1 property": "1 处房产",
+  "{0} properties": "{0} 处房产",
+  "Net rental": "净租金",
+  "No properties yet.": "暂无房产。",
+  "Home equity": "房屋净值",
+  "Principal you've paid down across all mortgages.": "您在所有抵押贷款中已偿还的本金。",
+  "principal paid down": "已偿还本金",
+  "{0}% paid off": "已还清 {0}%",
+  "of {0}": "共 {0}",
+  "No mortgages yet.": "暂无抵押贷款。",
 }
 
 export default catalog

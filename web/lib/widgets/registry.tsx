@@ -5,6 +5,8 @@ import { GoalsBody } from '@/components/widgets/bodies/GoalsBody'
 import { TopMerchantsBody } from '@/components/widgets/bodies/TopMerchantsBody'
 import { ActivityBody } from '@/components/widgets/bodies/ActivityBody'
 import { SavingsTrendsBody } from '@/components/widgets/bodies/SavingsTrendsBody'
+import { HousingCostsBody } from '@/components/widgets/bodies/HousingCostsBody'
+import { HomeEquityBody } from '@/components/widgets/bodies/HomeEquityBody'
 
 /**
  * Widget registry (spec 034 — foundation). The SINGLE source of truth for the
@@ -84,6 +86,20 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'Your latest transactions across the household.',
     defaultEnabled: false,
     Body: ActivityBody,
+  },
+  {
+    id: 'housing-costs',
+    title: 'Housing costs',
+    description: 'Your total monthly housing cost across all properties.',
+    defaultEnabled: false,
+    Body: HousingCostsBody,
+  },
+  {
+    id: 'home-equity',
+    title: 'Home equity',
+    description: "Principal you've paid down across all mortgages.",
+    defaultEnabled: false,
+    Body: HomeEquityBody,
   },
 ]
 

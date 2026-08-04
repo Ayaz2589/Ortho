@@ -474,6 +474,21 @@ const catalog: Record<string, string> = {
   "Open {0}": "{0}を開く",
   "Details coming soon.": "詳細は近日公開。",
   "Daily spending": "日々の支出",
+
+  // Housing widgets (spec 036)
+  "Housing costs": "住居費",
+  "Your total monthly housing cost across all properties.": "すべての物件を合わせた毎月の住居費の合計。",
+  "per month": "月あたり",
+  "1 property": "物件1件",
+  "{0} properties": "物件{0}件",
+  "Net rental": "純賃料収入",
+  "No properties yet.": "まだ物件がありません。",
+  "Home equity": "住宅の純資産",
+  "Principal you've paid down across all mortgages.": "すべての住宅ローンで返済した元金。",
+  "principal paid down": "返済済み元金",
+  "{0}% paid off": "{0}% 返済済み",
+  "of {0}": "／{0}",
+  "No mortgages yet.": "まだ住宅ローンがありません。",
 }
 
 export default catalog
