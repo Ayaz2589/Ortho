@@ -19,8 +19,9 @@ describe('RouteSkeleton — route → shape mapping', () => {
     ['/dashboard', 'skeleton-dashboard'],
     ['/transactions', 'skeleton-transactions'],
     ['/housing', 'skeleton-housing'],
-    ['/budgets', 'skeleton-budgets'],
-    ['/goals', 'skeleton-goals'],
+    ['/planning/budget', 'skeleton-budgets'],
+    ['/planning/goals', 'skeleton-goals'],
+    ['/planning', 'skeleton-planning'],
     ['/settings', 'skeleton-settings'],
     ['/settings/household', 'skeleton-settings'],
     ['/transactions/new', 'skeleton-transactions'],
@@ -85,7 +86,7 @@ describe('RouteSkeleton — sizing from remembered counts (US2)', () => {
   })
 
   it('a recorded 0 still renders at least one goal card (no blank screen)', () => {
-    pathnameMock.mockReturnValue('/goals')
+    pathnameMock.mockReturnValue('/planning/goals')
     localStorage.setItem('ortho.skeletonCounts', JSON.stringify({ goals: 0 }))
     render(<RouteSkeleton />)
     // At least the header + one card's worth of placeholders exist.

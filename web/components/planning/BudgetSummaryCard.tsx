@@ -24,7 +24,7 @@ export function BudgetSummaryCard({ summary }: { summary: BudgetSummary }) {
 
   const viewAll = (
     <Link
-      href="/budgets"
+      href="/planning/budget"
       className="inline-flex items-center gap-1 rounded-lg text-[13px] text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
     >
       {t('View all budgets')}

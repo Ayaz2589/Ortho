@@ -51,9 +51,18 @@ Adjacent month key; wraps year boundaries. Future keys are allowed (planning ahe
 Σ `goalPacing(g.target_cents, g.target_date, g.created_at, saved, referenceDate).suggested_monthly_cents`
 over goals; undated/reached contribute 0.
 
+### `unbudgetedSpendForMonth(budgets, transactions, monthKey): number`
+(Spec 040.) Σ `amount_cents` of `kind === 'expense'` transactions in the month's `monthBounds` window
+(UTC half-open, as `incomeForMonth`) whose `category` is NOT one of the household's budgeted
+categories — i.e. no budget with `monthly_limit_cents > 0` covers it (all budget types, including
+`non_monthly` sinking funds, count as "budgeted"). Spend inside a budgeted category is already
+reserved by that category's allowance, so only truly unplanned spend is counted here.
+
 ### `planHealth(input, referenceDate): PlanHealth`
 `budgetedCents` = Σ `monthly_limit_cents` over budgets with `monthly_limit_cents > 0` (base, not
-effective). `leftToPlanCents` = income − budgeted − goalContributions.
+effective). `unbudgetedSpentCents` = `unbudgetedSpendForMonth(...)`. `leftToPlanCents` = income −
+budgeted − goalContributions − unbudgetedSpent — so money already spent outside any budget reduces
+what's left to plan (spec 040).
 
 ### `rankAtRiskBudgets(budgets, transactions, referenceDate, elapsedFraction): AtRiskBudget[]`
 `fixed`/`flex` budgets with limit > 0 only; compute `budgetStatusForMonth`; assign `pace`; sort by
@@ -72,7 +81,11 @@ Composes all of the above using `referenceDate = planReferenceDate(input.monthKe
 
 ## Test obligations (write first)
 
-- `leftToPlanCents` equals income − budgeted − goalContributions for a mixed household.
+- `leftToPlanCents` equals income − budgeted − goalContributions − unbudgetedSpent for a mixed
+  household.
+- `unbudgetedSpendForMonth`: an expense in a category with no budget reduces `leftToPlanCents`;
+  an expense in a budgeted category (any budget type) does NOT; income/transfers never count;
+  out-of-month expenses are excluded.
 - Base (not effective) limits used in the hero: a flex budget with rollover surplus does NOT shrink
   `budgetedCents`.
 - `paceState`: 60% spent at 10% elapsed → `attention`; 60% at 90% → `under`; ≥100% → `over`; future

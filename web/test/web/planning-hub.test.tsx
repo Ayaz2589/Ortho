@@ -124,6 +124,21 @@ describe('PlanHealthHero (US2)', () => {
     expect(breakdown).toHaveTextContent(money(100000)) // budgeted
   })
 
+  it('shows unbudgeted spend in the breakdown and subtracts it from Left to plan (spec 040)', () => {
+    store.transactions = [
+      makeTx({ kind: 'income', category: 'income', amount_cents: 1000000, date: '2026-06-05T12:00:00.000Z' }),
+      makeTx({ kind: 'expense', category: 'entertainment', amount_cents: 500000, date: '2026-06-12T12:00:00.000Z' }),
+    ]
+    store.budgets = [makeBudget({ category: 'groceries', monthly_limit_cents: 200000 })]
+    render(<PlanHealthHero health={summaryFor().health} />)
+
+    const breakdown = screen.getByTestId('plan-breakdown')
+    expect(breakdown).toHaveTextContent('Spent (unbudgeted)')
+    expect(breakdown).toHaveTextContent(money(500000))
+    // 1,000,000 − 200,000 budgeted − 500,000 unbudgeted = 300,000.
+    expect(screen.getByTestId('left-to-plan')).toHaveTextContent(money(300000))
+  })
+
   it('renders an over-committed month as attention, never using the destructive token', () => {
     store.transactions = [makeTx({ kind: 'income', category: 'income', amount_cents: 100000, date: '2026-06-05T12:00:00.000Z' })]
     store.budgets = [makeBudget({ monthly_limit_cents: 500000 })]
@@ -161,7 +176,7 @@ describe('BudgetSummaryCard (US3)', () => {
     expect(screen.queryByText('Insurance')).not.toBeInTheDocument()
 
     const link = screen.getByRole('link', { name: /view all budgets/i })
-    expect(link).toHaveAttribute('href', '/budgets')
+    expect(link).toHaveAttribute('href', '/planning/budget')
   })
 
   it('labels an over-limit category as over', () => {
@@ -173,7 +188,7 @@ describe('BudgetSummaryCard (US3)', () => {
 
   it('shows a calm empty state with a link when there are no budgets', () => {
     render(<BudgetSummaryCard summary={summaryFor().budgets} />)
-    expect(screen.getByRole('link', { name: /budgets/i })).toHaveAttribute('href', '/budgets')
+    expect(screen.getByRole('link', { name: /budgets/i })).toHaveAttribute('href', '/planning/budget')
     expect(screen.getByTestId('budget-empty')).toBeInTheDocument()
   })
 
@@ -203,12 +218,12 @@ describe('GoalsSummaryCard (US4)', () => {
     const undated = rows.find((r) => within(r).queryByText('Someday'))!
     expect(within(undated).queryByText(/\/mo/)).toBeNull()
 
-    expect(screen.getByRole('link', { name: /view all goals/i })).toHaveAttribute('href', '/goals')
+    expect(screen.getByRole('link', { name: /view all goals/i })).toHaveAttribute('href', '/planning/goals')
   })
 
   it('shows a calm empty state with a link when there are no goals', () => {
     render(<GoalsSummaryCard summary={summaryFor().goals} />)
-    expect(screen.getByRole('link', { name: /goals/i })).toHaveAttribute('href', '/goals')
+    expect(screen.getByRole('link', { name: /goals/i })).toHaveAttribute('href', '/planning/goals')
     expect(screen.getByTestId('goals-empty')).toBeInTheDocument()
   })
 })
@@ -254,8 +269,8 @@ describe('Planning hub page (US1)', () => {
   it('renders the Planning header, a month bar, and links out to Budgets and Goals', () => {
     render(<PlanningPage />)
     expect(screen.getByRole('heading', { name: 'Planning' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /view all budgets/i })).toHaveAttribute('href', '/budgets')
-    expect(screen.getByRole('link', { name: /view all goals/i })).toHaveAttribute('href', '/goals')
+    expect(screen.getByRole('link', { name: /view all budgets/i })).toHaveAttribute('href', '/planning/budget')
+    expect(screen.getByRole('link', { name: /view all goals/i })).toHaveAttribute('href', '/planning/goals')
     expect(screen.getByRole('button', { name: /previous month/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /next month/i })).toBeInTheDocument()
   })

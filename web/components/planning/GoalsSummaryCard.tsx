@@ -19,7 +19,7 @@ export function GoalsSummaryCard({ summary }: { summary: GoalsSummary }) {
 
   const viewAll = (
     <Link
-      href="/goals"
+      href="/planning/goals"
       className="inline-flex items-center gap-1 rounded-lg text-[13px] text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
     >
       {t('View all goals')}

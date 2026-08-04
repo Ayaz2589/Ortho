@@ -37,11 +37,15 @@ export function GoalCard({
   const kindLabel = goal.kind === 'debt_payoff' ? t('Debt payoff') : t('Savings')
   const Icon = goal.kind === 'debt_payoff' ? TrendingDown : PiggyBank
 
-  const dueLabel = goal.target_date
-    ? new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', year: 'numeric' }).format(
-        parseLocalDate(goal.target_date)
-      )
-    : null
+  const dateFmt = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', year: 'numeric' })
+  const dueLabel = goal.target_date ? dateFmt.format(parseLocalDate(goal.target_date)) : null
+
+  // Individual payments behind the saved total, newest first (spec 040) — so the
+  // headline number is auditable. Date desc, then most-recently-recorded first.
+  const ledger = [...contributions].sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1
+    return a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0
+  })
 
   // Pace line for a dated goal. Behind → calm accent + a nudge; on pace → muted.
   let paceText: string | null = null
@@ -118,6 +122,26 @@ export function GoalCard({
               {paceText}
             </p>
           ) : null}
+
+          {/* Payment breakdown — the individual contributions behind the total. */}
+          <p className="mt-3 text-[11px] font-normal uppercase tracking-[0.6px] text-text-3">
+            {t('Contributions')}
+          </p>
+          {ledger.length > 0 ? (
+            <ul data-testid="contribution-list" className="mt-1 flex flex-col gap-1">
+              {ledger.map((c) => (
+                <li key={c.id} className="flex items-baseline justify-between gap-3 text-[13px]">
+                  <span className="min-w-0 truncate text-text-2">
+                    <span className="tabular-nums">{dateFmt.format(parseLocalDate(c.date))}</span>
+                    {c.note ? <span className="text-text-3"> · {c.note}</span> : null}
+                  </span>
+                  <span className="shrink-0 tabular-nums text-text">{formatMoney(c.amount_cents)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-[13px] text-text-3">{t('No contributions yet')}</p>
+          )}
 
           {onAddContribution ? (
             <button

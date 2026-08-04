@@ -18,6 +18,8 @@ export interface PlanHealth {
   incomeCents: number
   budgetedCents: number
   goalContributionsCents: number
+  /** Σ expense spent this month in categories with no budget (spec 040). */
+  unbudgetedSpentCents: number
   leftToPlanCents: number
 }
 
@@ -164,6 +166,38 @@ export function incomeForMonth(transactions: Transaction[], monthKey: string): n
   return sum
 }
 
+/**
+ * Σ EXPENSE cents this month spent in categories with NO budget (spec 040 — US3).
+ *
+ * A category is "budgeted" if any budget covers it with a positive limit (all
+ * budget types, including `non_monthly` sinking funds). Spend inside a budgeted
+ * category is already reserved by that category's allowance, so only truly
+ * unplanned spend is counted here — this is what "Left to plan" subtracts so money
+ * already gone outside the plan reduces what's left. Same UTC month window as
+ * `incomeForMonth`; income and transfers never count.
+ */
+export function unbudgetedSpendForMonth(
+  budgets: Budget[],
+  transactions: Transaction[],
+  monthKey: string,
+): number {
+  const budgeted = new Set<TransactionCategory>(
+    budgets.filter((b) => b.monthly_limit_cents > 0).map((b) => b.category),
+  )
+  const b = monthBounds(monthKey)
+  const startMs = new Date(b.dateFrom).getTime()
+  const endMs = new Date(b.dateTo).getTime()
+  let sum = 0
+  for (const tx of transactions) {
+    if (tx.kind !== 'expense') continue
+    if (budgeted.has(tx.category)) continue
+    const ms = new Date(tx.date).getTime()
+    if (ms < startMs || ms >= endMs) continue
+    sum += tx.amount_cents
+  }
+  return sum
+}
+
 /** Σ suggested monthly contribution over goals (dated + unreached contribute;
  *  undated/reached contribute 0), as of `referenceDate`. Only contributions made
  *  on or before `referenceDate` count, so a past month reflects its point-in-time
@@ -197,8 +231,10 @@ function contribsAsOf(
 }
 
 /** The "Left to plan" hero: income − BASE monthly allowances − planned goal
- *  contributions. Base (not rollover-effective) limits are used so a prior surplus
- *  never appears to reduce what's left to plan (FR-008). */
+ *  contributions − money already spent OUTSIDE any budget (spec 040). Base (not
+ *  rollover-effective) limits are used so a prior surplus never appears to reduce
+ *  what's left to plan (FR-008); unbudgeted spend is subtracted so cash already
+ *  gone off-plan is reflected (spec 040 — US3). */
 export function planHealth(input: PlanSummaryInput, referenceDate: Date): PlanHealth {
   const incomeCents = incomeForMonth(input.transactions, input.monthKey)
   const budgetedCents = input.budgets
@@ -206,11 +242,13 @@ export function planHealth(input: PlanSummaryInput, referenceDate: Date): PlanHe
     .reduce((s, b) => s + b.monthly_limit_cents, 0)
   const by = contributionsByGoal(input.goalContributions)
   const goalContributionsCents = plannedGoalContributions(input.goals, by, referenceDate)
+  const unbudgetedSpentCents = unbudgetedSpendForMonth(input.budgets, input.transactions, input.monthKey)
   return {
     incomeCents,
     budgetedCents,
     goalContributionsCents,
-    leftToPlanCents: incomeCents - budgetedCents - goalContributionsCents,
+    unbudgetedSpentCents,
+    leftToPlanCents: incomeCents - budgetedCents - goalContributionsCents - unbudgetedSpentCents,
   }
 }
 
