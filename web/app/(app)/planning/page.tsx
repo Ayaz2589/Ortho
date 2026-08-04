@@ -11,7 +11,7 @@ import { GoalsSummaryCard } from '@/components/planning/GoalsSummaryCard'
 import { SinkingFundsPanel } from '@/components/planning/SinkingFundsPanel'
 
 /**
- * Planning hub (spec 036) — a top-level destination alongside Dashboard,
+ * Planning hub (spec 038) — a top-level destination alongside Dashboard,
  * Transactions, Housing, and Settings. A calm, month-scoped composition that
  * summarizes budgets + goals and links out to their detail pages:
  *  - the "Left to plan" health hero (income − budgeted − goal contributions),

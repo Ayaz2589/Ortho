@@ -2,7 +2,7 @@
 
 **Branch**: `feat/planning-page` | **Date**: 2026-08-03 | **Spec**: [spec.md](./spec.md)
 
-**Input**: Feature specification from `specs/036-planning-hub/spec.md`
+**Input**: Feature specification from `specs/038-planning-hub/spec.md`
 
 ## Summary
 
@@ -83,7 +83,7 @@ catalogs. No changes to Budgets/Goals detail pages beyond being linked to.
 ### Documentation (this feature)
 
 ```text
-specs/036-planning-hub/
+specs/038-planning-hub/
 ├── plan.md              # This file
 ├── research.md          # Competitive + codebase research synthesis
 ├── data-model.md        # Derived view types (no stored data)

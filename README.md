@@ -9,13 +9,17 @@ two targets: a responsive web app and, wrapped via **Capacitor**, the iOS app
 SwiftUI app (`iOS/Ortho-iOS/`) is **frozen** since spec 021 — historical
 reference / rollback path only (see `docs/ios.md`).
 
-What the product does today: transactions with splits, tags, and notes;
-budgets with rollover bucket types (`fixed` / `flex` / `non_monthly`);
-savings and debt-payoff goals with pacing; a Dashboard with an
-**Overview | Reports** mode switch (savings rate + category deep-dive);
+What the product does today: transactions with splits, tags, and notes over a
+two-level category/subcategory taxonomy including income subcategories (spec 031);
+user-configurable deposit accounts for income (spec 033); budgets with rollover
+bucket types (`fixed` / `flex` / `non_monthly`); savings and debt-payoff goals with
+pacing; a single-view Dashboard of toggleable widgets (net-summary hero with spend
+heatmap, savings trends, spending pace, budgets, goals, top merchants) sharing one
+month/range scope, toggled per-browser in Settings → Widgets (specs 034/035);
 housing (mortgage, rentals, multifamily occupancy); member settle-up;
-receipt/statement scan; connect-only Plaid bank linking; Stripe subscriptions
-with a paywall; 6 languages; 7 display currencies over a USD-cents ledger.
+receipt/statement scan; connect-only Plaid plus SimpleFin bank sync (spec 028);
+dual-layer PDF data export/import under Settings → Data (spec 032); Stripe
+subscriptions with a paywall; 6 languages; 7 display currencies over a USD-cents ledger.
 
 ## What's inside
 
@@ -26,7 +30,7 @@ Ortho/
 │                 the canonical implementation; web/ios/App/ is its Capacitor iOS shell
 ├── iOS/          FROZEN SwiftUI app (Swift) — historical reference / rollback path only
 ├── shared/       Regression test vectors (finance logic pinning; formerly cross-language)
-├── supabase/     Postgres schema + 15 migrations + edge functions (the shared backend)
+├── supabase/     Postgres schema + 19 migrations + edge functions (the shared backend)
 ├── services/     Node cores synced into edge functions: billing (Stripe, spec 018) + aggregation (Plaid, spec 024)
 ├── specs/        Spec-Driven Development artifacts (Spec Kit)
 └── .specify/     Spec Kit config + the project constitution
@@ -39,8 +43,7 @@ pieces fit, then links a deep-dive per subsystem
 [ios](docs/ios.md) — Capacitor shell, TestFlight deploy, and the frozen native app).
 
 The four destinations on every canvas: **Dashboard**, **Transactions**, **Housing**,
-**Settings**. Budgets and Goals are reached from Settings → Planning; Reports is a
-mode inside Dashboard, not a fifth destination.
+**Settings**. Budgets and Goals are reached from Settings → Planning.
 
 ## Core ideas
 
@@ -86,8 +89,10 @@ npx tsc --noEmit   # typecheck
 npm run build      # static export → web/out/ (output: 'export')
 ```
 
-Deterministic demo data: `npm run gen:corpus` builds the seedable coverage
-corpus, `npm run seed:corpus` loads it (spec 026).
+Deterministic demo data (holistic seed, spec 030): `npm run gen:corpus` builds the
+coverage corpus, `npm run seed:corpus` loads a ~450-transaction demo household —
+creating the `auth.users` rows via the Admin API so the env-gated local/stage
+auto-login user owns the data and the app opens fully populated.
 
 ### iOS — Capacitor shell of `web/` (`web/ios/App/`)
 
@@ -114,10 +119,11 @@ credentials/setup live in the gitignored `CI-SETUP.local.md` at the repo root.
 ### Backend (`supabase/`)
 
 Postgres schema + migrations (households, members/people, transactions + shares
-+ tags + notes, cards, properties/mortgage/lease/units, rental payments, budgets
-with rollover, goals + contributions, aggregate RPCs, `upsert_transaction`,
-billing/entitlements, Plaid-linked institutions/accounts). Deno **edge
-functions** under `supabase/functions/` (Stripe billing + Plaid connect). Apply
++ tags + notes, cards, deposit accounts, properties/mortgage/lease/units, rental
+payments, budgets with rollover, goals + contributions, aggregate RPCs,
+`upsert_transaction`, billing/entitlements, linked institutions/accounts shared
+by both aggregation providers). Deno **edge functions** under
+`supabase/functions/` (Stripe billing + Plaid connect + SimpleFin sync). Apply
 with the Supabase CLI;
 [`.github/workflows/supabase-migrations.yml`](.github/workflows/supabase-migrations.yml)
 validates and auto-applies migrations in CI. Details: [`docs/supabase.md`](docs/supabase.md).
@@ -150,6 +156,8 @@ math and date logic never ship without coverage.
 ## How work flows here
 
 Features move through Spec-Driven Development — `specify → plan → tasks →
-implement`, recorded under `specs/`. All seven spec-027 features are merged;
-nothing is currently in-flight. The backlog lives in `docs/future_tasks/`.
+implement`, recorded under `specs/`. Work has shipped through spec 035 — recent:
+031 category/subcategory taxonomy, 032 PDF export + loading skeletons +
+copy/name-suggest, 033 deposit accounts, 034/035 the dashboard widget system.
+The backlog lives in `docs/future_tasks/`.
 Agent/contributor working notes live in [`CLAUDE.md`](CLAUDE.md).

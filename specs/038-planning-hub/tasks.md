@@ -1,10 +1,10 @@
 ---
-description: "Task list for Planning Hub (spec 036)"
+description: "Task list for Planning Hub (spec 038)"
 ---
 
 # Tasks: Planning Hub (top-level destination)
 
-**Input**: Design documents from `specs/036-planning-hub/`
+**Input**: Design documents from `specs/038-planning-hub/`
 
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/plan-summary.md
 
@@ -167,7 +167,7 @@ none, panel absent.
 - [ ] T029 [P] [POLISH] Verify design-system guards: `npm test -- test/tokens-only-backgrounds.test.ts`;
       manually confirm no red for loss/cost, no shadow on inset cards, focus rings, capped width.
 - [ ] T030 [P] [POLISH] Update `docs/web.md` §2 route tree + destination count (four → five) and note
-      the Planning hub; update root `CLAUDE.md` active-feature pointer to spec 036.
+      the Planning hub; update root `CLAUDE.md` active-feature pointer to spec 038.
 - [ ] T031 [POLISH] Full gate: `npm test` green, `npx tsc --noEmit` clean, run quickstart.md checks.
 
 ---

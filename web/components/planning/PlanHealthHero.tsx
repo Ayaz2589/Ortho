@@ -4,7 +4,7 @@ import { useApp } from '@/lib/store'
 import type { PlanHealth } from '@/lib/planning/planSummary'
 
 /**
- * Plan-health HERO (spec 036 — US2). The single "Left to plan" figure for the
+ * Plan-health HERO (spec 038 — US2). The single "Left to plan" figure for the
  * selected month = income − base monthly budget allowances − planned goal
  * contributions, with the three components shown beneath so the number is
  * trustworthy. Rendered card-less on the page background (like the dashboard's

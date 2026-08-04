@@ -6,7 +6,7 @@ import type { SinkingFund } from '@/lib/planning/planSummary'
 import { PlanningSection } from './PlanningSection'
 
 /**
- * Sinking-funds panel (spec 036 — US5). Surfaces `non_monthly` budget categories
+ * Sinking-funds panel (spec 038 — US5). Surfaces `non_monthly` budget categories
  * and how much is currently set aside (carried forward) for each — the app uniquely
  * models these irregular expenses. non_monthly carry is signed, so a category that
  * was overspent shows a "carried shortfall" rather than a contradictory negative

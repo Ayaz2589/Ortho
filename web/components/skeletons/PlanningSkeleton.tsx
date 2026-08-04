@@ -3,7 +3,7 @@
 import { Skeleton } from '@/components/ui/Skeleton'
 import { SkeletonRegion } from './SkeletonRegion'
 
-/** Planning hub skeleton (spec 036) — a fixed shape mirroring the hub: title +
+/** Planning hub skeleton (spec 038) — a fixed shape mirroring the hub: title +
  *  month bar, the "Left to plan" hero, and two summary-card placeholders. Static
  *  (no shimmer), token-only. */
 export function PlanningSkeleton() {

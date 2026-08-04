@@ -35,6 +35,10 @@ vectors are a single-implementation regression lock, not a cross-language parity
 Supporting model layer (not engines): `web/lib/categories.ts` (taxonomy), `web/lib/transaction.ts`
 (transfer helpers), `web/lib/format.ts` (`parseLocalDate`).
 
+Unvectored pure roll-ups added for the widget dashboard (spec 034), pinned by unit/integrity tests
+rather than golden vectors: `web/lib/finance/housing-summary.ts` (§10) and
+`web/lib/dashboard/spendHeatmap.ts` (§9).
+
 ## 2. The bedrock invariant: integer USD cents
 
 **Every stored monetary value is a whole-cent integer in US dollars.** All `*_cents` fields
@@ -71,7 +75,7 @@ conversion round-trip) assert truth that a laundered vector regeneration cannot 
 ## 3. Data shapes (`web/lib/types.ts`, mirrors Postgres column-for-column)
 
 - **Transaction**: `kind: 'expense' | 'income' | 'transfer'` (**3 kinds**);
-  `category: TransactionCategory` (**41 values** = 40 pickable + non-pickable `transfer`);
+  `category: TransactionCategory` (**40 values** = 39 pickable + non-pickable `transfer`);
   `amount_cents`; `paid_by?` (who paid out); `owner_ids: string[]`;
   `shares: Record<string, number>` (must sum to `amount_cents`); `notes`; `tags?: string[]`
   (tag ids, spec 027).
@@ -88,7 +92,7 @@ conversion round-trip) assert truth that a laundered vector regeneration cannot 
 - **Property/MortgageInfo/LeaseInfo/Unit** — housing sub-shapes; `Unit.occupied?` is the explicit
   occupancy flag (spec 020), with tenant-name fallback (§10).
 
-## 4. Money & currency (`money.ts` 109 lines, `currency.ts` 42 lines)
+## 4. Money & currency (`money.ts` 118 lines, `currency.ts` 42 lines)
 
 **7 currencies**, fixed order matching the historical iOS enum (`CURRENCIES`):
 `usd $` · `cad CA$` · `gbp £` · `eur €` · `jpy ¥` (**0 fraction digits**) · `cny CN¥` · `bdt ৳`
@@ -190,6 +194,12 @@ original order preserved. `FilterCriteria` dimensions:
 | `tags[]` | tag **ids**; `tx.tags ?? []` must intersect |
 | `dateFrom`/`dateTo` | half-open `[from, to)` |
 
+The `source` string / `sources[]` filter now reflects the user's configured **deposit accounts**
+(spec 033) — the hardcoded `INCOME_SOURCES` list is gone; the income "Deposit to" dropdown is
+driven by the household-scoped `deposit_accounts` table (model layer in `store.tsx`, see
+[`web.md`](./web.md)/[`supabase.md`](./supabase.md)). `transactions.source` still stores the chosen
+name, so no finance engine changed.
+
 `FilterContext.tagNames` is **optional** — the Makefile ingest CLI has no tag roster, so tag-name
 search is a no-op there (tag-id filtering still works). Helpers: `emptyCriteria()` (carries
 `tags: []`), `activeFilterCount` (7 dimensions; the date pair counts once), `availableSources`
@@ -214,6 +224,15 @@ Vector: `transaction-filters.json` (22 cases incl. tag OR/AND/absent and notes/t
   month, else the month's **last day at local noon** (fully elapsed, so `monthProgress` ≈ 1 and
   the under-budget rule — needs ≥ 0.7 — can fire for past months). Local, not UTC, so UTC+12/+13
   viewers don't scope the next month (spec 023 B2). Unvectored.
+
+### Spend heatmap — `web/lib/dashboard/spendHeatmap.ts` (spec 034)
+
+`buildSpendHeatmap(transactions, interval)` — pure/deterministic; enumerates every calendar day in
+the `[interval.start, interval.end)` scope window and sums **expense** cents per **local-calendar**
+day (`income` and `transfer` excluded — this is a spending heatmap). `level: 0..4` is **relative to
+the busiest day** in the window (0 for a no-spend day, else 1–4 by quartile of the max), so the ramp
+always uses its full range regardless of absolute spend; the render layer maps levels → token tints
+(never red). **Unvectored.**
 
 ## 10. Mortgage & housing
 
@@ -253,6 +272,17 @@ Single source of truth for net rental on Dashboard **and** property detail.
   `20260707120000_unit_occupied`).
 
 Vector: `housing-net-rental.json` (6 cases; occupancy pre-resolved to a boolean).
+
+### `web/lib/finance/housing-summary.ts` (56 lines — spec 034)
+
+`housingSummary(properties)` — household-wide pure roll-up across every property, returning
+`{cost, equity, netRental, multi, count}` in integer cents. Monthly `cost` = each mortgage's
+`monthlyPaymentCents` plus any `lease.monthly_rent_cents`; `equity` = principal paid down
+(`original_loan_cents − balance`, balance clamped to 0 below `PAID_OFF_THRESHOLD_CENTS`);
+`netRental` sums `netRentalCents(rentUnitsFrom(units), pay)` for **multifamily** properties —
+**not gated on having a mortgage** (a paid-off multifamily still earns its unit rents, `pay = 0`).
+Extracted from the desktop dashboard composition when it moved to the widget framework so the math
+outlives any one screen. **Unvectored** — pinned by `web/test/store.integrity.test.tsx`.
 
 ### Lease timing — `web/components/housing/lease.ts` (66 lines; NOT under `lib/finance/`)
 
@@ -344,9 +374,9 @@ Deliberately **unvectored** (unit tests only; documented policy in `PARITY.md`).
   `MonthWindow[]` (`{yyyymm, start, end}`), oldest→newest — needed because the
   `household_month_summary` RPC aggregates a whole window.
 
-## 14. Categories & severity (`web/lib/categories.ts`, 110 lines)
+## 14. Categories & severity (`web/lib/categories.ts`, 224 lines)
 
-- **3 kinds**, **41 categories** total: 40 `PICKABLE_CATEGORIES` + non-pickable `transfer`.
+- **3 kinds**, **40 categories** total: 39 `PICKABLE_CATEGORIES` + non-pickable `transfer`.
   Expense subcategories (29) organized in 8 groups via `CATEGORY_GROUPS.expense`; income
   subcategories (10) in 3 groups via `CATEGORY_GROUPS.income`. `SPEND_CATEGORIES` = 29 (all
   expense slugs derived from `CATEGORY_GROUPS.expense`). `INCOME_CATEGORIES` = 10 (all income

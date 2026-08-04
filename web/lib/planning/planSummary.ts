@@ -1,8 +1,8 @@
-// Planning Hub engine (spec 036). Pure, deterministic, integer-USD-cents; the
+// Planning Hub engine (spec 038). Pure, deterministic, integer-USD-cents; the
 // reference "today" is always injected. Composes the existing rollover
 // (`budgetStatusForMonth`) and goal-pacing (`goalProgress`/`goalPacing`) engines —
 // no new stored data, no schema change. Contract + test obligations:
-// specs/036-planning-hub/contracts/plan-summary.md, locked by
+// specs/038-planning-hub/contracts/plan-summary.md, locked by
 // test/planning/planSummary.test.ts.
 
 import type { Budget, Goal, GoalContribution, Transaction, TransactionCategory } from '../types'

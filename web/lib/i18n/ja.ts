@@ -3,7 +3,7 @@
 // to positional {0},{1} placeholders. New web-only keys are appended below
 // the seed block.
 const catalog: Record<string, string> = {
-  // Planning hub (spec 036)
+  // Planning hub (spec 038)
   "Plan health": "プランの状態",
   "Left to plan": "計画可能な残り",
   "Income not yet allocated this month.": "今月はまだ割り当てられていない収入です。",

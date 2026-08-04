@@ -8,7 +8,7 @@ import type { GoalsSummary, GoalRowSummary } from '@/lib/planning/planSummary'
 import { PlanningSection } from './PlanningSection'
 
 /**
- * Goals summary (spec 036 — US4). Per goal: progress, saved-of-target, on/off-track
+ * Goals summary (spec 038 — US4). Per goal: progress, saved-of-target, on/off-track
  * status, projected/due outlook, and — when behind — the suggested monthly
  * contribution to catch up. Off-track goals are listed first. Links out to the full
  * Goals page. Behind is calm sand `--accent`, reached is sage `--positive`, never

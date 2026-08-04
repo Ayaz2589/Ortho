@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react'
 
 /**
- * Shared hairline surface for the planning-hub summary cards (spec 036). NO shadow
+ * Shared hairline surface for the planning-hub summary cards (spec 038). NO shadow
  * — inset cards sit on the background (constitution II / SC-007). A title row with
  * an optional trailing action (e.g. a "View all …" link).
  */

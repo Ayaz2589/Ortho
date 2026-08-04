@@ -6,7 +6,7 @@ import { monthLabel } from '@/lib/useDashboardRange'
 import { currentMonthKey, stepMonthKey } from '@/lib/planning/planSummary'
 
 /**
- * Planning month stepper (spec 036 — US1). A prev/next month control plus a "This
+ * Planning month stepper (spec 038 — US1). A prev/next month control plus a "This
  * month" reset. It scopes the hub to the current or a PAST month only — the app has
  * no recurring/scheduled income, so a future month has no income data and a
  * "Left to plan" figure there would just be a negative artifact (fabricating an

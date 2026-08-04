@@ -1,4 +1,4 @@
-// Tunable constants for the Planning Hub (spec 036). Kept separate from the pure
+// Tunable constants for the Planning Hub (spec 038). Kept separate from the pure
 // engine so the thresholds are easy to find and adjust without touching the math.
 
 export const PLANNING = {

@@ -14,7 +14,7 @@ function paceColor(pace: PaceState): string {
 }
 
 /**
- * Budget summary (spec 036 — US3). An overall spent-vs-budgeted pace bar plus the
+ * Budget summary (spec 038 — US3). An overall spent-vs-budgeted pace bar plus the
  * few categories closest to or over their allowance, health judged by PACE (spend
  * vs. how far into the month), with rollover carry surfaced. Links out to the full
  * Budgets page. Presentational — the page passes the computed `BudgetSummary` in.
