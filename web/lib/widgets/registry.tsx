@@ -7,6 +7,12 @@ import { ActivityBody } from '@/components/widgets/bodies/ActivityBody'
 import { SavingsTrendsBody } from '@/components/widgets/bodies/SavingsTrendsBody'
 import { HousingCostsBody } from '@/components/widgets/bodies/HousingCostsBody'
 import { HomeEquityBody } from '@/components/widgets/bodies/HomeEquityBody'
+import {
+  DownloadDataBody,
+  WidgetSettingsBody,
+  ChangeCurrencyBody,
+  ChangeLanguageBody,
+} from '@/components/widgets/bodies/settingsShortcuts'
 
 /**
  * Widget registry (spec 034 — foundation). The SINGLE source of truth for the
@@ -31,6 +37,9 @@ export interface WidgetDefinition {
   defaultEnabled: boolean
   /** Propless body — reads data via `useApp()` + `useDashboardScopeContext()`. */
   Body: ComponentType
+  /** Optional route (spec 039). When set, the widget's card is a link to this path
+   *  and clicking it navigates instead of opening the details drawer. */
+  href?: string
 }
 
 /**
@@ -100,6 +109,39 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: "Principal you've paid down across all mortgages.",
     defaultEnabled: false,
     Body: HomeEquityBody,
+  },
+  // Navigation shortcuts (spec 039) — jump straight to a Settings page. Default-off.
+  {
+    id: 'download-data',
+    title: 'Download your data',
+    description: 'A shortcut to download or restore your household data.',
+    defaultEnabled: false,
+    Body: DownloadDataBody,
+    href: '/settings/data',
+  },
+  {
+    id: 'widget-settings',
+    title: 'Widget settings',
+    description: 'A shortcut to choose which widgets appear on your dashboard.',
+    defaultEnabled: false,
+    Body: WidgetSettingsBody,
+    href: '/settings/widgets',
+  },
+  {
+    id: 'change-currency',
+    title: 'Change currency',
+    description: 'A shortcut to change your display currency.',
+    defaultEnabled: false,
+    Body: ChangeCurrencyBody,
+    href: '/settings/currency',
+  },
+  {
+    id: 'change-language',
+    title: 'Change language',
+    description: 'A shortcut to change the app language.',
+    defaultEnabled: false,
+    Body: ChangeLanguageBody,
+    href: '/settings/language',
   },
 ]
 

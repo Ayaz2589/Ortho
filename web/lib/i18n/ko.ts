@@ -489,6 +489,16 @@ const catalog: Record<string, string> = {
   "{0}% paid off": "{0}% 상환",
   "of {0}": "/ {0}",
   "No mortgages yet.": "아직 주택담보대출이 없습니다.",
+  // Settings-shortcut widgets (spec 039)
+  "Download your data": "데이터 다운로드",
+  "Widget settings": "위젯 설정",
+  "Change currency": "통화 변경",
+  "Change language": "언어 변경",
+  "A shortcut to download or restore your household data.": "가계 데이터를 다운로드하거나 복원하는 바로가기.",
+  "A shortcut to choose which widgets appear on your dashboard.": "대시보드에 표시할 위젯을 선택하는 바로가기.",
+  "A shortcut to change your display currency.": "표시 통화를 변경하는 바로가기.",
+  "A shortcut to change the app language.": "앱 언어를 변경하는 바로가기.",
+  "Open": "열기",
 }
 
 export default catalog
