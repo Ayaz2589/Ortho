@@ -499,6 +499,13 @@ const catalog: Record<string, string> = {
   "A shortcut to change your display currency.": "更改显示货币的快捷方式。",
   "A shortcut to change the app language.": "更改应用语言的快捷方式。",
   "Open": "打开",
+  // Text size (spec 040)
+  "Text size": "文字大小",
+  "Small": "小",
+  "Medium": "中",
+  "Large": "大",
+  "X-Large": "特大",
+  "Choose how large text appears throughout the app.": "选择整个应用中文字的大小。",
 }
 
 export default catalog

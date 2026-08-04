@@ -29,14 +29,15 @@ Finance-engine math lives in [./finance.md](./finance.md); schema/RLS in
 ```
 web/app/
   layout.tsx            fonts (self-hosted Lato ×4 via next/font/local), viewport-fit=cover,
-                        inline pre-paint APPEARANCE_BOOT script (theme + html.native, no flash)
+                        inline pre-paint APPEARANCE_BOOT (theme + html.native) + TEXT_SIZE_BOOT
+                        (whole-UI zoom scale, spec 040) scripts — both no-flash
   page.tsx              client redirect → /dashboard
   sign-in/page.tsx      8-digit email OTP (signInWithOtp → verifyOtp(type:'email')); bounces
                         signed-in users to /dashboard on mount; builds its own t()
   (app)/layout.tsx      AppStateProvider + Shell + biometric lock overlay + paywall gate
   (app)/dashboard, transactions{,/new,/edit}, planning, housing{,/new,/edit}, budgets, goals,
         settings{,/household,/cards,/deposit-accounts,/subscription,/currency,
-                 /language,/appearance,/widgets,/data,/account,/linked-banks}, plaid-oauth
+                 /language,/appearance,/text-size,/widgets,/data,/account,/linked-banks}, plaid-oauth
         (settings/planning is a legacy client-redirect → /planning)
 ```
 
@@ -253,7 +254,9 @@ before wiring (also recorded in `PARITY.md`).
   catalogs (bn/es/ja/zh/ko) **dynamically imported per active language** (~30 KB gz never in the
   initial bundle); `useTranslate` returns English identity until the catalog resolves. `'System'`
   resolves via `navigator.language` prefix. `Language` values are native names (`'Español'`…).
-- localStorage keys: `currency`, `language`, `appearance`, `dashboardRange`, `fxRates`,
+- localStorage keys: `currency`, `language`, `appearance`, `textSize` (spec 040 — one of
+  `small|medium|large|xlarge`, default `medium`; a whole-UI `zoom` scale on `<html>` from
+  `components/settings/textSize.ts`, mirroring appearance), `dashboardRange`, `fxRates`,
   `fxRatesFetchedAt`, `ortho.flags`, `ortho.plaid.pendingLinkSession`, `ortho.skeletonCounts`
   (spec 032 — remembered per-collection sizes for loading skeletons), legacy `localUsers`
   (consumed once at bootstrap).
