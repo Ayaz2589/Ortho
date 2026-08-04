@@ -3,6 +3,20 @@
 // to positional {0},{1} placeholders. New web-only keys are appended below
 // the seed block.
 const catalog: Record<string, string> = {
+  // Planning hub (spec 038)
+  "Plan health": "プランの状態",
+  "Left to plan": "計画可能な残り",
+  "Income not yet allocated this month.": "今月はまだ割り当てられていない収入です。",
+  "You've committed more than this month's income.": "今月の収入を超えて割り当てています。",
+  "Budgeted": "予算計上",
+  "Goal contributions": "目標への積立",
+  "View all budgets": "すべての予算を見る",
+  "No budgets yet — set one up to plan your spending.": "まだ予算がありません — 支出を計画するには作成してください。",
+  "View all goals": "すべての目標を見る",
+  "No goals yet — create one to start saving toward it.": "まだ目標がありません — 貯蓄を始めるには作成してください。",
+  "On track · due {0}": "順調 · 期限 {0}",
+  "Sinking funds": "積立資金",
+  "{0} set aside": "{0} 積立済み",
 
   // Budget rollover (spec 027)
   "Fixed": "固定",
@@ -27,7 +41,6 @@ const catalog: Record<string, string> = {
   "{0} left of {1} with {2} days to go.": "残り{2}日で、{1}中{0}残っています。",
   "{0} of {1} still available with {2} days left.": "残り{2}日で、{1}中{0}がまだ利用可能。",
   "{0} P&I vs {1} income this month. Lenders typically target below 28%.": "今月の元本＋利息{0}に対して収入{1}。貸し手は通常28%未満を目安にします。",
-  "{0} set": "{0}件設定",
   "{0} this month — {1}% of total spend.": "今月{0} — 総支出の{1}%。",
   "{0} up {1}% vs last month": "{0}は先月比{1}%増",
   "{0} years remaining": "残り{0}年",
@@ -160,7 +173,6 @@ const catalog: Record<string, string> = {
   "No properties yet": "物件はまだありません",
   "No transactions yet": "取引はまだありません",
   "No units yet — edit this property to add them.": "ユニットがありません — この物件を編集して追加してください。",
-  "None set": "未設定",
   "Note": "メモ",
   "Nothing to copy yet": "コピーできる項目がありません",
   "of {0} · {1}": "{0}の · {1}",

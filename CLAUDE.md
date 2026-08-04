@@ -1,5 +1,15 @@
 <!-- SPECKIT START -->
-No active in-progress feature. Most recent shipped: **spec 035 — dashboard scope foundation**
+Active feature: **spec 038 — planning hub**. Plan:
+`specs/038-planning-hub/plan.md` (spec/plan/research/data-model/quickstart/contracts alongside it).
+Promotes **Planning** from a Settings sub-page to a **fifth top-level destination** (tab + sidebar,
+after Transactions) and rebuilds it as a month-scoped hub: a "Left to plan" health hero (income −
+base budget allowances − planned goal contributions), a pace-aware budget summary, a goals summary
+(behind-first, with catch-up amounts), and a non-monthly sinking-funds panel. All math is the pure
+`web/lib/planning/planSummary.ts` engine (reuses `budgetStatusForMonth` + `goalPacing`; no schema
+change). The old `/settings/planning` route client-redirects to `/planning`. Touches: `Sidebar.tsx`,
+`TabBar.tsx`, `components/planning/*`, `app/(app)/planning/page.tsx`, `settings/{page,planning}`,
+`SettingsSecondaryNav.tsx`, `RouteSkeleton`, 5 i18n catalogs. Fully TDD.
+Prior shipped: **spec 035 — dashboard scope foundation**
 (`specs/035-dashboard-scope-foundation/plan.md`): one shared month/range scope across dashboard widgets
 via `web/lib/useDashboardRange.ts` + `web/lib/widgets/DashboardScopeContext.tsx` (+ `web/lib/dashboard/`).
 Prior: **spec 034 — widget system foundation** (`specs/034-widget-system-foundation/plan.md`): the old

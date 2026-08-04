@@ -3,6 +3,20 @@
 // to positional {0},{1} placeholders. New web-only keys are appended below
 // the seed block.
 const catalog: Record<string, string> = {
+  // Planning hub (spec 038)
+  "Plan health": "计划概况",
+  "Left to plan": "待规划",
+  "Income not yet allocated this month.": "本月收入尚未分配。",
+  "You've committed more than this month's income.": "你安排的金额已超过本月收入。",
+  "Budgeted": "已预算",
+  "Goal contributions": "目标储蓄",
+  "View all budgets": "查看所有预算",
+  "No budgets yet — set one up to plan your spending.": "还没有预算 — 创建一个来规划支出。",
+  "View all goals": "查看所有目标",
+  "No goals yet — create one to start saving toward it.": "还没有目标 — 创建一个开始储蓄。",
+  "On track · due {0}": "进度正常 · 截止 {0}",
+  "Sinking funds": "专项储备金",
+  "{0} set aside": "已留存 {0}",
 
   // Budget rollover (spec 027)
   "Fixed": "固定",
@@ -27,7 +41,6 @@ const catalog: Record<string, string> = {
   "{0} left of {1} with {2} days to go.": "还剩{2}天，{1}中尚余{0}。",
   "{0} of {1} still available with {2} days left.": "还剩{2}天，{1}中尚有{0}可用。",
   "{0} P&I vs {1} income this month. Lenders typically target below 28%.": "本月本金+利息{0}对比收入{1}。贷款机构通常目标为低于28%。",
-  "{0} set": "已设置{0}",
   "{0} this month — {1}% of total spend.": "本月{0} — 总支出的{1}%。",
   "{0} up {1}% vs last month": "{0}较上月上涨{1}%",
   "{0} years remaining": "剩余{0}年",
@@ -160,7 +173,6 @@ const catalog: Record<string, string> = {
   "No properties yet": "暂无房产",
   "No transactions yet": "暂无交易",
   "No units yet — edit this property to add them.": "暂无单元 — 编辑此房产以添加。",
-  "None set": "未设置",
   "Note": "备注",
   "Nothing to copy yet": "暂无可复制内容",
   "of {0} · {1}": "{0}的 · {1}",

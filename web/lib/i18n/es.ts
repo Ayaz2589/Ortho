@@ -3,6 +3,20 @@
 // to positional {0},{1} placeholders. New web-only keys are appended below
 // the seed block.
 const catalog: Record<string, string> = {
+  // Planning hub (spec 038)
+  "Plan health": "Estado del plan",
+  "Left to plan": "Por planificar",
+  "Income not yet allocated this month.": "Ingresos aún sin asignar este mes.",
+  "You've committed more than this month's income.": "Has comprometido más que los ingresos de este mes.",
+  "Budgeted": "Presupuestado",
+  "Goal contributions": "Aportes a metas",
+  "View all budgets": "Ver todos los presupuestos",
+  "No budgets yet — set one up to plan your spending.": "Aún no hay presupuestos: crea uno para planificar tus gastos.",
+  "View all goals": "Ver todas las metas",
+  "No goals yet — create one to start saving toward it.": "Aún no hay metas: crea una para empezar a ahorrar.",
+  "On track · due {0}": "En camino · para {0}",
+  "Sinking funds": "Fondos de reserva",
+  "{0} set aside": "{0} reservado",
 
   // Budget rollover (spec 027)
   "Fixed": "Fijo",
@@ -27,7 +41,6 @@ const catalog: Record<string, string> = {
   "{0} left of {1} with {2} days to go.": "Te quedan {0} de {1} con {2} días por delante.",
   "{0} of {1} still available with {2} days left.": "{0} de {1} aún disponible con {2} días restantes.",
   "{0} P&I vs {1} income this month. Lenders typically target below 28%.": "{0} capital+interés vs {1} de ingreso este mes. Los prestamistas suelen apuntar a menos del 28%.",
-  "{0} set": "{0} establecidos",
   "{0} this month — {1}% of total spend.": "{0} este mes — {1}% del gasto total.",
   "{0} up {1}% vs last month": "{0} subió {1}% vs el mes pasado",
   "{0} years remaining": "{0} años restantes",
@@ -158,7 +171,6 @@ const catalog: Record<string, string> = {
   "No properties yet": "Aún no hay propiedades",
   "No transactions yet": "Aún no hay transacciones",
   "No units yet — edit this property to add them.": "Aún no hay unidades — edita esta propiedad para añadirlas.",
-  "None set": "Ninguno establecido",
   "Note": "Nota",
   "Nothing to copy yet": "Nada que copiar aún",
   "of {0} · {1}": "de {0} · {1}",

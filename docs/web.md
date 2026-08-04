@@ -34,9 +34,10 @@ web/app/
   sign-in/page.tsx      8-digit email OTP (signInWithOtp → verifyOtp(type:'email')); bounces
                         signed-in users to /dashboard on mount; builds its own t()
   (app)/layout.tsx      AppStateProvider + Shell + biometric lock overlay + paywall gate
-  (app)/dashboard, transactions{,/new,/edit}, housing{,/new,/edit}, budgets, goals,
-        settings{,/household,/planning,/cards,/deposit-accounts,/subscription,/currency,
+  (app)/dashboard, transactions{,/new,/edit}, planning, housing{,/new,/edit}, budgets, goals,
+        settings{,/household,/cards,/deposit-accounts,/subscription,/currency,
                  /language,/appearance,/widgets,/data,/account,/linked-banks}, plaid-oauth
+        (settings/planning is a legacy client-redirect → /planning)
 ```
 
 - **Settings › Data (spec 032)** — download household data (transactions + housing) as a dual-layer
@@ -50,9 +51,14 @@ web/app/
   + idempotent with two-tier dedup (canonical id, then the CSV fuzzy matcher). Payload round-trip +
   dedup are headlessly tested (`test/dataFile/*`); glyph rendering is on-device QA.
 
-- **Four destinations only** (Dashboard/Transactions/Housing/Settings) — identical TABS arrays
-  duplicated in `components/Sidebar.tsx` and `components/TabBar.tsx`. `/budgets` and `/goals` are
-  reached from Settings › Planning, not tabs. `/plaid-oauth` is the web bank-OAuth return route.
+- **Five destinations** (Dashboard/Transactions/Planning/Housing/Settings) — identical TABS arrays
+  duplicated in `components/Sidebar.tsx` and `components/TabBar.tsx`. **Planning (spec 038)** is a
+  top-level month-scoped hub (`app/(app)/planning/page.tsx`): a "Left to plan" health hero, a
+  pace-aware budget summary, a goals summary (behind-first), and a non-monthly sinking-funds panel,
+  all derived by the pure `lib/planning/planSummary.ts` engine (reuses `budgetStatusForMonth` +
+  `goalPacing`; no new data). `/budgets` and `/goals` are the detail pages the hub links to (the old
+  Settings › Planning route now client-redirects to `/planning`). `/plaid-oauth` is the web
+  bank-OAuth return route.
 - **Reports mode was removed (spec 036)** — the Overview/Reports toggle (`ModeSwitch`) and the
   fetched `ReportsView`/`useReportsData` UI are gone; the savings-rate view now lives on the board as
   the local-compute `savings-trends` widget. The Dashboard is a single view. (The pure aggregate/

@@ -10,6 +10,7 @@ import { TransactionsSkeleton } from './TransactionsSkeleton'
 import { HousingSkeleton } from './HousingSkeleton'
 import { BudgetsSkeleton } from './BudgetsSkeleton'
 import { GoalsSkeleton } from './GoalsSkeleton'
+import { PlanningSkeleton } from './PlanningSkeleton'
 import { SettingsSkeleton } from './SettingsSkeleton'
 
 /** Per-surface default row/card counts, used on the first-ever load before a real
@@ -59,6 +60,7 @@ export function RouteSkeleton() {
     return <GoalsSkeleton count={readSkeletonCount('goals', DEFAULTS.goals)} />
   }
   if (pathname.startsWith('/budgets')) return <BudgetsSkeleton />
+  if (pathname.startsWith('/planning')) return <PlanningSkeleton />
   if (pathname.startsWith('/settings')) return <SettingsSkeleton />
   if (pathname.startsWith('/dashboard')) return <DashboardSkeleton />
 

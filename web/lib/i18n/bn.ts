@@ -3,6 +3,20 @@
 // to positional {0},{1} placeholders. New web-only keys are appended below
 // the seed block.
 const catalog: Record<string, string> = {
+  // Planning hub (spec 038)
+  "Plan health": "পরিকল্পনার অবস্থা",
+  "Left to plan": "পরিকল্পনার বাকি",
+  "Income not yet allocated this month.": "এই মাসে আয় এখনও বরাদ্দ করা হয়নি।",
+  "You've committed more than this month's income.": "আপনি এই মাসের আয়ের চেয়ে বেশি প্রতিশ্রুতি দিয়েছেন।",
+  "Budgeted": "বাজেট করা",
+  "Goal contributions": "লক্ষ্যে অবদান",
+  "View all budgets": "সব বাজেট দেখুন",
+  "No budgets yet — set one up to plan your spending.": "এখনও কোনো বাজেট নেই — খরচ পরিকল্পনা করতে একটি তৈরি করুন।",
+  "View all goals": "সব লক্ষ্য দেখুন",
+  "No goals yet — create one to start saving toward it.": "এখনও কোনো লক্ষ্য নেই — সঞ্চয় শুরু করতে একটি তৈরি করুন।",
+  "On track · due {0}": "ঠিক পথে · {0} নাগাদ",
+  "Sinking funds": "সঞ্চিত তহবিল",
+  "{0} set aside": "{0} সরিয়ে রাখা",
 
   // Budget rollover (spec 027)
   "Fixed": "নির্দিষ্ট",
@@ -27,7 +41,6 @@ const catalog: Record<string, string> = {
   "{0} left of {1} with {2} days to go.": "{2} দিন বাকি — {1}-এর {0} অবশিষ্ট।",
   "{0} of {1} still available with {2} days left.": "{2} দিন বাকি — {1}-এর {0} এখনো পাওয়া যাবে।",
   "{0} P&I vs {1} income this month. Lenders typically target below 28%.": "এই মাসে {0} মূলধন+সুদ বনাম {1} আয়। ঋণদাতারা সাধারণত 28%-এর নিচে রাখার লক্ষ্য রাখেন।",
-  "{0} set": "{0} সেট",
   "{0} this month — {1}% of total spend.": "এই মাসে {0} — মোট খরচের {1}%।",
   "{0} up {1}% vs last month": "গত মাসের তুলনায় {0} {1}% বৃদ্ধি",
   "{0} years remaining": "{0} বছর বাকি",
@@ -160,7 +173,6 @@ const catalog: Record<string, string> = {
   "No properties yet": "এখনো কোন সম্পত্তি নেই",
   "No transactions yet": "এখনো কোন লেনদেন নেই",
   "No units yet — edit this property to add them.": "এখনো কোন ইউনিট নেই — যোগ করতে এই সম্পত্তি সম্পাদনা করুন।",
-  "None set": "সেট করা হয়নি",
   "Note": "নোট",
   "Nothing to copy yet": "কপি করার জন্য এখনো কিছু নেই",
   "of {0} · {1}": "{0}-এর · {1}",
