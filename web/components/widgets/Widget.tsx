@@ -34,8 +34,10 @@ export function Widget({
   const { t } = useApp()
   const { title, Body, href } = definition
   const open = () => onOpen(definition)
+  // `ring-inset` so the focus ring draws INSIDE the card — `.ow-card` clips overflow,
+  // which would otherwise crop an outset ring on this full-cover overlay.
   const overlayClass =
-    'absolute inset-0 rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]'
+    'absolute inset-0 rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]'
   return (
     <div
       role="listitem"

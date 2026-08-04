@@ -22,7 +22,12 @@ function SettingsShortcut({ icon: Icon }: { icon: LucideIcon }) {
           <Icon size={22} className="text-text-2" />
         </span>
       </div>
-      <span className="mt-auto inline-flex items-center gap-1 text-[13px] text-accent">
+      {/* Decorative affordance — the whole card is the link (aria-label "Open {title}"),
+          so hide this from assistive tech to avoid a redundant "Open" announcement. */}
+      <span
+        aria-hidden="true"
+        className="mt-auto inline-flex items-center gap-1 text-[13px] text-accent"
+      >
         {t('Open')}
         <ChevronRight size={15} />
       </span>
