@@ -45,4 +45,26 @@ describe('Widget frame', () => {
     fireEvent.click(opener)
     expect(onOpen).toHaveBeenCalledWith(definition)
   })
+
+  // Spec 039: a definition with an `href` is a NAVIGATION widget — the whole card is a
+  // real link to that route, and clicking it never opens the details drawer.
+  const navDefinition: WidgetDefinition = {
+    id: 'nav-demo',
+    title: 'Nav widget',
+    description: 'nav',
+    defaultEnabled: false,
+    href: '/settings/data',
+    Body: () => <div data-testid="nav-body">body</div>,
+  }
+
+  it('renders a real link to href and does not open the drawer', () => {
+    const onOpen = vi.fn()
+    render(<Widget definition={navDefinition} onOpen={onOpen} />)
+    const link = screen.getByRole('link', { name: 'Open Nav widget' })
+    expect(link.getAttribute('href')).toBe('/settings/data')
+    // There is no drawer-opening button for a navigation widget.
+    expect(screen.queryByRole('button', { name: 'Open Nav widget' })).toBeNull()
+    fireEvent.click(link)
+    expect(onOpen).not.toHaveBeenCalled()
+  })
 })

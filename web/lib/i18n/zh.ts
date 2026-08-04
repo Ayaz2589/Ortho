@@ -489,6 +489,16 @@ const catalog: Record<string, string> = {
   "{0}% paid off": "已还清 {0}%",
   "of {0}": "共 {0}",
   "No mortgages yet.": "暂无抵押贷款。",
+  // Settings-shortcut widgets (spec 039)
+  "Download your data": "下载您的数据",
+  "Widget settings": "小组件设置",
+  "Change currency": "更改货币",
+  "Change language": "更改语言",
+  "A shortcut to download or restore your household data.": "下载或恢复家庭数据的快捷方式。",
+  "A shortcut to choose which widgets appear on your dashboard.": "选择仪表板上显示哪些小组件的快捷方式。",
+  "A shortcut to change your display currency.": "更改显示货币的快捷方式。",
+  "A shortcut to change the app language.": "更改应用语言的快捷方式。",
+  "Open": "打开",
 }
 
 export default catalog

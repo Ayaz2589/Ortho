@@ -489,6 +489,16 @@ const catalog: Record<string, string> = {
   "{0}% paid off": "{0}% 返済済み",
   "of {0}": "／{0}",
   "No mortgages yet.": "まだ住宅ローンがありません。",
+  // Settings-shortcut widgets (spec 039)
+  "Download your data": "データをダウンロード",
+  "Widget settings": "ウィジェット設定",
+  "Change currency": "通貨を変更",
+  "Change language": "言語を変更",
+  "A shortcut to download or restore your household data.": "世帯データのダウンロードや復元へのショートカット。",
+  "A shortcut to choose which widgets appear on your dashboard.": "ダッシュボードに表示するウィジェットを選ぶショートカット。",
+  "A shortcut to change your display currency.": "表示通貨を変更するショートカット。",
+  "A shortcut to change the app language.": "アプリの言語を変更するショートカット。",
+  "Open": "開く",
 }
 
 export default catalog

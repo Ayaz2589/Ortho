@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import type { WidgetDefinition } from '@/lib/widgets/registry'
 import { useApp } from '@/lib/store'
 
@@ -10,13 +11,18 @@ import { useApp } from '@/lib/store'
  * grid — and the body SCROLLS when its content overflows that height, so nothing is
  * clipped. It is a `listitem` within the board's list (the heading names it).
  *
- * The whole card opens the widget's detail panel:
+ * A DATA widget's whole card opens the widget's detail panel:
  *  - pointer clicks are handled by the card's `onClick` (so the body can still
  *    scroll — a full overlay button would swallow wheel/touch);
  *  - an overlay `<button>` provides the keyboard + assistive-tech affordance. It is
  *    `pointer-events-none` so it never intercepts scrolling, but stays Tab-focusable
  *    and Enter/Space-activatable. The title stays a real `<h2>` (a `<button>` may not
  *    contain heading/flow content), so it is not nested inside the button.
+ *
+ * A NAVIGATION widget (spec 039 — `definition.href` set) instead routes to a Settings
+ * page: the overlay is a real `<Link>` covering the card (pointer-events auto — safe
+ * because shortcut bodies have no scrollable content), and the card no longer opens
+ * the drawer. Both variants share the same focus ring and heading.
  */
 export function Widget({
   definition,
@@ -26,25 +32,35 @@ export function Widget({
   onOpen: (def: WidgetDefinition) => void
 }) {
   const { t } = useApp()
-  const { title, Body } = definition
+  const { title, Body, href } = definition
   const open = () => onOpen(definition)
+  const overlayClass =
+    'absolute inset-0 rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]'
   return (
-    <div role="listitem" className="ow-card relative flex flex-col p-5" onClick={open}>
+    <div
+      role="listitem"
+      className="ow-card relative flex flex-col p-5"
+      onClick={href ? undefined : open}
+    >
       <h2 className="mb-3 text-[13px] font-normal uppercase tracking-[0.6px] text-text-2">
         {t(title)}
       </h2>
       <div className="min-h-0 flex-1 overflow-y-auto">
         <Body />
       </div>
-      <button
-        type="button"
-        aria-label={t('Open {0}', t(title))}
-        onClick={(e) => {
-          e.stopPropagation()
-          open()
-        }}
-        className="pointer-events-none absolute inset-0 rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-      />
+      {href ? (
+        <Link href={href} aria-label={t('Open {0}', t(title))} className={overlayClass} />
+      ) : (
+        <button
+          type="button"
+          aria-label={t('Open {0}', t(title))}
+          onClick={(e) => {
+            e.stopPropagation()
+            open()
+          }}
+          className={`pointer-events-none ${overlayClass}`}
+        />
+      )}
     </div>
   )
 }

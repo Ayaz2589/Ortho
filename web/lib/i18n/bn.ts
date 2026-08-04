@@ -489,6 +489,16 @@ const catalog: Record<string, string> = {
   "{0}% paid off": "{0}% পরিশোধিত",
   "of {0}": "{0} এর মধ্যে",
   "No mortgages yet.": "এখনো কোনো বন্ধক নেই।",
+  // Settings-shortcut widgets (spec 039)
+  "Download your data": "আপনার ডেটা ডাউনলোড করুন",
+  "Widget settings": "উইজেট সেটিংস",
+  "Change currency": "মুদ্রা পরিবর্তন",
+  "Change language": "ভাষা পরিবর্তন",
+  "A shortcut to download or restore your household data.": "আপনার পরিবারের ডেটা ডাউনলোড বা পুনরুদ্ধারের একটি শর্টকাট।",
+  "A shortcut to choose which widgets appear on your dashboard.": "আপনার ড্যাশবোর্ডে কোন উইজেট দেখাবে তা বেছে নেওয়ার একটি শর্টকাট।",
+  "A shortcut to change your display currency.": "প্রদর্শিত মুদ্রা পরিবর্তনের একটি শর্টকাট।",
+  "A shortcut to change the app language.": "অ্যাপের ভাষা পরিবর্তনের একটি শর্টকাট।",
+  "Open": "খুলুন",
 }
 
 export default catalog
