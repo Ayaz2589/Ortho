@@ -1,15 +1,20 @@
 <!-- SPECKIT START -->
-Active feature: **spec 038 — planning hub**. Plan:
-`specs/038-planning-hub/plan.md` (spec/plan/research/data-model/quickstart/contracts alongside it).
-Promotes **Planning** from a Settings sub-page to a **fifth top-level destination** (tab + sidebar,
-after Transactions) and rebuilds it as a month-scoped hub: a "Left to plan" health hero (income −
-base budget allowances − planned goal contributions), a pace-aware budget summary, a goals summary
-(behind-first, with catch-up amounts), and a non-monthly sinking-funds panel. All math is the pure
-`web/lib/planning/planSummary.ts` engine (reuses `budgetStatusForMonth` + `goalPacing`; no schema
-change). The old `/settings/planning` route client-redirects to `/planning`. Touches: `Sidebar.tsx`,
-`TabBar.tsx`, `components/planning/*`, `app/(app)/planning/page.tsx`, `settings/{page,planning}`,
-`SettingsSecondaryNav.tsx`, `RouteSkeleton`, 5 i18n catalogs. Fully TDD.
-Prior shipped: **spec 035 — dashboard scope foundation**
+Active feature: **spec 040 — global text size**. Plan:
+`specs/040-text-size/plan.md` (spec/plan/research/data-model/quickstart/contracts alongside it).
+A per-device **Text size** setting that scales the whole UI proportionally via a `zoom` on `<html>`
+(the app is not rem-based, so `zoom` is the reliable lever). Four levels — Small (1.00, today's
+density) / **Medium (1.06, new default — a subtle global bump)** / Large (1.14) / X-Large (1.22).
+Single source of truth `web/components/settings/textSize.ts` (`read/write/applyTextSize` +
+`textSizeBootScript`), mirroring `appearance.ts`: a pre-paint `TEXT_SIZE_BOOT` in `app/layout.tsx`
+(no flash) and re-apply at shell mount in `app/(app)/layout.tsx`. Picker at
+`settings/text-size/page.tsx`, registered in `settings/page.tsx` + `SettingsSecondaryNav.tsx`; 6
+strings × 5 catalogs. Motivated by the lower-income/older launch market (docs/research). Fully TDD.
+Standardized `zoom` (Baseline 2024) rescales the CSS pixel, so `h-dvh`/fixed tab bar don't overflow
+(needs one manual in-browser visual confirm — quickstart.md).
+Prior shipped: **spec 038 — planning hub** (`specs/038-planning-hub/plan.md`): Planning promoted to a
+fifth top-level destination, a month-scoped hub over the pure `web/lib/planning/planSummary.ts` engine.
+**spec 039 — settings-shortcut widgets** and **spec 036 — housing widgets** also shipped. Prior:
+**spec 035 — dashboard scope foundation**
 (`specs/035-dashboard-scope-foundation/plan.md`): one shared month/range scope across dashboard widgets
 via `web/lib/useDashboardRange.ts` + `web/lib/widgets/DashboardScopeContext.tsx` (+ `web/lib/dashboard/`).
 Prior: **spec 034 — widget system foundation** (`specs/034-widget-system-foundation/plan.md`): the old

@@ -6,6 +6,7 @@ import { SplashScreen } from '@capacitor/splash-screen'
 import { AppStateProvider, useApp } from '@/lib/store'
 import { useBiometricGate } from '@/lib/biometricGate'
 import { applyAppearance, readAppearance } from '@/components/settings/appearance'
+import { applyTextSize, readTextSize } from '@/components/settings/textSize'
 import { useTranslate } from '@/lib/i18n'
 import { asLanguage, DEFAULT_LANGUAGE, type Language } from '@/lib/language'
 import { TabBar } from '@/components/TabBar'
@@ -166,6 +167,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   // page is opened. No-op on desktop/mobile web (syncStatusBar is native-only).
   useEffect(() => {
     applyAppearance(readAppearance())
+    // spec 040: re-assert the persisted text size on shell mount, same as
+    // appearance — the boot script sets it pre-paint; this keeps it applied.
+    applyTextSize(readTextSize())
   }, [])
 
   // spec 023 B4: the provider is ALWAYS mounted; the biometric lock renders as a

@@ -502,6 +502,13 @@ const catalog: Record<string, string> = {
   "A shortcut to change your display currency.": "表示通貨を変更するショートカット。",
   "A shortcut to change the app language.": "アプリの言語を変更するショートカット。",
   "Open": "開く",
+  // Text size (spec 040)
+  "Text size": "文字サイズ",
+  "Small": "小",
+  "Medium": "中",
+  "Large": "大",
+  "X-Large": "特大",
+  "Choose how large text appears throughout the app.": "アプリ全体の文字の大きさを選びます。",
 }
 
 export default catalog

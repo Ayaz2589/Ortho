@@ -502,6 +502,13 @@ const catalog: Record<string, string> = {
   "A shortcut to change your display currency.": "표시 통화를 변경하는 바로가기.",
   "A shortcut to change the app language.": "앱 언어를 변경하는 바로가기.",
   "Open": "열기",
+  // Text size (spec 040)
+  "Text size": "텍스트 크기",
+  "Small": "작게",
+  "Medium": "보통",
+  "Large": "크게",
+  "X-Large": "아주 크게",
+  "Choose how large text appears throughout the app.": "앱 전체의 텍스트 크기를 선택하세요.",
 }
 
 export default catalog
