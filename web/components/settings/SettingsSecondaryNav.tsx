@@ -7,7 +7,6 @@ import { useApp } from '@/lib/store'
 
 const SECTIONS = [
   { href: '/settings/household', label: 'Household' },
-  { href: '/settings/planning', label: 'Planning' },
   { href: '/settings/cards', label: 'Cards' },
   { href: '/settings/subscription', label: 'Subscription' },
   { href: '/settings/currency', label: 'Currency' },

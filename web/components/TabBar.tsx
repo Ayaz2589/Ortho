@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, ArrowUpDown, House, Settings } from 'lucide-react'
+import { BarChart3, ArrowUpDown, Compass, House, Settings } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { useTabBarHidden } from '@/lib/tabBarVisibility'
 import { cn } from '@/lib/utils'
@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 const TABS = [
   { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
   { href: '/transactions', label: 'Transactions', icon: ArrowUpDown },
+  { href: '/planning', label: 'Planning', icon: Compass },
   { href: '/housing', label: 'Housing', icon: House },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]

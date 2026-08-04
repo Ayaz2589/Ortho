@@ -25,6 +25,7 @@ import { TabBar } from '@/components/TabBar'
 const DESTINATIONS = [
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Transactions', href: '/transactions' },
+  { label: 'Planning', href: '/planning' },
   { label: 'Housing', href: '/housing' },
   { label: 'Settings', href: '/settings' },
 ]

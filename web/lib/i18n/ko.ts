@@ -3,6 +3,20 @@
 // to positional {0},{1} placeholders. New web-only keys are appended below
 // the seed block.
 const catalog: Record<string, string> = {
+  // Planning hub (spec 036)
+  "Plan health": "계획 상태",
+  "Left to plan": "계획 가능 잔액",
+  "Income not yet allocated this month.": "이번 달 아직 배정되지 않은 수입입니다.",
+  "You've committed more than this month's income.": "이번 달 수입보다 많이 배정했습니다.",
+  "Budgeted": "예산 편성",
+  "Goal contributions": "목표 적립",
+  "View all budgets": "모든 예산 보기",
+  "No budgets yet — set one up to plan your spending.": "아직 예산이 없습니다 — 지출을 계획하려면 하나 만드세요.",
+  "View all goals": "모든 목표 보기",
+  "No goals yet — create one to start saving toward it.": "아직 목표가 없습니다 — 저축을 시작하려면 하나 만드세요.",
+  "On track · due {0}": "정상 진행 · {0}까지",
+  "Sinking funds": "적립 자금",
+  "{0} set aside": "{0} 적립됨",
 
   // Budget rollover (spec 027)
   "Fixed": "고정",
@@ -27,7 +41,6 @@ const catalog: Record<string, string> = {
   "{0} left of {1} with {2} days to go.": "{2}일 남았는데, {1} 중 {0} 남음.",
   "{0} of {1} still available with {2} days left.": "{2}일 남았는데, {1} 중 {0} 사용 가능.",
   "{0} P&I vs {1} income this month. Lenders typically target below 28%.": "이번 달 원금+이자 {0}, 수입 {1}. 대출 기관은 보통 28% 미만을 목표로 합니다.",
-  "{0} set": "{0}개 설정됨",
   "{0} this month — {1}% of total spend.": "이번 달 {0} — 총 지출의 {1}%.",
   "{0} up {1}% vs last month": "{0}이(가) 지난달 대비 {1}% 증가",
   "{0} years remaining": "{0}년 남음",
@@ -160,7 +173,6 @@ const catalog: Record<string, string> = {
   "No properties yet": "부동산이 없습니다",
   "No transactions yet": "거래가 없습니다",
   "No units yet — edit this property to add them.": "유닛이 없습니다 — 이 부동산을 편집하여 추가하세요.",
-  "None set": "설정 없음",
   "Note": "메모",
   "Nothing to copy yet": "복사할 항목이 없습니다",
   "of {0} · {1}": "{0}의 · {1}",

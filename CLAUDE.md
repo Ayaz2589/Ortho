@@ -1,12 +1,14 @@
 <!-- SPECKIT START -->
-Active feature: **spec 033 — income deposit accounts**. Plan:
-`specs/033-income-deposit-accounts/plan.md` (spec/plan/data-model/quickstart/contracts alongside it).
-Replaces hardcoded `INCOME_SOURCES` constant in `TxForm.tsx` with user-configurable `deposit_accounts`
-table (mirrors `cards`). Users add/delete named deposit accounts in Settings → Deposit Accounts. The
-"Deposit to" dropdown on income transactions shows configured accounts. No transactions schema change —
-`source` already stores the string name. Touches: new migration, `web/lib/store.tsx`, `TxForm.tsx`,
-`AddDepositAccountModal.tsx`, `settings/deposit-accounts/page.tsx`, `settings/page.tsx`, 5 i18n catalogs.
-Fully TDD.
+Active feature: **spec 036 — planning hub**. Plan:
+`specs/036-planning-hub/plan.md` (spec/plan/research/data-model/quickstart/contracts alongside it).
+Promotes **Planning** from a Settings sub-page to a **fifth top-level destination** (tab + sidebar,
+after Transactions) and rebuilds it as a month-scoped hub: a "Left to plan" health hero (income −
+base budget allowances − planned goal contributions), a pace-aware budget summary, a goals summary
+(behind-first, with catch-up amounts), and a non-monthly sinking-funds panel. All math is the pure
+`web/lib/planning/planSummary.ts` engine (reuses `budgetStatusForMonth` + `goalPacing`; no schema
+change). The old `/settings/planning` route client-redirects to `/planning`. Touches: `Sidebar.tsx`,
+`TabBar.tsx`, `components/planning/*`, `app/(app)/planning/page.tsx`, `settings/{page,planning}`,
+`SettingsSecondaryNav.tsx`, `RouteSkeleton`, 5 i18n catalogs. Fully TDD.
 Prior shipped: **spec 032 — most-common copy + merchant name suggestions** (`specs/032-common-copy-name-suggest/plan.md`):
 rework the New-form copy shortcut (frequency-selects most-common merchants, grouped by category then
 alphabetically), relabeled "Copy from most common"; kind-aware merchant/payer name suggestions via
