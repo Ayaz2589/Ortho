@@ -4,7 +4,7 @@
 // <html>, mirroring the appearance.ts pattern. Reads never throw; unknown/missing
 // values coerce to the default (medium). The pre-paint boot script is generated
 // from the same scale map so it can never drift. FR-002/003/004/007/008/009.
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   type TextSize,
   TEXT_SIZES,
@@ -50,6 +50,10 @@ describe('text-size constants', () => {
   it('has a scale entry for every size', () => {
     for (const s of TEXT_SIZES) expect(typeof TEXT_SIZE_SCALE[s]).toBe('number')
   })
+
+  it('never scales below 1.0 (preserves the mobile 16px input floor — FR-012)', () => {
+    for (const s of TEXT_SIZES) expect(TEXT_SIZE_SCALE[s]).toBeGreaterThanOrEqual(1)
+  })
 })
 
 describe('readTextSize', () => {
@@ -91,6 +95,26 @@ describe('writeTextSize', () => {
     expect(document.documentElement.style.getPropertyValue('zoom')).toBe('1.22')
     // round-trips back through read
     expect(readTextSize()).toBe('xlarge')
+  })
+})
+
+describe('hostile storage (private mode / disabled) never throws', () => {
+  it('readTextSize returns the default when getItem throws', () => {
+    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError')
+    })
+    expect(readTextSize()).toBe('medium')
+    spy.mockRestore()
+  })
+
+  it('writeTextSize still applies live when setItem throws', () => {
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceeded')
+    })
+    expect(() => writeTextSize('large')).not.toThrow()
+    expect(document.documentElement.getAttribute('data-text-size')).toBe('large')
+    expect(document.documentElement.style.getPropertyValue('zoom')).toBe('1.14')
+    spy.mockRestore()
   })
 })
 

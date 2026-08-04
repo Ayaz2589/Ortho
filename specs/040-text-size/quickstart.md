@@ -30,8 +30,10 @@ for the `zoom` × `h-dvh` × fixed-tab-bar interaction).
 cd web && npm run dev   # then open the app
 ```
 
-For each size (Small, Medium, Large, X-Large), on a **mobile-width** and a **desktop-width**
-window, confirm:
+Do this on Chromium/Safari desktop, a mobile browser, **and — critically — an iOS 15–17
+WebKit build** (the Capacitor shell targets iOS 15, which predates Safari 18's standardized
+`zoom`; see research.md R2). For each size (Small, Medium, Large, X-Large), on a
+**mobile-width** and a **desktop-width** window, confirm:
 
 1. **Settings → Text size** changes the whole UI immediately, no reload.
 2. **No page scrollbar / no overflow**: the app shell still fills exactly one viewport; the

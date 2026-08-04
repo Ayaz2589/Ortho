@@ -56,12 +56,26 @@ per-device `textSize` preference. Four levels: `small=1.00`, `medium=1.06` (defa
   (`h-dvh`/`h-screen`/`min-h-[100dvh]`/`max-h-[92vh]`, plus `max-height:88vh` in globals) —
   all of which resolve correctly under standardized `zoom`.
 
+**Two caveats the code review surfaced (both handled by the mandatory manual check, not code):**
+- **Breakpoints reflow (expected).** Because standardized `zoom` narrows the effective CSS
+  viewport, `matchMedia`/Tailwind breakpoints evaluate at the smaller width — at X-Large a
+  desktop can render the tablet/compact layout. This is the *intended* page-zoom behavior and
+  the responsive contract already spans phone→ultrawide, so it is not a defect; the earlier
+  "breakpoints unaffected" framing was wrong and is corrected here.
+- **iOS < 18 uses pre-standardized WebKit.** The Capacitor shell's deployment target is iOS 15
+  (`web/ios/App/App.xcodeproj`), so iOS 15–17 devices run WebKit that predates Safari 18's
+  standardized `zoom`. On those the `zoom`×`100dvh`×fixed-tab-bar interaction is *not*
+  guaranteed by the Baseline-2024 argument. The default is only 1.06 (small blast radius) and
+  every scale is ≥ 1, but this surface **must** be visually confirmed on an actual iOS 15–17
+  device/simulator before relying on it. If it misbehaves there, the fallback options are:
+  default to Small (opt-in only) or scope the zoom to non-viewport-height content.
+
 **Verification status**: Concluded from the standardized `zoom` definition (MDN CSS `zoom`;
 CSSWG css-viewport; OddBird "Zoom, zoom, and zoom", 2024) and Baseline-2024 support data. A
 local headless-browser check was not possible in this sandbox (arm64 + very new OS: puppeteer
 ships x86-only Chrome, and Playwright has no build for this OS). **quickstart.md therefore
 includes a mandatory manual browser check** across the four sizes on mobile + desktop widths
-as a belt-and-suspenders confirmation before merge.
+(explicitly including an iOS 15–17 WebKit build) as the gating confirmation before merge.
 
 ## R3 — Mount points & no-flash (mirror appearance)
 
