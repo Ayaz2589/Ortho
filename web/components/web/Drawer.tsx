@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { useApp } from '@/lib/store'
 import { useFocusTrap } from '@/lib/useFocusTrap'
 import { useIsExpanded } from '@/lib/useMediaQuery'
+import { lockScroll } from '@/lib/scrollLock'
 
 /**
  * The shared right-side slide-out panel — the same affordance the Transactions
@@ -42,17 +43,17 @@ export function Drawer({
       if (e.key === 'Escape') handleEscape()
     }
     document.addEventListener('keydown', onKey)
-    // Lock whichever element scrolls: <main> on desktop, <body> on mobile.
-    // `main` has `scrollbar-gutter: stable`, so hiding its scrollbar doesn't shift.
+    // Lock whichever element scrolls (<main> on desktop, <body> on mobile) WITHOUT
+    // shifting the page: `lockScroll` compensates the removed scrollbar width so
+    // centered content doesn't jump right when the panel opens (works even where
+    // `scrollbar-gutter: stable` isn't honored).
     const main = document.querySelector('main') as HTMLElement | null
-    const prevBody = document.body.style.overflow
-    const prevMain = main?.style.overflow
-    document.body.style.overflow = 'hidden'
-    if (main) main.style.overflow = 'hidden'
+    const unlockBody = lockScroll(document.body)
+    const unlockMain = main ? lockScroll(main) : null
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prevBody
-      if (main) main.style.overflow = prevMain ?? ''
+      unlockBody()
+      unlockMain?.()
     }
   }, [open, onClose, onEscape])
 
