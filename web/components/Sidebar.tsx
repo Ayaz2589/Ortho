@@ -27,7 +27,11 @@ export function Sidebar() {
   return (
     <nav
       aria-label={t('Primary')}
-      className="sticky top-0 hidden h-screen shrink-0 flex-col border-r border-hairline bg-bg sm:flex sm:w-[72px] lg:w-[232px]"
+      // h-full binds the nav to the shell's (h-dvh) container height — NOT the
+      // static h-screen (100vh), which can exceed the dynamic viewport and give the
+      // nav its own scroll body inside the shell's overflow-hidden context. The nav
+      // fills the non-scrolling shell; only <main> scrolls.
+      className="hidden h-full shrink-0 flex-col border-r border-hairline bg-bg sm:flex sm:w-[72px] lg:w-[232px]"
       style={{ padding: '20px 12px 16px' }}
     >
       {/* Wordmark */}
