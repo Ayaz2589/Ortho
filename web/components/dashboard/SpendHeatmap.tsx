@@ -6,14 +6,18 @@ import { shortDate } from '@/lib/format'
 import { buildSpendHeatmap, type HeatmapDay, type HeatmapLevel } from '@/lib/dashboard/spendHeatmap'
 import type { Interval } from '@/components/dashboard/range'
 
-/** Level → token tint. A calm sand `--accent` ramp on the neutral chip track —
- *  spend is never rendered red (money-first system). */
+/** Level → token tint. A calm sand `--accent` ramp on the neutral chip track, in
+ *  six graded steps so different daily amounts separate clearly — spend is never
+ *  rendered red (money-first system). The top band deepens the accent toward
+ *  `--text` so the heaviest days stay distinct from the near-full steps. */
 const LEVEL_BG: Record<HeatmapLevel, string> = {
   0: 'var(--chip-bg)',
-  1: 'color-mix(in srgb, var(--accent) 28%, var(--chip-bg))',
-  2: 'color-mix(in srgb, var(--accent) 50%, var(--chip-bg))',
-  3: 'color-mix(in srgb, var(--accent) 72%, var(--chip-bg))',
-  4: 'var(--accent)',
+  1: 'color-mix(in srgb, var(--accent) 20%, var(--chip-bg))',
+  2: 'color-mix(in srgb, var(--accent) 36%, var(--chip-bg))',
+  3: 'color-mix(in srgb, var(--accent) 54%, var(--chip-bg))',
+  4: 'color-mix(in srgb, var(--accent) 74%, var(--chip-bg))',
+  5: 'var(--accent)',
+  6: 'color-mix(in srgb, var(--accent) 86%, var(--text))',
 }
 
 const CELL = 14
