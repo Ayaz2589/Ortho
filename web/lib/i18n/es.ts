@@ -551,7 +551,11 @@ const catalog: Record<string, string> = {
   "Financial health": "Salud financiera",
   "See my score": "Ver mi puntuación",
   "Continue": "Continuar",
-  "Skip — use neutral defaults": "Omitir — usar valores neutrales",
+  "Skip for now": "Omitir por ahora",
+  "What's new": "Novedades",
+  "See how your money's doing with a calm 0–100 score — answer a few questions to start.":
+    "Descubre cómo va tu dinero con un puntaje tranquilo de 0 a 100: responde algunas preguntas para empezar.",
+  "Set up financial health": "Configura tu salud financiera",
   "Financial profile": "Perfil financiero",
   "Update this whenever your situation changes.": "Actualízalo cuando cambie tu situación.",
   "Save profile": "Guardar perfil",

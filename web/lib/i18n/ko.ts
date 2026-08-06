@@ -551,7 +551,11 @@ const catalog: Record<string, string> = {
   "Financial health": "재정 건강",
   "See my score": "내 점수 보기",
   "Continue": "계속",
-  "Skip — use neutral defaults": "건너뛰기 — 기본값 사용",
+  "Skip for now": "나중에 하기",
+  "What's new": "새로운 기능",
+  "See how your money's doing with a calm 0–100 score — answer a few questions to start.":
+    "차분한 0–100 점수로 돈 상태를 확인하세요 — 몇 가지 질문에 답하며 시작해요.",
+  "Set up financial health": "재정 건강 설정",
   "Financial profile": "재정 프로필",
   "Update this whenever your situation changes.": "상황이 바뀌면 언제든 업데이트하세요.",
   "Save profile": "프로필 저장",

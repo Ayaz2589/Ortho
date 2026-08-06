@@ -1,5 +1,18 @@
 <!-- SPECKIT START -->
-Active feature: **spec 041 — financial health**. Plan:
+Active feature: **spec 042 — feature-announcement popup**. Plan:
+`specs/042-feature-announcements/plan.md` (spec/plan/research/data-model/quickstart/contracts alongside it).
+A reusable "what's new" popup notifies signed-in users of newly shipped features on their next visit. A
+code-level **announcement registry** (`web/components/announcements/registry.ts`) declares each feature's
+`{ id, titleKey, descriptionKey, cta:{ labelKey, route }, isRelevant? }`; a per-device **seen-ledger**
+(`announcementsSeen.ts`, localStorage `ortho.announcementsSeen`, mirrors `textSize.ts`) records seen ids; a
+single **AnnouncementHost** (mounted in the app Shell) shows the next unseen+relevant announcement via the
+shared `Drawer` — right slide-out on desktop, full-page on mobile. CTA marks seen + navigates; dismiss marks
+seen only. First adopter = spec 041 Financial Health (CTA → `/welcome/financial-profile`, relevant only when
+`userFinancialProfile == null`). **Replaces** `FinancialHealthOnboardingGate`'s hard `router.replace`
+(deleted) and makes the questionnaire **Skip dismiss-only** (no more zero-income neutral-defaults write; the
+widget's `!hasProfile` branch shows "Set up your financial profile" honestly). No DB/migration. Fully TDD;
+i18n across all 5 catalogs. Builds on / stacked atop spec 041 (PR #99).
+Prior shipped: **spec 041 — financial health**. Plan:
 `specs/041-financial-health/plan.md` (spec/plan/research/data-model/quickstart/contracts alongside it;
 design doc `docs/plan/financial-health.md`). A baseline **financial-health metric**: a first-run
 questionnaire (income incl. variable/low-estimate; housing incl. shared share; monthly commitments with

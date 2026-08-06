@@ -551,7 +551,11 @@ const catalog: Record<string, string> = {
   "Financial health": "家計の健康度",
   "See my score": "スコアを見る",
   "Continue": "続ける",
-  "Skip — use neutral defaults": "スキップ — 標準設定を使う",
+  "Skip for now": "今はスキップ",
+  "What's new": "新着情報",
+  "See how your money's doing with a calm 0–100 score — answer a few questions to start.":
+    "落ち着いた0〜100のスコアでお金の状態を確認 — いくつかの質問に答えて始めましょう。",
+  "Set up financial health": "家計の健康度を設定",
   "Financial profile": "家計プロフィール",
   "Update this whenever your situation changes.": "状況が変わったら更新してください。",
   "Save profile": "プロフィールを保存",
