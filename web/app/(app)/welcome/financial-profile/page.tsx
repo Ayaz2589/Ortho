@@ -10,14 +10,15 @@ import {
   SECTION_TITLES,
   SECTION_COUNT,
 } from '@/components/financial-health/FinancialProfileForm'
-import { useFinancialProfileForm, neutralDraft } from '@/components/financial-health/useFinancialProfileForm'
-import { dismissOnboarding } from '@/components/financial-health/onboardingGate'
+import { useFinancialProfileForm } from '@/components/financial-health/useFinancialProfileForm'
 
 /**
- * First-run Financial Health questionnaire (spec 041, US1). A calm, minimal stepper:
- * one section per screen, a progress indicator, and a "Skip — use neutral defaults"
- * escape hatch on every screen except Income (required). Completing (or skipping)
- * writes the profile + a baseline snapshot and lands on the dashboard.
+ * First-run Financial Health questionnaire (spec 041, US1; spec 042). A calm,
+ * minimal stepper: one section per screen, a progress indicator, and a "Skip for
+ * now" escape hatch on every screen. Completing writes the profile + a baseline
+ * snapshot and lands on the dashboard. Skipping is DISMISS-ONLY — it writes no
+ * profile (so the widget honestly shows its "set up your profile" prompt) and
+ * just returns to the dashboard.
  */
 export default function FinancialProfileWelcomePage() {
   const { t } = useApp()
@@ -28,9 +29,14 @@ export default function FinancialProfileWelcomePage() {
   const isLast = step === SECTION_COUNT - 1
   const canAdvance = step !== 0 || form.incomeValid
 
-  const finish = async (draftOverride?: ReturnType<typeof neutralDraft>) => {
-    dismissOnboarding()
-    await form.submit(draftOverride)
+  const finish = async () => {
+    await form.submit()
+    router.replace('/dashboard')
+  }
+
+  // Dismiss-only: no profile is written, so an honest empty state shows on the
+  // dashboard rather than a score derived from a zero-income profile.
+  const skip = () => {
     router.replace('/dashboard')
   }
 
@@ -72,13 +78,13 @@ export default function FinancialProfileWelcomePage() {
             <span />
           )}
           {/* Skip is available on every step (incl. Income) so a user with nothing
-              to report is never trapped by the first-run gate. */}
+              to report is never trapped. Dismiss-only — writes no profile. */}
           <button
             type="button"
-            onClick={() => void finish(neutralDraft())}
+            onClick={skip}
             className="text-[14px] text-text-3"
           >
-            {t('Skip — use neutral defaults')}
+            {t('Skip for now')}
           </button>
         </div>
       </div>

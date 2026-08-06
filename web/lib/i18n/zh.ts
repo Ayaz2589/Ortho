@@ -551,7 +551,11 @@ const catalog: Record<string, string> = {
   "Financial health": "财务健康",
   "See my score": "查看我的评分",
   "Continue": "继续",
-  "Skip — use neutral defaults": "跳过 — 使用中性默认值",
+  "Skip for now": "暂时跳过",
+  "What's new": "新功能",
+  "See how your money's doing with a calm 0–100 score — answer a few questions to start.":
+    "用平和的 0–100 分数了解你的财务状况 — 回答几个问题即可开始。",
+  "Set up financial health": "设置财务健康度",
   "Financial profile": "财务档案",
   "Update this whenever your situation changes.": "情况变化时随时更新。",
   "Save profile": "保存档案",

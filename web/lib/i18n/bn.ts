@@ -551,7 +551,11 @@ const catalog: Record<string, string> = {
   "Financial health": "আর্থিক স্বাস্থ্য",
   "See my score": "আমার স্কোর দেখুন",
   "Continue": "চালিয়ে যান",
-  "Skip — use neutral defaults": "এড়িয়ে যান — নিরপেক্ষ ডিফল্ট ব্যবহার করুন",
+  "Skip for now": "আপাতত এড়িয়ে যান",
+  "What's new": "নতুন কী আছে",
+  "See how your money's doing with a calm 0–100 score — answer a few questions to start.":
+    "শান্ত ০–১০০ স্কোরে দেখুন আপনার টাকা কেমন চলছে — শুরু করতে কয়েকটি প্রশ্নের উত্তর দিন।",
+  "Set up financial health": "আর্থিক স্বাস্থ্য সেট আপ করুন",
   "Financial profile": "আর্থিক প্রোফাইল",
   "Update this whenever your situation changes.": "আপনার পরিস্থিতি পরিবর্তন হলে এটি আপডেট করুন।",
   "Save profile": "প্রোফাইল সংরক্ষণ করুন",
