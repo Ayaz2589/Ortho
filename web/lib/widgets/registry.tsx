@@ -7,6 +7,7 @@ import { ActivityBody } from '@/components/widgets/bodies/ActivityBody'
 import { SavingsTrendsBody } from '@/components/widgets/bodies/SavingsTrendsBody'
 import { HousingCostsBody } from '@/components/widgets/bodies/HousingCostsBody'
 import { HomeEquityBody } from '@/components/widgets/bodies/HomeEquityBody'
+import { FinancialHealthBody } from '@/components/widgets/bodies/FinancialHealthBody'
 import {
   DownloadDataBody,
   WidgetSettingsBody,
@@ -54,6 +55,13 @@ export interface WidgetDefinition {
  * default-off so the first-run board stays a clean set of tiles.
  */
 export const WIDGETS: readonly WidgetDefinition[] = [
+  {
+    id: 'financial-health',
+    title: 'Financial health',
+    description: 'Your baseline financial-health score and next step.',
+    defaultEnabled: true,
+    Body: FinancialHealthBody,
+  },
   {
     id: 'savings-trends',
     title: 'Savings trends',

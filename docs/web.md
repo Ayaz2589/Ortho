@@ -207,7 +207,12 @@ for extensionless paths, which infinite-loops signed-out native launches.
   under `components/widgets/bodies/<Name>Body.tsx` that reads household data from `useApp()` and the
   active window from `useDashboardScopeContext()` (`lib/widgets/DashboardScopeContext.tsx` wraps the
   overview and calls `useDashboardScope()` ONCE, so the `MonthPicker` + `RangePicker` and every widget
-  share one month/range — no desync). Shipped widgets: `savings-trends` (savings rate/month, reuses
+  share one month/range — no desync). **`financial-health` (spec 041)** — the baseline financial-health
+  score/band + next step from the pure `financialHealth.ts` engine (calm sand ramp, never red; a
+  profile-null CTA and a baseline-vs-now progress line); its questionnaire is a first-run flow at
+  `welcome/financial-profile` (shell-gated in `(app)/layout.tsx` on a null profile + a localStorage
+  dismissal) and re-takeable at `settings/financial-profile`, both built from the shared
+  `components/financial-health/` sections. Shipped widgets: `savings-trends` (savings rate/month, reuses
   `savingsRate` + the `SavingsRateChart` leaf), `spending-pace` (the one recharts area leaf,
   `components/widgets/charts/SpendingPaceChart.tsx` via `next/dynamic`), `budgets`, `goals`,
   `top-merchants`, and `activity` (a most-recent-6 live feed that ignores the scope window). Bodies

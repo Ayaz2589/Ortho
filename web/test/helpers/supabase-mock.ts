@@ -102,6 +102,9 @@ interface QueryBuilder extends PromiseLike<{ data: unknown[] | null; error: { me
   order: (col: string, opts?: unknown) => QueryBuilder
   limit: (n: number) => QueryBuilder
   single: () => Promise<{ data: unknown; error: null }>
+  /** Like single(), but resolves null (not an error) when there is no row —
+   *  used for at-most-one-row reads (e.g. the spec-041 financial profile). */
+  maybeSingle: () => Promise<{ data: unknown; error: { message: string; code?: string } | null }>
   insert: (payload?: unknown) => Promise<MutationResult>
   update: (payload?: unknown) => QueryBuilder & Promise<MutationResult>
   delete: () => QueryBuilder & Promise<MutationResult>
@@ -163,6 +166,12 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
       order: () => b,
       limit: () => b,
       single: () => Promise.resolve({ data: rows[0] ?? null, error: null }),
+      maybeSingle: () =>
+        Promise.resolve(
+          selectErr
+            ? { data: null, error: typeof selectErr === 'string' ? { message: selectErr } : selectErr }
+            : { data: rows[0] ?? null, error: null }
+        ),
       insert: (payload?: unknown) => record('insert', payload),
       // update()/delete() are chainable (callers do `.update(x).eq(...)`) AND
       // awaitable. The await must resolve with the MUTATION result (so injected

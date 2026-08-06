@@ -34,6 +34,16 @@ vi.mock('@/lib/store', () => ({
       { id: 'g1', name: 'Emergency fund', kind: 'savings', target_cents: 100000, target_date: null, created_at: firstOfMonth },
     ],
     goalContributions: [{ id: 'c1', goal_id: 'g1', amount_cents: 60000, date: firstOfMonth }],
+    // spec 041 — Financial Health surface. A profile makes the widget render a real score.
+    userFinancialProfile: {
+      id: 'p', user_id: 'p1', monthly_income_cents: 300000, income_is_variable: false,
+      income_low_estimate_cents: null, housing_type: 'rent', housing_cost_cents: 100000,
+      housing_share_fraction: 1, savings_target_fraction: 0.1, emergency_fund_level: '1_3m',
+      created_at: firstOfMonth, updated_at: firstOfMonth,
+    },
+    userFixedCosts: [],
+    userDimensionWeights: [],
+    healthSnapshots: [],
     // No properties → the housing widgets (spec 036) render their calm empty states;
     // their headings still count toward WIDGETS.length.
     properties: [],

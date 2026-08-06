@@ -82,6 +82,47 @@ export interface DepositAccountRow {
   created_at: string
 }
 
+// Financial Health (spec 041) — user-scoped rows (RLS user_id = auth.uid()).
+export interface UserFinancialProfileRow {
+  id: string
+  user_id: string
+  monthly_income_cents: number
+  income_is_variable: boolean
+  income_low_estimate_cents: number | null
+  housing_type: 'rent' | 'own' | 'family' | 'none'
+  housing_cost_cents: number | null
+  housing_share_fraction: number
+  savings_target_fraction: number
+  emergency_fund_level: 'none' | 'under_1m' | '1_3m' | '3_6m' | '6m_plus'
+  created_at: string
+  updated_at: string
+}
+
+export interface UserFixedCostRow {
+  id: string
+  user_id: string
+  label: string
+  amount_cents: number
+  kind: 'remittance' | 'loan' | 'phone' | 'transit' | 'childcare' | 'subscription' | 'other'
+  created_at: string
+}
+
+export interface UserDimensionWeightRow {
+  id: string
+  user_id: string
+  dimension: 'cash_flow' | 'safety_net' | 'commitment_load' | 'savings_momentum' | 'plan_engagement'
+  weight: number
+  created_at: string
+}
+
+export interface FinancialHealthSnapshotRow {
+  id: string
+  user_id: string
+  score: number
+  band: 'strong' | 'steady' | 'building' | 'getting_started'
+  created_at: string
+}
+
 export interface PropertyRow {
   id: string
   household_id: string

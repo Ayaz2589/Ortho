@@ -51,6 +51,11 @@ import type {
   LinkedAccount,
   Goal,
   GoalContribution,
+  FinancialProfile,
+  FixedCost,
+  DimensionWeight,
+  HealthSnapshot,
+  HealthBand,
 } from './types'
 import type {
   UserRow,
@@ -71,6 +76,10 @@ import type {
   LinkedAccountRow,
   GoalRow,
   GoalContributionRow,
+  UserFinancialProfileRow,
+  UserFixedCostRow,
+  UserDimensionWeightRow,
+  FinancialHealthSnapshotRow,
 } from './supabase/rows'
 
 const PLACEHOLDER_ID = '00000000-0000-0000-0000-000000000000'
@@ -111,6 +120,12 @@ interface AppStateValue {
   /** All contributions across the household's goals; a goal's progress is the
    *  sum of the ones whose `goal_id` matches. */
   goalContributions: GoalContribution[]
+  /** Financial Health (spec 041) — USER-scoped, private to the signed-in account.
+   *  The score is derived live; only these raw answers + snapshots persist. */
+  userFinancialProfile: FinancialProfile | null
+  userFixedCosts: FixedCost[]
+  userDimensionWeights: DimensionWeight[]
+  healthSnapshots: HealthSnapshot[]
   currency: CurrencyKey
   rates: Partial<Record<CurrencyKey, number>>
   /** Epoch ms of the last successful live-rate fetch (or cached fetch), null if never. */
@@ -179,6 +194,21 @@ interface AppStateValue {
   deleteGoal: (id: string) => void
   addContribution: (c: GoalContribution) => void
   deleteContribution: (id: string) => void
+  // Financial Health (spec 041) — deliberate form submissions (awaitable, no
+  // optimistic flicker); errors surface via the shared banner.
+  saveFinancialProfile: (input: Omit<FinancialProfile, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>
+  saveFixedCosts: (costs: Array<Pick<FixedCost, 'label' | 'amount_cents' | 'kind'>>) => Promise<void>
+  saveDimensionWeights: (weights: Array<Pick<DimensionWeight, 'dimension' | 'weight'>>) => Promise<void>
+  writeHealthSnapshot: (score: number, band: HealthBand) => Promise<void>
+  /** Persist a full questionnaire submit (profile + costs + weights) then a fresh
+   *  baseline snapshot, in sequence. */
+  saveFinancialHealth: (args: {
+    profile: Omit<FinancialProfile, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+    costs: Array<Pick<FixedCost, 'label' | 'amount_cents' | 'kind'>>
+    weights: Array<Pick<DimensionWeight, 'dimension' | 'weight'>>
+    score: number
+    band: HealthBand
+  }) => Promise<void>
   updateHouseholdName: (name: string) => void
   addPerson: (name: string, colorKey?: string) => void
   renamePerson: (id: string, name: string) => void
@@ -307,6 +337,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
   const [goalContributions, setGoalContributions] = useState<GoalContribution[]>([])
+  // Financial Health (spec 041) — user-scoped.
+  const [userFinancialProfile, setUserFinancialProfile] = useState<FinancialProfile | null>(null)
+  const [userFixedCosts, setUserFixedCosts] = useState<FixedCost[]>([])
+  const [userDimensionWeights, setUserDimensionWeights] = useState<DimensionWeight[]>([])
+  const [healthSnapshots, setHealthSnapshots] = useState<HealthSnapshot[]>([])
   const [linkedInstitutions, setLinkedInstitutions] = useState<LinkedInstitution[]>([])
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([])
   const [currency, setCurrencyState] = useState<CurrencyKey>('usd')
@@ -666,6 +701,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       tagsRes,
       txTagsRes,
       depositAccountsRes,
+      userProfileRes,
+      userFixedCostsRes,
+      userWeightsRes,
+      healthSnapshotsRes,
     ] = await Promise.all([
       // Column projection (US6/P5): the three highest-volume reads fetch only the
       // fields the app uses — never select('*'). Keep these lists in lockstep with
@@ -702,6 +741,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       supabase.from('transaction_tags').select('transaction_id, tag_id'),
       // Deposit accounts (spec 033): fail-open like tags/linked banks.
       supabase.from('deposit_accounts').select('*').order('created_at', { ascending: true }),
+      // Financial Health (spec 041): USER-scoped (RLS user_id = auth.uid()), so
+      // filtered by ownerId — NOT householdId. Fail-open like the others. The
+      // profile is at most one row (maybeSingle → row | null).
+      supabase.from('user_financial_profile').select('*').eq('user_id', ownerId).maybeSingle(),
+      supabase.from('user_fixed_costs').select('*').eq('user_id', ownerId).order('created_at', { ascending: true }),
+      supabase.from('user_dimension_weights').select('*').eq('user_id', ownerId),
+      supabase.from('financial_health_snapshots').select('*').eq('user_id', ownerId).order('created_at', { ascending: true }),
     ])
 
     // A failed read must surface as an error, not render as a real-looking
@@ -716,13 +762,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // window. Any OTHER error stays fail-loud like every bootstrap read.
     const missingTable = (e: { code?: string } | null | undefined) =>
       e?.code === 'PGRST205' || e?.code === '42P01'
-    for (const res of [goalsRes, goalContribRes, linkedInstRes, linkedAcctRes, tagsRes, txTagsRes, depositAccountsRes]) {
+    for (const res of [goalsRes, goalContribRes, linkedInstRes, linkedAcctRes, tagsRes, txTagsRes, depositAccountsRes, userFixedCostsRes, userWeightsRes, healthSnapshotsRes]) {
       if (res.error && missingTable(res.error as { code?: string })) {
         res.data = []
         res.error = null
       }
       orThrow(res)
     }
+    // The profile read is a maybeSingle (row | null), so its fail-open default is
+    // null, not [] — handled separately from the array reads above.
+    if (userProfileRes.error && missingTable(userProfileRes.error as { code?: string })) {
+      userProfileRes.data = null
+      userProfileRes.error = null
+    }
+    orThrow(userProfileRes)
 
     // Typed row → domain boundary (FR-018): each read is asserted to its DB row
     // type (`lib/supabase/rows.ts`) and assigned to domain-typed state, so a
@@ -789,6 +842,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     )
     setGoals((goalsRes.data ?? []) as GoalRow[])
     setGoalContributions((goalContribRes.data ?? []) as GoalContributionRow[])
+    setUserFinancialProfile((userProfileRes.data ?? null) as UserFinancialProfileRow | null)
+    setUserFixedCosts((userFixedCostsRes.data ?? []) as UserFixedCostRow[])
+    setUserDimensionWeights((userWeightsRes.data ?? []) as UserDimensionWeightRow[])
+    setHealthSnapshots((healthSnapshotsRes.data ?? []) as FinancialHealthSnapshotRow[])
     setLinkedInstitutions((linkedInstRes.data ?? []) as LinkedInstitutionRow[])
     setLinkedAccounts((linkedAcctRes.data ?? []) as LinkedAccountRow[])
 
@@ -1405,6 +1462,107 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     })()
   }
 
+  // ---- Financial Health (spec 041) — user-scoped, deliberate form submits ----
+  // Optimistic state + await write + setError on failure, mirroring the
+  // deposit-accounts pattern (no .insert().select() chaining, which the test mock
+  // doesn't model); the next loadAll reconciles any server-side defaults.
+  const saveFinancialProfile = async (
+    input: Omit<FinancialProfile, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+  ) => {
+    if (!currentUserId) return
+    const now = new Date().toISOString()
+    // Reuse the existing row id (so re-saves update in place); generate one on first save.
+    const row: FinancialProfile = {
+      id: userFinancialProfile?.id ?? uuid(),
+      user_id: currentUserId,
+      created_at: userFinancialProfile?.created_at ?? now,
+      updated_at: now,
+      ...input,
+    }
+    setUserFinancialProfile(row)
+    // Do NOT send `id` in the upsert: on conflict (user_id) Postgres would set the
+    // primary key to this fresh uuid, churning the PK on any device that saves
+    // before it has loaded the existing row. Omitting it keeps the existing row's
+    // id on update and lets the default generate it on first insert.
+    const { id: _id, ...payload } = row
+    const { error: e } = await supabase
+      .from('user_financial_profile')
+      .upsert(payload, { onConflict: 'user_id' })
+    if (e) setError(e.message)
+  }
+
+  const saveFixedCosts = async (costs: Array<Pick<FixedCost, 'label' | 'amount_cents' | 'kind'>>) => {
+    if (!currentUserId) return
+    const now = new Date().toISOString()
+    const rows: FixedCost[] = costs.map((c) => ({
+      id: uuid(),
+      user_id: currentUserId,
+      label: c.label,
+      amount_cents: c.amount_cents,
+      kind: c.kind,
+      created_at: now,
+    }))
+    setUserFixedCosts(rows)
+    // Replace-all: clear then re-insert the batch.
+    const { error: delErr } = await supabase.from('user_fixed_costs').delete().eq('user_id', currentUserId)
+    if (delErr) {
+      setError(delErr.message)
+      return
+    }
+    if (rows.length === 0) return
+    const { error: insErr } = await supabase.from('user_fixed_costs').insert(rows)
+    if (insErr) setError(insErr.message)
+  }
+
+  const saveDimensionWeights = async (weights: Array<Pick<DimensionWeight, 'dimension' | 'weight'>>) => {
+    if (!currentUserId) return
+    const now = new Date().toISOString()
+    const rows: DimensionWeight[] = weights.map((w) => ({
+      id: uuid(),
+      user_id: currentUserId,
+      dimension: w.dimension,
+      weight: w.weight,
+      created_at: now,
+    }))
+    setUserDimensionWeights(rows)
+    // Replace-all keeps it simple (there are only ~5 rows) and avoids upsert PK churn.
+    const { error: delErr } = await supabase.from('user_dimension_weights').delete().eq('user_id', currentUserId)
+    if (delErr) {
+      setError(delErr.message)
+      return
+    }
+    if (rows.length === 0) return
+    const { error: insErr } = await supabase.from('user_dimension_weights').insert(rows)
+    if (insErr) setError(insErr.message)
+  }
+
+  const writeHealthSnapshot = async (score: number, band: HealthBand) => {
+    if (!currentUserId) return
+    const row: HealthSnapshot = {
+      id: uuid(),
+      user_id: currentUserId,
+      score,
+      band,
+      created_at: new Date().toISOString(),
+    }
+    setHealthSnapshots((prev) => [...prev, row])
+    const { error: e } = await supabase.from('financial_health_snapshots').insert(row)
+    if (e) setError(e.message)
+  }
+
+  const saveFinancialHealth = async (args: {
+    profile: Omit<FinancialProfile, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+    costs: Array<Pick<FixedCost, 'label' | 'amount_cents' | 'kind'>>
+    weights: Array<Pick<DimensionWeight, 'dimension' | 'weight'>>
+    score: number
+    band: HealthBand
+  }) => {
+    await saveFinancialProfile(args.profile)
+    await saveFixedCosts(args.costs)
+    await saveDimensionWeights(args.weights)
+    await writeHealthSnapshot(args.score, args.band)
+  }
+
   const updateHouseholdName = (name: string) => {
     if (!household) return
     const prevName = household.name
@@ -1539,6 +1697,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     budgets,
     goals,
     goalContributions,
+    userFinancialProfile,
+    userFixedCosts,
+    userDimensionWeights,
+    healthSnapshots,
     currency,
     rates,
     ratesLastFetched,
@@ -1577,6 +1739,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     deleteGoal,
     addContribution,
     deleteContribution,
+    saveFinancialProfile,
+    saveFixedCosts,
+    saveDimensionWeights,
+    writeHealthSnapshot,
+    saveFinancialHealth,
     updateHouseholdName,
     addPerson,
     renamePerson,

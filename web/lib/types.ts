@@ -75,6 +75,72 @@ export interface DepositAccount {
   created_at: string
 }
 
+// Financial Health (spec 041) — user-scoped profile + derived-metric domain types.
+// Money is integer USD cents. The score itself is derived live (never stored); only
+// the raw questionnaire answers and append-only band snapshots persist.
+export type HousingType = 'rent' | 'own' | 'family' | 'none'
+export type EmergencyFundLevel = 'none' | 'under_1m' | '1_3m' | '3_6m' | '6m_plus'
+export type FixedCostKind =
+  | 'remittance'
+  | 'loan'
+  | 'phone'
+  | 'transit'
+  | 'childcare'
+  | 'subscription'
+  | 'other'
+export type HealthDimension =
+  | 'cash_flow'
+  | 'safety_net'
+  | 'commitment_load'
+  | 'savings_momentum'
+  | 'plan_engagement'
+export type HealthBand = 'strong' | 'steady' | 'building' | 'getting_started'
+
+/** One user's stated financial situation (one row per user; private to that user). */
+export interface FinancialProfile {
+  id: string
+  user_id: string
+  monthly_income_cents: number
+  income_is_variable: boolean
+  income_low_estimate_cents: number | null
+  housing_type: HousingType
+  housing_cost_cents: number | null
+  housing_share_fraction: number
+  savings_target_fraction: number
+  emergency_fund_level: EmergencyFundLevel
+  created_at: string
+  updated_at: string
+}
+
+/** A recurring monthly obligation beyond housing (remittances are first-class). */
+export interface FixedCost {
+  id: string
+  user_id: string
+  label: string
+  amount_cents: number
+  kind: FixedCostKind
+  created_at: string
+}
+
+/** The user's 1–5 importance weight for a single health dimension (default 3). */
+export interface DimensionWeight {
+  id: string
+  user_id: string
+  dimension: HealthDimension
+  weight: number
+  created_at: string
+}
+
+/** A point-in-time record of the computed score + band (append-only; drives the
+ *  "you moved from Building → Steady" progress story). */
+export interface HealthSnapshot {
+  id: string
+  user_id: string
+  score: number
+  band: HealthBand
+  created_at: string
+}
+
 export interface Transaction {
   id: string
   household_id: string
