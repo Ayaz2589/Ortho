@@ -24,6 +24,11 @@ vi.mock('@/lib/store', () => ({
     budgets: [],
     goals: [],
     goalContributions: [],
+    // spec 041 — Financial Health surface (profile-null → the widget's calm CTA).
+    userFinancialProfile: null,
+    userFixedCosts: [],
+    userDimensionWeights: [],
+    healthSnapshots: [],
     ownersDisplay: () => ({ avatarUser: {}, label: '—', count: 0 }),
   }),
 }))

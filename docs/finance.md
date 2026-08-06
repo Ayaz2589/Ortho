@@ -30,6 +30,7 @@ vectors are a single-implementation regression lock, not a cross-language parity
 | Lease timing | `web/components/housing/lease.ts` | `lease.json` |
 | Insights (8 rules) | `web/lib/finance/insights.ts` + `insights-thresholds.ts` | `insights.json` |
 | Goals (rule 9) | `web/lib/finance/goals.ts` + `goals-thresholds.ts` | `goals.json` |
+| Financial health (spec 041) | `web/lib/finance/financialHealth.ts` + `financial-health-thresholds.ts` | — (unit/property tests) |
 | Reports helpers | `web/lib/reports/{savings,categories,months}.ts` | — (unit tests only) |
 
 Supporting model layer (not engines): `web/lib/categories.ts` (taxonomy), `web/lib/transaction.ts`
@@ -38,6 +39,14 @@ Supporting model layer (not engines): `web/lib/categories.ts` (taxonomy), `web/l
 Unvectored pure roll-ups added for the widget dashboard (spec 034), pinned by unit/integrity tests
 rather than golden vectors: `web/lib/finance/housing-summary.ts` (§10) and
 `web/lib/dashboard/spendHeatmap.ts` (§9).
+
+**Financial health (spec 041)** — `web/lib/finance/financialHealth.ts` (+ `financial-health-thresholds.ts`)
+is a pure, `now`-injected engine like insights/goals, but pinned by **unit + property tests**
+(`web/test/financial-health.test.ts`), not a golden vector — same precedent as the roll-ups above.
+`scoreFinancialHealth()` blends a derived profile (from the user-scoped questionnaire answers) with
+transactions/budgets/goals into a 0–100 score over five dimensions (reusing `budgetStatusForMonth`,
+`goalPacing`, `savingsRate`), weighted by the user's per-dimension 1–5 sliders; bands are calm and
+**never red**. Contract: `specs/041-financial-health/contracts/health-scoring.md`.
 
 ## 2. The bedrock invariant: integer USD cents
 

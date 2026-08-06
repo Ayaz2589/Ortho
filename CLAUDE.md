@@ -1,5 +1,21 @@
 <!-- SPECKIT START -->
-Active feature: **spec 040 — global text size**. Plan:
+Active feature: **spec 041 — financial health**. Plan:
+`specs/041-financial-health/plan.md` (spec/plan/research/data-model/quickstart/contracts alongside it;
+design doc `docs/plan/financial-health.md`). A baseline **financial-health metric**: a first-run
+questionnaire (income incl. variable/low-estimate; housing incl. shared share; monthly commitments with
+a first-class **remittance** kind; safety-net emergency-fund chip; per-dimension 1–5 importance sliders)
+feeds the pure engine `web/lib/finance/financialHealth.ts` (+ `financial-health-thresholds.ts`), which
+blends the profile with transactions/budgets/goals into a 0–100 score across **five dimensions** (cash
+flow, safety net, commitment load, savings momentum, plan engagement), weighted by the user's sliders.
+Bands Strong/Steady/Building/Getting started — **calm, never red**, always one next step; profile-first
+(works with zero history/no bank). Four **user-scoped** tables (`user_financial_profile`,
+`user_fixed_costs`, `user_dimension_weights`, `financial_health_snapshots`; RLS `user_id=auth.uid()`;
+migration `20260806120000`). Surfaced as a dashboard **widget** (`FinancialHealthBody`, registry
+`financial-health`) with a baseline-vs-now progress line; first-run flow at `welcome/financial-profile`
+(shell-gated on profile===null + a localStorage dismissal); re-take at `settings/financial-profile`.
+Engine pinned by unit/property tests (not a golden vector). This is feature one of two — the deferred
+**Purchase Advisor** (`docs/plan/purchase-advisor.md`) will consume this engine. Fully TDD.
+Prior shipped: **spec 040 — global text size**. Plan:
 `specs/040-text-size/plan.md` (spec/plan/research/data-model/quickstart/contracts alongside it).
 A per-device **Text size** setting that scales the whole UI proportionally via a `zoom` on `<html>`
 (the app is not rem-based, so `zoom` is the reliable lever). Four levels — Small (1.00, today's

@@ -1,0 +1,298 @@
+// Financial Health engine (spec 041). Pure, deterministic, side-effect-free;
+// integer USD cents in, 0–100 scores out; the reference "today" is injected.
+// Mirrors insights.ts / goals.ts / planSummary.ts (no React, no DB) so the future
+// Purchase Advisor can import it directly. Pinned by unit + property tests
+// (web/test/financial-health.test.ts), not a golden vector — the precedent for newer
+// pure roll-ups (housing-summary.ts, spendHeatmap.ts). Contract:
+// specs/041-financial-health/contracts/health-scoring.md.
+
+import type {
+  Budget,
+  DimensionWeight,
+  EmergencyFundLevel,
+  FinancialProfile,
+  FixedCost,
+  Goal,
+  GoalContribution,
+  HealthBand,
+  HealthDimension,
+  Transaction,
+} from '../types'
+import { roundHalfAwayFromZero } from './money'
+import { budgetStatusForMonth } from './budgets'
+import { goalPacing } from './goals'
+import { savingsRate } from '../reports/savings'
+import { FINANCIAL_HEALTH_THRESHOLDS as T } from './financial-health-thresholds'
+
+export interface DerivedFinancialProfile {
+  /** Low estimate when income varies, else monthly income. Used for all ratios. */
+  incomeForRatiosCents: number
+  /** housing_cost · housing_share_fraction + Σ fixed costs. */
+  committedCents: number
+  /** incomeForRatiosCents − committedCents (may be negative). */
+  netAvailableCents: number
+  /** round(monthly_income · savings_target_fraction). */
+  savingsTargetCents: number
+  savingsTargetFraction: number
+  emergencyFundLevel: EmergencyFundLevel
+}
+
+export interface DimensionScore {
+  key: HealthDimension
+  score: number
+  weight: number
+}
+
+export interface HealthAction {
+  dimension: HealthDimension
+  /** English tr() template key (see ACTION_TEMPLATES). */
+  key: string
+  args: Array<string | number>
+}
+
+export interface FinancialHealthInput {
+  profile: DerivedFinancialProfile | null
+  transactions: Transaction[]
+  budgets: Budget[]
+  goals: Goal[]
+  contributionsByGoal: Record<string, GoalContribution[]>
+  weights: Partial<Record<HealthDimension, number>>
+  now: Date
+}
+
+export interface FinancialHealthResult {
+  score: number
+  band: HealthBand
+  dimensions: DimensionScore[]
+  topAction: HealthAction
+  hasProfile: boolean
+}
+
+const clamp = (x: number, lo: number, hi: number): number => (x < lo ? lo : x > hi ? hi : x)
+/** Dimension scores are whole numbers in [0,100] (rounded to kill lerp FP wobble). */
+const clampScore = (x: number): number => Math.round(clamp(x, 0, 100))
+
+/** Linear map of `x∈[x0,x1]` onto `[y0,y1]`, clamped to that output range. */
+function lerp(x: number, x0: number, x1: number, y0: number, y1: number): number {
+  if (x1 === x0) return y0
+  const t = clamp((x - x0) / (x1 - x0), 0, 1)
+  return y0 + t * (y1 - y0)
+}
+
+/** Action copy (English keys; positional {0} args resolved via tr() in the UI). */
+export const ACTION_TEMPLATES: Record<HealthDimension, { key: string; args: Array<string | number> }> = {
+  cash_flow: {
+    key: 'Your spending is close to your income — trimming one recurring cost frees up room.',
+    args: [],
+  },
+  safety_net: {
+    // No embedded currency: a display-currency amount can't be formatted from a
+    // pure engine (Constitution IV — money must read as money, converted).
+    key: 'Start a small emergency fund — a little each week builds a cushion.',
+    args: [],
+  },
+  commitment_load: {
+    key: 'A lot of your income is committed — see if one fixed cost can be reduced or shared.',
+    args: [],
+  },
+  savings_momentum: {
+    key: 'Set aside a little each month — even a {0}% goal is a solid start.',
+    args: [5],
+  },
+  plan_engagement: {
+    key: 'Set a budget for one category — it makes the rest easier to see.',
+    args: [],
+  },
+}
+
+/** Derive the query-time profile from the stored raw answers (never persisted). */
+export function deriveProfile(
+  profile: FinancialProfile | null,
+  fixedCosts: readonly FixedCost[]
+): DerivedFinancialProfile | null {
+  if (!profile) return null
+  const incomeForRatios = profile.income_is_variable
+    ? (profile.income_low_estimate_cents ?? profile.monthly_income_cents)
+    : profile.monthly_income_cents
+  const housing = roundHalfAwayFromZero(
+    (profile.housing_cost_cents ?? 0) * profile.housing_share_fraction
+  )
+  const fixedTotal = fixedCosts.reduce((s, c) => s + c.amount_cents, 0)
+  const committed = housing + fixedTotal
+  return {
+    incomeForRatiosCents: incomeForRatios,
+    committedCents: committed,
+    netAvailableCents: incomeForRatios - committed,
+    savingsTargetCents: roundHalfAwayFromZero(
+      profile.monthly_income_cents * profile.savings_target_fraction
+    ),
+    savingsTargetFraction: profile.savings_target_fraction,
+    emergencyFundLevel: profile.emergency_fund_level,
+  }
+}
+
+/** Sum of `expense` cents in the LOCAL-calendar month of `now` (budgets.ts regime). */
+export function monthSpendCents(transactions: readonly Transaction[], now: Date): number {
+  const y = now.getFullYear()
+  const m = now.getMonth()
+  let total = 0
+  for (const tx of transactions) {
+    if (tx.kind !== 'expense') continue
+    const d = new Date(tx.date)
+    if (d.getFullYear() === y && d.getMonth() === m) total += tx.amount_cents
+  }
+  return total
+}
+
+function intentionBase(f: number): number {
+  const knots = T.SAVINGS_INTENT_KNOTS
+  if (f <= knots[0].f) return knots[0].score
+  const last = knots[knots.length - 1]
+  if (f >= last.f) return last.score
+  for (let i = 1; i < knots.length; i++) {
+    if (f <= knots[i].f) {
+      return lerp(f, knots[i - 1].f, knots[i].f, knots[i - 1].score, knots[i].score)
+    }
+  }
+  return last.score
+}
+
+/** Whether a goal is funded and on pace (undated funded goals count as on pace). */
+function goalOnPaceFunded(
+  goal: Goal,
+  contributionsByGoal: Record<string, GoalContribution[]>,
+  now: Date
+): boolean {
+  const contribs = contributionsByGoal[goal.id] ?? []
+  const saved = contribs.reduce((s, c) => s + c.amount_cents, 0)
+  if (saved <= 0) return false
+  return !goalPacing(goal.target_cents, goal.target_date, goal.created_at, saved, now).off_track
+}
+
+// --- Dimension scorers (each → 0..100). Profile-null neutral handled in scoreFinancialHealth. ---
+
+function cashFlowScore(p: DerivedFinancialProfile, monthSpend: number): number {
+  // Spend is at least the committed fixed costs (rent is paid whether or not it's
+  // logged yet), plus any variable spend already logged this month — `max`, not
+  // sum, so logging a fixed cost never double-counts it. This also stops the
+  // score reading an artificial 100 early in a new month before spend accrues.
+  const spend = Math.max(monthSpend, p.committedCents)
+  const income = p.incomeForRatiosCents
+  const ratio = income > 0 ? (income - spend) / income : 0
+  return clampScore(lerp(ratio, 0, T.CASHFLOW_FULL_RATIO, T.CASHFLOW_FLOOR, 100))
+}
+
+function safetyNetScore(
+  p: DerivedFinancialProfile,
+  goals: readonly Goal[],
+  contributionsByGoal: Record<string, GoalContribution[]>,
+  now: Date
+): number {
+  const base = T.EMERGENCY_BASE[p.emergencyFundLevel] ?? T.NEUTRAL
+  const bonus = goals.some((g) => goalOnPaceFunded(g, contributionsByGoal, now)) ? T.SAFETY_GOAL_BONUS : 0
+  return clampScore(base + bonus)
+}
+
+function commitmentLoadScore(p: DerivedFinancialProfile): number {
+  const income = p.incomeForRatiosCents
+  const committedFraction = income > 0 ? p.committedCents / income : 1
+  return clampScore(lerp(committedFraction, T.COMMIT_LOW, T.COMMIT_HIGH, 100, T.COMMIT_FLOOR))
+}
+
+function savingsMomentumScore(
+  p: DerivedFinancialProfile,
+  monthSpend: number,
+  hasHistory: boolean
+): number {
+  const base = intentionBase(p.savingsTargetFraction)
+  const income = p.incomeForRatiosCents
+  if (!hasHistory || income <= 0) return clampScore(base)
+  const rate = savingsRate(income, Math.max(monthSpend, p.committedCents))
+  if (rate == null) return clampScore(base)
+  const fEff = Math.max(p.savingsTargetFraction, T.SAVINGS_ACTUAL_MIN_TARGET)
+  const actual = lerp(rate, 0, fEff, T.SAVINGS_ACTUAL_FLOOR, 100)
+  return clampScore(Math.max(base, actual))
+}
+
+function planEngagementScore(
+  budgets: readonly Budget[],
+  goals: readonly Goal[],
+  transactions: readonly Transaction[],
+  contributionsByGoal: Record<string, GoalContribution[]>,
+  now: Date
+): number {
+  const active = budgets.filter((b) => b.monthly_limit_cents > 0)
+  let s = T.PLAN_BASE
+  if (active.length > 0) {
+    s += T.PLAN_HAS_BUDGET
+    const allOnTrack = active.every(
+      (b) => budgetStatusForMonth(b, transactions as Transaction[], now).remainingCents >= 0
+    )
+    if (allOnTrack) s += T.PLAN_BUDGETS_ONTRACK
+  }
+  if (goals.length > 0) {
+    s += T.PLAN_HAS_GOAL
+    const allOnTrack = goals.every((g) => {
+      const saved = (contributionsByGoal[g.id] ?? []).reduce((a, c) => a + c.amount_cents, 0)
+      return !goalPacing(g.target_cents, g.target_date, g.created_at, saved, now).off_track
+    })
+    if (allOnTrack) s += T.PLAN_GOALS_ONTRACK
+  }
+  return clampScore(s)
+}
+
+/** Composite score → calm band. Monotonic; boundaries at 40/60/80. */
+export function bandForScore(score: number): HealthBand {
+  if (score >= T.BAND.strong) return 'strong'
+  if (score >= T.BAND.steady) return 'steady'
+  if (score >= T.BAND.building) return 'building'
+  return 'getting_started'
+}
+
+/** DimensionWeight[] → a plain record the engine consumes (missing → default). */
+export function weightsToRecord(
+  weights: readonly DimensionWeight[]
+): Partial<Record<HealthDimension, number>> {
+  const out: Partial<Record<HealthDimension, number>> = {}
+  for (const w of weights) out[w.dimension] = w.weight
+  return out
+}
+
+/** Compute the composite Financial Health result. Pure; `now` injected. */
+export function scoreFinancialHealth(input: FinancialHealthInput): FinancialHealthResult {
+  const { profile, transactions, budgets, goals, contributionsByGoal, weights, now } = input
+  const hasProfile = profile != null
+
+  // Computed once and shared by cash-flow + savings (both scan expenses this month).
+  const monthSpend = monthSpendCents(transactions, now)
+  const hasHistory = transactions.some((t) => t.kind === 'expense')
+
+  const rawScores: Record<HealthDimension, number> = {
+    cash_flow: profile ? cashFlowScore(profile, monthSpend) : T.NEUTRAL,
+    safety_net: profile ? safetyNetScore(profile, goals, contributionsByGoal, now) : T.NEUTRAL,
+    commitment_load: profile ? commitmentLoadScore(profile) : T.NEUTRAL,
+    savings_momentum: profile ? savingsMomentumScore(profile, monthSpend, hasHistory) : T.NEUTRAL,
+    // Plan engagement never needs the profile — it scores from real data always.
+    plan_engagement: planEngagementScore(budgets, goals, transactions, contributionsByGoal, now),
+  }
+
+  const dimensions: DimensionScore[] = T.DIMENSION_ORDER.map((key) => ({
+    key,
+    score: rawScores[key],
+    weight: clamp(weights[key] ?? T.DEFAULT_WEIGHT, 1, 5),
+  }))
+
+  const weightSum = dimensions.reduce((s, d) => s + d.weight, 0)
+  const weighted = dimensions.reduce((s, d) => s + d.score * d.weight, 0)
+  const score = clampScore(Math.round(weightSum > 0 ? weighted / weightSum : T.NEUTRAL))
+
+  // Top action: lowest weighted contribution, tie-broken by fixed dimension order.
+  let lowest = dimensions[0]
+  for (const d of dimensions) {
+    if (d.score * d.weight < lowest.score * lowest.weight) lowest = d
+  }
+  const template = ACTION_TEMPLATES[lowest.key]
+  const topAction: HealthAction = { dimension: lowest.key, key: template.key, args: template.args }
+
+  return { score, band: bandForScore(score), dimensions, topAction, hasProfile }
+}
