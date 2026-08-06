@@ -15,7 +15,7 @@ import { Sidebar } from '@/components/Sidebar'
 import { Paywall } from '@/components/Paywall'
 import { PlaidHandBack } from '@/components/PlaidHandBack'
 import { RouteSkeleton } from '@/components/skeletons/RouteSkeleton'
-import { FinancialHealthOnboardingGate } from '@/components/financial-health/onboardingGate'
+import { AnnouncementHost } from '@/components/announcements/AnnouncementHost'
 
 /** spec 021, FR-011 — shown while `useBiometricGate()` is 'checking' or
  *  'locked'. Never rendered on a device with no biometric enrollment (the
@@ -100,8 +100,10 @@ function Shell({ children, active }: { children: ReactNode; active: boolean }) {
           Capacitor shell (ortho://plaid-done hand-back + foreground poll).
           Renders nothing; no-op on desktop/mobile web. */}
       <PlaidHandBack />
-      {/* spec 041: routes a profile-less user into the first-run questionnaire once. */}
-      <FinancialHealthOnboardingGate />
+      {/* spec 042: the reusable "what's new" popup. Replaces spec 041's forced
+          onboarding redirect — notifies signed-in users of new features (starting
+          with Financial Health) via a dismissible Drawer, never a hard redirect. */}
+      <AnnouncementHost />
       <Sidebar />
       <main
         className="relative flex-1 overflow-y-auto sm:min-w-0 sm:[scrollbar-gutter:stable]"

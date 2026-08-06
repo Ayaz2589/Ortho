@@ -66,7 +66,7 @@ const FEATURE_KEYS = [
   'Financial health',
   'See my score',
   'Continue',
-  'Skip — use neutral defaults',
+  'Skip for now', // spec 042 — relabeled from 'Skip — use neutral defaults' (Skip is now dismiss-only)
   // settings
   'Financial profile',
   'Update this whenever your situation changes.',

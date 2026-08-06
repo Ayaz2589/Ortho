@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 // spec 041 US1 — first-run questionnaire stepper: Income is required before
-// advancing; completing writes the profile + baseline and lands on the dashboard;
-// "Skip — use neutral defaults" writes defaults and leaves.
+// advancing; completing writes the profile + baseline and lands on the dashboard.
+// spec 042 — "Skip for now" is now DISMISS-ONLY: it writes NO profile (the old
+// misleading zero-income neutral-defaults write is gone) and just leaves.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, cleanup, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -67,18 +68,18 @@ describe('Financial Health onboarding stepper', () => {
     expect(h.replace).toHaveBeenCalledWith('/dashboard')
   })
 
-  it('Skip writes neutral defaults, marks dismissal, and leaves', async () => {
+  it('Skip is dismiss-only — writes no profile, no dismissal key, and leaves', async () => {
     const user = userEvent.setup()
     render(<Page />)
-    await user.type(screen.getByPlaceholderText('0.00'), '3000')
-    await user.click(screen.getByRole('button', { name: 'Continue' })) // to Housing (skip visible)
+    // Skip is available on every step, including Income — a user with nothing to
+    // report is never trapped.
     await act(async () => {
-      await user.click(screen.getByRole('button', { name: 'Skip — use neutral defaults' }))
+      await user.click(screen.getByRole('button', { name: 'Skip for now' }))
     })
-    await waitFor(() => expect(h.saveFinancialHealth).toHaveBeenCalledTimes(1))
-    const arg = h.saveFinancialHealth.mock.calls[0][0] as { profile: { monthly_income_cents: number } }
-    expect(arg.profile.monthly_income_cents).toBe(0) // neutral defaults
-    expect(localStorage.getItem('ortho.fhOnboardingDismissed')).toBe('1')
+    // No profile is persisted (the old zero-income neutral-defaults write is gone).
+    expect(h.saveFinancialHealth).not.toHaveBeenCalled()
+    // The onboarding dismissal key is retired with the gate.
+    expect(localStorage.getItem('ortho.fhOnboardingDismissed')).toBeNull()
     expect(h.replace).toHaveBeenCalledWith('/dashboard')
   })
 })
