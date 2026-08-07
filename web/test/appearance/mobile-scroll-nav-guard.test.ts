@@ -32,6 +32,17 @@ describe('mobile scroll + nav guard', () => {
     expect(sameCls.test(SHELL)).toBe(true)
   })
 
+  it('shell outer div never uses a static h-screen (100vh) that overrides h-dvh on desktop', () => {
+    // A `sm:h-screen` (or bare `h-screen`) override makes the desktop shell a static
+    // 100vh, which renders TALLER than the viewport under the text-size `zoom`
+    // (spec 040) — the shell + its h-full Sidebar then overflow the body and add a
+    // second root-level scrollbar ("double scroll"). The shell must stay h-dvh at
+    // every width. (Only the shell div is checked — identified by the `inert` attr.)
+    const shellCls = SHELL.match(/className="([^"]*\bh-dvh\b[^"]*)"\s+inert=/)?.[1] ?? ''
+    expect(shellCls, 'shell className resolved').not.toBe('')
+    expect(/\bh-screen\b/.test(shellCls), 'shell must not use static h-screen').toBe(false)
+  })
+
   it('shell <main> has overflow-y-auto without a sm: breakpoint prefix (mobile scrolls inside main)', () => {
     // Currently only sm:overflow-y-auto — strip that and confirm a bare
     // overflow-y-auto still exists (i.e. it applies on mobile too).
