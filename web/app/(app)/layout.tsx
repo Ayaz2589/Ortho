@@ -95,13 +95,20 @@ function Shell({ children, active }: { children: ReactNode; active: boolean }) {
     // the covered household data behind the opaque overlay (FR-011). The z-index
     // overlay only occludes visually; `inert` removes the content from the tab
     // order and the accessibility tree. React 19 emits the attribute only when true.
-    // h-dvh at EVERY width — never `sm:h-screen`. A static 100vh shell on desktop
-    // renders TALLER than the real viewport under the global text-size `zoom`
-    // (spec 040, default 1.06), so the shell (and its h-full Sidebar) overflow the
-    // body and add a second, root-level scrollbar beside <main>'s ("double scroll").
-    // `h-dvh` is zoom-aware and tracks the visible viewport, so the shell fits and
-    // only <main> scrolls.
-    <div className="flex h-dvh overflow-hidden" inert={!active}>
+    // Height must fit the viewport UNDER the global text-size `zoom` (spec 040).
+    // `zoom: Z` on <html> scales the whole root, so a plain full-viewport-height
+    // shell renders at viewport×Z — TALLER than the viewport — and the shell (plus
+    // its h-full Sidebar) overflow the body, adding a second, root-level scrollbar
+    // beside <main>'s ("double scroll"; verified in Chromium). Dividing by the same
+    // zoom (`--ui-zoom`, set with the zoom in components/settings/textSize.ts) makes
+    // the shell render at exactly the viewport at every text size. `dvh` (a dynamic
+    // viewport unit) keeps the mobile URL-bar tracking; `var(…, 1)` falls back to a
+    // plain dynamic-viewport height pre-boot.
+    <div
+      className="flex overflow-hidden"
+      style={{ height: 'calc(100dvh / var(--ui-zoom, 1))' }}
+      inert={!active}
+    >
       {/* spec 024: completes a pending Hosted Plaid Link session on the
           Capacitor shell (ortho://plaid-done hand-back + foreground poll).
           Renders nothing; no-op on desktop/mobile web. */}
