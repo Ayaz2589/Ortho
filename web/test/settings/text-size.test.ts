@@ -19,6 +19,7 @@ import {
 function resetRoot() {
   const r = document.documentElement
   r.style.removeProperty('zoom')
+  r.style.removeProperty('--ui-zoom')
   r.removeAttribute('data-text-size')
 }
 
@@ -82,6 +83,9 @@ describe('applyTextSize', () => {
       applyTextSize(size)
       const r = document.documentElement
       expect(r.style.getPropertyValue('zoom')).toBe(String(TEXT_SIZE_SCALE[size]))
+      // Mirrored into --ui-zoom so the app shell can divide it out of its 100dvh
+      // height and not overflow the viewport under zoom (double-scroll fix).
+      expect(r.style.getPropertyValue('--ui-zoom')).toBe(String(TEXT_SIZE_SCALE[size]))
       expect(r.getAttribute('data-text-size')).toBe(size)
     },
   )
@@ -125,12 +129,14 @@ describe('textSizeBootScript (pre-paint, no-flash)', () => {
     new Function(textSizeBootScript())()
     expect(document.documentElement.getAttribute('data-text-size')).toBe('large')
     expect(document.documentElement.style.getPropertyValue('zoom')).toBe('1.14')
+    expect(document.documentElement.style.getPropertyValue('--ui-zoom')).toBe('1.14')
   })
 
   it('defaults to medium when no size is stored (the global bump reaches everyone)', () => {
     new Function(textSizeBootScript())()
     expect(document.documentElement.getAttribute('data-text-size')).toBe('medium')
     expect(document.documentElement.style.getPropertyValue('zoom')).toBe('1.06')
+    expect(document.documentElement.style.getPropertyValue('--ui-zoom')).toBe('1.06')
   })
 
   it('falls back to medium for an unknown stored value', () => {

@@ -2,10 +2,16 @@
 // proportionally via CSS `zoom` on <html>, so pixel-locked text (the app is not
 // rem-based) still scales without a per-component refactor. Standardized `zoom`
 // (Baseline 2024 — Chrome 128 / Firefox 126 / Safari 18) rescales the CSS pixel,
-// so viewport units (`100dvh`) and `position: fixed` keep working — the app shell
-// and tab bar do not overflow. NOTE: the Capacitor iOS shell targets iOS 15+
-// (pre-standardized WebKit on iOS 15–17), so the whole-UI scale must be visually
-// confirmed there before relying on it (quickstart.md manual check).
+// but it ALSO scales viewport units: a `100dvh`/`100vh` box renders at
+// viewport×zoom, so a full-viewport-height container overflows the viewport under
+// zoom (this caused a desktop "double scrollbar" — verified in Chromium). To
+// counter it, this module also mirrors the zoom into a `--ui-zoom` CSS variable so
+// a full-viewport container can divide it back out: `calc(100dvh / var(--ui-zoom))`
+// renders at exactly the viewport at every text size (see app/(app)/layout.tsx).
+// `position: fixed` is unaffected (it pins to the scaled viewport). NOTE: the
+// Capacitor iOS shell targets iOS 15+ (pre-standardized WebKit on iOS 15–17), where
+// legacy `zoom` may NOT scale viewport units — the `--ui-zoom` division must be
+// visually confirmed on-device (quickstart.md manual check).
 //
 // This mirrors components/settings/appearance.ts: a read/write/apply trio plus a
 // pre-paint boot script (built here so it can never drift from the scale map),
@@ -50,7 +56,12 @@ function isTextSize(v: unknown): v is TextSize {
 export function applyTextSize(size: TextSize) {
   if (typeof document === 'undefined') return
   const root = document.documentElement
-  root.style.setProperty('zoom', String(TEXT_SIZE_SCALE[size]))
+  const scale = TEXT_SIZE_SCALE[size]
+  root.style.setProperty('zoom', String(scale))
+  // Mirror the zoom into a CSS var so a full-viewport container can divide it out
+  // (`calc(100dvh / var(--ui-zoom))`) — under `zoom` a 100dvh box renders at
+  // viewport×zoom and would overflow. See app/(app)/layout.tsx (the app shell).
+  root.style.setProperty('--ui-zoom', String(scale))
   root.setAttribute('data-text-size', size)
 }
 
@@ -88,5 +99,5 @@ export function writeTextSize(size: TextSize) {
 export function textSizeBootScript(): string {
   return `(function(){try{var S=${JSON.stringify(TEXT_SIZE_SCALE)},d=${JSON.stringify(
     DEFAULT_TEXT_SIZE,
-  )};var v=localStorage.getItem('${STORAGE_KEY}');var s=Object.prototype.hasOwnProperty.call(S,v)?v:d;var r=document.documentElement;r.style.zoom=String(S[s]);r.setAttribute('data-text-size',s);}catch(e){}})();`
+  )};var v=localStorage.getItem('${STORAGE_KEY}');var s=Object.prototype.hasOwnProperty.call(S,v)?v:d;var r=document.documentElement;r.style.zoom=String(S[s]);r.style.setProperty('--ui-zoom',String(S[s]));r.setAttribute('data-text-size',s);}catch(e){}})();`
 }
