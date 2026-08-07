@@ -95,7 +95,13 @@ function Shell({ children, active }: { children: ReactNode; active: boolean }) {
     // the covered household data behind the opaque overlay (FR-011). The z-index
     // overlay only occludes visually; `inert` removes the content from the tab
     // order and the accessibility tree. React 19 emits the attribute only when true.
-    <div className="flex h-dvh overflow-hidden sm:h-screen" inert={!active}>
+    // h-dvh at EVERY width — never `sm:h-screen`. A static 100vh shell on desktop
+    // renders TALLER than the real viewport under the global text-size `zoom`
+    // (spec 040, default 1.06), so the shell (and its h-full Sidebar) overflow the
+    // body and add a second, root-level scrollbar beside <main>'s ("double scroll").
+    // `h-dvh` is zoom-aware and tracks the visible viewport, so the shell fits and
+    // only <main> scrolls.
+    <div className="flex h-dvh overflow-hidden" inert={!active}>
       {/* spec 024: completes a pending Hosted Plaid Link session on the
           Capacitor shell (ortho://plaid-done hand-back + foreground poll).
           Renders nothing; no-op on desktop/mobile web. */}
