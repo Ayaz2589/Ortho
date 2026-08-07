@@ -27,7 +27,11 @@ function DashboardHeader() {
   return (
     <div className="mb-4 flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
       <h1 className="text-[32px] font-light tracking-[-0.6px] text-text">{t('Dashboard')}</h1>
-      <div className="flex shrink-0 items-center gap-2">
+      {/* On a narrow phone the range picker + month picker together exceed the
+          viewport, so they wrap onto separate lines (the month picker drops below
+          the range control) instead of forcing horizontal overflow. Desktop keeps
+          them on one right-aligned line (sm:flex-nowrap + sm:shrink-0). */}
+      <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:shrink-0">
         <RangePicker options={scope.rangeOptions} value={scope.range} onChange={scope.setRange} />
         <MonthPicker
           availableMonths={scope.availableMonths}
