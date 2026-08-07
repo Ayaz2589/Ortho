@@ -69,9 +69,13 @@ describe('dashboard scope bar', () => {
     expect(header.className).toContain('flex-col')
     expect(header.className).toContain('sm:flex-row')
     expect(header.className).toContain('sm:justify-between')
-    // Range + month controls share one non-wrapping row (both selectors on a line).
-    const controls = screen.getByText('Pick a month').closest('.shrink-0')
+    // Range + month controls: one right-aligned line on desktop (sm:flex-nowrap +
+    // sm:shrink-0), but they WRAP on a narrow phone so they never overflow the
+    // viewport (flex-wrap) — the month picker drops below the range control.
+    const controls = screen.getByText('Pick a month').closest('.sm\\:shrink-0')
     expect(controls).not.toBeNull()
     expect(controls!.className).toContain('items-center')
+    expect(controls!.className).toContain('flex-wrap')
+    expect(controls!.className).toContain('sm:flex-nowrap')
   })
 })
