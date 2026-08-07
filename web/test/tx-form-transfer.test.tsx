@@ -74,13 +74,14 @@ describe('useTxForm — who paid + transfer', () => {
     expect(result.current.canSave).toBe(false)
   })
 
-  it('a settle prefill opens directly in transfer mode, pre-filled', () => {
-    const { result } = renderHook(() =>
-      useTxForm({ initialTransfer: { from: 'p2', to: 'p1', amountCents: 5000 } })
-    )
-    expect(result.current.isTransfer).toBe(true)
-    expect(result.current.transferFrom).toBe('p2')
-    expect(result.current.transferTo).toBe('p1')
-    expect(result.current.canSave).toBe(true)
+  it('a transfer with a non-positive amount cannot be saved', () => {
+    const { result } = renderHook(() => useTxForm({}))
+    act(() => result.current.setDir('transfer'))
+    act(() => {
+      result.current.setAmount('0')
+      result.current.setTransferFrom('p2')
+      result.current.setTransferTo('p1')
+    })
+    expect(result.current.canSave).toBe(false)
   })
 })

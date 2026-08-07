@@ -34,8 +34,6 @@ capability contract.
   `cny` = `CN¥`), keyed by code.
 - `dashboard-month-scope.json` — `components/dashboard/range.ts`:
   `availableMonths`, `availableRanges`, `monthReferenceDate`, `stepMonth`.
-- `member-balance.json` — `lib/balances.ts` `balanceBetween` settle-up net
-  cents; expenses carry `paid_by`, reimbursements are directional `transfer` rows.
 - `housing-net-rental.json` — `lib/finance/housing.ts`
   `occupiedRentCents`/`netRentalCents`. Occupancy is a resolved boolean.
 - `lease.json` — `components/housing/lease.ts`: `rentDueDay`,

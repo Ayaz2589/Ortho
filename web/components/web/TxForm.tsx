@@ -20,13 +20,6 @@ import { TagEditor } from './TagEditor'
 import { resolveDefaultOwnerId } from '@/lib/defaultOwner'
 
 
-/** Prefill for opening the form directly in transfer ("Settle up") mode. */
-export interface TransferPrefill {
-  from: string
-  to: string
-  amountCents: number
-}
-
 function centsToDisplay(cents: number, rate: number, fd: number): string {
   if (!cents) return ''
   return ((cents / 100) * rate).toFixed(fd)
@@ -124,11 +117,9 @@ function selectStyle(): React.CSSProperties {
 export function useTxForm({
   editing,
   copying,
-  initialTransfer,
 }: {
   editing?: Transaction | null
   copying?: Transaction | null
-  initialTransfer?: TransferPrefill | null
 }) {
   const {
     currency,
@@ -147,7 +138,7 @@ export function useTxForm({
   const fd = fractionDigits(currency)
   const r = rate(currency)
   const src = editing ?? copying ?? null
-  const initialKind: TransactionKind = initialTransfer ? 'transfer' : src?.kind ?? 'expense'
+  const initialKind: TransactionKind = src?.kind ?? 'expense'
   const defaultOwner = resolveDefaultOwnerId(currentPersonId, householdMembers, currentUserId)
   const otherMember = (notId: string) => householdMembers.find((m) => m.id !== notId)?.id ?? notId
   // Copy paths validate the source's people against CURRENT membership so a
@@ -181,15 +172,11 @@ export function useTxForm({
   }, [editing, src, householdMembers, memberIds])
 
   const [direction, setDirection] = useState<TransactionKind>(initialKind)
-  const [amount, setAmount] = useState(
-    initialTransfer ? centsToDisplay(initialTransfer.amountCents, r, fd) : src ? centsToDisplay(src.amount_cents, r, fd) : ''
-  )
-  // The pre-filled amount's exact cents: the stored total in edit mode, or the
-  // exact balance for a settle-up transfer prefill. If the user doesn't touch
-  // the field, Save reuses these cents verbatim so an FX round-trip never shifts
-  // the stored total (mirrors iOS) — for a settle-up this keeps the transfer
-  // exactly zeroing the balance in a non-USD display currency (spec 023 B9).
-  const originalAmountCents = editing ? editing.amount_cents : initialTransfer ? initialTransfer.amountCents : null
+  const [amount, setAmount] = useState(src ? centsToDisplay(src.amount_cents, r, fd) : '')
+  // The pre-filled amount's exact cents: the stored total in edit mode. If the
+  // user doesn't touch the field, Save reuses these cents verbatim so an FX
+  // round-trip never shifts the stored total (mirrors iOS).
+  const originalAmountCents = editing ? editing.amount_cents : null
   const [originalAmountText] = useState(originalAmountCents != null ? centsToDisplay(originalAmountCents, r, fd) : '')
   const [merchant, setMerchant] = useState(src?.merchant ?? '')
   const [category, setCategory] = useState<TransactionCategory>(
@@ -207,12 +194,10 @@ export function useTxForm({
   )
   // Transfer parties: from = the ower/sender, to = the payer/recipient.
   const [transferFrom, setTransferFrom] = useState<string>(() => {
-    if (initialTransfer) return initialTransfer.from
     if (src?.kind === 'transfer' && src.paid_by && (editing || isMember(src.paid_by))) return src.paid_by
     return defaultOwner
   })
   const [transferTo, setTransferTo] = useState<string>(() => {
-    if (initialTransfer) return initialTransfer.to
     if (src?.kind === 'transfer' && src.owner_ids[0] && (editing || isMember(src.owner_ids[0]))) {
       return src.owner_ids[0]
     }
@@ -1011,7 +996,6 @@ export function TxFormContent({
   title,
   editing,
   copying,
-  initialTransfer,
   onDone,
   onCancel,
   saveLabel,
@@ -1019,15 +1003,14 @@ export function TxFormContent({
   title: string
   editing?: Transaction | null
   copying?: Transaction | null
-  initialTransfer?: TransferPrefill | null
   onDone: () => void
   onCancel: () => void
   saveLabel?: string
 }) {
   const { t } = useApp()
-  const form = useTxForm({ editing, copying, initialTransfer })
+  const form = useTxForm({ editing, copying })
   const [picking, setPicking] = useState(false)
-  const allowCopy = !editing && !initialTransfer
+  const allowCopy = !editing
 
   if (picking) {
     return (

@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { txRecord, shareRows, persist } from '../../scripts/import/db/persist'
-import { balanceBetween } from '../../lib/balances'
 import type { Transaction } from '../../lib/types'
 
 const single: Transaction = {
@@ -88,18 +87,13 @@ describe('persist', () => {
 })
 
 
-// --- Spec 020: paid_by must survive the import so settle-up counts CLI rows. ---
-describe('paid_by → settle-up correctness', () => {
+// --- Spec 020: paid_by must survive the import. ---
+describe('paid_by survives the import', () => {
   const expense: Transaction = {
     ...multi, id: 't3', paid_by: 'u1', amount_cents: 10000,
     owner_ids: ['u1', 'u2'], shares: { u1: 6000, u2: 4000 },
   }
-  it('an imported expense with a payer is counted in balanceBetween (u2 owes u1)', () => {
+  it('an imported expense preserves its payer', () => {
     expect(txRecord(expense).paid_by).toBe('u1')
-    expect(balanceBetween('u1', 'u2', [expense])).toBe(4000)
-  })
-  it('regression: a payer-less expense is silently dropped from settle-up', () => {
-    const { paid_by: _omit, ...noPayer } = expense
-    expect(balanceBetween('u1', 'u2', [noPayer as Transaction])).toBe(0)
   })
 })

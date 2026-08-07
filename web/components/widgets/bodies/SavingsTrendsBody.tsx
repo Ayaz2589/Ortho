@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { useApp } from '@/lib/store'
 import { useDashboardScopeContext } from '@/lib/widgets/DashboardScopeContext'
 import { savingsRate } from '@/lib/reports/savings'
+import { monthBoundsInterval } from '@/lib/useDashboardRange'
 
 // The savings-rate bar time-series stays behind next/dynamic so recharts never
 // enters the dashboard initial-load chunk (spec 022; the leaf is already a
@@ -41,9 +42,33 @@ function formatRate(rate: number | null): string {
  * pure `savingsRate` helper and the existing `SavingsRateChart` leaf. A shortfall
  * reads via sign/position — never red.
  */
+/** The `YYYY-MM` calendar month immediately before the given one. */
+function previousMonth(yyyymm: string): string {
+  const [y, m] = yyyymm.split('-').map(Number)
+  return m === 1 ? `${y - 1}-12` : `${y}-${pad2(m - 1)}`
+}
+
+/** Income/expense cents for a single `YYYY-MM` from the transactions. Uses the
+ *  shared UTC `monthBoundsInterval` (the same window the dashboard scope resolves
+ *  a specific month to), so the comparison buckets identically to the headline. */
+function monthTotals(transactions: Array<{ kind: string; amount_cents: number; date: string }>, yyyymm: string) {
+  const { start, end } = monthBoundsInterval(yyyymm)
+  const startMs = start.getTime()
+  const endMs = end.getTime()
+  let income = 0
+  let expense = 0
+  for (const tx of transactions) {
+    const ms = new Date(tx.date).getTime()
+    if (ms < startMs || ms >= endMs) continue
+    if (tx.kind === 'income') income += tx.amount_cents
+    else if (tx.kind === 'expense') expense += tx.amount_cents
+  }
+  return { income, expense }
+}
+
 export function SavingsTrendsBody() {
   const { transactions, t, locale } = useApp()
-  const { interval } = useDashboardScopeContext()
+  const { interval, isSpecificMonth, selectedMonth, availableMonths } = useDashboardScopeContext()
 
   const buckets = useMemo<MonthBucket[]>(() => {
     // Enumerate the calendar months the window spans, in order.
@@ -87,6 +112,17 @@ export function SavingsTrendsBody() {
     return { label: monthShort(b.yyyymm), rate: r === null ? 0 : Math.round(r * 100) }
   })
 
+  // Single-month view (spec 043 US3): show the previous calendar month's rate as
+  // a comparison. When that month has no data (e.g. the earliest month), show a
+  // calm "no comparison" note rather than a misleading 0%.
+  const comparison = (() => {
+    if (!isSpecificMonth || !selectedMonth) return null
+    const prev = previousMonth(selectedMonth)
+    if (!availableMonths?.includes(prev)) return { available: false as const }
+    const pt = monthTotals(transactions, prev)
+    return { available: true as const, rate: savingsRate(pt.income, pt.expense) }
+  })()
+
   if (!hasActivity) {
     return (
       <div className="flex h-full flex-col">
@@ -105,6 +141,12 @@ export function SavingsTrendsBody() {
       >
         {formatRate(overallRate)}
       </span>
+
+      {comparison ? (
+        <p className="mt-1 text-xs text-text-3" data-testid="savings-comparison">
+          {comparison.available ? t('Last month {0}', formatRate(comparison.rate)) : t('No comparison yet')}
+        </p>
+      ) : null}
 
       {/* Per-month rate bars grow to fill the remaining height of the tier. */}
       <div className="mt-4 min-h-0 flex-1">

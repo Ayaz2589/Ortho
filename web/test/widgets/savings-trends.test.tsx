@@ -10,7 +10,12 @@ import { SavingsTrendsBody } from '@/components/widgets/bodies/SavingsTrendsBody
 
 const h = vi.hoisted(() => ({
   txns: [] as unknown[],
-  scope: {} as { interval: { start: Date; end: Date } },
+  scope: {} as {
+    interval: { start: Date; end: Date }
+    isSpecificMonth?: boolean
+    selectedMonth?: string | null
+    availableMonths?: string[]
+  },
 }))
 
 vi.mock('@/lib/store', () => ({
@@ -63,5 +68,43 @@ describe('SavingsTrendsBody', () => {
   it('fills its cell (h-full)', () => {
     const { container } = render(<SavingsTrendsBody />)
     expect((container.firstChild as HTMLElement).className).toContain('h-full')
+  })
+
+  it('does NOT show a last-month comparison in a multi-month range view', () => {
+    render(<SavingsTrendsBody />) // beforeEach scope has no isSpecificMonth
+    expect(screen.queryByTestId('savings-comparison')).toBeNull()
+  })
+
+  describe('single-month last-month comparison (spec 043 US3)', () => {
+    beforeEach(() => {
+      h.scope = {
+        interval: { start: new Date(2026, 5, 1), end: new Date(2026, 6, 1) }, // June only
+        isSpecificMonth: true,
+        selectedMonth: '2026-06',
+        availableMonths: ['2026-06', '2026-05'],
+      }
+      h.txns = [
+        // June: (100000−60000)/100000 = 40%
+        { id: 'jn-i', kind: 'income', amount_cents: 100000, date: '2026-06-15T12:00:00.000Z' },
+        { id: 'jn-e', kind: 'expense', amount_cents: 60000, date: '2026-06-15T12:00:00.000Z' },
+        // May: (100000−50000)/100000 = 50%
+        { id: 'my-i', kind: 'income', amount_cents: 100000, date: '2026-05-15T12:00:00.000Z' },
+        { id: 'my-e', kind: 'expense', amount_cents: 50000, date: '2026-05-15T12:00:00.000Z' },
+      ]
+    })
+
+    it('shows the selected month rate AND last month as a comparison', () => {
+      render(<SavingsTrendsBody />)
+      expect(screen.getByText('40%')).toBeTruthy() // June headline
+      const cmp = screen.getByTestId('savings-comparison')
+      expect(cmp).toHaveTextContent('Last month')
+      expect(cmp).toHaveTextContent('50%') // May
+    })
+
+    it('shows a calm no-comparison indication at the earliest month', () => {
+      h.scope.availableMonths = ['2026-06'] // no prior month with data
+      render(<SavingsTrendsBody />)
+      expect(screen.getByTestId('savings-comparison')).toHaveTextContent('No comparison yet')
+    })
   })
 })

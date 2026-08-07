@@ -109,12 +109,6 @@ describe('NewTransactionPage (mobile)', () => {
     expect(merchantInput().value).toBe('Blue Bottle')
   })
 
-  it('opens in Settle-up transfer mode from ?from&to&amount', async () => {
-    setUrl('?from=u1&to=u2&amount=1200')
-    render(<NewTransactionPage />)
-    expect(await screen.findByText('Settle up')).toBeInTheDocument()
-  })
-
   it('redirects to the list at desktop width and renders no form', async () => {
     H.expanded = true
     render(<NewTransactionPage />)
