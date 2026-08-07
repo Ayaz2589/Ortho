@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { computeShares, validateSplit, seedSplit, orderedOwnerIds, PERCENT_TOLERANCE } from '@/lib/splits'
-import { balanceBetween } from '@/lib/balances'
 import { toDisplayAmount, toUSDCents } from '@/lib/finance/money'
 import { CURRENCIES, FALLBACK_RATE_FROM_USD } from '@/lib/finance/currency'
 import { generateInsights } from '@/lib/finance/insights'
@@ -90,31 +89,6 @@ describe('property — currency conversion round-trips within display tolerance'
       })
     }
   }
-})
-
-describe('property — balanceBetween is antisymmetric', () => {
-  const t = (over: Partial<Transaction>): Transaction => ({
-    id: 'i', household_id: 'h', merchant: 'm', category: 'dining', kind: 'expense',
-    amount_cents: 0, source: 's', date: '2026-06-15T12:00:00.000Z', created_by: 'x',
-    created_at: '2026-06-15T12:00:00.000Z', updated_at: '2026-06-15T12:00:00.000Z',
-    owner_ids: [], shares: {}, ...over,
-  })
-  const ledger: Transaction[] = [
-    t({ paid_by: 'a', amount_cents: 3000, owner_ids: ['a', 'b'], shares: { a: 1500, b: 1500 } }),
-    t({ paid_by: 'b', amount_cents: 4200, owner_ids: ['a', 'b'], shares: { a: 2100, b: 2100 } }),
-    t({ kind: 'transfer', category: 'transfer', paid_by: 'a', amount_cents: 700, owner_ids: ['b'], shares: { b: 700 } }),
-    t({ kind: 'transfer', category: 'transfer', paid_by: 'b', amount_cents: 250, owner_ids: ['a'], shares: { a: 250 } }),
-    t({ kind: 'income', amount_cents: 9999, owner_ids: ['a'], shares: { a: 9999 } }), // ignored by balances
-  ]
-  it('balance(a,b) === −balance(b,a)', () => {
-    expect(balanceBetween('a', 'b', ledger)).toBe(-balanceBetween('b', 'a', ledger))
-  })
-  it('income rows never affect a settle-up balance', () => {
-    // The trailing income row carries no payer semantics; dropping it must not
-    // change the net owed between the two members.
-    const withoutIncome = ledger.filter((r) => r.kind !== 'income')
-    expect(balanceBetween('a', 'b', ledger)).toBe(balanceBetween('a', 'b', withoutIncome))
-  })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────

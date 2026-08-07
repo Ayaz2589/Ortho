@@ -5,6 +5,7 @@ import { WidgetBoard } from '@/components/widgets/WidgetBoard'
 import { MonthPicker } from '@/components/dashboard/MonthPicker'
 import { RangePicker } from '@/components/dashboard/RangePicker'
 import { NetSummaryHero } from '@/components/dashboard/NetSummaryHero'
+import { MemberSummary } from '@/components/dashboard/MemberSummary'
 import {
   DashboardScopeProvider,
   useDashboardScopeContext,
@@ -59,6 +60,7 @@ export default function DashboardPage() {
       <DashboardScopeProvider>
         <DashboardHeader />
         <NetSummaryHero />
+        <MemberSummary />
         <WidgetBoard />
       </DashboardScopeProvider>
     </div>

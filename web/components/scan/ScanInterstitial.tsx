@@ -52,9 +52,8 @@ function SwitchControl({
 }
 
 /** The "Start review" / "Done" pill: light chip background + accent text,
- *  matching the existing capsule idiom (e.g. `BalanceSummary`'s "Settle up"
- *  button) — the web equivalent of Swift's `Capsule().fill(AppTheme.text
- *  .opacity(0.05))` buttons. */
+ *  matching the existing capsule idiom — the web equivalent of Swift's
+ *  `Capsule().fill(AppTheme.text.opacity(0.05))` buttons. */
 export function ScanPillButton({
   onClick,
   children,

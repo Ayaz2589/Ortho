@@ -1,5 +1,18 @@
 <!-- SPECKIT START -->
-Active feature: **spec 042 — feature-announcement popup**. Plan:
+Active feature: **spec 043 — dashboard & household refinements**. Plan:
+`specs/043-dashboard-household-refinements/plan.md` (spec/plan/research/data-model/quickstart/contracts alongside it).
+Three independent changes: (1) **Remove the broken household "balances" feature** — delete the
+`BalanceSummary` "who owes whom" card + `web/lib/balances.ts` (`balanceBetween`) + the settle-up prefill
+plumbing (`TransferPrefill`/`initialTransfer`/`transfer` URL param/`openSettle`). Transfers survive: the New
+form ALREADY offers a "Transfer" kind (`directionOptions=['expense','income','transfer']`, TxForm.tsx ~315)
+— just preserve+test it. (2) **Dashboard individual-member view** — a person selector (dropdown, default
+"Everyone") on `dashboard/page.tsx`; picking a member renders a personal summary row below `NetSummaryHero`
+(income / expenses = their split share via `effectiveShares` / transfers = received−sent / net) for the
+shared scope. Backed by NEW pure `web/lib/finance/personSummary.ts`. (3) **Savings-trend last-month
+comparison** — `SavingsTrendsBody` single-month view (`isSpecificMonth`) also shows previous month's savings
+rate (reuse `savingsRate`); range view unchanged; calm "no comparison" when no prior month. No DB change.
+Fully TDD; i18n all 5 catalogs (add personal/savings keys, remove balances keys).
+Prior shipped: **spec 042 — feature-announcement popup**. Plan:
 `specs/042-feature-announcements/plan.md` (spec/plan/research/data-model/quickstart/contracts alongside it).
 A reusable "what's new" popup notifies signed-in users of newly shipped features on their next visit. A
 code-level **announcement registry** (`web/components/announcements/registry.ts`) declares each feature's

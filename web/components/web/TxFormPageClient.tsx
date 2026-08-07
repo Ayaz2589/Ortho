@@ -5,7 +5,7 @@ import { useApp } from '@/lib/store'
 import type { Transaction } from '@/lib/types'
 import { FormPage } from './FormPage'
 import { FormPageHeader } from './FormPageHeader'
-import { useTxForm, TxFormBody, TxCopyList, type TransferPrefill } from './TxForm'
+import { useTxForm, TxFormBody, TxCopyList } from './TxForm'
 
 /**
  * New / Edit transaction as a full mobile PAGE (spec 025). Same form engine as
@@ -19,26 +19,22 @@ import { useTxForm, TxFormBody, TxCopyList, type TransferPrefill } from './TxFor
 export function TxFormPageClient({
   editing,
   copying,
-  initialTransfer,
   onDone,
 }: {
   editing?: Transaction | null
   copying?: Transaction | null
-  initialTransfer?: TransferPrefill | null
   onDone: () => void
 }) {
   const { t } = useApp()
-  const form = useTxForm({ editing, copying, initialTransfer })
+  const form = useTxForm({ editing, copying })
   const [picking, setPicking] = useState(false)
-  const allowCopy = !editing && !initialTransfer
+  const allowCopy = !editing
   const title = editing
     ? editing.kind === 'transfer'
       ? t('Edit reimbursement')
       : t('Edit transaction')
-    : initialTransfer
-      ? t('Settle up')
-      : t('New transaction')
-  const saveLabel = editing ? t('Save') : initialTransfer ? t('Record') : t('Add')
+    : t('New transaction')
+  const saveLabel = editing ? t('Save') : t('Add')
 
   return (
     <FormPage>

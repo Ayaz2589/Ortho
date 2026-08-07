@@ -8,28 +8,16 @@ import type { PropertyKind } from './types'
 export interface TxNewParams {
   /** Copy an existing transaction (by id) into a fresh add form. */
   copyFrom: string | null
-  /** Open the add form directly in "Settle up" transfer mode, pre-filled. */
-  transfer: { from: string; to: string; amountCents: number } | null
 }
 
 /**
- * Parse the add-transaction page params. A valid settle-up transfer
- * (`from`+`to`+non-negative-integer `amount`) takes precedence over `copyFrom`;
- * anything missing/malformed degrades to a blank add form (never throws).
+ * Parse the add-transaction page params. A missing/blank `copyFrom` degrades to a
+ * blank add form (never throws).
  */
 export function parseTxNewParams(search: string): TxNewParams {
   const p = new URLSearchParams(search)
-  const from = p.get('from')
-  const to = p.get('to')
-  const amountRaw = p.get('amount')
-  if (from && to && amountRaw !== null && amountRaw.trim() !== '') {
-    const amountCents = Number(amountRaw)
-    if (Number.isInteger(amountCents) && amountCents >= 0) {
-      return { copyFrom: null, transfer: { from, to, amountCents } }
-    }
-  }
   const copyFrom = p.get('copyFrom')
-  return { copyFrom: copyFrom && copyFrom.length > 0 ? copyFrom : null, transfer: null }
+  return { copyFrom: copyFrom && copyFrom.length > 0 ? copyFrom : null }
 }
 
 /** The `id` of the entity an edit page targets, or null if absent/blank. */

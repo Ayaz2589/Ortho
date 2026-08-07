@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { monthlyPaymentCents, currentPrincipalBalanceCents, currentEquityCents, upcomingAmortization } from '@/lib/finance/mortgage'
 import { computeShares, orderedOwnerIds } from '@/lib/splits'
-import { balanceBetween } from '@/lib/balances'
 import { occupiedRentCents, netRentalCents, type RentUnit } from '@/lib/finance/housing'
 import { toDisplayAmount, toUSDCents, roundHalfAwayFromZero } from '@/lib/finance/money'
 import { generateInsights } from '@/lib/finance/insights'
@@ -97,26 +96,6 @@ describe('finance goldens — splits (leftover cent placement)', () => {
 
   it('single owner takes the whole amount', () => {
     expect(computeShares(9999, ['solo'], { method: 'even' })).toEqual({ solo: 9999 })
-  })
-})
-
-describe('finance goldens — member balances (settle-up)', () => {
-  // alice fronts a $30 dinner split evenly; bob owes his $15 share.
-  const dinner = tx({ paid_by: 'alice', amount_cents: 3000, owner_ids: ['alice', 'bob'], shares: { alice: 1500, bob: 1500 } })
-  // bob reimburses alice $15 via a transfer (bob = sender, alice = recipient).
-  const payback = tx({ kind: 'transfer', category: 'transfer', paid_by: 'bob', amount_cents: 1500, owner_ids: ['alice'], shares: { alice: 1500 } })
-
-  it('an expense alice paid makes bob owe his share (+)', () => {
-    expect(balanceBetween('alice', 'bob', [dinner])).toBe(1500)
-  })
-
-  it('the reimbursement settles the debt to zero', () => {
-    // +$15 owed, then −$15 paid back ⇒ settled.
-    expect(balanceBetween('alice', 'bob', [dinner, payback])).toBe(0)
-  })
-
-  it('balance is antisymmetric between the two members', () => {
-    expect(balanceBetween('bob', 'alice', [dinner])).toBe(-1500)
   })
 })
 

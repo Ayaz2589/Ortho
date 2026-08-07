@@ -12,9 +12,7 @@ import type { Transaction } from '@/lib/types'
 import { sortByName } from '@/lib/transaction'
 import { TransactionRow } from '@/components/transactions/TransactionRow'
 import { TransactionDetailView } from '@/components/transactions/TransactionDetailView'
-import { BalanceSummary } from '@/components/transactions/BalanceSummary'
 import { useRouter } from 'next/navigation'
-import type { TransferPrefill } from '@/components/web/TxForm'
 import { useTransactionFilters } from '@/lib/useTransactionFilters'
 import { FilterPanel } from '@/components/web/FilterPanel'
 import { ActiveFilterChips } from '@/components/web/ActiveFilterChips'
@@ -59,20 +57,12 @@ export default function TransactionsPage() {
 
   // This component is the MOBILE tree (desktop early-returns <TransactionsDesktop/>
   // above), so add/edit navigate to their dedicated pages instead of opening the
-  // in-place tray (spec 025). Copy/settle intent rides the query string.
+  // in-place tray (spec 025). Copy intent rides the query string.
   function openAdd() {
     router.push('/transactions/new')
   }
   function openCopy(tx: Transaction) {
     router.push(`/transactions/new?copyFrom=${encodeURIComponent(tx.id)}`)
-  }
-  function openSettle(prefill: TransferPrefill) {
-    const q = new URLSearchParams({
-      from: prefill.from,
-      to: prefill.to,
-      amount: String(prefill.amountCents),
-    })
-    router.push(`/transactions/new?${q.toString()}`)
   }
 
   // Desktop (≥1024px): the ledger table + detail drawer.
@@ -160,9 +150,6 @@ export default function TransactionsPage() {
       )}
 
       {hasAny && <ActiveFilterChips f={f} />}
-
-      {/* Hidden while search is active — matches iOS (`!searchActive`). */}
-      {!searchActive && <BalanceSummary onSettle={openSettle} />}
 
       {!hasAny ? (
         <EmptyState
