@@ -72,4 +72,22 @@ describe('Financial Health settings page', () => {
     expect(typeof arg.band).toBe('string')
     expect(h.push).toHaveBeenCalledWith('/settings')
   })
+
+  it('renders a sixth Routine awareness weight control alongside the original five', () => {
+    render(<Page />)
+    expect(screen.getByRole('radiogroup', { name: 'Routine awareness' })).toBeTruthy()
+  })
+
+  it('saving a changed routine-awareness weight persists it', async () => {
+    const user = userEvent.setup()
+    render(<Page />)
+    const group = screen.getByRole('radiogroup', { name: 'Routine awareness' })
+    await user.click(within(group).getByRole('radio', { name: '5 out of 5' }))
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: 'Save profile' }))
+    })
+    await waitFor(() => expect(h.saveFinancialHealth).toHaveBeenCalledTimes(1))
+    const arg = h.saveFinancialHealth.mock.calls[0][0] as { weights: Array<{ dimension: string; weight: number }> }
+    expect(arg.weights.find((w) => w.dimension === 'routine_awareness')?.weight).toBe(5)
+  })
 })

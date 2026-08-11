@@ -17,6 +17,7 @@ import type {
   HealthDimension,
   Transaction,
 } from '@/lib/types'
+import type { RoutineWithState } from '@/lib/finance/routines'
 
 // --- fixtures ---------------------------------------------------------------
 
@@ -343,5 +344,98 @@ describe('scoreFinancialHealth — invariants', () => {
     }
     expect(share(5)).toBeGreaterThan(share(3))
     expect(share(3)).toBeGreaterThan(share(1))
+  })
+})
+
+// --- routine awareness (spec 044) -------------------------------------------
+
+function routine(over: Partial<RoutineWithState>): RoutineWithState {
+  return {
+    routineKey: 'rc:netflix',
+    kind: 'recurring_charge',
+    merchantKey: 'netflix',
+    merchantLabel: 'Netflix',
+    category: 'streaming',
+    weekday: null,
+    hourBucket: null,
+    personId: null,
+    typicalAmountCents: 1000,
+    amountVarianceCents: 0,
+    occurrenceCount: 1,
+    firstSeenAt: '2026-05-01',
+    lastSeenAt: '2026-08-01',
+    confidence: 90,
+    derivedStatus: 'recognized',
+    evidenceTransactionIds: [],
+    status: 'confirmed',
+    label: null,
+    ...over,
+  }
+}
+
+describe('scoreFinancialHealth — routine awareness (spec 044)', () => {
+  it('appends routine_awareness as the sixth, last dimension', () => {
+    const r = scoreFinancialHealth(input({ routines: [] }))
+    expect(r.dimensions).toHaveLength(6)
+    expect(r.dimensions.at(-1)!.key).toBe('routine_awareness')
+  })
+
+  it('no routines → neutral score, empty citations, never a penalized low score', () => {
+    const r = scoreFinancialHealth(input({ routines: [] }))
+    expect(byKey(r).routine_awareness).toBe(50)
+    expect(r.dimensions.find((d) => d.key === 'routine_awareness')!.contributingRoutineKeys).toEqual([])
+  })
+
+  it('scores coverage between the low/high bounds and cites contributing routines by spend desc', () => {
+    const windowSpend = [
+      expense(50000, '2026-06-01'),
+      expense(50000, '2026-07-01'),
+    ] // 100,000¢ total in the trailing window
+    const routines: RoutineWithState[] = [
+      routine({ routineKey: 'rc:a', typicalAmountCents: 10000, occurrenceCount: 2 }), // 20,000¢
+      routine({ routineKey: 'rc:b', typicalAmountCents: 5000, occurrenceCount: 2 }), // 10,000¢
+    ]
+    const r = scoreFinancialHealth(input({ transactions: windowSpend, routines }))
+    // coverage = 30,000/100,000 = 0.3 → lerp(0.3, 0.15, 0.6, 35, 100) ≈ 56.67 → 57
+    expect(byKey(r).routine_awareness).toBe(57)
+    const dim = r.dimensions.find((d) => d.key === 'routine_awareness')!
+    expect(dim.contributingRoutineKeys).toEqual(['rc:a', 'rc:b'])
+  })
+
+  it('excludes dismissed and lapsed routines from the coverage computation', () => {
+    const windowSpend = [expense(100000, '2026-07-01')]
+    const routines: RoutineWithState[] = [
+      routine({ routineKey: 'rc:dismissed', status: 'dismissed', typicalAmountCents: 100000, occurrenceCount: 1 }),
+      routine({ routineKey: 'rc:lapsed', status: 'lapsed', typicalAmountCents: 100000, occurrenceCount: 1 }),
+    ]
+    const r = scoreFinancialHealth(input({ transactions: windowSpend, routines }))
+    expect(byKey(r).routine_awareness).toBe(50) // no active evidence → neutral, same as zero routines
+  })
+
+  it('the five pre-existing dimensions and the composite score are byte-identical whether routines is omitted or empty', () => {
+    const omitted = scoreFinancialHealth(input({}))
+    const empty = scoreFinancialHealth(input({ routines: [] }))
+    expect(omitted.score).toBe(empty.score)
+    expect(omitted.band).toBe(empty.band)
+    for (const key of ['cash_flow', 'safety_net', 'commitment_load', 'savings_momentum', 'plan_engagement'] as const) {
+      expect(byKey(omitted)[key]).toBe(byKey(empty)[key])
+    }
+  })
+
+  it('a household with zero routines gets the exact spec-041 composite score (no dilution from the neutral placeholder)', () => {
+    // Same fixture as the day-one-profile test above, computed WITHOUT spec 044 in the picture.
+    const r = scoreFinancialHealth(input({}))
+    expect(r.score).toBe(76) // mean(100,60,100,70,50) over the ORIGINAL five — unaffected by routine_awareness
+  })
+
+  it('users can weight routine_awareness like any other dimension', () => {
+    const windowSpend = [expense(100000, '2026-07-01')]
+    const routines: RoutineWithState[] = [routine({ typicalAmountCents: 60000, occurrenceCount: 1 })]
+    const weighted = scoreFinancialHealth(
+      input({ transactions: windowSpend, routines, weights: { routine_awareness: 5 } })
+    )
+    const unweighted = scoreFinancialHealth(input({ transactions: windowSpend, routines }))
+    // routine_awareness scores 100 here (coverage 0.6 ≥ HIGH) — up-weighting it must not lower the composite.
+    expect(weighted.score).toBeGreaterThanOrEqual(unweighted.score)
   })
 })

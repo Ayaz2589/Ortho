@@ -170,31 +170,31 @@ contributed; the existing five dimensions are unchanged.
 without — the breakdown differs only for the household with routines and cites specific routines;
 dismissing one changes the corresponding part of the breakdown.
 
-- [ ] T025 [US3] Write failing tests in `web/test/financial-health.test.ts` per
+- [X] T025 [US3] Write failing tests in `web/test/financial-health.test.ts` per
       `contracts/routine-awareness-dimension.md`: `DIMENSION_ORDER` includes `routine_awareness`
       appended last; zero routines or zero window spend → `NEUTRAL (50)` with empty
       `contributingRoutineKeys`; coverage-ratio scoring between `ROUTINE_AWARENESS_LOW/HIGH` bounds;
       `dismissed`/`lapsed` routines excluded from `activeRoutines`; `contributingRoutineKeys` sorted by
       windowed-spend descending; the five pre-existing dimensions are byte-identical to their spec 041
       values when `routines: []` (the literal no-regression requirement, FR-010).
-- [ ] T026 [US3] [P] Write failing property tests extending `web/test/finance-properties.test.ts` per
+- [X] T026 [US3] [P] Write failing property tests extending `web/test/finance-properties.test.ts` per
       the contract's invariants 7-10: dismissing a routine never increases `routine_awareness`'s
       score; increasing its weight never decreases its composite share; score stays in `[0,100]` for
       all generated `routines` arrays.
-- [ ] T027 [US3] Extend `web/lib/finance/financial-health-thresholds.ts` (`ROUTINE_AWARENESS_LOW`,
+- [X] T027 [US3] Extend `web/lib/finance/financial-health-thresholds.ts` (`ROUTINE_AWARENESS_LOW`,
       `_HIGH`, `_FLOOR`, `ROUTINE_AWARENESS_WINDOW_MONTHS` defaults per the contract) and
       `web/lib/finance/financialHealth.ts`: add `routines: RoutineWithState[]` to
       `FinancialHealthInput`, implement `routineAwarenessScore()`, add its `ACTION_TEMPLATES` entry,
       add `contributingRoutineKeys?` to `DimensionScore`, wire it into `scoreFinancialHealth()`'s
       `rawScores`/`dimensions` construction. Make T025 and T026 pass.
-- [ ] T028 [US3] Write failing tests extending `web/test/widgets/financial-health.test.tsx`: the
+- [X] T028 [US3] Write failing tests extending `web/test/widgets/financial-health.test.tsx`: the
       widget renders a sixth dimension row citing contributing routine labels; a household with no
       routines shows the calm "not enough history yet" state, never a low/red-reading score.
-- [ ] T029 [US3] Update `web/components/widgets/bodies/FinancialHealthBody.tsx` to pass the store's
+- [X] T029 [US3] Update `web/components/widgets/bodies/FinancialHealthBody.tsx` to pass the store's
       `routines` selector into `scoreFinancialHealth`, and render the sixth dimension row + cited
       routine labels (resolve `routineKey`s back to `merchantLabel`/`label` for display). Make T028
       pass.
-- [ ] T030 [US3] Write failing tests extending `web/test/financial-health-settings.test.tsx` (or the
+- [X] T030 [US3] Write failing tests extending `web/test/financial-health-settings.test.tsx` (or the
       `FinancialProfileForm` component test): `WeightsSection` renders a sixth 1-5 control for
       "Routine awareness" alongside the existing five, and saving persists a `routine_awareness` row
       to `user_dimension_weights`. Implement: add `routine_awareness` to

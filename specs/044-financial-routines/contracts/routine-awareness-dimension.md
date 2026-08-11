@@ -84,8 +84,14 @@ Only ever becomes `topAction` when it has the lowest weighted contribution among
    `windowSpendCents === 0` — dismissing every routine or having no history never reads as a
    penalized low score (Story 3 AC2).
 8. Dismissing a previously-`recognized`/`confirmed` routine (moving it out of `activeRoutines`) never
-   *increases* `routine_awareness`'s score, and removes its key from `contributingRoutineKeys`
-   (Story 3 AC3).
+   *increases* `routine_awareness`'s score **while at least one other active routine remains**, and
+   always removes its key from `contributingRoutineKeys` (Story 3 AC3). **Exception, not a bug**:
+   dismissing the *last* active routine resets `hasData` to `false`, landing on `NEUTRAL (50)` per
+   invariant #7 — a low-coverage score (which can sit below 50, e.g. near the `FLOOR`) can therefore
+   legitimately be *followed* by a higher neutral score once nothing active remains, exactly like
+   every other profile-null dimension in this engine resets to neutral rather than continuing to be
+   judged. Property tests must scope strict monotonicity to pairs where `hasData` stays `true` on
+   both sides.
 9. Adding weight to `routine_awareness` never decreases its share of the composite score (same
    invariant #4 from health-scoring.md, generalized to six dimensions).
 10. Both the five pre-existing dimensions' individual scores AND the overall composite `score`/`band`

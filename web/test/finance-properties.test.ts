@@ -3,7 +3,9 @@ import { computeShares, validateSplit, seedSplit, orderedOwnerIds, PERCENT_TOLER
 import { toDisplayAmount, toUSDCents } from '@/lib/finance/money'
 import { CURRENCIES, FALLBACK_RATE_FROM_USD } from '@/lib/finance/currency'
 import { generateInsights } from '@/lib/finance/insights'
+import { scoreFinancialHealth, type FinancialHealthInput } from '@/lib/finance/financialHealth'
 import type { Transaction, Budget } from '@/lib/types'
+import type { RoutineWithState } from '@/lib/finance/routines'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // spec 025 — US1 CORRECTNESS ORACLE (property / invariant tests)
@@ -191,4 +193,130 @@ describe('property — insights invariant 4: sorted by severity (no lower rank p
       expect(prev, `insight[${i - 1}].severity "${insights[i - 1].severity}" ranked higher than insight[${i}].severity "${insights[i].severity}"`).toBeLessThanOrEqual(curr)
     }
   })
+})
+
+// --- routine awareness (spec 044) — contracts/routine-awareness-dimension.md invariants 7-10 ----
+
+const RA_NOW = new Date('2026-08-15')
+
+function raExpense(amount_cents: number, date: string): Transaction {
+  return {
+    id: `tx-${date}-${amount_cents}`,
+    household_id: 'h',
+    merchant: 'm',
+    category: 'groceries',
+    kind: 'expense',
+    amount_cents,
+    source: 's',
+    date,
+    created_by: 'u',
+    created_at: `${date}T12:00:00Z`,
+    updated_at: `${date}T12:00:00Z`,
+    owner_ids: ['u'],
+    shares: { u: amount_cents },
+  }
+}
+
+function raRoutine(over: Partial<RoutineWithState>): RoutineWithState {
+  return {
+    routineKey: 'rc:netflix',
+    kind: 'recurring_charge',
+    merchantKey: 'netflix',
+    merchantLabel: 'Netflix',
+    category: 'streaming',
+    weekday: null,
+    hourBucket: null,
+    personId: null,
+    typicalAmountCents: 10000,
+    amountVarianceCents: 0,
+    occurrenceCount: 2,
+    firstSeenAt: '2026-06-01',
+    lastSeenAt: '2026-08-01',
+    confidence: 90,
+    derivedStatus: 'recognized',
+    evidenceTransactionIds: [],
+    status: 'confirmed',
+    label: null,
+    ...over,
+  }
+}
+
+const raInput = (over: Partial<FinancialHealthInput> = {}): FinancialHealthInput => ({
+  profile: null,
+  transactions: [raExpense(100000, '2026-07-01')],
+  budgets: [],
+  goals: [],
+  contributionsByGoal: {},
+  weights: {},
+  now: RA_NOW,
+  ...over,
+})
+
+describe('property — routine_awareness: dismissing a routine never increases its score (while other active routines remain — hasData stays true on both sides)', () => {
+  // Two routines contributing coverage; dismissing ONE (while the other stays active) can only
+  // hold or lower the coverage ratio, never raise it.
+  const twoActive = raInput({
+    routines: [
+      raRoutine({ routineKey: 'rc:a', status: 'confirmed', typicalAmountCents: 20000, occurrenceCount: 1 }),
+      raRoutine({ routineKey: 'rc:b', status: 'confirmed', typicalAmountCents: 20000, occurrenceCount: 1 }),
+    ],
+  })
+  const oneDismissed = raInput({
+    routines: [
+      raRoutine({ routineKey: 'rc:a', status: 'confirmed', typicalAmountCents: 20000, occurrenceCount: 1 }),
+      raRoutine({ routineKey: 'rc:b', status: 'dismissed', typicalAmountCents: 20000, occurrenceCount: 1 }),
+    ],
+  })
+  it('dismissing one of two active routines never raises the score', () => {
+    const before = scoreFinancialHealth(twoActive).dimensions.find((d) => d.key === 'routine_awareness')!.score
+    const after = scoreFinancialHealth(oneDismissed).dimensions.find((d) => d.key === 'routine_awareness')!.score
+    expect(after).toBeLessThanOrEqual(before)
+  })
+})
+
+describe('property — routine_awareness: dismissing the LAST active routine resets to neutral, not a penalized low score', () => {
+  // This is a deliberate exception to strict monotonicity, not a bug: "zero active routines" is a
+  // no-data state (hasData=false), which — like every other profile-null/no-data dimension in this
+  // engine — reads as calm/neutral rather than judged against the coverage floor. A user dismissing
+  // their only routine sees the dimension go quiet, not penalized.
+  it('going from one low-coverage active routine to zero active routines lands on NEUTRAL (50)', () => {
+    const oneActive = raInput({ routines: [raRoutine({ status: 'confirmed', typicalAmountCents: 20000, occurrenceCount: 1 })] })
+    const zeroActive = raInput({ routines: [raRoutine({ status: 'dismissed', typicalAmountCents: 20000, occurrenceCount: 1 })] })
+    const before = scoreFinancialHealth(oneActive).dimensions.find((d) => d.key === 'routine_awareness')!.score
+    const after = scoreFinancialHealth(zeroActive).dimensions.find((d) => d.key === 'routine_awareness')!.score
+    expect(before).toBeLessThan(50) // low coverage genuinely scores below neutral
+    expect(after).toBe(50) // but "nothing left" is calm-neutral, not a continuation of the floor
+  })
+})
+
+describe('property — routine_awareness: increasing its weight never decreases its composite share', () => {
+  const base = raInput({ routines: [raRoutine({ typicalAmountCents: 60000, occurrenceCount: 1 })] }) // coverage 0.6 → 100
+  it('for weights 1, 3, 5', () => {
+    const scores = [1, 3, 5].map(
+      (w) => scoreFinancialHealth({ ...base, weights: { routine_awareness: w } }).score
+    )
+    // routine_awareness scores 100 (well above the neutral other dimensions' 50) — up-weighting it
+    // must never lower the composite.
+    expect(scores[1]).toBeGreaterThanOrEqual(scores[0])
+    expect(scores[2]).toBeGreaterThanOrEqual(scores[1])
+  })
+})
+
+describe('property — routine_awareness: score always in [0,100] across varied coverage ratios', () => {
+  const AMOUNTS = [0, 1, 5000, 50000, 100000, 500000, 1_000_000]
+  for (const spend of AMOUNTS) {
+    for (const routineAmount of AMOUNTS) {
+      it(`window spend ${spend}¢, routine spend ${routineAmount}¢`, () => {
+        const r = scoreFinancialHealth(
+          raInput({
+            transactions: spend > 0 ? [raExpense(spend, '2026-07-01')] : [],
+            routines: routineAmount > 0 ? [raRoutine({ typicalAmountCents: routineAmount, occurrenceCount: 1 })] : [],
+          })
+        )
+        const score = r.dimensions.find((d) => d.key === 'routine_awareness')!.score
+        expect(score).toBeGreaterThanOrEqual(0)
+        expect(score).toBeLessThanOrEqual(100)
+      })
+    }
+  }
 })
