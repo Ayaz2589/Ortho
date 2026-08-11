@@ -2,15 +2,23 @@
 // spec 044 US1/US2 — RoutinesList: recognized routines with cadence + amount, confirm/dismiss/
 // rename actions, dismissed-never-reappears, lapsed distinguished, calm empty state.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { RoutineWithState } from '@/lib/finance/routines'
+import type { LocationConsent, RecognizedRoutineState, RoutineVisit } from '@/lib/types'
+import { clusterVisits, clusterRoutineKey } from '@/lib/location/visitClusters'
 
 const h = vi.hoisted(() => ({
   routines: [] as RoutineWithState[],
   confirmRoutine: vi.fn(),
   dismissRoutine: vi.fn(),
   renameRoutine: vi.fn(),
+  locationConsent: null as LocationConsent | null,
+  routineVisits: [] as RoutineVisit[],
+  recognizedRoutineStates: [] as RecognizedRoutineState[],
+  loadRoutineVisits: vi.fn(() => Promise.resolve()),
+  recordRoutineVisit: vi.fn(() => Promise.resolve()),
+  merchantGeocodes: [] as unknown[],
 }))
 
 vi.mock('@/lib/store', () => ({
@@ -20,6 +28,12 @@ vi.mock('@/lib/store', () => ({
     confirmRoutine: h.confirmRoutine,
     dismissRoutine: h.dismissRoutine,
     renameRoutine: h.renameRoutine,
+    locationConsent: h.locationConsent,
+    routineVisits: h.routineVisits,
+    recognizedRoutineStates: h.recognizedRoutineStates,
+    loadRoutineVisits: h.loadRoutineVisits,
+    recordRoutineVisit: h.recordRoutineVisit,
+    merchantGeocodes: h.merchantGeocodes,
     t: (k: string, ...a: unknown[]) =>
       k.replace(/\{(\d+)\}/g, (_: string, i: string) => String(a[Number(i)] ?? '')),
   }),
@@ -57,6 +71,12 @@ describe('RoutinesList', () => {
     h.confirmRoutine.mockClear()
     h.dismissRoutine.mockClear()
     h.renameRoutine.mockClear()
+    h.locationConsent = null
+    h.routineVisits = []
+    h.recognizedRoutineStates = []
+    h.loadRoutineVisits.mockClear()
+    h.recordRoutineVisit.mockClear()
+    h.merchantGeocodes = []
     cleanup()
   })
 
@@ -146,5 +166,76 @@ describe('RoutinesList — US2 behavioral habits alongside recurring charges', (
     render(<RoutinesList />)
     const names = screen.getAllByText(/Netflix|Coffee Shop/).map((el) => el.textContent)
     expect(names).toEqual(['Netflix', 'Coffee Shop'])
+  })
+})
+
+describe('RoutinesList — US4 location candidates', () => {
+  beforeEach(() => {
+    h.routines = []
+    h.locationConsent = null
+    h.routineVisits = []
+    h.recognizedRoutineStates = []
+    h.dismissRoutine.mockClear()
+    cleanup()
+  })
+
+  function visit(lat: number, lng: number, id: string) {
+    return {
+      id,
+      user_id: 'u',
+      household_id: 'h',
+      captured_at: '2026-08-01T09:00:00Z',
+      latitude: lat,
+      longitude: lng,
+      accuracy_meters: 10,
+      created_at: '2026-08-01T09:00:00Z',
+    }
+  }
+
+  it('shows nothing location-related when consent is off, even with visit rows present', () => {
+    h.locationConsent = null
+    h.routineVisits = [visit(40.7128, -74.006, 'v1'), visit(40.7128, -74.006, 'v2'), visit(40.7128, -74.006, 'v3')]
+    render(<RoutinesList />)
+    expect(screen.queryByText(/place you visit often/i)).not.toBeInTheDocument()
+  })
+
+  it('surfaces a dismissible candidate card for a repeating-place cluster when opted into foreground_capture', () => {
+    h.locationConsent = { id: 'c', user_id: 'u', level: 'foreground_capture', granted_at: 'x', revoked_at: null, created_at: 'x', updated_at: 'x' }
+    h.routineVisits = [visit(40.7128, -74.006, 'v1'), visit(40.7128, -74.006, 'v2'), visit(40.7128, -74.006, 'v3')]
+    render(<RoutinesList />)
+    expect(screen.getByText(/place you visit often/i)).toBeInTheDocument()
+  })
+
+  it('dismissing a candidate calls dismissRoutine with a loc: prefixed key', async () => {
+    h.locationConsent = { id: 'c', user_id: 'u', level: 'foreground_capture', granted_at: 'x', revoked_at: null, created_at: 'x', updated_at: 'x' }
+    h.routineVisits = [visit(40.7128, -74.006, 'v1'), visit(40.7128, -74.006, 'v2'), visit(40.7128, -74.006, 'v3')]
+    render(<RoutinesList />)
+    await userEvent.click(screen.getByText('Dismiss'))
+    expect(h.dismissRoutine).toHaveBeenCalledTimes(1)
+    expect((h.dismissRoutine.mock.calls[0][0] as string)).toMatch(/^loc:/)
+  })
+
+  it('a dismissed cluster never reappears', () => {
+    h.locationConsent = { id: 'c', user_id: 'u', level: 'foreground_capture', granted_at: 'x', revoked_at: null, created_at: 'x', updated_at: 'x' }
+    const visits = [visit(40.7128, -74.006, 'v1'), visit(40.7128, -74.006, 'v2'), visit(40.7128, -74.006, 'v3')]
+    h.routineVisits = visits
+    // Compute the real key the same way the component does, so this asserts against actual
+    // behavior rather than a guessed rounding.
+    const realKey = clusterRoutineKey(clusterVisits(visits)[0].clusterId)
+    h.recognizedRoutineStates = [
+      { id: 's1', household_id: 'h', routine_key: realKey, status: 'dismissed', label: null, person_id: null, created_by: 'u', created_at: 'x', updated_at: 'x' },
+    ]
+    render(<RoutinesList />)
+    expect(screen.queryByText(/place you visit often/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/not enough history yet/i)).toBeInTheDocument()
+  })
+
+  it('never renders anything that could be mistaken for an auto-created transaction (dismiss is the only action)', () => {
+    h.locationConsent = { id: 'c', user_id: 'u', level: 'foreground_capture', granted_at: 'x', revoked_at: null, created_at: 'x', updated_at: 'x' }
+    h.routineVisits = [visit(40.7128, -74.006, 'v1'), visit(40.7128, -74.006, 'v2'), visit(40.7128, -74.006, 'v3')]
+    render(<RoutinesList />)
+    const card = screen.getByText(/place you visit often/i).closest('div')!.parentElement!
+    const buttons = within(card).getAllByRole('button')
+    expect(buttons.map((b) => b.textContent)).toEqual(['Dismiss'])
   })
 })

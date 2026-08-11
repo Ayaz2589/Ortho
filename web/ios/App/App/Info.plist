@@ -42,6 +42,12 @@
 	<string>Ortho uses the camera to scan receipts and bank statements so you can add transactions without typing them in.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Ortho uses Face ID to keep your household's finances private to you.</string>
+	<!-- spec 044 (US4): a foreground-only "When In Use" prompt for the optional Routines location
+	     booster. Deliberately no NSLocationAlwaysAndWhenInUseUsageDescription / UIBackgroundModes —
+	     research.md §1 found true background dwell detection disproportionate for this feature;
+	     capture only happens at natural app-foreground moments while the user has opted in. -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Ortho can use your location, only while the app is open, to notice places you visit often and suggest a spending routine. This is entirely optional and off by default.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

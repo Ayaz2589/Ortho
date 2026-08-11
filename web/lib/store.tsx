@@ -21,6 +21,7 @@ import { hapticConfirm, hapticDestructive } from './haptics'
 import { formatMoney as fmtMoney, type CurrencyKey } from './finance/money'
 import { FALLBACK_RATE_FROM_USD } from './finance/currency'
 import { applyRoutineStates, detectRoutines, type RoutineWithState } from './finance/routines'
+import { consentTransition, shouldDeleteVisitsOnTransition } from './location/consent'
 import { effectiveShares } from './format'
 import { CATEGORIES, paletteFor } from './categories'
 import {
@@ -59,7 +60,9 @@ import type {
   HealthBand,
   RecognizedRoutineState,
   LocationConsent,
+  LocationConsentLevel,
   MerchantGeocode,
+  RoutineVisit,
 } from './types'
 import type {
   UserRow,
@@ -87,6 +90,7 @@ import type {
   RecognizedRoutineStateRow,
   UserLocationConsentRow,
   MerchantGeocodeRow,
+  UserRoutineVisitRow,
 } from './supabase/rows'
 
 const PLACEHOLDER_ID = '00000000-0000-0000-0000-000000000000'
@@ -140,6 +144,12 @@ interface AppStateValue {
   merchantGeocodes: MerchantGeocode[]
   /** The signed-in user's location-assistance opt-in level (private; null until loaded/created). */
   locationConsent: LocationConsent | null
+  setLocationConsent: (level: LocationConsentLevel) => Promise<void>
+  /** Lazily-loaded (spec 044 US4) — only fetched on demand, only meaningful once opted into
+   *  'foreground_capture'. Empty until `loadRoutineVisits` is called. */
+  routineVisits: RoutineVisit[]
+  loadRoutineVisits: () => Promise<void>
+  recordRoutineVisit: (latitude: number, longitude: number, accuracyMeters: number | null) => Promise<void>
   currency: CurrencyKey
   rates: Partial<Record<CurrencyKey, number>>
   /** Epoch ms of the last successful live-rate fetch (or cached fetch), null if never. */
@@ -368,6 +378,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [recognizedRoutineStates, setRecognizedRoutineStates] = useState<RecognizedRoutineState[]>([])
   const [merchantGeocodes, setMerchantGeocodes] = useState<MerchantGeocode[]>([])
   const [locationConsent, setLocationConsentState] = useState<LocationConsent | null>(null)
+  const [routineVisits, setRoutineVisits] = useState<RoutineVisit[]>([])
   const [linkedInstitutions, setLinkedInstitutions] = useState<LinkedInstitution[]>([])
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([])
   const [currency, setCurrencyState] = useState<CurrencyKey>('usd')
@@ -1652,6 +1663,66 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // (no explicit status patch here).
   const renameRoutine = async (routineKey: string, label: string) => upsertRoutineState(routineKey, { label })
 
+  // ---- Location consent + opportunistic visit capture (spec 044 US4) — user-scoped ----
+  const setLocationConsent = async (level: LocationConsentLevel) => {
+    if (!currentUserId) return
+    const now = new Date().toISOString()
+    const previousLevel = locationConsent?.level ?? 'off'
+    const { grantedAt, revokedAt } = consentTransition(previousLevel, level, now)
+    const row: LocationConsent = {
+      id: locationConsent?.id ?? uuid(),
+      user_id: currentUserId,
+      level,
+      granted_at: grantedAt ?? locationConsent?.granted_at ?? null,
+      revoked_at: revokedAt ?? locationConsent?.revoked_at ?? null,
+      created_at: locationConsent?.created_at ?? now,
+      updated_at: now,
+    }
+    setLocationConsentState(row)
+    const { id: _id, ...payload } = row
+    const { error: e } = await supabase.from('user_location_consent').upsert(payload, { onConflict: 'user_id' })
+    if (e) {
+      setError(e.message)
+      return
+    }
+    // FR-015: revoking cascades to delete every captured visit, within this session.
+    if (shouldDeleteVisitsOnTransition(previousLevel, level)) {
+      setRoutineVisits([])
+      const { error: delErr } = await supabase.from('user_routine_visits').delete().eq('user_id', currentUserId)
+      if (delErr) setError(delErr.message)
+    }
+  }
+
+  // Lazy-loaded (not part of loadAll's boot Promise.all — data-model.md): only fetched when a
+  // surface actually needs visit-cluster suggestions, and only meaningful once opted into
+  // 'foreground_capture'.
+  const loadRoutineVisits = async () => {
+    if (!currentUserId) return
+    const { data, error: e } = await supabase.from('user_routine_visits').select('*').eq('user_id', currentUserId)
+    if (e) {
+      setError(e.message)
+      return
+    }
+    setRoutineVisits((data ?? []) as UserRoutineVisitRow[])
+  }
+
+  const recordRoutineVisit = async (latitude: number, longitude: number, accuracyMeters: number | null) => {
+    if (!currentUserId || !household || locationConsent?.level !== 'foreground_capture') return
+    const row: RoutineVisit = {
+      id: uuid(),
+      user_id: currentUserId,
+      household_id: household.id,
+      captured_at: new Date().toISOString(),
+      latitude,
+      longitude,
+      accuracy_meters: accuracyMeters,
+      created_at: new Date().toISOString(),
+    }
+    setRoutineVisits((prev) => [...prev, row])
+    const { error: e } = await supabase.from('user_routine_visits').insert(row)
+    if (e) setError(e.message)
+  }
+
   const updateHouseholdName = (name: string) => {
     if (!household) return
     const prevName = household.name
@@ -1793,6 +1864,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     recognizedRoutineStates,
     merchantGeocodes,
     locationConsent,
+    setLocationConsent,
+    routineVisits,
+    loadRoutineVisits,
+    recordRoutineVisit,
     currency,
     rates,
     ratesLastFetched,

@@ -7,7 +7,7 @@ import type { RoutineWithState } from '@/lib/finance/routines'
 /** One recognized routine: cadence + typical amount, confirm/dismiss/rename actions. Real
  *  `<button>`s throughout (Constitution V). Calm — no red, no urgency (Constitution II/IV). */
 export function RoutineCard({ routine }: { routine: RoutineWithState }) {
-  const { formatMoney, confirmRoutine, dismissRoutine, renameRoutine, t } = useApp()
+  const { formatMoney, confirmRoutine, dismissRoutine, renameRoutine, merchantGeocodes, t } = useApp()
   const [renaming, setRenaming] = useState(false)
   const [draftLabel, setDraftLabel] = useState(routine.label ?? routine.merchantLabel)
 
@@ -17,6 +17,11 @@ export function RoutineCard({ routine }: { routine: RoutineWithState }) {
       ? t('Monthly, about {0}', formatMoney(routine.typicalAmountCents))
       : t('A regular habit, around {0}', formatMoney(routine.typicalAmountCents))
   const lapsed = routine.status === 'lapsed'
+  // US4 FR-012: an optional, purely decorative place label — never affects detection/display of
+  // the routine itself when absent (geocoding off, or the merchant not yet resolved).
+  const geocode = (merchantGeocodes ?? []).find(
+    (g) => g.merchant_key === routine.merchantKey && g.resolved_at != null
+  )
 
   return (
     <div className="flex flex-col gap-2 px-4 py-3">
@@ -41,6 +46,7 @@ export function RoutineCard({ routine }: { routine: RoutineWithState }) {
           <span className="truncate text-[13px] text-text-3">
             {cadence}
             {lapsed && ` · ${t('No longer active')}`}
+            {geocode?.label && ` · ${geocode.label}`}
           </span>
         </div>
         {routine.status !== 'dismissed' && !renaming && (

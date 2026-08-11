@@ -216,59 +216,60 @@ Revoking removes all location-derived data within one session.
 `foreground_capture` — repeated app-open captures can surface a visit-pattern suggestion; revoke —
 all visit data and location-only suggestions gone immediately.
 
-- [ ] T031 [US4] Add `NSLocationWhenInUseUsageDescription` (plain-language: what's collected, that
+- [X] T031 [US4] Add `NSLocationWhenInUseUsageDescription` (plain-language: what's collected, that
       it's optional, that it stays scoped to routine detection) to `ios/App/App/Info.plist`. No
       `UIBackgroundModes` entry (foreground-only, per research.md §1 — deliberately no background
       capability).
-- [ ] T032 [US4] Write failing tests in `web/test/location/consent.test.ts`: reading/writing
+- [X] T032 [US4] Write failing tests in `web/test/location/consent.test.ts`: reading/writing
       `user_location_consent` for the three levels; moving off `'off'` stamps `granted_at`; moving to
       `'off'` stamps `revoked_at` **and** triggers deletion of all of that user's `user_routine_visits`
       rows (mocked store/supabase client).
-- [ ] T033 [US4] Implement `web/lib/location/consent.ts` (`getLocationConsent`, `setLocationConsent`)
+- [X] T033 [US4] Implement `web/lib/location/consent.ts` (`getLocationConsent`, `setLocationConsent`)
       and wire the revoke-cascades-to-delete-visits call into `web/lib/store.tsx`. Make T032 pass.
-- [ ] T034 [US4] Write failing tests in `web/test/location/captureVisit.test.ts`: a capture call is a
+- [X] T034 [US4] Write failing tests in `web/test/location/captureVisit.test.ts`: a capture call is a
       no-op unless `level === 'foreground_capture'`; throttled by `captureMinIntervalMinutes` (no
       second capture within the window); silently no-ops (no thrown error, no repeated nagging) on
       permission denial or an unavailable Geolocation API (mock `@capacitor/geolocation`).
-- [ ] T035 [US4] Implement `web/lib/location/captureVisit.ts` using `@capacitor/geolocation`'s
+- [X] T035 [US4] Implement `web/lib/location/captureVisit.ts` using `@capacitor/geolocation`'s
       `requestPermissions`/`getCurrentPosition`, writing one `user_routine_visits` row per qualifying
       capture. Make T034 pass. Hook the capture call into the Routines view's mount effect (app-open
       proxy) — not into every navigation, per the throttle.
-- [ ] T036 [US4] Write failing tests in `web/test/location/geocoding.test.ts`:
+- [X] T036 [US4] Write failing tests in `web/test/location/geocoding.test.ts`:
       `checkGeocodingAvailable()` returns `'unconfigured'` when the probe reports not-configured,
       `'available'` when configured, `'no-household'` when there's no active household; a
       `merchant_geocodes` row is only written/read when `available`.
-- [ ] T037 [US4] Implement `web/lib/location/geocoding.ts` (`checkGeocodingAvailable()` calling the
+- [X] T037 [US4] Implement `web/lib/location/geocoding.ts` (`checkGeocodingAvailable()` calling the
       edge function's probe mode; `resolveMerchantGeocode(merchantKey, merchantLabel)` — fire-and-
       forget, cache-first against `merchant_geocodes`). Make T036 pass.
-- [ ] T038 [US4] Implement `supabase/functions/geocode-merchant/index.ts` following the
+- [X] T038 [US4] Implement `supabase/functions/geocode-merchant/index.ts` following the
       `plaid-link-token` pattern exactly: `requiredEnv('MAPS_GEOCODING_API_KEY')` (or the real
       provider's credential name), a `probe` mode returning `{ configured: boolean }` without
       spending a real geocode call, and a normal mode that geocodes via a small internal
       `geocode(merchantLabel): Promise<{lat,lng,label}|null>` interface (stubbed/unimplemented body
       acceptable — no credential exists in this environment per research.md §7 — but the
       `not_configured` 503 path must be real and correct).
-- [ ] T039 [US4] [P] Write `supabase/functions/geocode-merchant/config.test.ts` (Deno.test, mirroring
-      `plaid-exchange/completion.test.ts`'s style) asserting the `not_configured` decision path when
-      the required env var is absent. **Cannot be executed in this sandbox** (no Deno CLI available)
-      — write it correctly per the existing pattern and note in the task's completion that it needs a
-      `deno test` run in an environment with Deno installed (matching this repo's existing "no
-      Xcode/no browser" verification-gap precedent).
-- [ ] T040 [US4] Write failing tests in `web/test/location/LocationConsentSection.test.tsx`: renders
+- [ ] T039 [US4] [P] Write `supabase/functions/geocode-merchant/decision.test.ts` (Deno.test,
+      mirroring `plaid-exchange/completion.test.ts`'s style — extracted a pure `decideGeocodeRequest`
+      into `decision.ts` for testability, same as `completion.ts`'s `decideCompletionAfterRpcError`)
+      asserting the `not_configured`/`probe_ok`/`invalid_request`/`proceed` routing. **Written, but
+      cannot be executed in this sandbox** (no Deno CLI available) — matches this repo's existing "no
+      Xcode/no browser" verification-gap precedent; needs a `deno test` run in an environment with
+      Deno installed before merge.
+- [X] T040 [US4] Write failing tests in `web/test/location/LocationConsentSection.test.tsx`: renders
       the three-tier control (Off/Geocoding/Foreground capture); geocoding shown as unavailable
       renders the calm "Location enrichment isn't available yet" message instead of a broken toggle;
       selecting "Foreground capture" triggers the permission-request flow; selecting "Off" after a
       higher tier triggers the revoke-and-delete flow.
-- [ ] T041 [US4] Implement `web/components/settings/LocationConsentSection.tsx` and route
+- [X] T041 [US4] Implement `web/components/settings/LocationConsentSection.tsx` and route
       `web/app/(app)/settings/location/page.tsx`; add a "Location" entry link from
       `web/app/(app)/settings/page.tsx`. Make T040 pass.
-- [ ] T042 [US4] Write failing tests extending `web/test/routines/RoutinesList.test.tsx`: when
+- [X] T042 [US4] Write failing tests extending `web/test/routines/RoutinesList.test.tsx`: when
       geocoding is `available` and a routine's `merchantKey` has a resolved `merchant_geocodes` row,
       the routine card shows the place label; when `foreground_capture` visits exist that cluster by
       proximity + weekday/hour, a distinct "candidate routine" card is shown, dismissible, and never
       auto-creates a transaction (FR-014); with location off, none of this renders and behavior is
       identical to Phase 3-5's output (US4 AC1).
-- [ ] T043 [US4] Implement the visit-clustering-to-candidate-suggestion logic (a small pure helper in
+- [X] T043 [US4] Implement the visit-clustering-to-candidate-suggestion logic (a small pure helper in
       `web/lib/location/visitClusters.ts` — group `user_routine_visits` by rounded-coordinate
       proximity + weekday/hour-bucket, reusing the same bucket-size constant as
       `routines-thresholds.ts`'s behavioral detection) and render it in `RoutinesList.tsx` as a
@@ -287,20 +288,20 @@ all visit data and location-only suggestions gone immediately.
 
 ## Phase 7: Polish & Cross-Cutting
 
-- [ ] T045 [P] Add `web/test/i18n/routines-i18n.test.ts` (mirror the spec-043/042 i18n guard pattern):
+- [X] T045 [P] Add `web/test/i18n/routines-i18n.test.ts` (mirror the spec-043/042 i18n guard pattern):
       every new English string introduced across Phases 3-6 (routines list/card copy, confirm/
       dismiss/rename controls, lapsed/empty states, the 6th dimension label + action template,
       location consent tiers + calm unconfigured/denied copy) is present in `bn`/`es`/`ja`/`zh`/`ko`
       with matching `{n}`-placeholder arity.
-- [ ] T046 Add the translations for every key from T045 to `web/lib/i18n/{bn,es,ja,zh,ko}.ts`. Make
+- [X] T046 Add the translations for every key from T045 to `web/lib/i18n/{bn,es,ja,zh,ko}.ts`. Make
       T045 pass.
-- [ ] T047 Run the full gate: `npx tsc --noEmit` (UNPIPED — must be clean) then `npm test` (full
+- [X] T047 Run the full gate: `npx tsc --noEmit` (UNPIPED — must be clean) then `npm test` (full
       suite green), from `web/`.
-- [ ] T048 [P] Verify no accidental deletion/regression of Rule 5 (`insights.ts`'s existing recurring-
+- [X] T048 [P] Verify no accidental deletion/regression of Rule 5 (`insights.ts`'s existing recurring-
       subscriptions detector) and no stale references:
       `grep -rn "TODO.*routine\|FIXME.*routine" web/{app,components,lib,test}` returns nothing
       unresolved; confirm `web/lib/finance/insights.ts`'s Rule 5 block is untouched.
-- [ ] T049 [P] Run `npm run gen:vectors` (from `web/`) and confirm **no diff** — routine detection and
+- [X] T049 [P] Run `npm run gen:vectors` (from `web/`) and confirm **no diff** — routine detection and
       the 6th health dimension are unit/property-pinned only, never promoted into
       `shared/test-vectors/` by this feature (research.md §3, spec Assumptions).
 - [ ] T050 [P] Manual cross-canvas confirm per `quickstart.md` (all four stories, desktop + mobile +
