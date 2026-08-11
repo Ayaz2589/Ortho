@@ -66,61 +66,61 @@ next matching transaction (FR-017/SC-008).
 cadence + amount; dismiss → stays gone on reload; confirm → the next matching transaction arrives
 pre-categorized.
 
-- [ ] T007 [US1] Write failing tests in `web/test/finance/routines.test.ts` for `detectRoutines()`'s
+- [X] T007 [US1] Write failing tests in `web/test/finance/routines.test.ts` for `detectRoutines()`'s
       `recurring_charge` branch per `contracts/routines-engine.md` §"FR-001/FR-002": below-min-count
       groups produce nothing; amount-tolerance and cadence-window gating (including a group that fails
       the hit ratio); `routineKey` format (`rc:${merchantKey}`) and stability across re-detection runs
       on a superset of the same transactions; `confidence ∈ [0,100]`; `derivedStatus` flips to
       `'lapsed'` after `lapseAfterMissedCycles` missed cycles.
-- [ ] T008 [US1] Implement the `recurring_charge` branch of `detectRoutines()` in
+- [X] T008 [US1] Implement the `recurring_charge` branch of `detectRoutines()` in
       `web/lib/finance/routines.ts` (median amount, tolerance/hit-ratio gates, cadence-gap analysis,
       confidence formula, lapsed detection) using `ROUTINE_THRESHOLDS`. Make T007 pass.
-- [ ] T009 [US1] [P] Write failing property tests in `web/test/finance/routines-properties.test.ts`:
+- [X] T009 [US1] [P] Write failing property tests in `web/test/finance/routines-properties.test.ts`:
       `detectRoutines` is order-independent (shuffle input, same output set by `routineKey`); every
       `evidenceTransactionIds` entry exists in the input and matches the group; `occurrenceCount ===
       evidenceTransactionIds.length`; two households' transactions never cross-contaminate a
       `routineKey` (per contracts/routines-engine.md invariants 1-4, 6).
-- [ ] T010 [US1] Write failing tests for `applyRoutineStates()` in `web/test/finance/routines.test.ts`:
+- [X] T010 [US1] Write failing tests for `applyRoutineStates()` in `web/test/finance/routines.test.ts`:
       no state row → `status = derivedStatus`; a `dismissed` row always wins; a `confirmed` row wins
       unless `derivedStatus === 'lapsed'` (lapsed wins over confirmed); `label` falls back to
       `merchantLabel` when the state row's label is null; output array length always equals input
       length (invariant 5).
-- [ ] T011 [US1] Implement `applyRoutineStates()` in `web/lib/finance/routines.ts`. Make T010 pass.
-- [ ] T012 [US1] Write failing store tests in `web/test/store/routines.test.tsx`: `confirmRoutine`,
+- [X] T011 [US1] Implement `applyRoutineStates()` in `web/lib/finance/routines.ts`. Make T010 pass.
+- [X] T012 [US1] Write failing store tests in `web/test/store/routines.test.tsx`: `confirmRoutine`,
       `dismissRoutine`, `renameRoutine` each upsert one row into `recognized_routine_states` keyed on
       `(household_id, routine_key)`; a computed `routines: RoutineWithState[]` selector combines
       `detectRoutines(transactions, now)` with `applyRoutineStates(...)` and
       `recognizedRoutineStates`.
-- [ ] T013 [US1] Implement `confirmRoutine(routineKey, personId?)`, `dismissRoutine(routineKey)`,
+- [X] T013 [US1] Implement `confirmRoutine(routineKey, personId?)`, `dismissRoutine(routineKey)`,
       `renameRoutine(routineKey, label)`, and a memoized `routines` selector in `web/lib/store.tsx`.
       Make T012 pass.
-- [ ] T014 [US1] Write failing component tests in `web/test/routines/RoutinesList.test.tsx`: renders
+- [X] T014 [US1] Write failing component tests in `web/test/routines/RoutinesList.test.tsx`: renders
       recognized routines with cadence + typical amount; a household with only 1-2 occurrences shows
       nothing for it; confirm/dismiss/rename buttons call the corresponding store function; a
       dismissed routine never reappears after a re-render with the same transactions; a lapsed routine
       is visually distinguished (not shown as active); an empty/insufficient-history household shows a
       calm message, never a red/alarming empty state (Constitution II/IV).
-- [ ] T015 [US1] Implement `web/components/routines/RoutineCard.tsx` (one routine: cadence, typical
+- [X] T015 [US1] Implement `web/components/routines/RoutineCard.tsx` (one routine: cadence, typical
       amount, confirm/dismiss/rename controls — real `<button>`s, per Constitution V) and
       `web/components/routines/RoutinesList.tsx` (fetches `routines` from `useApp()`, renders
       `RoutineCard`s, empty state). Make T014 pass.
-- [ ] T016 [US1] Create route `web/app/(app)/routines/page.tsx` rendering `<RoutinesList />` inside the
+- [X] T016 [US1] Create route `web/app/(app)/routines/page.tsx` rendering `<RoutinesList />` inside the
       standard app shell/page-header pattern (match an existing simple list route, e.g.
       `settings/deposit-accounts/page.tsx`, for header/back-nav conventions).
-- [ ] T017 [US1] Add a "Routines" entry point: a link row from `web/app/(app)/settings/page.tsx` to
+- [X] T017 [US1] Add a "Routines" entry point: a link row from `web/app/(app)/settings/page.tsx` to
       `/routines` (per Constitution's four preserved top-level destinations — Routines is reached
       *from* Settings, like Budgets/Goals/Deposit Accounts, not a new top-level nav item).
-- [ ] T018 [US1] Write failing tests in `web/test/web/tx-form-auto-categorize.test.tsx`: entering a
+- [X] T018 [US1] Write failing tests in `web/test/web/tx-form-auto-categorize.test.tsx`: entering a
       merchant that normalizes to a **confirmed** `recurring_charge` routine's `merchantKey`
       pre-fills the category field with that routine's `category` (only when the category field is
       still at its unset/default state — never overrides a category the user already picked); a
       merely-`recognized` (unconfirmed) or `dismissed` routine never auto-categorizes (FR-017);
       auto-categorization never creates or submits a transaction on its own.
-- [ ] T019 [US1] Implement the auto-categorization suggestion in `web/components/web/TxForm.tsx`: on
+- [X] T019 [US1] Implement the auto-categorization suggestion in `web/components/web/TxForm.tsx`: on
       merchant blur/change, normalize via `normalizeMerchantKey`, look up a confirmed
       `recurring_charge` routine with that `merchantKey` from the store's `routines` selector, and
       prefill `category` if still unset. Make T018 pass.
-- [ ] T020 [US1] [P] Manually verify `web/lib/finance/insights.ts`'s existing "Rule 5: Recurring
+- [X] T020 [US1] [P] Manually verify `web/lib/finance/insights.ts`'s existing "Rule 5: Recurring
       subscriptions" is untouched (still present, still tested) — this feature adds a parallel,
       richer surface and does not replace or delete it (research.md §4). Confirm with
       `npx vitest run test/insights.unit.test.ts test/insights.parity.test.ts`.

@@ -1,11 +1,12 @@
 'use client'
 
-import { useId, useMemo, useState, type ReactNode } from 'react'
+import { useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { readCollapsedCategories, writeCollapsedCategories } from '@/lib/txCopyCollapse'
 import { useApp } from '@/lib/store'
 import { CATEGORY_GROUPS, categoryMeta } from '@/lib/categories'
 import { currencySymbol, fractionDigits } from '@/lib/finance/currency'
 import { toUSDCents } from '@/lib/finance/money'
+import { normalizeMerchantKey } from '@/lib/finance/routines'
 import { mostCommonTransactions, knownNamesForKind, groupByCategory } from '@/lib/txSuggest'
 import { parseMoney, CalendarPanel } from '@/components/inputs'
 import { mediumDate } from '@/lib/format'
@@ -133,6 +134,7 @@ export function useTxForm({
     resolveUser,
     addTransaction,
     updateTransaction,
+    routines,
   } = useApp()
 
   const fd = fractionDigits(currency)
@@ -179,9 +181,28 @@ export function useTxForm({
   const originalAmountCents = editing ? editing.amount_cents : null
   const [originalAmountText] = useState(originalAmountCents != null ? centsToDisplay(originalAmountCents, r, fd) : '')
   const [merchant, setMerchant] = useState(src?.merchant ?? '')
-  const [category, setCategory] = useState<TransactionCategory>(
+  const [category, setCategoryRaw] = useState<TransactionCategory>(
     src && src.kind === 'expense' ? src.category : 'groceries'
   )
+  // spec 044 FR-017: a *confirmed* recurring_charge routine may suggest its category on merchant
+  // blur, but only into an untouched category field — never overriding a category the user (or an
+  // edit/copy source) already set. `categoryTouched` flips permanently once the user picks via the
+  // category panel; the auto-suggestion path (onMerchantBlur below) never flips it, so editing the
+  // merchant again can still re-suggest for a different confirmed routine.
+  const categoryTouchedRef = useRef(!!src)
+  const setCategory = (c: TransactionCategory) => {
+    categoryTouchedRef.current = true
+    setCategoryRaw(c)
+  }
+  const onMerchantBlur = () => {
+    if (categoryTouchedRef.current || direction !== 'expense') return
+    const key = normalizeMerchantKey(merchant)
+    if (!key) return
+    const match = (routines ?? []).find(
+      (r) => r.kind === 'recurring_charge' && r.merchantKey === key && r.status === 'confirmed' && r.category
+    )
+    if (match?.category) setCategoryRaw(match.category)
+  }
   const [incomeCategory, setIncomeCategory] = useState<TransactionCategory>(
     src && src.kind === 'income' ? src.category : 'salary'
   )
@@ -316,7 +337,9 @@ export function useTxForm({
       setIncomeCategory((c) => (c === 'groceries' ? 'salary' : c))
     } else if (d === 'expense') {
       setSource((s) => (expenseSources.includes(s) ? s : expenseSources[0] ?? ''))
-      setCategory((c) => (c === 'salary' ? 'groceries' : c))
+      // A direction-flip correction, not a user pick — use the raw setter so
+      // categoryTouchedRef stays false and a routine suggestion can still land.
+      setCategoryRaw((c) => (c === 'salary' ? 'groceries' : c))
     }
     // Flipping direction resets the split to even, like iOS `onChange(of: kind)`.
     resetSplitsToEven()
@@ -474,6 +497,7 @@ export function useTxForm({
     setAmount,
     merchant,
     setMerchant,
+    onMerchantBlur,
     category,
     setCategory,
     incomeCategory,
@@ -635,7 +659,7 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
           {/* Merchant + category */}
           <div className="ow-card" style={{ margin: '0 20px 14px' }}>
             <Row label={isIncome ? t('Source') : t('Merchant')} first>
-              <input className="ow-row-input" value={form.merchant} onChange={(e) => form.setMerchant(e.target.value)} placeholder={isIncome ? t('e.g. Acme Co. payroll') : t('e.g. Whole Foods')} list={merchantListId} autoComplete="off" />
+              <input className="ow-row-input" value={form.merchant} onChange={(e) => form.setMerchant(e.target.value)} onBlur={form.onMerchantBlur} placeholder={isIncome ? t('e.g. Acme Co. payroll') : t('e.g. Whole Foods')} list={merchantListId} autoComplete="off" />
             </Row>
             <datalist id={merchantListId}>
               {nameSuggestions.map((name) => (

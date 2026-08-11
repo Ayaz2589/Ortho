@@ -38,6 +38,15 @@ interface DimensionScore {
 profile-null mode) — consistent with `plan_engagement` being the one existing dimension that already
 works without a profile.
 
+**Composite gating (discovered during implementation, corrects an earlier gap in this contract):**
+the function also returns `hasData: boolean` (true once `activeRoutines.length > 0`). `scoreFinancialHealth`
+excludes `routine_awareness` from the weighted composite/topAction calculation entirely whenever
+`hasData` is false — simply averaging in a `NEUTRAL` placeholder score for every household with zero
+routines would change the overall score/band for every existing spec-041 household, which is a
+literal violation of FR-010. The dimension still appears in the `dimensions` array for display (the
+UI renders its calm "not enough history yet" row either way) — only its effect on the composite score
+is gated on real signal existing.
+
 1. `activeRoutines` = `routines.filter(r => r.status === 'confirmed' || r.status === 'recognized')`
    (excludes `dismissed` and `lapsed` — a lapsed routine no longer represents live, predictable
    spend).
@@ -79,6 +88,7 @@ Only ever becomes `topAction` when it has the lowest weighted contribution among
    (Story 3 AC3).
 9. Adding weight to `routine_awareness` never decreases its share of the composite score (same
    invariant #4 from health-scoring.md, generalized to six dimensions).
-10. The five pre-existing dimensions' scores are byte-identical to their spec 041 values for any
-    input that omits `routines` (empty array) — this is the literal "no regression" requirement
-    (FR-010, Story 3 AC2).
+10. Both the five pre-existing dimensions' individual scores AND the overall composite `score`/`band`
+    are byte-identical to their spec 041 values for any input that omits `routines` (empty array) —
+    this is the literal "no regression" requirement (FR-010, Story 3 AC2), and specifically why
+    `hasData` gates the composite, not just the individual dimension score.

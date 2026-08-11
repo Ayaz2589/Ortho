@@ -20,6 +20,7 @@ import { signInHref } from './nav'
 import { hapticConfirm, hapticDestructive } from './haptics'
 import { formatMoney as fmtMoney, type CurrencyKey } from './finance/money'
 import { FALLBACK_RATE_FROM_USD } from './finance/currency'
+import { applyRoutineStates, detectRoutines, type RoutineWithState } from './finance/routines'
 import { effectiveShares } from './format'
 import { CATEGORIES, paletteFor } from './categories'
 import {
@@ -222,6 +223,13 @@ interface AppStateValue {
     score: number
     band: HealthBand
   }) => Promise<void>
+  // Financial Routines (spec 044) — `routines` is a memoized selector combining live detection
+  // (routines.ts) with persisted household state; confirm/dismiss/rename are the only durable
+  // actions (FR-005).
+  routines: RoutineWithState[]
+  confirmRoutine: (routineKey: string, personId?: string | null) => Promise<void>
+  dismissRoutine: (routineKey: string) => Promise<void>
+  renameRoutine: (routineKey: string, label: string) => Promise<void>
   updateHouseholdName: (name: string) => void
   addPerson: (name: string, colorKey?: string) => void
   renamePerson: (id: string, name: string) => void
@@ -1598,6 +1606,52 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     await writeHealthSnapshot(args.score, args.band)
   }
 
+  // ---- Financial Routines (spec 044) — household-scoped ----
+  // Detection is always recomputed live from `transactions` (README's "derived, never stored");
+  // only the confirm/dismiss/rename overlay persists. Recomputed on every transactions/state change
+  // — cheap relative to a household's realistic transaction volume, same precedent as insights.ts.
+  const routines = useMemo(
+    () => applyRoutineStates(detectRoutines(transactions, new Date()), recognizedRoutineStates),
+    [transactions, recognizedRoutineStates]
+  )
+
+  const upsertRoutineState = async (
+    routineKey: string,
+    patch: Partial<Pick<RecognizedRoutineState, 'status' | 'label' | 'person_id'>>
+  ) => {
+    if (!household || !currentUserId) return
+    const now = new Date().toISOString()
+    const existing = recognizedRoutineStates.find((s) => s.routine_key === routineKey)
+    const row: RecognizedRoutineState = {
+      id: existing?.id ?? uuid(),
+      household_id: household.id,
+      routine_key: routineKey,
+      status: existing?.status ?? 'confirmed',
+      label: existing?.label ?? null,
+      person_id: existing?.person_id ?? null,
+      created_by: existing?.created_by ?? currentUserId,
+      created_at: existing?.created_at ?? now,
+      updated_at: now,
+      ...patch,
+    }
+    setRecognizedRoutineStates((prev) => [...prev.filter((s) => s.routine_key !== routineKey), row])
+    const { id: _id, ...payload } = row
+    const { error: e } = await supabase
+      .from('recognized_routine_states')
+      .upsert(payload, { onConflict: 'household_id,routine_key' })
+    if (e) setError(e.message)
+  }
+
+  const confirmRoutine = async (routineKey: string, personId?: string | null) =>
+    upsertRoutineState(routineKey, { status: 'confirmed', ...(personId !== undefined ? { person_id: personId } : {}) })
+  const dismissRoutine = async (routineKey: string) => upsertRoutineState(routineKey, { status: 'dismissed' })
+  // recognized_routine_states.status only has room for 'confirmed'/'dismissed' (there is no
+  // persisted 'recognized' — that's simply the absence of a row). Renaming a not-yet-reviewed
+  // routine is a real engagement signal, so it defaults to 'confirmed' on first write via
+  // upsertRoutineState's fallback; renaming an already-dismissed routine leaves it dismissed
+  // (no explicit status patch here).
+  const renameRoutine = async (routineKey: string, label: string) => upsertRoutineState(routineKey, { label })
+
   const updateHouseholdName = (name: string) => {
     if (!household) return
     const prevName = household.name
@@ -1782,6 +1836,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     saveDimensionWeights,
     writeHealthSnapshot,
     saveFinancialHealth,
+    routines,
+    confirmRoutine,
+    dismissRoutine,
+    renameRoutine,
     updateHouseholdName,
     addPerson,
     renamePerson,

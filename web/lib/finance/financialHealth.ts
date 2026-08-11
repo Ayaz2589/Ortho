@@ -259,8 +259,14 @@ function planEngagementScore(
 function routineAwarenessScore(_routines: readonly RoutineWithState[]): {
   score: number
   contributingRoutineKeys: string[]
+  /** False while there's no real routine signal yet. When false, the composite/topAction
+   *  computation excludes this dimension entirely — a household with zero routines gets the exact
+   *  same overall score/band as spec 041 (FR-010), not a diluted one from averaging in a neutral
+   *  placeholder. The dimension still appears in `dimensions` for display (calm "not enough
+   *  history yet" state) — only its effect on the composite is gated. */
+  hasData: boolean
 } {
-  return { score: T.NEUTRAL, contributingRoutineKeys: [] }
+  return { score: T.NEUTRAL, contributingRoutineKeys: [], hasData: false }
 }
 
 /** Composite score → calm band. Monotonic; boundaries at 40/60/80. */
@@ -310,13 +316,19 @@ export function scoreFinancialHealth(input: FinancialHealthInput): FinancialHeal
       : {}),
   }))
 
-  const weightSum = dimensions.reduce((s, d) => s + d.weight, 0)
-  const weighted = dimensions.reduce((s, d) => s + d.score * d.weight, 0)
+  // FR-010: routine_awareness only counts toward the composite/topAction once it has real signal
+  // (routineAwareness.hasData) — otherwise a household with zero routines would get a DIFFERENT
+  // overall score than spec 041 produced, just from averaging in a neutral placeholder. The
+  // dimension still renders in `dimensions` (calm "not enough history yet" state) either way.
+  const scored = dimensions.filter((d) => d.key !== 'routine_awareness' || routineAwareness.hasData)
+
+  const weightSum = scored.reduce((s, d) => s + d.weight, 0)
+  const weighted = scored.reduce((s, d) => s + d.score * d.weight, 0)
   const score = clampScore(Math.round(weightSum > 0 ? weighted / weightSum : T.NEUTRAL))
 
-  // Top action: lowest weighted contribution, tie-broken by fixed dimension order.
-  let lowest = dimensions[0]
-  for (const d of dimensions) {
+  // Top action: lowest weighted contribution among scored dimensions, tie-broken by fixed order.
+  let lowest = scored[0]
+  for (const d of scored) {
     if (d.score * d.weight < lowest.score * lowest.weight) lowest = d
   }
   const template = ACTION_TEMPLATES[lowest.key]
