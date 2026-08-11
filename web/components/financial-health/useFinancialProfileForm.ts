@@ -72,6 +72,7 @@ export function useFinancialProfileForm() {
     budgets,
     goals,
     goalContributions,
+    routines,
     saveFinancialHealth,
   } = useApp()
 
@@ -151,6 +152,7 @@ export function useFinancialProfileForm() {
       budgets,
       goals,
       contributionsByGoal: contributionsByGoal(goalContributions),
+      routines,
       weights: Object.fromEntries(weights.map((w) => [w.dimension, w.weight])),
       now: new Date(),
     })

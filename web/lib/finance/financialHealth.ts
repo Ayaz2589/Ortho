@@ -18,6 +18,7 @@ import type {
   HealthDimension,
   Transaction,
 } from '../types'
+import type { RoutineWithState } from './routines'
 import { roundHalfAwayFromZero } from './money'
 import { budgetStatusForMonth } from './budgets'
 import { goalPacing } from './goals'
@@ -41,6 +42,9 @@ export interface DimensionScore {
   key: HealthDimension
   score: number
   weight: number
+  /** spec 044 — set only for key === 'routine_awareness'; the routines contributing to its score,
+   *  sorted by windowed spend descending. */
+  contributingRoutineKeys?: string[]
 }
 
 export interface HealthAction {
@@ -56,6 +60,9 @@ export interface FinancialHealthInput {
   budgets: Budget[]
   goals: Goal[]
   contributionsByGoal: Record<string, GoalContribution[]>
+  /** spec 044 — recognized routines feeding the `routine_awareness` dimension. Optional; an
+   *  omitted/empty array scores that dimension as neutral (see routineAwarenessScore). */
+  routines?: RoutineWithState[]
   weights: Partial<Record<HealthDimension, number>>
   now: Date
 }
@@ -101,6 +108,10 @@ export const ACTION_TEMPLATES: Record<HealthDimension, { key: string; args: Arra
   },
   plan_engagement: {
     key: 'Set a budget for one category — it makes the rest easier to see.',
+    args: [],
+  },
+  routine_awareness: {
+    key: 'A few more recognized routines would make your spending easier to predict — review what’s been detected.',
     args: [],
   },
 }
@@ -241,6 +252,57 @@ function planEngagementScore(
   return clampScore(s)
 }
 
+/** Sum of `expense` cents in the trailing `months` from `now` (half-open-ish: inclusive both ends,
+ *  matching monthSpendCents's calendar-month sibling). Used only by routineAwarenessScore. */
+function windowExpenseCents(transactions: readonly Transaction[], now: Date, months: number): number {
+  const start = new Date(now)
+  start.setMonth(start.getMonth() - months)
+  let total = 0
+  for (const t of transactions) {
+    if (t.kind !== 'expense') continue
+    const d = new Date(t.date)
+    if (d >= start && d <= now) total += t.amount_cents
+  }
+  return total
+}
+
+/** Contract: specs/044-financial-routines/contracts/routine-awareness-dimension.md. Coverage =
+ *  confirmed/recognized routines' windowed spend ÷ total windowed expense spend. Never uses
+ *  `profile` (like plan_engagement) — scores from real transaction/routine data always. */
+function routineAwarenessScore(
+  routines: readonly RoutineWithState[],
+  transactions: readonly Transaction[],
+  now: Date
+): {
+  score: number
+  contributingRoutineKeys: string[]
+  /** False while there's no real routine signal yet. When false, the composite/topAction
+   *  computation excludes this dimension entirely — a household with zero routines gets the exact
+   *  same overall score/band as spec 041 (FR-010), not a diluted one from averaging in a neutral
+   *  placeholder. The dimension still appears in `dimensions` for display (calm "not enough
+   *  history yet" state) — only its effect on the composite is gated. */
+  hasData: boolean
+} {
+  const active = routines.filter((r) => r.status === 'confirmed' || r.status === 'recognized')
+  if (active.length === 0) return { score: T.NEUTRAL, contributingRoutineKeys: [], hasData: false }
+
+  const windowSpend = windowExpenseCents(transactions, now, T.ROUTINE_AWARENESS_WINDOW_MONTHS)
+  if (windowSpend <= 0) return { score: T.NEUTRAL, contributingRoutineKeys: [], hasData: false }
+
+  // occurrenceCount is already windowed by the detection engine's own window (recurringWindowMonths
+  // / behavioralWindowWeeks), which defaults to the same span as ROUTINE_AWARENESS_WINDOW_MONTHS —
+  // reusing it directly avoids re-deriving a cadence-implied count here.
+  const contributions = active
+    .map((r) => ({ key: r.routineKey, spend: r.typicalAmountCents * r.occurrenceCount }))
+    .sort((a, b) => b.spend - a.spend)
+  const routineSpend = contributions.reduce((s, c) => s + c.spend, 0)
+  const coverage = clamp(routineSpend / windowSpend, 0, 1)
+  const score = clampScore(
+    lerp(coverage, T.ROUTINE_AWARENESS_LOW, T.ROUTINE_AWARENESS_HIGH, T.ROUTINE_AWARENESS_FLOOR, 100)
+  )
+  return { score, contributingRoutineKeys: contributions.map((c) => c.key), hasData: true }
+}
+
 /** Composite score → calm band. Monotonic; boundaries at 40/60/80. */
 export function bandForScore(score: number): HealthBand {
   if (score >= T.BAND.strong) return 'strong'
@@ -260,12 +322,13 @@ export function weightsToRecord(
 
 /** Compute the composite Financial Health result. Pure; `now` injected. */
 export function scoreFinancialHealth(input: FinancialHealthInput): FinancialHealthResult {
-  const { profile, transactions, budgets, goals, contributionsByGoal, weights, now } = input
+  const { profile, transactions, budgets, goals, contributionsByGoal, routines, weights, now } = input
   const hasProfile = profile != null
 
   // Computed once and shared by cash-flow + savings (both scan expenses this month).
   const monthSpend = monthSpendCents(transactions, now)
   const hasHistory = transactions.some((t) => t.kind === 'expense')
+  const routineAwareness = routineAwarenessScore(routines ?? [], transactions, now)
 
   const rawScores: Record<HealthDimension, number> = {
     cash_flow: profile ? cashFlowScore(profile, monthSpend) : T.NEUTRAL,
@@ -274,21 +337,32 @@ export function scoreFinancialHealth(input: FinancialHealthInput): FinancialHeal
     savings_momentum: profile ? savingsMomentumScore(profile, monthSpend, hasHistory) : T.NEUTRAL,
     // Plan engagement never needs the profile — it scores from real data always.
     plan_engagement: planEngagementScore(budgets, goals, transactions, contributionsByGoal, now),
+    // Routine awareness never needs the profile either — see routineAwarenessScore.
+    routine_awareness: routineAwareness.score,
   }
 
   const dimensions: DimensionScore[] = T.DIMENSION_ORDER.map((key) => ({
     key,
     score: rawScores[key],
     weight: clamp(weights[key] ?? T.DEFAULT_WEIGHT, 1, 5),
+    ...(key === 'routine_awareness'
+      ? { contributingRoutineKeys: routineAwareness.contributingRoutineKeys }
+      : {}),
   }))
 
-  const weightSum = dimensions.reduce((s, d) => s + d.weight, 0)
-  const weighted = dimensions.reduce((s, d) => s + d.score * d.weight, 0)
+  // FR-010: routine_awareness only counts toward the composite/topAction once it has real signal
+  // (routineAwareness.hasData) — otherwise a household with zero routines would get a DIFFERENT
+  // overall score than spec 041 produced, just from averaging in a neutral placeholder. The
+  // dimension still renders in `dimensions` (calm "not enough history yet" state) either way.
+  const scored = dimensions.filter((d) => d.key !== 'routine_awareness' || routineAwareness.hasData)
+
+  const weightSum = scored.reduce((s, d) => s + d.weight, 0)
+  const weighted = scored.reduce((s, d) => s + d.score * d.weight, 0)
   const score = clampScore(Math.round(weightSum > 0 ? weighted / weightSum : T.NEUTRAL))
 
-  // Top action: lowest weighted contribution, tie-broken by fixed dimension order.
-  let lowest = dimensions[0]
-  for (const d of dimensions) {
+  // Top action: lowest weighted contribution among scored dimensions, tie-broken by fixed order.
+  let lowest = scored[0]
+  for (const d of scored) {
     if (d.score * d.weight < lowest.score * lowest.weight) lowest = d
   }
   const template = ACTION_TEMPLATES[lowest.key]

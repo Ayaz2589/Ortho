@@ -110,7 +110,13 @@ export interface UserFixedCostRow {
 export interface UserDimensionWeightRow {
   id: string
   user_id: string
-  dimension: 'cash_flow' | 'safety_net' | 'commitment_load' | 'savings_momentum' | 'plan_engagement'
+  dimension:
+    | 'cash_flow'
+    | 'safety_net'
+    | 'commitment_load'
+    | 'savings_momentum'
+    | 'plan_engagement'
+    | 'routine_awareness'
   weight: number
   created_at: string
 }
@@ -120,6 +126,53 @@ export interface FinancialHealthSnapshotRow {
   user_id: string
   score: number
   band: 'strong' | 'steady' | 'building' | 'getting_started'
+  created_at: string
+}
+
+// Financial Routines (spec 044). recognized_routine_states/merchant_geocodes are
+// household-scoped (RLS via is_household_member); user_location_consent/user_routine_visits are
+// user-scoped (RLS user_id = auth.uid()), mirroring the financial-health rows above.
+export interface RecognizedRoutineStateRow {
+  id: string
+  household_id: string
+  routine_key: string
+  status: 'confirmed' | 'dismissed'
+  label: string | null
+  person_id: string | null
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
+export interface UserLocationConsentRow {
+  id: string
+  user_id: string
+  level: 'off' | 'geocoding' | 'foreground_capture'
+  granted_at: string | null
+  revoked_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface UserRoutineVisitRow {
+  id: string
+  user_id: string
+  household_id: string
+  captured_at: string
+  latitude: number
+  longitude: number
+  accuracy_meters: number | null
+  created_at: string
+}
+
+export interface MerchantGeocodeRow {
+  id: string
+  household_id: string
+  merchant_key: string
+  latitude: number | null
+  longitude: number | null
+  label: string | null
+  resolved_at: string | null
   created_at: string
 }
 

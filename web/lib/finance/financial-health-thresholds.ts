@@ -57,12 +57,20 @@ export const FINANCIAL_HEALTH_THRESHOLDS = {
   PLAN_HAS_GOAL: 10,
   PLAN_GOALS_ONTRACK: 10,
 
-  /** Fixed display/composite order of the five dimensions. */
+  /** Fixed display/composite order of the six dimensions (spec 044 appended `routine_awareness`
+   *  last — the original five keep their positions/keys unchanged). */
   DIMENSION_ORDER: [
     'cash_flow',
     'safety_net',
     'commitment_load',
     'savings_momentum',
     'plan_engagement',
+    'routine_awareness',
   ] as ReadonlyArray<HealthDimension>,
+
+  // Routine awareness (spec 044): coverage = confirmed/recognized routine spend ÷ window spend.
+  ROUTINE_AWARENESS_WINDOW_MONTHS: 6,
+  ROUTINE_AWARENESS_LOW: 0.15, // coverage ≤ this → floor
+  ROUTINE_AWARENESS_HIGH: 0.6, // coverage ≥ this → 100
+  ROUTINE_AWARENESS_FLOOR: 35, // supportive floor, never 0
 } as const

@@ -83,4 +83,31 @@ describe('FinancialHealthBody', () => {
     const { container } = render(<FinancialHealthBody />)
     expect((container.firstChild as HTMLElement).className).toContain('h-full')
   })
+
+  // spec 044 US3 — routine awareness citation
+  it('cites contributing routine labels when the dimension has real coverage', () => {
+    h.app = {
+      userFinancialProfile: profile,
+      transactions: [
+        { id: 't1', household_id: 'h', merchant: 'm', category: 'groceries', kind: 'expense', amount_cents: 100000, source: 's', date: '2026-07-01', created_by: 'u', created_at: 'x', updated_at: 'x', owner_ids: ['u'], shares: { u: 100000 } },
+      ],
+      routines: [
+        {
+          routineKey: 'rc:netflix', kind: 'recurring_charge', merchantKey: 'netflix', merchantLabel: 'Netflix',
+          category: 'streaming', weekday: null, hourBucket: null, personId: null,
+          typicalAmountCents: 60000, amountVarianceCents: 0, occurrenceCount: 1,
+          firstSeenAt: '2026-06-01', lastSeenAt: '2026-07-01', confidence: 90,
+          derivedStatus: 'recognized', evidenceTransactionIds: [], status: 'confirmed', label: null,
+        },
+      ],
+    }
+    render(<FinancialHealthBody />)
+    expect(screen.getByText(/Routine awareness reflects: Netflix/)).toBeTruthy()
+  })
+
+  it('shows a calm "not enough routines" line when there is no routine data', () => {
+    h.app = { userFinancialProfile: profile, routines: [] }
+    render(<FinancialHealthBody />)
+    expect(screen.getByText(/Not enough recognized routines yet/)).toBeTruthy()
+  })
 })

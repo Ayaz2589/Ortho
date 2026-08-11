@@ -37,6 +37,7 @@ export function FinancialHealthBody() {
     budgets,
     goals,
     goalContributions,
+    routines,
     t,
     locale,
   } = useApp()
@@ -50,11 +51,20 @@ export function FinancialHealthBody() {
         budgets,
         goals,
         contributionsByGoal: contributionsByGoal(goalContributions),
+        routines,
         weights: weightsToRecord(userDimensionWeights),
         now,
       }),
-    [userFinancialProfile, userFixedCosts, userDimensionWeights, transactions, budgets, goals, goalContributions, now]
+    [userFinancialProfile, userFixedCosts, userDimensionWeights, transactions, budgets, goals, goalContributions, routines, now]
   )
+
+  // spec 044 — routine awareness (6th dimension): resolve cited routine keys back to
+  // display labels for the calm "here's why" citation.
+  const routineAwareness = result.dimensions.find((d) => d.key === 'routine_awareness')
+  const citedRoutineLabels = (routineAwareness?.contributingRoutineKeys ?? [])
+    .map((key) => (routines ?? []).find((r) => r.routineKey === key))
+    .filter((r): r is NonNullable<typeof r> => !!r)
+    .map((r) => r.label ?? r.merchantLabel)
 
   if (!result.hasProfile) {
     return (
@@ -101,6 +111,16 @@ export function FinancialHealthBody() {
           {t('{0} → {1} since {2}', t(BAND_LABEL[baseline.band]), t(BAND_LABEL[result.band]), sinceLabel)}
         </p>
       ) : null}
+
+      {citedRoutineLabels.length > 0 ? (
+        <p className="text-xs text-text-3">
+          {t('Routine awareness reflects: {0}', citedRoutineLabels.join(', '))}
+        </p>
+      ) : (
+        <p className="text-xs text-text-3">
+          {t('Not enough recognized routines yet to shape your routine awareness.')}
+        </p>
+      )}
 
       <p className="mt-auto text-xs text-text-3">{t(result.topAction.key, ...result.topAction.args)}</p>
     </div>

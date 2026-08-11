@@ -1,5 +1,35 @@
 <!-- SPECKIT START -->
-Active feature: **spec 043 — dashboard & household refinements**. Plan:
+Active feature: **spec 044 — financial routines**. Plan:
+`specs/044-financial-routines/plan.md` (spec/plan/research/data-model/quickstart/contracts alongside it).
+Learns a household's recurring spend patterns and habits over time, grounded in the prior decision
+record (github.com/Ayaz2589/Ortho/pull/5, `findings.md`). Four user stories: (1) **Recurring-charge
+routines** — a new pure engine `web/lib/finance/routines.ts` (`detectRoutines`/`applyRoutineStates`/
+`normalizeMerchantKey`) detects fixed-amount recurring charges from transactions alone (merchant +
+cadence + amount tolerance), no permission needed; "derived, never stored" like `insights.ts`/
+`personSummary.ts` — only a user's confirm/dismiss/rename persists, in a new household-scoped
+`recognized_routine_states` table keyed by a deterministic `routineKey`. (2) **Behavioral habits** —
+looser weekday/hour-bucket pattern detection (manual/receipt-entry transactions only; imports lack a
+real time-of-day). (3) **Financial-health integration** — a new sixth `routine_awareness` dimension
+appended to spec 041's engine (`financialHealth.ts`, `DIMENSION_ORDER`, `ACTION_TEMPLATES`), scored
+from confirmed/recognized routines' share of spend; the existing five dimensions are unchanged
+(byte-identical when `routines` is empty). (4) **Optional location booster** — merchant-name
+geocoding (new credential-gated `supabase/functions/geocode-merchant`, follows the Plaid/SimpleFin
+`requiredEnv`+probe pattern; reports "not configured" honestly since no credential exists in this
+environment) plus **opportunistic foreground visit capture** in place of true passive background
+dwell detection, which research.md found infeasible on the Capacitor/web architecture without a new
+paid/complex native plugin — `@capacitor/geolocation` (new dependency), "When In Use" permission
+only, one-shot captures at app-foreground moments accumulated in a new user-private
+`user_routine_visits` table. New tables (migration `20260811120000_financial_routines.sql`):
+`recognized_routine_states` + `merchant_geocodes` (household-scoped RLS via
+`is_household_member`), `user_location_consent` + `user_routine_visits` (user-scoped RLS, mirrors
+spec 041). Routine visibility has no new DB-level per-member privacy boundary (research.md found none
+exists today even for "personal" transactions — RLS is household-wide); a personal routine is a
+UI-layer filter on a `person_id` attribution column. Bounded automation only: a *confirmed*
+recurring-charge routine may auto-categorize a future matching transaction (`TxForm.tsx`); routines
+can never create/modify/delete a transaction. Detection engine intentionally stays outside
+`shared/test-vectors/` for now (unit/property-pinned, like `financialHealth.ts` itself already is —
+not a golden vector). Fully TDD; i18n all 5 catalogs.
+Prior shipped: **spec 043 — dashboard & household refinements**. Plan:
 `specs/043-dashboard-household-refinements/plan.md` (spec/plan/research/data-model/quickstart/contracts alongside it).
 Three independent changes: (1) **Remove the broken household "balances" feature** — delete the
 `BalanceSummary` "who owes whom" card + `web/lib/balances.ts` (`balanceBetween`) + the settle-up prefill

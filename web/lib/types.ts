@@ -94,6 +94,7 @@ export type HealthDimension =
   | 'commitment_load'
   | 'savings_momentum'
   | 'plan_engagement'
+  | 'routine_awareness' // spec 044 — appended; existing five keep their order/positions
 export type HealthBand = 'strong' | 'steady' | 'building' | 'getting_started'
 
 /** One user's stated financial situation (one row per user; private to that user). */
@@ -185,6 +186,63 @@ export interface Tag {
   id: string
   household_id: string
   name: string
+  created_at: string
+}
+
+// Financial Routines (spec 044) — persisted state layer only; the routines themselves are derived
+// live from transactions by web/lib/finance/routines.ts (DetectedRoutine/RoutineWithState live
+// there, not here — they're pure-engine output, never stored as-is).
+export type RoutinePersistedStatus = 'confirmed' | 'dismissed'
+export type RoutineStatus = 'recognized' | 'lapsed' | RoutinePersistedStatus
+export type LocationConsentLevel = 'off' | 'geocoding' | 'foreground_capture'
+
+/** A household member's confirm/dismiss/rename decision on a detected routine, keyed by the
+ *  engine's deterministic `routine_key` (there is no separate "routine" row — see routines.ts). */
+export interface RecognizedRoutineState {
+  id: string
+  household_id: string
+  routine_key: string
+  status: RoutinePersistedStatus
+  label: string | null
+  person_id: string | null
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
+/** One user's location-assistance opt-in level (private; off by default). */
+export interface LocationConsent {
+  id: string
+  user_id: string
+  level: LocationConsentLevel
+  granted_at: string | null
+  revoked_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** One opportunistic foreground location capture (only written while consent level is
+ *  'foreground_capture'; private to the capturing user). */
+export interface RoutineVisit {
+  id: string
+  user_id: string
+  household_id: string
+  captured_at: string
+  latitude: number
+  longitude: number
+  accuracy_meters: number | null
+  created_at: string
+}
+
+/** A household-level cache of a merchant name resolved to a place (FR-012 baseline enrichment). */
+export interface MerchantGeocode {
+  id: string
+  household_id: string
+  merchant_key: string
+  latitude: number | null
+  longitude: number | null
+  label: string | null
+  resolved_at: string | null
   created_at: string
 }
 

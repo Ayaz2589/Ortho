@@ -8,6 +8,8 @@ import { useApp } from '@/lib/store'
 const SECTIONS = [
   { href: '/settings/household', label: 'Household' },
   { href: '/settings/cards', label: 'Cards' },
+  { href: '/routines', label: 'Routines' },
+  { href: '/settings/location', label: 'Location' },
   { href: '/settings/financial-profile', label: 'Financial profile' },
   { href: '/settings/subscription', label: 'Subscription' },
   { href: '/settings/currency', label: 'Currency' },

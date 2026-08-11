@@ -20,6 +20,8 @@ import { signInHref } from './nav'
 import { hapticConfirm, hapticDestructive } from './haptics'
 import { formatMoney as fmtMoney, type CurrencyKey } from './finance/money'
 import { FALLBACK_RATE_FROM_USD } from './finance/currency'
+import { applyRoutineStates, detectRoutines, type RoutineWithState } from './finance/routines'
+import { consentTransition, shouldDeleteVisitsOnTransition } from './location/consent'
 import { effectiveShares } from './format'
 import { CATEGORIES, paletteFor } from './categories'
 import {
@@ -56,6 +58,11 @@ import type {
   DimensionWeight,
   HealthSnapshot,
   HealthBand,
+  RecognizedRoutineState,
+  LocationConsent,
+  LocationConsentLevel,
+  MerchantGeocode,
+  RoutineVisit,
 } from './types'
 import type {
   UserRow,
@@ -80,6 +87,10 @@ import type {
   UserFixedCostRow,
   UserDimensionWeightRow,
   FinancialHealthSnapshotRow,
+  RecognizedRoutineStateRow,
+  UserLocationConsentRow,
+  MerchantGeocodeRow,
+  UserRoutineVisitRow,
 } from './supabase/rows'
 
 const PLACEHOLDER_ID = '00000000-0000-0000-0000-000000000000'
@@ -126,6 +137,19 @@ interface AppStateValue {
   userFixedCosts: FixedCost[]
   userDimensionWeights: DimensionWeight[]
   healthSnapshots: HealthSnapshot[]
+  /** Financial Routines (spec 044) — household-scoped confirm/dismiss/rename state, keyed by the
+   *  detection engine's routine_key. Routines themselves are derived live (see lib/finance/routines.ts). */
+  recognizedRoutineStates: RecognizedRoutineState[]
+  /** Household-level merchant-name → place cache (FR-012). */
+  merchantGeocodes: MerchantGeocode[]
+  /** The signed-in user's location-assistance opt-in level (private; null until loaded/created). */
+  locationConsent: LocationConsent | null
+  setLocationConsent: (level: LocationConsentLevel) => Promise<void>
+  /** Lazily-loaded (spec 044 US4) — only fetched on demand, only meaningful once opted into
+   *  'foreground_capture'. Empty until `loadRoutineVisits` is called. */
+  routineVisits: RoutineVisit[]
+  loadRoutineVisits: () => Promise<void>
+  recordRoutineVisit: (latitude: number, longitude: number, accuracyMeters: number | null) => Promise<void>
   currency: CurrencyKey
   rates: Partial<Record<CurrencyKey, number>>
   /** Epoch ms of the last successful live-rate fetch (or cached fetch), null if never. */
@@ -209,6 +233,13 @@ interface AppStateValue {
     score: number
     band: HealthBand
   }) => Promise<void>
+  // Financial Routines (spec 044) — `routines` is a memoized selector combining live detection
+  // (routines.ts) with persisted household state; confirm/dismiss/rename are the only durable
+  // actions (FR-005).
+  routines: RoutineWithState[]
+  confirmRoutine: (routineKey: string, personId?: string | null) => Promise<void>
+  dismissRoutine: (routineKey: string) => Promise<void>
+  renameRoutine: (routineKey: string, label: string) => Promise<void>
   updateHouseholdName: (name: string) => void
   addPerson: (name: string, colorKey?: string) => void
   renamePerson: (id: string, name: string) => void
@@ -342,6 +373,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [userFixedCosts, setUserFixedCosts] = useState<FixedCost[]>([])
   const [userDimensionWeights, setUserDimensionWeights] = useState<DimensionWeight[]>([])
   const [healthSnapshots, setHealthSnapshots] = useState<HealthSnapshot[]>([])
+  // Financial Routines (spec 044) — recognizedRoutineStates/merchantGeocodes are
+  // household-scoped; locationConsent is user-scoped (private).
+  const [recognizedRoutineStates, setRecognizedRoutineStates] = useState<RecognizedRoutineState[]>([])
+  const [merchantGeocodes, setMerchantGeocodes] = useState<MerchantGeocode[]>([])
+  const [locationConsent, setLocationConsentState] = useState<LocationConsent | null>(null)
+  const [routineVisits, setRoutineVisits] = useState<RoutineVisit[]>([])
   const [linkedInstitutions, setLinkedInstitutions] = useState<LinkedInstitution[]>([])
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([])
   const [currency, setCurrencyState] = useState<CurrencyKey>('usd')
@@ -705,6 +742,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       userFixedCostsRes,
       userWeightsRes,
       healthSnapshotsRes,
+      routineStatesRes,
+      merchantGeocodesRes,
+      locationConsentRes,
     ] = await Promise.all([
       // Column projection (US6/P5): the three highest-volume reads fetch only the
       // fields the app uses — never select('*'). Keep these lists in lockstep with
@@ -748,6 +788,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       supabase.from('user_fixed_costs').select('*').eq('user_id', ownerId).order('created_at', { ascending: true }),
       supabase.from('user_dimension_weights').select('*').eq('user_id', ownerId),
       supabase.from('financial_health_snapshots').select('*').eq('user_id', ownerId).order('created_at', { ascending: true }),
+      // Financial Routines (spec 044): household-scoped, fail-open like tags/goals — RLS scopes
+      // them, so no explicit household filter is needed (mirrors linked_institutions above).
+      supabase.from('recognized_routine_states').select('*'),
+      supabase.from('merchant_geocodes').select('*'),
+      // User-scoped (RLS user_id = auth.uid()), fail-open null like user_financial_profile.
+      supabase.from('user_location_consent').select('*').eq('user_id', ownerId).maybeSingle(),
     ])
 
     // A failed read must surface as an error, not render as a real-looking
@@ -762,20 +808,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // window. Any OTHER error stays fail-loud like every bootstrap read.
     const missingTable = (e: { code?: string } | null | undefined) =>
       e?.code === 'PGRST205' || e?.code === '42P01'
-    for (const res of [goalsRes, goalContribRes, linkedInstRes, linkedAcctRes, tagsRes, txTagsRes, depositAccountsRes, userFixedCostsRes, userWeightsRes, healthSnapshotsRes]) {
+    for (const res of [goalsRes, goalContribRes, linkedInstRes, linkedAcctRes, tagsRes, txTagsRes, depositAccountsRes, userFixedCostsRes, userWeightsRes, healthSnapshotsRes, routineStatesRes, merchantGeocodesRes]) {
       if (res.error && missingTable(res.error as { code?: string })) {
         res.data = []
         res.error = null
       }
       orThrow(res)
     }
-    // The profile read is a maybeSingle (row | null), so its fail-open default is
+    // The profile/consent reads are maybeSingle (row | null), so their fail-open default is
     // null, not [] — handled separately from the array reads above.
     if (userProfileRes.error && missingTable(userProfileRes.error as { code?: string })) {
       userProfileRes.data = null
       userProfileRes.error = null
     }
     orThrow(userProfileRes)
+    if (locationConsentRes.error && missingTable(locationConsentRes.error as { code?: string })) {
+      locationConsentRes.data = null
+      locationConsentRes.error = null
+    }
+    orThrow(locationConsentRes)
 
     // Typed row → domain boundary (FR-018): each read is asserted to its DB row
     // type (`lib/supabase/rows.ts`) and assigned to domain-typed state, so a
@@ -846,6 +897,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setUserFixedCosts((userFixedCostsRes.data ?? []) as UserFixedCostRow[])
     setUserDimensionWeights((userWeightsRes.data ?? []) as UserDimensionWeightRow[])
     setHealthSnapshots((healthSnapshotsRes.data ?? []) as FinancialHealthSnapshotRow[])
+    setRecognizedRoutineStates((routineStatesRes.data ?? []) as RecognizedRoutineStateRow[])
+    setMerchantGeocodes((merchantGeocodesRes.data ?? []) as MerchantGeocodeRow[])
+    setLocationConsentState((locationConsentRes.data ?? null) as UserLocationConsentRow | null)
     setLinkedInstitutions((linkedInstRes.data ?? []) as LinkedInstitutionRow[])
     setLinkedAccounts((linkedAcctRes.data ?? []) as LinkedAccountRow[])
 
@@ -1563,6 +1617,112 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     await writeHealthSnapshot(args.score, args.band)
   }
 
+  // ---- Financial Routines (spec 044) — household-scoped ----
+  // Detection is always recomputed live from `transactions` (README's "derived, never stored");
+  // only the confirm/dismiss/rename overlay persists. Recomputed on every transactions/state change
+  // — cheap relative to a household's realistic transaction volume, same precedent as insights.ts.
+  const routines = useMemo(
+    () => applyRoutineStates(detectRoutines(transactions, new Date()), recognizedRoutineStates),
+    [transactions, recognizedRoutineStates]
+  )
+
+  const upsertRoutineState = async (
+    routineKey: string,
+    patch: Partial<Pick<RecognizedRoutineState, 'status' | 'label' | 'person_id'>>
+  ) => {
+    if (!household || !currentUserId) return
+    const now = new Date().toISOString()
+    const existing = recognizedRoutineStates.find((s) => s.routine_key === routineKey)
+    const row: RecognizedRoutineState = {
+      id: existing?.id ?? uuid(),
+      household_id: household.id,
+      routine_key: routineKey,
+      status: existing?.status ?? 'confirmed',
+      label: existing?.label ?? null,
+      person_id: existing?.person_id ?? null,
+      created_by: existing?.created_by ?? currentUserId,
+      created_at: existing?.created_at ?? now,
+      updated_at: now,
+      ...patch,
+    }
+    setRecognizedRoutineStates((prev) => [...prev.filter((s) => s.routine_key !== routineKey), row])
+    const { id: _id, ...payload } = row
+    const { error: e } = await supabase
+      .from('recognized_routine_states')
+      .upsert(payload, { onConflict: 'household_id,routine_key' })
+    if (e) setError(e.message)
+  }
+
+  const confirmRoutine = async (routineKey: string, personId?: string | null) =>
+    upsertRoutineState(routineKey, { status: 'confirmed', ...(personId !== undefined ? { person_id: personId } : {}) })
+  const dismissRoutine = async (routineKey: string) => upsertRoutineState(routineKey, { status: 'dismissed' })
+  // recognized_routine_states.status only has room for 'confirmed'/'dismissed' (there is no
+  // persisted 'recognized' — that's simply the absence of a row). Renaming a not-yet-reviewed
+  // routine is a real engagement signal, so it defaults to 'confirmed' on first write via
+  // upsertRoutineState's fallback; renaming an already-dismissed routine leaves it dismissed
+  // (no explicit status patch here).
+  const renameRoutine = async (routineKey: string, label: string) => upsertRoutineState(routineKey, { label })
+
+  // ---- Location consent + opportunistic visit capture (spec 044 US4) — user-scoped ----
+  const setLocationConsent = async (level: LocationConsentLevel) => {
+    if (!currentUserId) return
+    const now = new Date().toISOString()
+    const previousLevel = locationConsent?.level ?? 'off'
+    const { grantedAt, revokedAt } = consentTransition(previousLevel, level, now)
+    const row: LocationConsent = {
+      id: locationConsent?.id ?? uuid(),
+      user_id: currentUserId,
+      level,
+      granted_at: grantedAt ?? locationConsent?.granted_at ?? null,
+      revoked_at: revokedAt ?? locationConsent?.revoked_at ?? null,
+      created_at: locationConsent?.created_at ?? now,
+      updated_at: now,
+    }
+    setLocationConsentState(row)
+    const { id: _id, ...payload } = row
+    const { error: e } = await supabase.from('user_location_consent').upsert(payload, { onConflict: 'user_id' })
+    if (e) {
+      setError(e.message)
+      return
+    }
+    // FR-015: revoking cascades to delete every captured visit, within this session.
+    if (shouldDeleteVisitsOnTransition(previousLevel, level)) {
+      setRoutineVisits([])
+      const { error: delErr } = await supabase.from('user_routine_visits').delete().eq('user_id', currentUserId)
+      if (delErr) setError(delErr.message)
+    }
+  }
+
+  // Lazy-loaded (not part of loadAll's boot Promise.all — data-model.md): only fetched when a
+  // surface actually needs visit-cluster suggestions, and only meaningful once opted into
+  // 'foreground_capture'.
+  const loadRoutineVisits = async () => {
+    if (!currentUserId) return
+    const { data, error: e } = await supabase.from('user_routine_visits').select('*').eq('user_id', currentUserId)
+    if (e) {
+      setError(e.message)
+      return
+    }
+    setRoutineVisits((data ?? []) as UserRoutineVisitRow[])
+  }
+
+  const recordRoutineVisit = async (latitude: number, longitude: number, accuracyMeters: number | null) => {
+    if (!currentUserId || !household || locationConsent?.level !== 'foreground_capture') return
+    const row: RoutineVisit = {
+      id: uuid(),
+      user_id: currentUserId,
+      household_id: household.id,
+      captured_at: new Date().toISOString(),
+      latitude,
+      longitude,
+      accuracy_meters: accuracyMeters,
+      created_at: new Date().toISOString(),
+    }
+    setRoutineVisits((prev) => [...prev, row])
+    const { error: e } = await supabase.from('user_routine_visits').insert(row)
+    if (e) setError(e.message)
+  }
+
   const updateHouseholdName = (name: string) => {
     if (!household) return
     const prevName = household.name
@@ -1701,6 +1861,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     userFixedCosts,
     userDimensionWeights,
     healthSnapshots,
+    recognizedRoutineStates,
+    merchantGeocodes,
+    locationConsent,
+    setLocationConsent,
+    routineVisits,
+    loadRoutineVisits,
+    recordRoutineVisit,
     currency,
     rates,
     ratesLastFetched,
@@ -1744,6 +1911,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     saveDimensionWeights,
     writeHealthSnapshot,
     saveFinancialHealth,
+    routines,
+    confirmRoutine,
+    dismissRoutine,
+    renameRoutine,
     updateHouseholdName,
     addPerson,
     renamePerson,
