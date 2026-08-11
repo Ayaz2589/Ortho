@@ -147,6 +147,34 @@ window) rather than stored, so it needs no background job.
   where `financial-health.test.ts`/`finance-properties.test.ts` already do); component/store/i18n
   coverage follows the existing `web/test/{widgets,store,i18n}/` split.
 
+## 6b. No transaction in this system carries a real time-of-day — behavioral habits key on weekday only (discovered during US2 implementation)
+
+**Question**: FR-003 assumed manual/receipt-entry transactions carry a real time-of-day and only
+bank-import rows don't (per the spec's own Assumptions section).
+
+**Finding**: That assumption is wrong. Every write path in the app pins `date` to
+`T12:00:00.000Z` (noon UTC on the picked calendar day) — manual entry (`TxForm.tsx`, a day-only
+picker with no time input, per the spec-004 cross-client-parity convention: "iOS + CLI write the
+same instant"), receipt/statement scan (`ParsedCandidate.date` is calendar-day-only, no hour ever
+extracted), and bank/CSV import all produce the identical noon-UTC placeholder. There is no `source`
+convention distinguishing origins either — `source` is the payment card/account label, set
+identically by both paths. **No transaction anywhere in the current system has a genuine
+time-of-day.**
+
+**Decision**: Behavioral-habit detection (`bh:${merchantKey}:${weekday}`) drops the hour-bucket
+dimension from FR-003 — it groups by `(merchantKey, weekday)` only, using the weekday derived from
+the noon-UTC date (still a real, meaningful signal: "coffee most Tuesdays" is a genuine cadence
+pattern even without knowing it was 8am). `hourBucket` stays in the `DetectedRoutine` type (and the
+`routine_key` format keeps a slot for it) for forward-compatibility, but `hasRealTimeOfDay(tx)`
+returns `false` unconditionally today, so it's always `null` in practice — this keeps the data model
+honest about what it can't currently know rather than fabricating a fake "everyone's noon" bucket
+that would read as real granularity it isn't.
+
+**Follow-up (out of scope here)**: capturing a real time-of-day would sharpen this meaningfully — an
+optional time field on manual/receipt entry (bank imports would still have none) is a small,
+independent, low-risk future enhancement worth its own spec; it wasn't scoped or estimated as part
+of spec 044.
+
 ## 7. Merchant-name geocoding needs a credentials-gated provider — greenfield, follow the Plaid/SimpleFin pattern
 
 **Question**: FR-012's baseline geocoding turns a merchant name into a place. That needs a real

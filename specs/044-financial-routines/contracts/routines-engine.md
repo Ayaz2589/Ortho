@@ -20,7 +20,8 @@ interface DetectedRoutine {
   merchantLabel: string                 // most-frequent raw merchant string among evidence
   category: TransactionCategory | null  // most-frequent category among evidence
   weekday: number | null                // 0=Sun..6=Sat; behavioral_habit only
-  hourBucket: number | null             // 0..(24/behavioralHourBucketSizeHours - 1); behavioral_habit only
+  hourBucket: number | null             // reserved for a future real-time-capture enhancement;
+                                         // always null today — see "Time-of-day availability"
   personId: string | null               // single owner_ids[0] if every evidence tx has exactly one
                                          // owner and it's the same person throughout; else null (shared)
   typicalAmountCents: number            // median of evidence amounts
@@ -47,12 +48,16 @@ function normalizeMerchantKey(merchant: string): string
 
 ```
 recurring_charge: `rc:${merchantKey}`
-behavioral_habit: `bh:${merchantKey}:${weekday}:${hourBucket}`
+behavioral_habit: `bh:${merchantKey}:${weekday}`
 ```
 
-Stable across re-detection runs as long as the same merchant/weekday/hour-bucket keeps recurring —
-this is what lets a `recognized_routine_states` row (FR-005's confirm/dismiss/rename) keep applying
-to "the same" real-world pattern as new transactions arrive (FR-006).
+(`hourBucket` is not part of the key today since it's always `null` — see "Time-of-day
+availability"; adding it back in once real time capture exists is additive, not a breaking key
+change, since existing state rows keep matching on the weekday-only key.)
+
+Stable across re-detection runs as long as the same merchant/weekday keeps recurring — this is what
+lets a `recognized_routine_states` row (FR-005's confirm/dismiss/rename) keep applying to "the same"
+real-world pattern as new transactions arrive (FR-006).
 
 ## `normalizeMerchantKey` (FR-007)
 
@@ -80,10 +85,12 @@ For each `normalizeMerchantKey` group of `expense` transactions within the trail
 
 ## FR-003 — `behavioral_habit` candidates
 
-Only transactions with a real time-of-day (assumption: manual/receipt entries — see "Time-of-day
-availability" below) are eligible. Group by `(merchantKey, weekday, hourBucket)` (bucket size
-`behavioralHourBucketSizeHours`, default 2h ⇒ 12 buckets/day) within the trailing
-`behavioralWindowWeeks` (default 8):
+**Corrected during implementation — see research.md §6b.** The original design gated eligibility on
+a real time-of-day (assumed present for manual/receipt entries). In fact **no transaction source in
+this system carries one** — manual entry, receipt scan, and bank import all pin `date` to a
+noon-UTC placeholder (spec-004 cross-client parity). Grouping is therefore `(merchantKey, weekday)`
+only, within the trailing `behavioralWindowWeeks` (default 8) — every transaction is eligible
+(there is no source to exclude):
 
 1. Require `occurrenceCount >= behavioralMinCount` (default 4).
 2. Require the fraction of *eligible weeks in the window* that contain at least one matching
@@ -91,17 +98,18 @@ availability" below) are eligible. Group by `(merchantKey, weekday, hourBucket)`
 3. Amount is **not** gated (habits vary in cost) — `typicalAmountCents`/`amountVarianceCents` are
    still reported (median/spread) for display, just not used as a matching criterion.
 4. `confidence` = `100 * min(1, occurrenceCount / (behavioralMinCount * 2)) * weekHitRatio`.
+5. `hourBucket` is always `null` (see "Time-of-day availability" below) — the type and `routineKey`
+   format keep a slot for it so a future real-time-capture enhancement doesn't need a data-model
+   change, but nothing populates it today.
 
 ### Time-of-day availability
 
-A transaction has a real time-of-day only when its stored `date` carries meaningful sub-day
-precision — per `PARITY.md`, imported/statement rows are noon-UTC-pinned placeholders and MUST be
-excluded from behavioral grouping (still eligible for `recurring_charge` grouping, which is
-date-only). The engine determines eligibility via a `hasRealTimeOfDay(tx)` predicate checked against
-`tx.source` (import-tagged sources excluded) — exact predicate finalized against the real `source`
-values used by the import pipeline vs. manual/receipt entry (see `lib/dataFile`/scan code) during
-implementation; documented here as a named, tested function precisely so the heuristic is visible
-and can be corrected without touching the grouping logic around it.
+`hasRealTimeOfDay(tx: Transaction): boolean` exists as a named, tested function (so the constraint
+is visible and can be corrected in one place if the app ever adds real time capture) but currently
+**always returns `false`** — every write path (`TxForm.tsx`'s day-only picker, `ParsedCandidate`'s
+calendar-day-only scan result, and every bank/CSV import profile) pins `date` to
+`T12:00:00.000Z`, so there is no sub-day precision anywhere to detect. `recurring_charge` grouping
+is unaffected (it's date-only, never used hour-of-day).
 
 ## `derivedStatus` — recognized vs. lapsed (FR-006)
 

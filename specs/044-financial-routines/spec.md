@@ -201,9 +201,12 @@ behavior.
   recurring-charge routine, so that one or two coincidentally similar transactions are not
   misidentified.
 - **FR-003**: System MUST detect looser, higher-frequency behavioral routines (same merchant/
-  category around a consistent weekday and/or time-of-day, amount varying) using only transactions
-  that carry a real time of day, and MUST exclude transactions without a real time (e.g. bank-import
-  rows) from time-of-day-based matching while still allowing them to contribute to FR-001.
+  category around a consistent weekday, amount varying). [Amended during implementation — see
+  research.md §6b: no transaction in the current system carries a genuine time-of-day (every write
+  path, including manual entry, pins to a noon-UTC placeholder), so this groups by weekday only,
+  not weekday+hour as originally scoped. The data model keeps room for an hour-of-day signal so a
+  future time-capture enhancement can sharpen this without a data-model change, but none is built
+  here.]
 - **FR-004**: System MUST let a user view their recognized routines (both recurring charges and
   behavioral habits) in one place, showing what was recognized, how often, and roughly how much.
 - **FR-005**: System MUST let a user confirm, rename, or dismiss a recognized routine, and MUST NOT
@@ -321,9 +324,10 @@ behavior.
   existing vector-locked `InsightEngine` regression harness initially, graduating into it only once
   the detection math has stabilized against real data — an implementation sequencing detail for the
   planning phase, not a constraint on this spec's requirements.
-- A transaction's true time-of-day is only available for sources that carry one today (manual entry,
-  receipt scan); bank/statement imports carry a placeholder date with no reliable time, which is why
-  FR-003 explicitly excludes them from time-of-day-based (but not cadence-based) matching.
+- [Corrected during implementation, research.md §6b] No transaction source — manual entry, receipt
+  scan, or bank/statement import — carries a genuine time-of-day today; every write path pins to a
+  noon-UTC placeholder (spec-004 cross-client-parity convention). FR-003's behavioral-habit
+  detection therefore keys on weekday only, not weekday+hour as originally assumed here.
 - Minimum-evidence thresholds (how many occurrences, over how long, before a routine is "recognized")
   are a tuning detail to be finalized during planning against real transaction data, not a
   user-facing scope decision. "Recognized" (system-detected) and "confirmed" (user-approved) are

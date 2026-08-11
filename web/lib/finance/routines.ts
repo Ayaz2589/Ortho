@@ -176,10 +176,85 @@ function clampConfidence(x: number): number {
   return Math.round(Math.max(0, Math.min(100, x)))
 }
 
+/** Whether a transaction carries a genuine time-of-day (vs. a noon-UTC placeholder). Always
+ *  `false` today — every write path (manual entry's day-only picker, receipt/statement scan, and
+ *  every bank/CSV import profile) pins `date` to `T12:00:00.000Z` (spec-004 cross-client parity;
+ *  research.md §6b). Kept as a named, tested predicate so the constraint is visible and correctable
+ *  in one place if the app ever adds real time capture — behavioral grouping keys on weekday alone
+ *  until then. */
+export function hasRealTimeOfDay(_tx: Transaction): boolean {
+  return false
+}
+
+function detectBehavioralHabits(transactions: readonly Transaction[], now: Date): DetectedRoutine[] {
+  const windowStart = new Date(now)
+  windowStart.setDate(windowStart.getDate() - T.behavioralWindowWeeks * 7)
+  const inWindow = transactions.filter(
+    (t) => t.kind === 'expense' && new Date(t.date) >= windowStart && new Date(t.date) <= now
+  )
+
+  const groups = new Map<string, { merchantKey: string; weekday: number; transactions: Transaction[] }>()
+  for (const t of inWindow) {
+    const merchantKey = normalizeMerchantKey(t.merchant)
+    const weekday = new Date(t.date).getUTCDay()
+    const key = `${merchantKey}:${weekday}`
+    const group = groups.get(key) ?? { merchantKey, weekday, transactions: [] }
+    group.transactions.push(t)
+    groups.set(key, group)
+  }
+
+  const out: DetectedRoutine[] = []
+  for (const group of groups.values()) {
+    const evidence = [...group.transactions].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    )
+    if (evidence.length < T.behavioralMinCount) continue
+
+    const eligibleWeeks = Math.max(1, Math.ceil(daysBetween(windowStart, now) / 7))
+    const weeksHit = new Set(
+      evidence.map((t) => Math.floor(daysBetween(windowStart, new Date(t.date)) / 7))
+    ).size
+    const weekHitRatio = weeksHit / eligibleWeeks
+    if (weekHitRatio < T.behavioralHitRatio) continue
+
+    const amounts = evidence.map((t) => t.amount_cents)
+    const typicalAmountCents = median(amounts)
+    const amountVarianceCents = Math.max(...amounts.map((a) => Math.abs(a - typicalAmountCents)))
+    const firstSeenAt = evidence[0].date
+    const lastSeenAt = evidence[evidence.length - 1].date
+    const daysSinceLastSeen = daysBetween(new Date(lastSeenAt), now)
+    const derivedStatus: RoutineDerivedStatus =
+      daysSinceLastSeen > T.behavioralLapseAfterDays ? 'lapsed' : 'recognized'
+    const confidence = clampConfidence(
+      100 * Math.min(1, evidence.length / (T.behavioralMinCount * 2)) * weekHitRatio
+    )
+
+    out.push({
+      routineKey: `bh:${group.merchantKey}:${group.weekday}`,
+      kind: 'behavioral_habit',
+      merchantKey: group.merchantKey,
+      merchantLabel: mode(evidence.map((t) => t.merchant)),
+      category: mode(evidence.map((t) => t.category)),
+      weekday: group.weekday,
+      hourBucket: null, // always null today — see hasRealTimeOfDay
+      personId: attributedPerson(evidence),
+      typicalAmountCents,
+      amountVarianceCents,
+      occurrenceCount: evidence.length,
+      firstSeenAt,
+      lastSeenAt,
+      confidence,
+      derivedStatus,
+      evidenceTransactionIds: evidence.map((t) => t.id),
+    })
+  }
+  return out
+}
+
 /** Detect every routine candidate from a household's transactions (FR-001-003). Pure; `now`
  *  injected. Order of the returned array is not significant — callers group/sort for display. */
 export function detectRoutines(transactions: Transaction[], now: Date): DetectedRoutine[] {
-  return [...detectRecurringCharges(transactions, now)]
+  return [...detectRecurringCharges(transactions, now), ...detectBehavioralHabits(transactions, now)]
 }
 
 /** Overlay persisted confirm/dismiss/rename state onto detected routines (FR-005/006). Never drops

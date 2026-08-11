@@ -25,10 +25,13 @@ export const ROUTINE_THRESHOLDS = {
   behavioralWindowWeeks: 8,
   /** Minimum occurrences to be considered a candidate. */
   behavioralMinCount: 4,
-  /** Hour-of-day bucket size (hours) — 2h ⇒ 12 buckets/day. */
+  /** Reserved for a future real-time-capture enhancement — unused today, since no transaction
+   *  source carries a genuine time-of-day (research.md §6b); hourBucket is always null. */
   behavioralHourBucketSizeHours: 2,
   /** Fraction of eligible weeks in the window that must contain a matching occurrence. */
   behavioralHitRatio: 0.6,
+  /** Days since the last matching occurrence before a behavioral_habit reads as lapsed. */
+  behavioralLapseAfterDays: 14,
 
   // --- normalizeMerchantKey ---
   /** Trailing POS/store-location numeric suffix length range treated as a store code, not part of

@@ -190,3 +190,57 @@ describe('applyRoutineStates', () => {
     expect(out.length).toBe(2)
   })
 })
+
+describe('detectRoutines — behavioral_habit (FR-003)', () => {
+  // research.md §6b: no transaction source carries a real time-of-day (every write path pins to
+  // noon-UTC), so behavioral grouping keys on weekday only — hourBucket stays reserved/null.
+  const NOW2 = new Date('2026-08-15')
+  const mondays = ['2026-07-06', '2026-07-13', '2026-07-20', '2026-07-27', '2026-08-03', '2026-08-10']
+  const expectedWeekday = new Date('2026-07-06T00:00:00Z').getUTCDay()
+
+  function habit(merchant: string, dates: string[], amounts: number[]): Transaction[] {
+    return dates.map((date, i) =>
+      tx({ id: `t-${merchant}-${date}`, merchant, date, amount_cents: amounts[i], category: 'coffee' })
+    )
+  }
+
+  it('detects a weekday-consistent habit with varying amounts', () => {
+    const amounts = [300, 350, 280, 320, 310, 290]
+    const txns = habit('Blue Bottle', mondays, amounts)
+    const routine = detectRoutines(txns, NOW2).find((r) => r.kind === 'behavioral_habit')
+    expect(routine).toBeDefined()
+    expect(routine!.merchantKey).toBe('blue bottle')
+    expect(routine!.weekday).toBe(expectedWeekday)
+    expect(routine!.occurrenceCount).toBe(6)
+    expect(routine!.amountVarianceCents).toBeGreaterThan(0)
+  })
+
+  it('hourBucket is always null (no real time-of-day signal exists today)', () => {
+    const txns = habit('Blue Bottle', mondays, [300, 350, 280, 320, 310, 290])
+    const routine = detectRoutines(txns, NOW2).find((r) => r.kind === 'behavioral_habit')!
+    expect(routine.hourBucket).toBeNull()
+  })
+
+  it('routineKey is `bh:<merchantKey>:<weekday>`', () => {
+    const txns = habit('Blue Bottle', mondays, [300, 350, 280, 320, 310, 290])
+    const routine = detectRoutines(txns, NOW2).find((r) => r.kind === 'behavioral_habit')!
+    expect(routine.routineKey).toBe(`bh:blue bottle:${expectedWeekday}`)
+  })
+
+  it('below the minimum occurrence count produces nothing', () => {
+    const txns = habit('Rare Spot', mondays.slice(0, 3), [300, 300, 300])
+    expect(detectRoutines(txns, NOW2).find((r) => r.merchantKey === 'rare spot')).toBeUndefined()
+  })
+
+  it('genuinely irregular spending (different weekday each time) never produces a habit', () => {
+    const dates = ['2026-07-06', '2026-07-14', '2026-07-22', '2026-07-30', '2026-08-07', '2026-08-11']
+    const txns = habit('Scattered', dates, [400, 400, 400, 400, 400, 400])
+    expect(detectRoutines(txns, NOW2).find((r) => r.merchantKey === 'scattered' && r.kind === 'behavioral_habit')).toBeUndefined()
+  })
+
+  it('bank-import transactions still contribute to recurring_charge detection (unaffected by FR-003)', () => {
+    const txns = monthly('Import Sub', ['2026-05-15', '2026-06-15', '2026-07-15', '2026-08-15'])
+    const routine = detectRoutines(txns, NOW2).find((r) => r.merchantKey === 'import sub')
+    expect(routine?.kind).toBe('recurring_charge')
+  })
+})

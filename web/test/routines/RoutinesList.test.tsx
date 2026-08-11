@@ -115,3 +115,36 @@ describe('RoutinesList', () => {
     expect(screen.getByText('Dismiss')).toBeInTheDocument()
   })
 })
+
+describe('RoutinesList — US2 behavioral habits alongside recurring charges', () => {
+  beforeEach(() => {
+    h.routines = []
+    cleanup()
+  })
+
+  it('labels a behavioral_habit routine distinctly from a recurring_charge one', () => {
+    h.routines = [
+      routine({ routineKey: 'rc:netflix', merchantLabel: 'Netflix', kind: 'recurring_charge' }),
+      routine({
+        routineKey: 'bh:coffee shop:1',
+        merchantLabel: 'Coffee Shop',
+        kind: 'behavioral_habit',
+        weekday: 1,
+        typicalAmountCents: 400,
+      }),
+    ]
+    render(<RoutinesList />)
+    expect(screen.getByText(/monthly, about/i)).toBeInTheDocument()
+    expect(screen.getByText(/regular habit/i)).toBeInTheDocument()
+  })
+
+  it('sorts recurring charges before behavioral habits', () => {
+    h.routines = [
+      routine({ routineKey: 'bh:coffee shop:1', merchantLabel: 'Coffee Shop', kind: 'behavioral_habit', weekday: 1 }),
+      routine({ routineKey: 'rc:netflix', merchantLabel: 'Netflix', kind: 'recurring_charge' }),
+    ]
+    render(<RoutinesList />)
+    const names = screen.getAllByText(/Netflix|Coffee Shop/).map((el) => el.textContent)
+    expect(names).toEqual(['Netflix', 'Coffee Shop'])
+  })
+})

@@ -138,22 +138,22 @@ fixed-amount routines, using only transactions with a real time-of-day.
 merchant with varying amounts → surfaced as a distinct "habit" routine; bank-imported rows never
 produce one but still count toward Story 1's detection.
 
-- [ ] T021 [US2] Write failing tests in `web/test/finance/routines.test.ts` for `detectRoutines()`'s
+- [X] T021 [US2] Write failing tests in `web/test/finance/routines.test.ts` for `detectRoutines()`'s
       `behavioral_habit` branch per `contracts/routines-engine.md` §"FR-003": groups by
       `(merchantKey, weekday, hourBucket)`; below-min-count / below-week-hit-ratio groups produce
       nothing; amount is reported (`typicalAmountCents`/`amountVarianceCents`) but never gates
       inclusion; a `hasRealTimeOfDay(tx) === false` transaction (import-tagged `source`) is excluded
       from grouping but still eligible for the `recurring_charge` branch from Phase 3; `routineKey`
       format `bh:${merchantKey}:${weekday}:${hourBucket}`.
-- [ ] T022 [US2] Implement the `behavioral_habit` branch and `hasRealTimeOfDay(tx)` predicate in
+- [X] T022 [US2] Implement the `behavioral_habit` branch and `hasRealTimeOfDay(tx)` predicate in
       `web/lib/finance/routines.ts` (determine the real import-vs-manual/receipt `source` values from
       `web/lib/dataFile/` / scan-entry code and encode the exact predicate, per the contract's note
       that this heuristic must be visible/correctable independent of the grouping logic around it).
       Make T021 pass.
-- [ ] T023 [US2] Write failing tests extending `web/test/routines/RoutinesList.test.tsx`: a
+- [X] T023 [US2] Write failing tests extending `web/test/routines/RoutinesList.test.tsx`: a
       `behavioral_habit` routine is visually labeled distinctly from a `recurring_charge` routine
       (e.g. "habit" vs. "recurring charge"), and the list groups/sorts kind-then-confidence.
-- [ ] T024 [US2] Update `RoutineCard.tsx`/`RoutinesList.tsx` to render kind-specific labeling and
+- [X] T024 [US2] Update `RoutineCard.tsx`/`RoutinesList.tsx` to render kind-specific labeling and
       sorting. Make T023 pass.
 
 **Checkpoint**: `npx vitest run test/finance/routines.test.ts test/routines/RoutinesList.test.tsx` green.
