@@ -56,6 +56,9 @@ import type {
   DimensionWeight,
   HealthSnapshot,
   HealthBand,
+  RecognizedRoutineState,
+  LocationConsent,
+  MerchantGeocode,
 } from './types'
 import type {
   UserRow,
@@ -80,6 +83,9 @@ import type {
   UserFixedCostRow,
   UserDimensionWeightRow,
   FinancialHealthSnapshotRow,
+  RecognizedRoutineStateRow,
+  UserLocationConsentRow,
+  MerchantGeocodeRow,
 } from './supabase/rows'
 
 const PLACEHOLDER_ID = '00000000-0000-0000-0000-000000000000'
@@ -126,6 +132,13 @@ interface AppStateValue {
   userFixedCosts: FixedCost[]
   userDimensionWeights: DimensionWeight[]
   healthSnapshots: HealthSnapshot[]
+  /** Financial Routines (spec 044) — household-scoped confirm/dismiss/rename state, keyed by the
+   *  detection engine's routine_key. Routines themselves are derived live (see lib/finance/routines.ts). */
+  recognizedRoutineStates: RecognizedRoutineState[]
+  /** Household-level merchant-name → place cache (FR-012). */
+  merchantGeocodes: MerchantGeocode[]
+  /** The signed-in user's location-assistance opt-in level (private; null until loaded/created). */
+  locationConsent: LocationConsent | null
   currency: CurrencyKey
   rates: Partial<Record<CurrencyKey, number>>
   /** Epoch ms of the last successful live-rate fetch (or cached fetch), null if never. */
@@ -342,6 +355,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [userFixedCosts, setUserFixedCosts] = useState<FixedCost[]>([])
   const [userDimensionWeights, setUserDimensionWeights] = useState<DimensionWeight[]>([])
   const [healthSnapshots, setHealthSnapshots] = useState<HealthSnapshot[]>([])
+  // Financial Routines (spec 044) — recognizedRoutineStates/merchantGeocodes are
+  // household-scoped; locationConsent is user-scoped (private).
+  const [recognizedRoutineStates, setRecognizedRoutineStates] = useState<RecognizedRoutineState[]>([])
+  const [merchantGeocodes, setMerchantGeocodes] = useState<MerchantGeocode[]>([])
+  const [locationConsent, setLocationConsentState] = useState<LocationConsent | null>(null)
   const [linkedInstitutions, setLinkedInstitutions] = useState<LinkedInstitution[]>([])
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([])
   const [currency, setCurrencyState] = useState<CurrencyKey>('usd')
@@ -705,6 +723,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       userFixedCostsRes,
       userWeightsRes,
       healthSnapshotsRes,
+      routineStatesRes,
+      merchantGeocodesRes,
+      locationConsentRes,
     ] = await Promise.all([
       // Column projection (US6/P5): the three highest-volume reads fetch only the
       // fields the app uses — never select('*'). Keep these lists in lockstep with
@@ -748,6 +769,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       supabase.from('user_fixed_costs').select('*').eq('user_id', ownerId).order('created_at', { ascending: true }),
       supabase.from('user_dimension_weights').select('*').eq('user_id', ownerId),
       supabase.from('financial_health_snapshots').select('*').eq('user_id', ownerId).order('created_at', { ascending: true }),
+      // Financial Routines (spec 044): household-scoped, fail-open like tags/goals — RLS scopes
+      // them, so no explicit household filter is needed (mirrors linked_institutions above).
+      supabase.from('recognized_routine_states').select('*'),
+      supabase.from('merchant_geocodes').select('*'),
+      // User-scoped (RLS user_id = auth.uid()), fail-open null like user_financial_profile.
+      supabase.from('user_location_consent').select('*').eq('user_id', ownerId).maybeSingle(),
     ])
 
     // A failed read must surface as an error, not render as a real-looking
@@ -762,20 +789,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // window. Any OTHER error stays fail-loud like every bootstrap read.
     const missingTable = (e: { code?: string } | null | undefined) =>
       e?.code === 'PGRST205' || e?.code === '42P01'
-    for (const res of [goalsRes, goalContribRes, linkedInstRes, linkedAcctRes, tagsRes, txTagsRes, depositAccountsRes, userFixedCostsRes, userWeightsRes, healthSnapshotsRes]) {
+    for (const res of [goalsRes, goalContribRes, linkedInstRes, linkedAcctRes, tagsRes, txTagsRes, depositAccountsRes, userFixedCostsRes, userWeightsRes, healthSnapshotsRes, routineStatesRes, merchantGeocodesRes]) {
       if (res.error && missingTable(res.error as { code?: string })) {
         res.data = []
         res.error = null
       }
       orThrow(res)
     }
-    // The profile read is a maybeSingle (row | null), so its fail-open default is
+    // The profile/consent reads are maybeSingle (row | null), so their fail-open default is
     // null, not [] — handled separately from the array reads above.
     if (userProfileRes.error && missingTable(userProfileRes.error as { code?: string })) {
       userProfileRes.data = null
       userProfileRes.error = null
     }
     orThrow(userProfileRes)
+    if (locationConsentRes.error && missingTable(locationConsentRes.error as { code?: string })) {
+      locationConsentRes.data = null
+      locationConsentRes.error = null
+    }
+    orThrow(locationConsentRes)
 
     // Typed row → domain boundary (FR-018): each read is asserted to its DB row
     // type (`lib/supabase/rows.ts`) and assigned to domain-typed state, so a
@@ -846,6 +878,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setUserFixedCosts((userFixedCostsRes.data ?? []) as UserFixedCostRow[])
     setUserDimensionWeights((userWeightsRes.data ?? []) as UserDimensionWeightRow[])
     setHealthSnapshots((healthSnapshotsRes.data ?? []) as FinancialHealthSnapshotRow[])
+    setRecognizedRoutineStates((routineStatesRes.data ?? []) as RecognizedRoutineStateRow[])
+    setMerchantGeocodes((merchantGeocodesRes.data ?? []) as MerchantGeocodeRow[])
+    setLocationConsentState((locationConsentRes.data ?? null) as UserLocationConsentRow | null)
     setLinkedInstitutions((linkedInstRes.data ?? []) as LinkedInstitutionRow[])
     setLinkedAccounts((linkedAcctRes.data ?? []) as LinkedAccountRow[])
 
@@ -1701,6 +1736,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     userFixedCosts,
     userDimensionWeights,
     healthSnapshots,
+    recognizedRoutineStates,
+    merchantGeocodes,
+    locationConsent,
     currency,
     rates,
     ratesLastFetched,

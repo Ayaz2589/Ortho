@@ -39,6 +39,7 @@ const DIMENSION_LABEL: Record<HealthDimension, string> = {
   commitment_load: 'Commitment load',
   savings_momentum: 'Savings momentum',
   plan_engagement: 'Planning',
+  routine_awareness: 'Routine awareness',
 }
 
 type Props = { draft: ProfileDraft; patch: (p: Partial<ProfileDraft>) => void }
