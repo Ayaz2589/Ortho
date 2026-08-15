@@ -217,6 +217,7 @@ interface AppStateValue {
   updateGoal: (g: Goal) => void
   deleteGoal: (id: string) => void
   addContribution: (c: GoalContribution) => void
+  updateContribution: (c: GoalContribution) => void
   deleteContribution: (id: string) => void
   // Financial Health (spec 041) — deliberate form submissions (awaitable, no
   // optimistic flicker); errors surface via the shared banner.
@@ -1501,6 +1502,34 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     })()
   }
 
+  /** Correct a recorded contribution (spec 045 US3) — a goal's saved total is the
+   *  sum of its contributions, so a mistyped one made the whole total untrustworthy
+   *  with no remedy short of deleting the goal. Optimistic with rollback, mirroring
+   *  `updateGoal`. Only the three user-editable columns are written: an edit never
+   *  re-parents a contribution to another goal (that would silently move money
+   *  between two goals from a form showing one) and never rewrites who recorded it. */
+  const updateContribution = (c: GoalContribution) => {
+    let prev: GoalContribution | undefined
+    setGoalContributions((cur) => {
+      prev = cur.find((x) => x.id === c.id)
+      return cur.map((x) => (x.id === c.id ? c : x))
+    })
+    ;(async () => {
+      const { error: e } = await supabase
+        .from('goal_contributions')
+        .update({
+          amount_cents: c.amount_cents,
+          date: c.date,
+          note: c.note,
+        })
+        .eq('id', c.id)
+      if (e) {
+        setGoalContributions((cur) => (prev ? cur.map((x) => (x.id === c.id ? prev! : x)) : cur))
+        setError(e.message)
+      }
+    })()
+  }
+
   const deleteContribution = (id: string) => {
     let removed: GoalContribution | undefined
     setGoalContributions((prev) => {
@@ -1905,6 +1934,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     updateGoal,
     deleteGoal,
     addContribution,
+    updateContribution,
     deleteContribution,
     saveFinancialProfile,
     saveFixedCosts,

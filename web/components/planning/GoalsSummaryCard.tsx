@@ -1,100 +1,99 @@
 'use client'
 
-import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { useApp } from '@/lib/store'
-import { parseLocalDate } from '@/lib/format'
-import type { GoalsSummary, GoalRowSummary } from '@/lib/planning/planSummary'
+import { contributionsByGoal } from '@/lib/finance/goals'
+import { GoalCard } from '@/components/goals/GoalCard'
+import { GoalForm } from '@/components/goals/GoalForm'
+import { ContributionForm } from '@/components/goals/ContributionForm'
+import type { GoalsSummary } from '@/lib/planning/planSummary'
+import type { Goal } from '@/lib/types'
 import { PlanningSection } from './PlanningSection'
 
+/** How many contributions a hub card shows before deferring to the detail page.
+ *  Capped so cards stay a comparable, scannable size (spec 045 Assumptions). */
+const CARD_CONTRIBUTIONS = 3
+
 /**
- * Goals summary (spec 038 — US4). Per goal: progress, saved-of-target, on/off-track
- * status, projected/due outlook, and — when behind — the suggested monthly
- * contribution to catch up. Off-track goals are listed first. Links out to the full
- * Goals page. Behind is calm sand `--accent`, reached is sage `--positive`, never
- * red. Presentational — the page passes the computed `GoalsSummary` in.
+ * Goals on the Planning hub (spec 038 US4, reworked by spec 045).
+ *
+ * Each goal is now its own `GoalCard` — the same component the detail page uses —
+ * rather than a thin local `GoalRow`. That was a near-duplicate of the card and had
+ * already drifted from it ("On track · due" here vs "On pace · due" there), so
+ * collapsing to one component removes a real correctness hazard, not just code.
+ *
+ * The "View all goals" link is gone with the goals index it pointed at: a goal is
+ * reached from its own card now. Goal CREATION moved here with it — this section is
+ * the only place goals are made, so the New-goal action lives in its header.
+ *
+ * Off-track goals are listed first, from the order `summary.rows` already computes.
+ * Behind is calm sand `--accent`, reached is sage `--positive`, never red.
  */
 export function GoalsSummaryCard({ summary }: { summary: GoalsSummary }) {
-  const { t } = useApp()
+  const { goals, goalContributions, deleteGoal, t } = useApp()
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<Goal | null>(null)
+  const [contributingTo, setContributingTo] = useState<Goal | null>(null)
 
-  const viewAll = (
-    <Link
-      href="/planning/goals"
-      className="inline-flex items-center gap-1 rounded-lg text-[13px] text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+  const byGoal = useMemo(() => contributionsByGoal(goalContributions), [goalContributions])
+  // `summary.rows` carries the behind-first order; resolve each back to its Goal.
+  const ordered = useMemo(
+    () =>
+      summary.rows
+        .map((r) => goals.find((g) => g.id === r.goalId))
+        .filter((g): g is Goal => g != null),
+    [summary.rows, goals]
+  )
+
+  const newGoal = (
+    <button
+      type="button"
+      onClick={() => {
+        setEditing(null)
+        setFormOpen(true)
+      }}
+      className="ortho-interactive inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[13px] text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
     >
-      {t('View all goals')}
-      <ArrowRight size={14} />
-    </Link>
+      <Plus size={14} />
+      {t('New goal')}
+    </button>
   )
 
-  if (summary.goalCount === 0) {
-    return (
-      <PlanningSection title={t('Goals')} action={viewAll}>
-        <p data-testid="goals-empty" className="py-2 text-sm text-text-2">
-          {t('No goals yet — create one to start saving toward it.')}
-        </p>
+  return (
+    <>
+      <PlanningSection title={t('Goals')} action={newGoal}>
+        {summary.goalCount === 0 ? (
+          <p data-testid="goals-empty" className="py-2 text-sm text-text-2">
+            {t('No goals yet — create one to start saving toward it.')}
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {ordered.map((g) => (
+              <GoalCard
+                key={g.id}
+                goal={g}
+                contributions={byGoal[g.id] ?? []}
+                href={`/planning/goals?id=${g.id}`}
+                maxContributions={CARD_CONTRIBUTIONS}
+                onAddContribution={setContributingTo}
+                onEdit={(goal) => {
+                  setEditing(goal)
+                  setFormOpen(true)
+                }}
+              />
+            ))}
+          </div>
+        )}
       </PlanningSection>
-    )
-  }
 
-  return (
-    <PlanningSection title={t('Goals')} action={viewAll}>
-      <ul className="flex flex-col gap-4">
-        {summary.rows.map((row) => (
-          <GoalRow key={row.goalId} row={row} />
-        ))}
-      </ul>
-    </PlanningSection>
-  )
-}
-
-function GoalRow({ row }: { row: GoalRowSummary }) {
-  const { formatMoney, t, locale } = useApp()
-  const pct = Math.round(row.fraction * 100)
-
-  const dueLabel = row.targetDate
-    ? new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', year: 'numeric' }).format(
-        parseLocalDate(row.targetDate),
-      )
-    : null
-
-  // Status line — behind is calm accent (never red); reached is sage.
-  let statusText: string | null = null
-  let statusColor = 'var(--text-2)'
-  if (row.reached) {
-    statusText = dueLabel ? t('Reached · by {0}', dueLabel) : t('Reached')
-    statusColor = 'var(--positive)'
-  } else if (row.dated && row.offTrack) {
-    statusText = t('Behind pace — set aside {0}/mo to reach it by {1}.', formatMoney(row.suggestedMonthlyCents), dueLabel ?? '')
-    statusColor = 'var(--accent)'
-  } else if (row.dated) {
-    statusText = t('On track · due {0}', dueLabel ?? '')
-  }
-
-  return (
-    <li data-testid="goal-row" className="flex flex-col gap-1">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="truncate text-sm text-text">{row.name}</span>
-        <span className="shrink-0 text-xs tabular-nums text-text-2">
-          {formatMoney(row.savedCents)} {t('of')} {formatMoney(row.targetCents)}
-        </span>
-      </div>
-      <div
-        role="progressbar"
-        aria-valuenow={pct}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuetext={t('{0}% complete', pct)}
-        className="h-1.5 w-full overflow-hidden rounded-full"
-        style={{ background: 'var(--hairline)' }}
-      >
-        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: 'var(--positive)' }} />
-      </div>
-      {statusText ? (
-        <span className="text-xs" style={{ color: statusColor }}>
-          {statusText}
-        </span>
-      ) : null}
-    </li>
+      <GoalForm
+        open={formOpen}
+        editing={editing}
+        onClose={() => setFormOpen(false)}
+        onDelete={(g) => deleteGoal(g.id)}
+      />
+      <ContributionForm goal={contributingTo} onClose={() => setContributingTo(null)} />
+    </>
   )
 }

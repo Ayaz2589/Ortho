@@ -22,6 +22,19 @@ interface StoreView {
   formatMoney: (cents: number, opts?: { leadingPlus?: boolean }) => string
   t: (key: string, ...args: (string | number)[]) => string
   locale: string
+  // The Goals section now owns the goal + contribution forms (spec 045), so the
+  // mocked store has to carry what those forms read.
+  currency: string
+  rate: (c: string) => number
+  currentHousehold: { id: string } | null
+  currentUserId: string
+  linkedAccounts: unknown[]
+  addGoal: (g: Goal) => void
+  updateGoal: (g: Goal) => void
+  deleteGoal: (id: string) => void
+  addContribution: (c: GoalContribution) => void
+  updateContribution: (c: GoalContribution) => void
+  deleteContribution: (id: string) => void
 }
 let store: StoreView
 vi.mock('@/lib/store', () => ({
@@ -107,6 +120,17 @@ beforeEach(() => {
     formatMoney: money,
     t: (key, ...args) => (args.length ? key.replace(/\{(\d+)\}/g, (_m, i) => String(args[Number(i)])) : key),
     locale: 'en-US',
+    currency: 'usd',
+    rate: () => 1,
+    currentHousehold: { id: 'hh-1' },
+    currentUserId: 'u-me',
+    linkedAccounts: [],
+    addGoal: vi.fn(),
+    updateGoal: vi.fn(),
+    deleteGoal: vi.fn(),
+    addContribution: vi.fn(),
+    updateContribution: vi.fn(),
+    deleteContribution: vi.fn(),
   }
 })
 
@@ -200,31 +224,59 @@ describe('BudgetSummaryCard (US3)', () => {
   })
 })
 
-// ── US4: goals summary ──────────────────────────────────────────────────────────
+// ── US4: goals summary (spec 045 — one card per goal, no index page) ────────────
 describe('GoalsSummaryCard (US4)', () => {
-  it('lists behind goals first with a suggested monthly, undated goals neutral', () => {
+  const threeGoals = () => {
     store.goals = [
       makeGoal({ id: 'g-on', name: 'On Track', target_cents: 120000, created_at: '2026-01-01T00:00:00.000Z', target_date: '2027-12-31' }),
       makeGoal({ id: 'g-un', name: 'Someday', target_cents: 50000, target_date: null }),
       makeGoal({ id: 'g-behind', name: 'Behind Fund', target_cents: 120000, created_at: '2026-01-01T00:00:00.000Z', target_date: '2026-07-01' }),
     ]
     store.goalContributions = [contrib('g-on', 60000)]
+  }
+
+  it('renders one card per goal, behind first, with a suggested monthly; undated goals neutral', () => {
+    threeGoals()
     render(<GoalsSummaryCard summary={summaryFor().goals} />)
 
-    const rows = screen.getAllByTestId('goal-row')
-    expect(within(rows[0]).getByText(/Behind Fund/)).toBeInTheDocument()
-    expect(within(rows[0]).getByText(/\/mo/)).toBeInTheDocument() // catch-up suggestion
+    const cards = screen.getAllByTestId('goal-card')
+    expect(cards).toHaveLength(3)
+    expect(within(cards[0]).getByText(/Behind Fund/)).toBeInTheDocument()
+    expect(within(cards[0]).getByText(/\/mo/)).toBeInTheDocument() // catch-up suggestion
 
-    const undated = rows.find((r) => within(r).queryByText('Someday'))!
+    const undated = cards.find((c) => within(c).queryByText('Someday'))!
     expect(within(undated).queryByText(/\/mo/)).toBeNull()
-
-    expect(screen.getByRole('link', { name: /view all goals/i })).toHaveAttribute('href', '/planning/goals')
   })
 
-  it('shows a calm empty state with a link when there are no goals', () => {
+  it('opens each goal at its own detail address', () => {
+    threeGoals()
     render(<GoalsSummaryCard summary={summaryFor().goals} />)
-    expect(screen.getByRole('link', { name: /goals/i })).toHaveAttribute('href', '/planning/goals')
+    expect(screen.getByRole('link', { name: /Behind Fund/ })).toHaveAttribute(
+      'href',
+      '/planning/goals?id=g-behind'
+    )
+  })
+
+  it('no longer links to an all-goals index', () => {
+    threeGoals()
+    render(<GoalsSummaryCard summary={summaryFor().goals} />)
+    // Every goals link must target a SPECIFIC goal — the index is retired.
+    for (const link of screen.getAllByRole('link')) {
+      const href = link.getAttribute('href') ?? ''
+      if (href.startsWith('/planning/goals')) expect(href).toContain('?id=')
+    }
+    expect(screen.queryByRole('link', { name: /view all goals/i })).toBeNull()
+  })
+
+  it('offers goal creation, which the retired index page used to own', () => {
+    render(<GoalsSummaryCard summary={summaryFor().goals} />)
+    expect(screen.getByRole('button', { name: /new goal/i })).toBeInTheDocument()
+  })
+
+  it('shows a calm empty state when there are no goals', () => {
+    render(<GoalsSummaryCard summary={summaryFor().goals} />)
     expect(screen.getByTestId('goals-empty')).toBeInTheDocument()
+    expect(screen.queryByTestId('goal-card')).toBeNull()
   })
 })
 
@@ -266,11 +318,13 @@ describe('PlanningMonthBar (US1)', () => {
 })
 
 describe('Planning hub page (US1)', () => {
-  it('renders the Planning header, a month bar, and links out to Budgets and Goals', () => {
+  it('renders the Planning header, a month bar, the Budgets link and the Goals section', () => {
     render(<PlanningPage />)
     expect(screen.getByRole('heading', { name: 'Planning' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /view all budgets/i })).toHaveAttribute('href', '/planning/budget')
-    expect(screen.getByRole('link', { name: /view all goals/i })).toHaveAttribute('href', '/planning/goals')
+    // Goals has no "view all" any more — the section itself is where goals live.
+    expect(screen.queryByRole('link', { name: /view all goals/i })).toBeNull()
+    expect(screen.getByRole('button', { name: /new goal/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /previous month/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /next month/i })).toBeInTheDocument()
   })

@@ -10,7 +10,17 @@ import { fileURLToPath } from 'node:url'
 // silently pull recharts back into a route's initial-load bundle — this test fails if so.
 
 const WEB_ROOT = fileURLToPath(new URL('../../', import.meta.url))
-const EAGER_DIRS = ['components/dashboard', 'components/housing', 'components/widgets']
+// spec 045 added `components/goals` and `components/planning` — the goal detail
+// page's charts live under components/goals/charts/, and until now neither
+// directory was scanned, so a chart consumer there could have pulled recharts back
+// into an initial-load bundle unnoticed.
+const EAGER_DIRS = [
+  'components/dashboard',
+  'components/housing',
+  'components/widgets',
+  'components/goals',
+  'components/planning',
+]
 
 function tsxFilesExcludingCharts(dir: string): string[] {
   const out: string[] = []

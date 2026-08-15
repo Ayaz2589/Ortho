@@ -58,11 +58,14 @@ export function RouteSkeleton() {
   }
   // Budget/Goals detail live under /planning (spec 040) — match them BEFORE the
   // general /planning hub so the sub-routes keep their own skeletons.
-  if (pathname.startsWith('/planning/goals')) {
-    return <GoalsSkeleton count={readSkeletonCount('goals', DEFAULTS.goals)} />
-  }
+  // /planning/goals is a SINGLE-goal detail page now (spec 045) — a fixed shape,
+  // so no count. The recorded goal count moved to the hub, where the per-goal
+  // cards actually render.
+  if (pathname.startsWith('/planning/goals')) return <GoalsSkeleton />
   if (pathname.startsWith('/planning/budget')) return <BudgetsSkeleton />
-  if (pathname.startsWith('/planning')) return <PlanningSkeleton />
+  if (pathname.startsWith('/planning')) {
+    return <PlanningSkeleton goalCount={readSkeletonCount('goals', DEFAULTS.goals)} />
+  }
   if (pathname.startsWith('/settings')) return <SettingsSkeleton />
   if (pathname.startsWith('/dashboard')) return <DashboardSkeleton />
 

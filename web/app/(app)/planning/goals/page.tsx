@@ -1,79 +1,56 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import Link from 'next/link'
-import { ChevronLeft, Plus, Target } from 'lucide-react'
+import { useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { useApp } from '@/lib/store'
-import { PageHeader, EmptyState, IconButton } from '@/components/ui'
+import { useRouteSearch } from '@/lib/useRouteSearch'
+import { parseIdParam } from '@/lib/formPageIntent'
 import { ReadingColumn } from '@/components/layout'
-import { GoalCard } from '@/components/goals/GoalCard'
-import { GoalForm } from '@/components/goals/GoalForm'
-import { ContributionForm } from '@/components/goals/ContributionForm'
-import { contributionsByGoal } from '@/lib/finance/goals'
-import type { Goal } from '@/lib/types'
+import { GoalDetail } from '@/components/goals/GoalDetail'
 
-export default function GoalsPage() {
-  const { goals, goalContributions, currentHousehold, deleteGoal, t } = useApp()
+/**
+ * One goal's detail page (spec 045 US2). This route used to be the goals INDEX —
+ * a second list of every goal, duplicating the Planning hub's own goals section.
+ * The hub now renders a card per goal, so this route became the place a single
+ * goal is understood instead.
+ *
+ * Addressed `?id=<goalId>`, not `/planning/goals/<goalId>`: the app is a static
+ * export (`output: 'export'`), so a dynamic segment would need every id enumerated
+ * at build time, and goal ids are runtime UUIDs. `?id=` is the repo's existing
+ * answer to exactly this (`housing/edit`, `transactions/edit`), and it keeps the
+ * URL refresh-safe on web and correct in the Capacitor iOS shell, where an
+ * extensionless path would be swallowed by the asset router's SPA fallback.
+ *
+ * Both "not known yet" states render nothing AND redirect nothing: `search` is
+ * undefined until the mount effect reads it, and `loading` is true until the store
+ * arrives. Redirecting during either would bounce a legitimate refresh to
+ * /planning before the goal ever loaded.
+ */
+export default function GoalDetailPage() {
+  const router = useRouter()
+  const search = useRouteSearch()
+  const { goals, goalContributions, loading } = useApp()
 
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<Goal | null>(null)
-  const [contributingTo, setContributingTo] = useState<Goal | null>(null)
+  const id = search === undefined ? undefined : parseIdParam(search)
+  const goal = id ? goals.find((g) => g.id === id) ?? null : null
 
-  const byGoal = useMemo(() => contributionsByGoal(goalContributions), [goalContributions])
+  useEffect(() => {
+    if (search === undefined || loading) return
+    if (!goal) router.replace('/planning')
+  }, [search, loading, goal, router])
 
-  const openNew = () => {
-    setEditing(null)
-    setFormOpen(true)
-  }
-  const openEdit = (g: Goal) => {
-    setEditing(g)
-    setFormOpen(true)
-  }
+  const contributions = useMemo(
+    () => (goal ? goalContributions.filter((c) => c.goal_id === goal.id) : []),
+    [goal, goalContributions]
+  )
+
+  // Nothing to show, and no error screen either — the effect above is already
+  // taking the user back to Planning.
+  if (search === undefined || loading || !goal) return null
 
   return (
     <ReadingColumn>
-      <div className="pt-2">
-        <Link href="/planning" className="inline-flex items-center gap-1 text-[15px] text-accent">
-          <ChevronLeft size={18} />
-          {t('Planning')}
-        </Link>
-      </div>
-      <PageHeader
-        title={t('Goals')}
-        right={
-          <IconButton onClick={openNew} ariaLabel={t('New goal')} disabled={!currentHousehold}>
-            <Plus size={20} />
-          </IconButton>
-        }
-      />
-
-      {goals.length === 0 ? (
-        <EmptyState
-          icon={<Target size={40} strokeWidth={1.5} />}
-          title={t('No goals yet')}
-          body={t('Name something you’re saving toward or paying off, set a target, and track your progress.')}
-        />
-      ) : (
-        <div className="flex flex-col gap-3">
-          {goals.map((g) => (
-            <GoalCard
-              key={g.id}
-              goal={g}
-              contributions={byGoal[g.id] ?? []}
-              onAddContribution={setContributingTo}
-              onEdit={openEdit}
-            />
-          ))}
-        </div>
-      )}
-
-      <GoalForm
-        open={formOpen}
-        editing={editing}
-        onClose={() => setFormOpen(false)}
-        onDelete={(g) => deleteGoal(g.id)}
-      />
-      <ContributionForm goal={contributingTo} onClose={() => setContributingTo(null)} />
+      <GoalDetail goal={goal} contributions={contributions} />
     </ReadingColumn>
   )
 }

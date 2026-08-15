@@ -85,12 +85,35 @@ describe('RouteSkeleton — sizing from remembered counts (US2)', () => {
     expect(blocks.length).toBeLessThan(200)
   })
 
-  it('a recorded 0 still renders at least one goal card (no blank screen)', () => {
+  it('the goals route draws a single-goal detail shape, not a list (spec 045)', () => {
+    // /planning/goals is one goal's detail page now, so its skeleton is a fixed
+    // shape — a recorded goal count must NOT multiply cards here.
     pathnameMock.mockReturnValue('/planning/goals')
+    localStorage.setItem('ortho.skeletonCounts', JSON.stringify({ goals: 7 }))
+    render(<RouteSkeleton />)
+    const many = screen.getByTestId('skeleton-goals').querySelectorAll('[aria-hidden="true"]').length
+
+    cleanup()
     localStorage.setItem('ortho.skeletonCounts', JSON.stringify({ goals: 0 }))
     render(<RouteSkeleton />)
-    // At least the header + one card's worth of placeholders exist.
-    const blocks = screen.getByTestId('skeleton-goals').querySelectorAll('[aria-hidden="true"]')
-    expect(blocks.length).toBeGreaterThan(2)
+    const none = screen.getByTestId('skeleton-goals').querySelectorAll('[aria-hidden="true"]').length
+
+    expect(many).toBe(none)
+    expect(none).toBeGreaterThan(2) // never a blank screen
+  })
+
+  it('the Planning hub skeleton sizes its goal cards from the recorded count', () => {
+    // The per-goal cards moved to the hub with spec 045, and so did the count.
+    pathnameMock.mockReturnValue('/planning')
+    localStorage.setItem('ortho.skeletonCounts', JSON.stringify({ goals: 5 }))
+    render(<RouteSkeleton />)
+    const many = screen.getByTestId('skeleton-planning').querySelectorAll('[aria-hidden="true"]').length
+
+    cleanup()
+    localStorage.setItem('ortho.skeletonCounts', JSON.stringify({ goals: 1 }))
+    render(<RouteSkeleton />)
+    const few = screen.getByTestId('skeleton-planning').querySelectorAll('[aria-hidden="true"]').length
+
+    expect(many).toBeGreaterThan(few)
   })
 })
