@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApp } from '@/lib/store'
 import { ReadingColumn } from '@/components/layout'
@@ -33,10 +33,21 @@ export default function FinancialProfileWelcomePage() {
 
   // spec 048 (FR-004): never ask someone to redo a questionnaire they have already
   // answered — whatever brought them here, including a stale funnel marker left by
-  // a different visitor on this device (FR-009). Waiting for `loading` keeps `null`
-  // meaning "no profile" rather than "not fetched yet"; the (app) Shell already
-  // gates children on it, so this is belt-and-braces against that gate moving.
-  const alreadyAnswered = !loading && userFinancialProfile != null
+  // a different visitor on this device (FR-009).
+  //
+  // The question is whether they ARRIVED having already answered, so the first
+  // settled reading is latched rather than re-read live. Completing the
+  // questionnaire sets `userFinancialProfile` optimistically (store.tsx's
+  // saveFinancialProfile) while saveFinancialHealth still awaits three more
+  // writes; a live re-read would treat that as "already answered" and blank the
+  // page mid-save. Waiting for `loading` keeps `null` meaning "no profile" rather
+  // than "not fetched yet" — the (app) Shell already gates children on it, so this
+  // is belt-and-braces against that gate moving.
+  const arrivedAnswered = useRef<boolean | null>(null)
+  if (arrivedAnswered.current === null && !loading) {
+    arrivedAnswered.current = userFinancialProfile != null
+  }
+  const alreadyAnswered = arrivedAnswered.current === true
   useEffect(() => {
     if (alreadyAnswered) router.replace('/dashboard')
   }, [alreadyAnswered, router])

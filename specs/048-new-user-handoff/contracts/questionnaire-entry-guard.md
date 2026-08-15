@@ -17,16 +17,32 @@ This split is why FR-004 is a separate requirement from FR-001 rather than a cla
 
 ## Behavior
 
-| Precondition | Render | Navigation |
+The guard asks **"did they *arrive* having already answered?"** — not "does a profile exist at this
+instant". The first settled reading of `userFinancialProfile` is latched; later changes to it do not
+re-trigger the guard.
+
+| Precondition (at the first settled render) | Render | Navigation |
 |---|---|---|
-| `loading` | the questionnaire (unchanged) | none — see note |
+| `loading` | the questionnaire (unchanged); nothing latched yet | none — see note |
 | `!loading && userFinancialProfile != null` | **nothing** (`null`) | `router.replace('/dashboard')` |
 | `!loading && userFinancialProfile == null` | the questionnaire, unchanged | none |
+| profile becomes non-null *later*, while mounted | the questionnaire, unchanged | none — see below |
+
+**Why latched, not live.** `store.tsx`'s `saveFinancialProfile` sets `userFinancialProfile`
+**optimistically**, before its own upsert resolves — and `saveFinancialHealth` then awaits three more
+writes (fixed costs, dimension weights, baseline snapshot). A guard that re-read the profile live
+would see that optimistic write, decide "already answered", and blank the page for the remaining
+round-trips, leaving the user staring at nothing after pressing "See my score". Latching keeps the
+completion path exactly as spec 041/042 left it, which is what FR-011 requires.
 
 **Note on `loading`**: `app/(app)/layout.tsx:157` renders `<RouteSkeleton />` while loading and
 mounts `children` only afterwards, so this page never actually observes a loading state today. The
 condition is read anyway so the guard cannot silently invert if that Shell gate is ever moved — a
 `null` profile must mean "no profile", never "not yet fetched".
+
+**Remount re-evaluates.** The latch lives for one mount. A user who completes the questionnaire and
+then navigates back to it gets a fresh reading, sees their now-existing profile, and is bounced —
+which is the correct answer for that visit.
 
 **Render `null`, do not flash.** Rendering the five-step form for one frame before bouncing is the
 kind of un-calm moment Principle II rules out. No "Redirecting…" copy is added either — it would need
@@ -65,7 +81,10 @@ questionnaire collects. Two adjacent surfaces are deliberately **not** touched:
 
 - profile present → renders no questionnaire heading, calls `router.replace('/dashboard')`
 - profile present → `saveFinancialHealth` is never called
+- profile present but still `loading` → does not navigate yet
 - profile absent → renders the questionnaire, no navigation on mount
+- profile appears *while mounted* → the questionnaire stays rendered and nothing navigates (the
+  optimistic-write case above)
 - profile absent → Skip still writes no profile and lands on `/dashboard` (FR-007 restated at the
   guard's seam)
 

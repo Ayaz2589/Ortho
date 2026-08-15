@@ -90,6 +90,25 @@ describe('questionnaire entry guard — the account already has a profile (FR-00
   })
 })
 
+describe('questionnaire entry guard — completing the questionnaire (FR-011)', () => {
+  it('does not fire when the profile appears while the user is still on the page', async () => {
+    // store.tsx's saveFinancialProfile sets userFinancialProfile OPTIMISTICALLY,
+    // before its upsert resolves — and saveFinancialHealth then awaits three more
+    // writes (costs, weights, snapshot). A guard that re-read the profile live
+    // would blank the page and navigate mid-save, leaving the user staring at
+    // nothing for three round-trips. The question is whether they ARRIVED having
+    // already answered, not whether a profile exists at this instant.
+    const { rerender } = render(<Page />)
+    expect(screen.getByRole('heading', { name: 'Financial health' })).toBeTruthy()
+
+    h.app.userFinancialProfile = { id: 'freshly-saved' }
+    rerender(<Page />)
+
+    expect(screen.getByRole('heading', { name: 'Financial health' })).toBeTruthy()
+    expect(h.replace).not.toHaveBeenCalled()
+  })
+})
+
 describe('questionnaire entry guard — no profile yet (FR-011)', () => {
   it('renders the questionnaire and navigates nowhere', () => {
     render(<Page />)
