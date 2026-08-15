@@ -4,6 +4,8 @@ const ko: LandingCatalog = {
   metaTitle: 'Ortho — 가계 재정을 가지런하게.',
   metaDescription:
     '지출을 기록하고, 비용을 나누고, 함께 계획하세요. 가정을 위한 차분한 가계부를 당신의 언어로.',
+  notFoundLine: '해당 페이지를 찾지 못했습니다.',
+  notFoundCta: 'Ortho로 가기',
   placeholderLine: '가계 재정을 가지런하게.',
 }
 

@@ -121,20 +121,31 @@ describe('landing catalogs — reserved regions for features 046/047', () => {
 })
 
 describe('landing catalogs — isolation from the app catalogs', () => {
-  it.each(landingSlugs())('%s.ts imports no app catalog and no store', (slug) => {
-    const src = source(slug)
-    expect(src).not.toMatch(/from ['"]@?\/?(\.\.\/)*lib\/i18n\/(bn|es|ja|zh|ko)['"]/)
+  /**
+   * test/i18n/no-eager-catalog.test.ts (spec 023's bundle guard) skips this directory,
+   * because the landing files share basenames with the app catalogs and it would flag
+   * the legitimate `import es from './es'` sibling. That makes THIS the only guard
+   * standing between a landing page and a 32-55 KB app catalog, so it has to cover
+   * every way one can be named — including the parent-relative `'../es'`, which is how
+   * lib/i18n/landing/*.ts would actually reach lib/i18n/es.ts.
+   */
+  const APP_CATALOG_IMPORT =
+    /^\s*import\s+[^;\n]*\s+from\s+['"](?:\.\.\/(?:\.\.\/)*|[^'"]*i18n\/)(bn|es|ja|zh|ko)['"]/m
+
+  it.each([...landingSlugs(), 'index'])('%s.ts imports no app catalog and no store', (name) => {
+    const src = source(name)
+    expect(src).not.toMatch(APP_CATALOG_IMPORT)
     expect(src).not.toContain('@/lib/store')
   })
 
-  it('index.ts imports no app catalog', () => {
-    // test/i18n/no-eager-catalog.test.ts deliberately skips this directory (the
-    // landing siblings share basenames with the app catalogs), so the spec-023
-    // protection for these files is asserted here instead. `i18n/` must precede the
-    // basename, which distinguishes '@/lib/i18n/es' from the './es' sibling.
-    const src = readFileSync(join(DIR, 'index.ts'), 'utf8')
-    expect(src).not.toMatch(/^\s*import\s+[^;\n]*\s+from\s+['"][^'"]*i18n\/(bn|es|ja|zh|ko)['"]/m)
-    expect(src).not.toContain('@/lib/store')
+  it('the guard actually rejects a parent-relative app-catalog import', () => {
+    // Pins the guard itself. Written after a probe showed the earlier version passed
+    // when `import appEs from '../es'` was injected into a landing catalog.
+    expect("import appEs from '../es'\n").toMatch(APP_CATALOG_IMPORT)
+    expect("import ja from '../../lib/i18n/ja'\n").toMatch(APP_CATALOG_IMPORT)
+    expect("import bn from '@/lib/i18n/bn'\n").toMatch(APP_CATALOG_IMPORT)
+    // …and still allows the legitimate sibling import of a LANDING catalog.
+    expect("import es from './es'\n").not.toMatch(APP_CATALOG_IMPORT)
   })
 
   it('keeps the whole landing catalog set far smaller than one app catalog', () => {

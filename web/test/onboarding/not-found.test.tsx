@@ -6,10 +6,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 
-const h = vi.hoisted(() => ({ replace: vi.fn() }))
+const h = vi.hoisted(() => ({ replace: vi.fn(), isNativePlatform: vi.fn(() => false) }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: h.replace, push: vi.fn() }) }))
+vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: h.isNativePlatform } }))
 
 import NotFound from '@/app/not-found'
+import { LANDING_CATALOGS } from '@/lib/i18n/landing'
 
 function setPath(pathname: string) {
   window.history.replaceState({}, '', pathname)
@@ -21,9 +23,45 @@ function setLanguage(tag: string) {
 
 beforeEach(() => {
   h.replace.mockClear()
+  h.isNativePlatform.mockReturnValue(false)
   setLanguage('en-US')
 })
 afterEach(cleanup)
+
+describe('not-found — never recovers to marketing inside the installed app', () => {
+  it('does not redirect a /landing/ path on native', async () => {
+    // Nothing in the app links to /landing/* today, but the guard costs one line and
+    // this is exactly the failure the feature exists to prevent.
+    h.isNativePlatform.mockReturnValue(true)
+    setLanguage('es-ES')
+    setPath('/landing/fr')
+    render(<NotFound />)
+    await new Promise((r) => setTimeout(r, 20))
+    expect(h.replace).not.toHaveBeenCalled()
+  })
+})
+
+describe('not-found — localized', () => {
+  it.each(['es', 'ja', 'ko'] as const)('renders %s copy for that browser language', async (slug) => {
+    const tag = { es: 'es-ES', ja: 'ja-JP', ko: 'ko-KR' }[slug]
+    setLanguage(tag)
+    setPath('/transactions/typo')
+    render(<NotFound />)
+    // Resolved after mount — the static document cannot know the browser language.
+    await waitFor(() =>
+      expect(screen.getByText(LANDING_CATALOGS[slug].notFoundLine)).toBeTruthy(),
+    )
+  })
+
+  it('falls back to English for an unsupported browser language', async () => {
+    setLanguage('fr-FR')
+    setPath('/transactions/typo')
+    render(<NotFound />)
+    await waitFor(() =>
+      expect(screen.getByText(LANDING_CATALOGS.en.notFoundLine)).toBeTruthy(),
+    )
+  })
+})
 
 describe('not-found — landing recovery branch', () => {
   it('recovers a stale /landing/<unknown> link to the detected locale', async () => {

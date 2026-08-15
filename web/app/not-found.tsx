@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { detectLandingSlug } from '@/lib/onboarding/locales'
+import { Capacitor } from '@capacitor/core'
+import { detectLandingSlug, localeForSlug } from '@/lib/onboarding/locales'
+import { landingCatalog } from '@/lib/i18n/landing'
 
 /**
  * spec 045 US1 — the codebase's first not-found route, with two strictly separate
@@ -27,10 +29,19 @@ import { detectLandingSlug } from '@/lib/onboarding/locales'
 export default function NotFound() {
   const router = useRouter()
   const [recovering, setRecovering] = useState(false)
+  const [slug, setSlug] = useState('en')
 
   useEffect(() => {
+    setSlug(detectLandingSlug(navigator.language))
+
+    // Same rule as the root router, for the same reason: the installed app must never
+    // reach a marketing page. Reaching this branch on native would need something to
+    // navigate to /landing/* inside the shell — nothing does today — but the guard is
+    // one line and this is precisely the failure the feature exists to prevent.
+    if (Capacitor.isNativePlatform()) return
+
     const path = window.location.pathname
-    // Trailing slash matters: `/landing/fr` recovers, but `/landingpage` is an
+    // The trailing slash matters: `/landing/fr` recovers, but `/landingpage` is an
     // unrelated path and must fall through to the ordinary page.
     if (!path.startsWith('/landing/')) return
     setRecovering(true)
@@ -41,17 +52,27 @@ export default function NotFound() {
   // followed a legitimate — if outdated — link.
   if (recovering) return null
 
+  // Localized from the funnel's own catalogs. This page is pre-auth, so it cannot use
+  // the store's `t()` — and shipping it English-only would be a visible gap in a
+  // product whose whole front door is language-specific. Resolved after mount (the
+  // static document can't know the browser language), which is why it starts at 'en'.
+  const copy = landingCatalog(slug)
+  const locale = localeForSlug(slug)
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-bg px-6">
+    <div
+      lang={locale?.locale}
+      className="flex min-h-screen flex-col items-center justify-center bg-bg px-6"
+    >
       <div className="w-full max-w-sm text-center">
         <h1 className="text-2xl font-light tracking-tight text-text">Ortho</h1>
-        <p className="mt-2 text-sm text-text-2">We couldn&rsquo;t find that page.</p>
+        <p className="mt-2 text-sm text-text-2">{copy.notFoundLine}</p>
         <a
           href="/"
           className="ortho-interactive mt-6 inline-block rounded-full px-5 py-2.5 text-[15px] font-normal text-accent"
           style={{ background: 'var(--chip-bg)' }}
         >
-          Go to Ortho
+          {copy.notFoundCta}
         </a>
       </div>
     </div>

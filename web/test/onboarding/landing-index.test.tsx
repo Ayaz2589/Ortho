@@ -4,8 +4,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 
-const h = vi.hoisted(() => ({ replace: vi.fn() }))
+const h = vi.hoisted(() => ({ replace: vi.fn(), isNativePlatform: vi.fn(() => false) }))
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: h.replace, push: vi.fn() }) }))
+vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: h.isNativePlatform } }))
 
 import LandingIndex from '@/app/landing/page'
 import { LANDING_CATALOGS } from '@/lib/i18n/landing'
@@ -14,8 +15,21 @@ function setLanguage(tag: string) {
   Object.defineProperty(window.navigator, 'language', { value: tag, configurable: true })
 }
 
-beforeEach(() => h.replace.mockClear())
+beforeEach(() => {
+  h.replace.mockClear()
+  h.isNativePlatform.mockReturnValue(false)
+})
 afterEach(cleanup)
+
+describe('/landing on the installed app', () => {
+  it('goes to the dashboard, never to a locale page', async () => {
+    h.isNativePlatform.mockReturnValue(true)
+    setLanguage('es-ES')
+    render(<LandingIndex />)
+    await waitFor(() => expect(h.replace).toHaveBeenCalledWith('/dashboard'))
+    expect(h.replace).not.toHaveBeenCalledWith('/landing/es')
+  })
+})
 
 describe('/landing (no slug)', () => {
   it('forwards to the detected locale', async () => {

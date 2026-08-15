@@ -4,6 +4,8 @@ const bn: LandingCatalog = {
   metaTitle: 'Ortho — ঘরের হিসাব, গোছানো।',
   metaDescription:
     'খরচের হিসাব রাখা, ভাগ করে নেওয়া আর একসাথে পরিকল্পনা করার একটি শান্ত উপায়। পরিবারের জন্য, আপনার ভাষায়।',
+  notFoundLine: 'আমরা সেই পাতাটি খুঁজে পাইনি।',
+  notFoundCta: 'Ortho-তে যান',
   placeholderLine: 'ঘরের হিসাব, গোছানো।',
 }
 

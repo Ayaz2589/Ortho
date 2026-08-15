@@ -29,6 +29,10 @@ export interface LandingCatalog {
   metaDescription: string
   /** The single line the placeholder renders. Feature 046 replaces this surface. */
   placeholderLine: string
+  /** not-found.tsx body. Pre-auth, so it cannot use the store's `t()`. */
+  notFoundLine: string
+  /** not-found.tsx back-affordance label. */
+  notFoundCta: string
 }
 
 /**

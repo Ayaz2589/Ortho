@@ -7,6 +7,8 @@ const en: LandingCatalog = {
   metaTitle: 'Ortho — household finance, in order.',
   metaDescription:
     'A calm way to track spending, split costs and plan together. Built for households, in your language.',
+  notFoundLine: 'We couldn\u2019t find that page.',
+  notFoundCta: 'Go to Ortho',
   placeholderLine: 'Household finance, in order.',
 }
 

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { Capacitor } from '@capacitor/core'
 import { detectLandingSlug } from '@/lib/onboarding/locales'
 
 /**
@@ -17,6 +18,12 @@ export default function LandingIndex() {
   const router = useRouter()
 
   useEffect(() => {
+    // Defense in depth, matching the root router: nothing in the installed app links
+    // here, but if anything ever did, it must land in the app rather than marketing.
+    if (Capacitor.isNativePlatform()) {
+      router.replace('/dashboard')
+      return
+    }
     router.replace(`/landing/${detectLandingSlug(navigator.language)}`)
   }, [router])
 

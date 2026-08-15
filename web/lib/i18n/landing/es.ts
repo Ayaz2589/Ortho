@@ -4,6 +4,8 @@ const es: LandingCatalog = {
   metaTitle: 'Ortho — las finanzas del hogar, en orden.',
   metaDescription:
     'Una forma tranquila de seguir los gastos, repartir las cuentas y planificar juntos. Hecho para el hogar, en tu idioma.',
+  notFoundLine: 'No encontramos esa página.',
+  notFoundCta: 'Ir a Ortho',
   placeholderLine: 'Las finanzas del hogar, en orden.',
 }
 
