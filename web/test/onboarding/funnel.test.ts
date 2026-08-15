@@ -93,17 +93,38 @@ describe('funnel marker — storage unavailable', () => {
 })
 
 describe('funnel marker — FR-019: defined here, used by 047/048', () => {
-  it('is imported by no production module in this feature', () => {
-    // 045 owns the contract but must not act on it: setting it belongs to the tour
-    // and acting on it to the hand-off. If this fails, a later feature's behavior
-    // has leaked into the foundation.
-    const hits = execSync(
-      "grep -rl 'onboarding/funnel' app components lib 2>/dev/null || true",
-      { cwd: process.cwd(), encoding: 'utf8' },
-    )
+  /** Production modules importing the funnel module, excluding the module's own home. */
+  function importers(): string[] {
+    return execSync("grep -rl 'onboarding/funnel' app components lib 2>/dev/null || true", {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+    })
       .split('\n')
       .filter(Boolean)
       .filter((f) => !f.startsWith('lib/onboarding/'))
-    expect(hits).toEqual([])
+      .sort()
+  }
+
+  it('is set by the tour and by nothing else', () => {
+    // Originally asserted NO production importer at all — correct while 045 stood
+    // alone, since setting the marker belongs to the tour and acting on it to the
+    // hand-off. Spec 047 is that tour, so the guard is narrowed rather than dropped:
+    // it now names the one permitted caller. A second importer appearing here means a
+    // feature has started writing the marker somewhere it should not.
+    expect(importers()).toEqual(['components/tour/TourDeck.tsx'])
+  })
+
+  it('is still READ by nothing — that belongs to spec 048', () => {
+    // The half of FR-019 that has not been claimed yet. Acting on the marker (and
+    // clearing it so the hand-off fires exactly once) is 048's job; until then, a
+    // reader in production would be a behavior leak.
+    const src = execSync("grep -rn 'readFunnelEntry\\|clearFunnelEntry' app components lib 2>/dev/null || true", {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+    })
+      .split('\n')
+      .filter(Boolean)
+      .filter((line) => !line.startsWith('lib/onboarding/'))
+    expect(src).toEqual([])
   })
 })

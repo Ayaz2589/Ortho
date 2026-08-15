@@ -1,24 +1,47 @@
 <!-- SPECKIT START -->
-Active feature: **spec 046 — per-language landing pages**. Plan:
-`specs/046-landing-pages/plan.md` (spec/research/data-model/quickstart/contracts alongside it).
-Feature 2 of 4 in the onboarding funnel: fills spec 045's six structural placeholders with the real
-marketing page. Replaces `web/components/landing/LandingPlaceholder.tsx` with **`LandingView.tsx`** —
-a hero (wordmark, headline, subhead), a variable-length list of supporting points, one prominent
-`<a href="/tour/{slug}">` and one quieter `<a href="/sign-in">`, both calling spec 045's
-`adoptLandingLanguage(slug)` in their click handler (synchronous localStorage, so "adopt then
-navigate" needs no preventDefault). **Plain anchors, NOT `next/link`** — crawlability is the funnel's
-whole purpose, and `Link` would prefetch `/tour/*`, which spec 047 has not built yet. Copy lives ONLY
-inside the `spec 046` marker region of `web/lib/i18n/landing/*.ts` as a nested `landing: LandingCopy`
-(`headline`/`subhead`/`points[]`/`primaryCta`/`secondaryPrompt`/`secondaryCta`); the app catalogs
-`web/lib/i18n/{bn,es,ja,zh,ko}.ts` stay untouched, and the `spec 047` region is left empty and intact
-for a parallel branch. **`points` is an ARRAY** — that is the mechanism for US3: a market can carry a
-different number of supporting ideas with no per-locale branch in the component. `placeholderLine` is
-removed (the headline supersedes it), which retargets four spec-045 tests. Layout is one centered
-560px reading column, `min-h-screen` never `h-screen`, hero above the fold and points below; tokens
-only, no new CSS (the global focus-visible ring and `.ortho-interactive` already cover it), and
-`components/ui.tsx` is deliberately NOT touched. Six locales ship a faithful translation of one
-English proposition whose every claim traces to a shipped feature — per-market positioning is the
-product owner's, and any locale is a one-region edit. No DB, no migration, no new dependency. Fully TDD.
+Active feature: **the onboarding funnel — specs 045-048**, all four now on the integration branch.
+Plans: `specs/{045-onboarding-foundation,046-landing-pages,047-learn-more-tour,048-new-user-handoff}/plan.md`
+(spec/research/data-model/quickstart/contracts alongside each), over `docs/plan/onboarding-funnel.md`.
+A signed-out front door: `/landing/{en|es|bn|ja|zh|ko}` → `/tour/{locale}` → sign-in → the existing
+financial-health questionnaire.
+
+**045 (foundation)** — `lib/onboarding/locales.ts` is THE single source of truth for the six slugs
+(`LANDING_LOCALES`/`detectLandingSlug`); `funnel.ts` (per-device `ortho.onboardingFunnel` marker) and
+`adoptLanguage.ts` (writes the EXISTING `language` key, on explicit continue only). `app/page.tsx` is a
+**smart router** whose FIRST branch is `Capacitor.isNativePlatform() → /dashboard` — the installed iOS
+app must never show marketing, and the guard test asserts `getUser()` is never *called* on native,
+ordering being the real regression. Six landing documents come from ONE dynamic route
+`app/landing/[locale]/` + `generateStaticParams` (six folders would fail SC-006). Also the app's first
+SEO surface (`robots.ts`, `sitemap.ts`, `metadataBase`) and its first `not-found.tsx`, whose redirect is
+scoped to `/landing/` so a typo'd in-app URL never ejects a signed-in user to marketing. The funnel has
+its OWN small catalogs `lib/i18n/landing/*.ts` — the app catalogs are 32-55 KB and `useTranslate`
+resolves AFTER mount, which would flash English on a locale-fixed page; `lib/i18n/effectiveLanguage.ts`
+was split out of the i18n barrel so a Server Component can import it without pulling React hooks.
+
+**046 (landing pages)** — `components/landing/LandingView.tsx` replaced 045's placeholder: hero, a
+**variable-length** `points[]` array (the mechanism that lets a market carry a different number of
+ideas with no per-locale branch), one prominent `<a href="/tour/{slug}">` and one quieter
+`<a href="/sign-in">`. **Plain anchors, NOT `next/link`** — crawlability is the funnel's purpose.
+Both adopt the language on click; viewing never adopts.
+
+**047 (tour)** — `app/tour/[locale]/` (the second server component; `robots:{index:false}` since a
+funnel step is not a search destination) renders `components/tour/TourDeck.tsx`. **Screens are client
+state, never routes** (6 × 5 = 30 documents for nothing) and position is NOT in the URL
+(`useSearchParams` fails a static build without Suspense; per-screen history would trap Back). **The
+single most invertible requirement: Skip must ALSO call `markFunnelEntry()`** — Finish and Skip share
+one `leaveForSignIn()`, so Skip has no path of its own to forget. Pure logic in `lib/onboarding/tour.ts`.
+
+**048 (hand-off)** — after sign-in, a funnel-walker goes to `/welcome/financial-profile` instead of the
+dashboard, then the marker is cleared. A **scoped reversal of spec 042**, which deliberately deleted
+spec 041's forced redirect: it applies to funnel-walkers ONLY, the announcement drawer stays for
+everyone else, and every 041/042 test still passes. It keys on the marker, NOT profile absence —
+sign-in renders outside `AppStateProvider` and cannot read the profile, so the profile guard lives at
+the questionnaire's entry instead.
+
+Constraints that shaped all four: `output: 'export'` means no server, no middleware, no redirects —
+every routing decision is a client effect; pre-auth routes import neither `lib/store` nor
+`components/ui` (which imports the store) nor an app catalog. No DB, no migration, no new dependency
+anywhere in the funnel. Fully TDD.
 Prior shipped: **spec 045 — onboarding foundation**. Plan:
 `specs/045-onboarding-foundation/plan.md` (spec/research/data-model/quickstart/contracts alongside it).
 The shared plumbing for a signed-out onboarding funnel — landing → tour → sign-in → financial health

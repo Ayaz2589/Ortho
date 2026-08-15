@@ -171,7 +171,25 @@ replace the per-market messaging afterward.
 
 ---
 
-### Spec 047 — Learn-more tour *(sandbox 2)*
+### Spec 047 — Learn-more tour ✅ **IMPLEMENTED** *(sandbox 2)*
+
+Built as planned, with three decisions worth recording because they were open when this was
+written (details in `specs/047-learn-more-tour/research.md`):
+
+- **Position is not in the URL at all.** The scope below left "dots indicator" open as to whether
+  the address tracked the slide. It does not: `useSearchParams` fails a production build without a
+  Suspense boundary, and a pushed history entry per slide would trap the Back button for five
+  presses. Back now leaves the tour in one.
+- **Tour copy is a sibling named export inside the marker region**, not a `LandingCatalog` field —
+  the catalog object literal sits *above* the region, so a field could not have satisfied
+  "copy only inside the markers". `TourCopy` and the registry live in a new
+  `lib/i18n/landing/tour.ts`; `index.ts` is untouched, leaving 046 a zero-line conflict surface.
+- **The tour is `noindex, follow` and stays out of the sitemap.** It is step two of a journey; six
+  more indexable documents would compete with the six landing pages for the same queries.
+
+Two spec-045 assertions in `test/i18n/landing-catalogs.test.ts` were narrowed (the "both regions
+empty on delivery" case, and the directory sweep that now also excludes `tour.ts`). Everything else
+in the 045 surface is untouched.
 
 **Scope**
 - `/tour/{locale}` for the same six locales, **max 5 slides**, drawn from what actually shipped:

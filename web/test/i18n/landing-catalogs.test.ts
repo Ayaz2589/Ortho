@@ -47,8 +47,13 @@ function copyStrings(slug: LandingSlug): Array<[string, string]> {
 
 describe('landing catalogs — coverage', () => {
   it('has exactly one catalog file per registry slug', () => {
+    // Non-catalog modules in this directory are excluded by name, so the check stays a
+    // real "one file per slug" assertion rather than drifting into a file count:
+    //   index.ts — the LandingCatalog type + LANDING_CATALOGS registry (spec 045)
+    //   tour.ts  — the TourCopy type + TOUR_CATALOGS registry (spec 047)
+    const NOT_A_CATALOG = ['index.ts', 'tour.ts']
     const files = readdirSync(DIR)
-      .filter((f) => f.endsWith('.ts') && f !== 'index.ts')
+      .filter((f) => f.endsWith('.ts') && !NOT_A_CATALOG.includes(f))
       .map((f) => f.replace(/\.ts$/, ''))
       .sort()
     expect(files).toEqual([...landingSlugs()].sort())
@@ -155,17 +160,22 @@ describe('landing catalogs — reserved regions for features 046/047', () => {
   const between = (src: string, open: string, close: string) =>
     src.slice(src.indexOf(open) + open.length, src.indexOf(close)).trim()
 
+  // Merge resolution (046 + 047). Spec 045 shipped both regions EMPTY and asserted so;
+  // each feature then narrowed that assertion from its own side — 046 claimed its region
+  // while 047's was still empty, and 047 the mirror image. Both regions are now filled,
+  // so the standing invariant is that each is CLAIMED and neither feature consumed,
+  // reordered or tidied away the other's. That is the marker mechanism having worked.
   it.each(landingSlugs())('fills the spec 046 region in %s.ts', (slug) => {
-    // spec 046 — all of this feature's marketing copy lives here and nowhere else
-    // (FR-005). An empty region would mean a locale shipped without a proposition.
+    // spec 046 — all of its marketing copy lives here and nowhere else (FR-005). An
+    // empty region would mean a locale shipped without a proposition.
     expect(between(source(slug), OPEN_046, CLOSE_046)).not.toBe('')
   })
 
-  it.each(landingSlugs())('leaves the spec 047 region empty in %s.ts', (slug) => {
-    // The contract spec 047 depends on. Its tour copy is being written in a PARALLEL
-    // sandbox against these same six files; 046 must not consume, reorder or tidy
-    // away the region it will insert into.
-    expect(between(source(slug), OPEN_047, CLOSE_047)).toBe('')
+  it.each(landingSlugs())('fills the spec 047 region in %s.ts', (slug) => {
+    // spec 047 — tour copy, inside the markers as a sibling export (it sits below the
+    // LandingCatalog literal, so a field would have had to live OUTSIDE them). Its
+    // deeper structural guards are in test/i18n/tour-catalogs.test.ts.
+    expect(between(source(slug), OPEN_047, CLOSE_047)).not.toBe('')
   })
 
   it.each(landingSlugs())('separates the two regions by blank context in %s.ts', (slug) => {
