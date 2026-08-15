@@ -125,7 +125,7 @@ behavior. The work here is proving it holds and cannot silently regress.
 
 - [X] T023 **RED** [US3] Add to `test/onboarding/landing-view.test.tsx` the structural proof for US3 acceptance scenario 2: render `LandingView` with a fabricated copy object carrying **two** points, and again with **four**, and assert both render every point with no per-locale branching. This is the test that fails the day someone "simplifies" `points` into `point1`/`point2`/`point3`.
 - [X] T024 **GREEN** [US3] Confirm T023 passes against the T017 implementation unchanged. If it does not, the component is branching on locale or assuming a fixed count — fix the component, never the test.
-- [ ] T025 [P] [US3] Prove SC-005 mechanically: `git diff --name-only` for a trial edit of one locale's `landing` block must list exactly one file. Record the result in the PR description; revert the trial edit.
+- [X] T025 [P] [US3] Prove SC-005 mechanically: `git diff --name-only` for a trial edit of one locale's `landing` block must list exactly one file. Record the result in the PR description; revert the trial edit.
 
 **Checkpoint**: per-market positioning is a one-region edit, and a test says so.
 
@@ -136,11 +136,41 @@ behavior. The work here is proving it holds and cannot silently regress.
 - [X] T026 Measure the catalog byte budget ([quickstart.md](./quickstart.md) §2): `wc -c lib/i18n/landing/*.ts`. Must stay under the 30,000-byte guard, which is **not** to be raised — if the copy approaches it, the page has too many words (research §5).
 - [X] T027 [P] Reconcile `docs/web.md` §2: the spec-045 bullet describes six *placeholder* pages and names `LandingPlaceholder.tsx`. Update it to describe the real landing pages and `LandingView.tsx`, and record the plain-`<a>`/no-`next/link` decision so the next person does not "upgrade" it and reintroduce prefetches to `/tour/*`.
 - [X] T028 [P] Reconcile `docs/plan/onboarding-funnel.md`: mark feature 046 implemented, and note the primary CTA ships as "See how it works" rather than the diagram's "Learn more" (research §9), so the doc and the product agree.
-- [ ] T029 Verify the full gate: `npx tsc --noEmit` clean and `npm test` green (275+ files). Keeping `tsc` clean is not optional — a type error fails `next build`, and there is no other build gate.
-- [ ] T030 Verify the static export really produced six real pages ([quickstart.md](./quickstart.md) §3): `npm run build`, then confirm `out/landing/*.html` exists for all six, the `ja` title is in Japanese, `ja` carries seven hreflang links, and `out/landing/ko.html` links to `/tour/ko`. That last grep is the whole feature in one line.
+- [X] T029 Verify the full gate: `npx tsc --noEmit` clean and `npm test` green (275+ files). Keeping `tsc` clean is not optional — a type error fails `next build`, and there is no other build gate.
+- [X] T030 Verify the static export really produced six real pages ([quickstart.md](./quickstart.md) §3): `npm run build`, then confirm `out/landing/*.html` exists for all six, the `ja` title is in Japanese, `ja` carries seven hreflang links, and `out/landing/ko.html` links to `/tour/ko`. That last grep is the whole feature in one line.
 - [ ] T031 **Operator** Browser walkthrough, [quickstart.md](./quickstart.md) §4 steps 1–6: above-the-fold on a phone; no English flash on first paint; view-adopts-nothing then click-adopts; the Korean sign-in hand-off. Step 2 and step 3 are the two that catch subtle regressions — a lost static import, and an over-eager adopt.
 - [ ] T032 **Operator, macOS only** iOS shell confirm ([quickstart.md](./quickstart.md) §5): the installed app opens on `/dashboard` or `/sign-in` and never displays a landing page. This feature adds the first interactive landing surface, so re-confirm spec 045's guard.
 - [ ] T033 **Product owner** Copy review ([quickstart.md](./quickstart.md) §6): read all six `landing` blocks. What ships is a translated English proposition making only supportable claims; per-market positioning is deliberately not invented and is a one-region edit when you want it.
+
+---
+
+## Verification record (2026-08-15)
+
+What the automatable gates actually returned, so a reviewer does not have to re-run them to know
+where this stands.
+
+| Gate | Result |
+|---|---|
+| Baseline before any change (T001) | 275 files / 2569 passed |
+| Full suite after (T029) | **276 files / 2621 passed**, 3 expected-fail unchanged |
+| `npx tsc --noEmit` (T029) | clean |
+| Catalog byte budget (T026) | **10,959** of 30,000 bytes across the six catalogs (was 6,303) |
+| Static export (T030) | six documents; each with 1 canonical + **7** `rel="alternate"`; `ja` title in Japanese; `out/landing/ko.html` links to `/tour/ko` and `/sign-in`; the Bengali headline is in the **served HTML**, not just after hydration |
+| SC-005 blast radius (T025) | rewriting `es`'s proposition **and** taking it from three points to four changed exactly **one** file — `web/lib/i18n/landing/es.ts` — with the suite still green. No component, no other locale, no test. |
+
+**Two honest notes on the TDD record.**
+
+1. T019 (US2 semantics) and T023 (US3 point-count) **passed on first run** rather than going RED:
+   T017 was written from a plan that already specified those properties, so the assertions were
+   satisfied on arrival. Rather than claim a RED that did not happen, each was verified by
+   *mutation* — the component was temporarily broken three ways (`<h1>`→`<h2>`, `points.slice(0,3)`,
+   an added `outline-none`) and exactly the intended tests failed, 7 of 47. The mutations were then
+   reverted. That is what a RED buys you — proof the test has teeth — obtained after the fact.
+2. Everything else ran RED first, verifiably: Phase 1 failed 10/47 naming the missing copy, and
+   Phase 3 failed on `LandingView` not existing.
+
+**One inherited question closed.** Spec 045's research §2 deferred "does `x-default` survive Next's
+`alternates.languages` record?" to a built-HTML check. It does — verified in T030, all six documents.
 
 ---
 
