@@ -117,7 +117,7 @@ signed-out web visitors to marketing.
 **This phase carries the feature's highest regression risk. The guard test lands in the same change
 as the router — never after it.**
 
-- [ ] T015 [US2] Write the failing native-guard tests in `web/test/onboarding/root-router.test.tsx`
+- [X] T015 [US2] Write the failing native-guard tests in `web/test/onboarding/root-router.test.tsx`
       FIRST, before touching `app/page.tsx`. Mock Capacitor with the established pattern
       `vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => true } }))` (see
       `web/test/store/context-render-isolation.test.tsx:15`; use the parameterized form from
@@ -125,12 +125,12 @@ as the router — never after it.**
       the router reaches `/dashboard` AND `supabase.auth.getUser()` is **never called** — the
       ordering, not just the destination, is the regression; and that native with a signed-out
       session and an `es-ES` device language still reaches `/dashboard`.
-- [ ] T016 [US2] Extend `web/test/onboarding/root-router.test.tsx` with the remaining rows of the
+- [X] T016 [US2] Extend `web/test/onboarding/root-router.test.tsx` with the remaining rows of the
       matrix in `contracts/root-router.md` §1: web+signed-in → `/dashboard` with no landing render
       at any point; web+signed-out+`es-ES` → `/landing/es`; web+signed-out+`fr-FR` → `/landing/en`;
       web+signed-out+absent-language → `/landing/en`; and while the decision is resolving, neither
       destination is rendered.
-- [ ] T017 [US2] Rewrite `web/app/page.tsx` as the three-branch smart router. Branch 1
+- [X] T017 [US2] Rewrite `web/app/page.tsx` as the three-branch smart router. Branch 1
       (`Capacitor.isNativePlatform()` → `/dashboard`) MUST be first and synchronous — no await, no
       storage read, no language read before it. Use `router.replace()`, never `window.location` (a
       hard navigation would hit the extensionless-path fallback documented in `web/lib/nav.ts`), and
