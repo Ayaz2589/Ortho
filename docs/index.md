@@ -108,6 +108,11 @@ the `savings-trends` widget. Budgets/Goals live under Settings → Planning, not
 5. **Check env**: gitignored `web/.env.local` needs `NEXT_PUBLIC_SUPABASE_URL` +
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`; `IMPORT_EMAIL` for CLI OTP; `SUPABASE_SERVICE_ROLE_KEY` only
    for `ADMIN=1`. The backend is **live shared data** — prefer `DRY_RUN=1` for CLI writes.
+   `NEXT_PUBLIC_SITE_URL` (spec 045) is **optional and currently unset everywhere** — it is the
+   marketing origin for canonical/hreflang links and the sitemap. Without it `lib/siteUrl.ts`
+   falls back to the Vercel deployment host, then `http://localhost:3000`; both work, but the
+   wrong domain would be indexed. Setting it in Vercel production is an operator task before the
+   landing pages are submitted for indexing.
 6. **If changing pure finance logic**: edit the TS, `npm run gen:vectors`, `npm test`, review the
    vector diff as a behavior change, reconcile `PARITY.md`.
 7. **If adding a feature**: Spec Kit flow (`specify → plan → tasks → implement`) into a new
