@@ -1,6 +1,6 @@
 # Feature Specification: Goal Detail & Contribution Editing
 
-**Feature Branch**: `045-goal-detail-contributions`
+**Feature Branch**: `049-goal-detail-contributions`
 
 **Created**: 2026-08-15
 

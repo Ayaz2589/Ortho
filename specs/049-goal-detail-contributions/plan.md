@@ -1,8 +1,8 @@
 # Implementation Plan: Goal Detail & Contribution Editing
 
-**Branch**: `feat/045-goal-detail-contributions` | **Date**: 2026-08-15 | **Spec**: [spec.md](./spec.md)
+**Branch**: `feat/049-goal-detail-contributions` | **Date**: 2026-08-15 | **Spec**: [spec.md](./spec.md)
 
-**Input**: Feature specification from `/specs/045-goal-detail-contributions/spec.md`
+**Input**: Feature specification from `/specs/049-goal-detail-contributions/spec.md`
 
 ## Summary
 
@@ -73,7 +73,7 @@ decision recorded in the spec, not an unjustified deviation.
 ### Documentation (this feature)
 
 ```text
-specs/045-goal-detail-contributions/
+specs/049-goal-detail-contributions/
 ├── plan.md              # This file
 ├── spec.md              # Feature specification
 ├── research.md          # Phase 0 — R1..R8

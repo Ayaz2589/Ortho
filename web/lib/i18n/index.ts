@@ -24,21 +24,15 @@ const CATALOG_LOADERS: Record<CatalogLang, () => Promise<{ default: Record<strin
   한국어: () => import('./ko'),
 }
 
-/** Resolve "System" to a named language via the browser's language tag,
- *  mirroring iOS's system-language behavior. Unsupported tags → English. */
-export function effectiveLanguage(language: Language): Language {
-  if (language !== 'System') return language
-  const tag = (typeof navigator !== 'undefined' ? navigator.language : '') || ''
-  const prefix = tag.toLowerCase().split('-')[0]
-  switch (prefix) {
-    case 'bn': return 'বাংলা'
-    case 'es': return 'Español'
-    case 'ja': return '日本語'
-    case 'zh': return '简体中文'
-    case 'ko': return '한국어'
-    default: return 'English'
-  }
-}
+/** Resolve "System" to a named language via the browser's language tag.
+ *
+ *  spec 045: moved to ./effectiveLanguage.ts and re-exported here, so every existing
+ *  `from '@/lib/i18n'` import is unchanged. It had to leave this file because this
+ *  module depends on React hooks (`useTranslate` below), which makes it client-only —
+ *  and the landing route is a Server Component that needs the pure resolver. The
+ *  function itself was always pure; it was simply in the wrong file. */
+export { effectiveLanguage } from './effectiveLanguage'
+import { effectiveLanguage } from './effectiveLanguage'
 
 /** Dynamically load the catalog for a language (`undefined` for English/System-
  *  English). Only the active language's chunk is fetched. */

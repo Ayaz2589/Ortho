@@ -24,14 +24,26 @@ Finance-engine math lives in [./finance.md](./finance.md); schema/RLS in
 - The package also hosts the deterministic bank-statement import + tx CRUD CLI
   (`web/scripts/import/`), driven by the root Makefile — internals in [./makefile.md](./makefile.md).
 
-## 2. Route tree (all `'use client'`)
+## 2. Route tree (all `'use client'` except the landing and tour routes — see below)
 
 ```
 web/app/
   layout.tsx            fonts (self-hosted Lato ×4 via next/font/local), viewport-fit=cover,
                         inline pre-paint APPEARANCE_BOOT (theme + html.native) + TEXT_SIZE_BOOT
-                        (whole-UI zoom scale, spec 040) scripts — both no-flash
-  page.tsx              client redirect → /dashboard
+                        (whole-UI zoom scale, spec 040) scripts — both no-flash;
+                        metadataBase from lib/siteUrl.ts (spec 045)
+  page.tsx              SMART ROUTER (spec 045): native → /dashboard (FIRST, synchronous);
+                        signed-in web → /dashboard; signed-out web → /landing/{detected}
+  landing/page.tsx      bare /landing → forwards to the detected locale
+  landing/[locale]/     SERVER component — generateStaticParams from the registry,
+                        dynamicParams:false, per-locale metadata + hreflang;
+                        renders components/landing/LandingView.tsx (spec 046)
+  tour/[locale]/        SERVER component (spec 047) — the ≤5-screen learn-more tour;
+                        same static-params shape, metadata is noindex (funnel step, not
+                        a search destination); screens are CLIENT STATE, so six
+                        documents, not thirty
+  not-found.tsx         calm 404; redirects ONLY paths under /landing/ (spec 045)
+  robots.ts, sitemap.ts static Route Handlers — the app's first SEO surface
   sign-in/page.tsx      8-digit email OTP (signInWithOtp → verifyOtp(type:'email')); bounces
                         signed-in users to /dashboard on mount; builds its own t()
   (app)/layout.tsx      AppStateProvider + Shell + biometric lock overlay + paywall gate
@@ -60,6 +72,76 @@ web/app/
   `goalPacing`; no new data). `/budgets` and `/goals` are the detail pages the hub links to (the old
   Settings › Planning route now client-redirects to `/planning`). `/plaid-oauth` is the web
   bank-OAuth return route.
+- **Onboarding funnel foundation (spec 045)** — the app's first *pre-auth* surface, and the first
+  thing here that is not a signed-in screen. Four things are easy to get wrong:
+  1. **`/` is also the installed iOS app's entry point** (Capacitor wraps this same bundle). The
+     root router's native branch is therefore first and synchronous — a marketing page must never
+     paint inside the App Store build. The guard test asserts `getUser()` is never *called* on
+     native, because destination alone would still pass with the race present.
+  2. **`landing/[locale]/page.tsx` and `tour/[locale]/page.tsx` are the codebase's only server
+     components.** Next permits a `metadata` export from nothing else, and per-locale
+     titles/hreflang are the point. One dynamic route each, not six folders, so adding a language
+     is a single edit to `LANDING_LOCALES`.
+  3. **The funnel has its OWN catalogs** (`lib/i18n/landing/*.ts`). The app catalogs are 32–55 KB
+     and `useTranslate` resolves them *after* mount — fine for the app, but it would flash English
+     on a locale-fixed marketing page. Never add funnel copy to `lib/i18n/{bn,es,ja,zh,ko}.ts`.
+  4. **`not-found.tsx` redirects only under `/landing/`.** A blanket redirect-to-marketing would
+     eject a signed-in user who mistyped an in-app URL.
+  Pure modules live in `lib/onboarding/`: `locales.ts` (the registry — the single source of truth
+  for the six slugs), `adoptLanguage.ts` (writes the existing `language` key on an explicit
+  continue), `funnel.ts` (per-device marker, defined here but set by 047 and read by 048).
+- **Landing page content (spec 046)** — `components/landing/LandingView.tsx` replaced 045's inert
+  `LandingPlaceholder`: a hero (wordmark, `<h1>` proposition, subhead), a **variable-length** list of
+  supporting points, one prominent action to `/tour/{slug}` and one quieter link to `/sign-in`. Four
+  things here are load-bearing:
+  1. **Both actions are plain `<a href>` — deliberately not `next/link`.** A crawlable link from a
+     landing page to its tour is the whole SEO point of a per-language funnel, and `Link` would
+     prefetch `/tour/*`. Don't "upgrade" this.
+  2. **Both call `adoptLandingLanguage(slug)` in `onClick`**, so the language carries into sign-in
+     and the app. It is a synchronous `localStorage` write, so no `preventDefault` is needed.
+     **Viewing a page must never adopt** — that view/act split is what lets a Spanish speaker open a
+     shared Japanese link without losing their preference, and it is pinned in both directions.
+  3. **Copy lives in the `spec 046` marker region** of each `lib/i18n/landing/*.ts` as a nested
+     `landing: LandingCopy`. (The `spec 047` region beside it now holds the tour copy — the two
+     features were built in parallel sandboxes and merged with one conflict, in a shared *test*,
+     never in the catalog data. The markers did their job.)
+  4. **`points` is an array, not `point1`/`point2`/`point3`.** That is the entire mechanism by which
+     a market can carry a different number of supporting ideas with no per-locale branch in the
+     component; a test renders 1/2/4/5-point catalogs to keep it that way.
+- **Learn-more tour (spec 047)** — `/tour/{locale}`, five screens between the landing page and
+  sign-in, built on 045's contracts. Three things are easy to get wrong:
+  1. **Skip must ALSO call `markFunnelEntry()`.** The intuitive reading ("they opted out") is
+     wrong: a visitor who skips is still a funnel visitor, and dropping the marker silently costs
+     them the guided hand-off 048 provides. Both exits therefore route through one
+     `leaveForSignIn()` — adopt language → mark funnel → `push('/sign-in')` — so Skip has no path
+     of its own to forget.
+  2. **Screens are client state, and position is NOT in the URL.** `useSearchParams` fails a
+     production build without a Suspense boundary, and a pushed history entry per screen would
+     mean pressing Back five times to leave. Back leaves the tour in one press.
+  3. **No `components/ui`.** That module imports `lib/store`, so `PrimaryButton` would drag
+     Supabase and the household data layer onto a signed-out page. The tour reproduces its recipe
+     in tokens instead. Copy lives only inside the `spec 047` markers in `lib/i18n/landing/*.ts`,
+     as a sibling named export typed at `lib/i18n/landing/tour.ts` — `index.ts` is untouched.
+  Edge-case logic (`clampScreen`/`swipeIntent`/`formatPosition`) is pure, in `lib/onboarding/tour.ts`.
+- **New-user hand-off (spec 048)** — closes the funnel: `lib/onboarding/handoff.ts`
+  (`resolvePostSignInRoute()`) is `funnel.ts`'s reader. `app/sign-in/page.tsx` calls it in `verify()`
+  instead of hardcoding `/dashboard`; a marker means "clear it, mark the `financial-health`
+  announcement seen, go to `/welcome/financial-profile`", and no marker means `/dashboard` having
+  written *nothing*. Three things to keep straight:
+  1. **It is a SCOPED reversal of spec 042.** 041 hard-redirected every profile-less user, 042
+     deleted that on purpose. The hard hand-off is back for funnel-walkers *only* — which is why the
+     decision reads the marker and never profile absence. The spec 041/042 test files are the
+     regression lock: if a change needs one of them edited, the reversal has leaked.
+  2. **The profile check is at the destination, not at sign-in.** `app/sign-in/page.tsx` renders
+     outside `AppStateProvider` and cannot read `userFinancialProfile`, so
+     `app/(app)/welcome/financial-profile/page.tsx` carries the entry guard (renders `null` while
+     redirecting — no stepper flash). This split is the design, not an oversight.
+  3. **Only the successful-`verifyOtp` path is wired.** The already-signed-in mount bounce stays a
+     literal `/dashboard`; routing it through the hand-off would let a stale per-device marker greet
+     a returning user with a questionnaire.
+  Keeping the logic in `lib/onboarding/` also keeps 045's FR-019 guard test green — it asserts that
+  nothing outside `lib/onboarding/` imports `onboarding/funnel`, so inlining the read into the
+  sign-in page would have broken it.
 - **Reports mode was removed (spec 036)** — the Overview/Reports toggle (`ModeSwitch`) and the
   fetched `ReportsView`/`useReportsData` UI are gone; the savings-rate view now lives on the board as
   the local-compute `savings-trends` widget. The Dashboard is a single view. (The pure aggregate/

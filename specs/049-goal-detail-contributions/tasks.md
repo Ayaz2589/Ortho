@@ -1,6 +1,6 @@
 # Tasks: Goal Detail & Contribution Editing
 
-**Feature dir**: `specs/045-goal-detail-contributions/` | **Branch**: `feat/045-goal-detail-contributions`
+**Feature dir**: `specs/049-goal-detail-contributions/` | **Branch**: `feat/049-goal-detail-contributions`
 **Inputs**: plan.md, spec.md, research.md, data-model.md, contracts/goal-detail.md, quickstart.md
 **Approach**: TDD (Constitution VI) — every behavior gets a failing test before the code that
 satisfies it. The new date/money math (`goalSeries`) is unit + property tested; the FX round-trip
