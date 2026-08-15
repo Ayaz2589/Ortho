@@ -1,5 +1,25 @@
 <!-- SPECKIT START -->
-Active feature: **spec 045 — onboarding foundation**. Plan:
+Active feature: **spec 048 — new-user hand-off**. Plan:
+`specs/048-new-user-handoff/plan.md` (spec/research/data-model/quickstart/contracts alongside it).
+Feature 4 of 4 in the onboarding funnel (`docs/plan/onboarding-funnel.md`), and the smallest — it
+closes the loop so a visitor who walked landing → tour → sign-in continues into the financial-health
+questionnaire instead of landing on an empty dashboard. **A deliberate, SCOPED reversal of spec 042**:
+041 hard-redirected every profile-less user, 042 deleted that on purpose for a dismissible
+announcement; this reintroduces a hard hand-off for **funnel-walkers only**. Widening it to "any new
+user" undoes 042 — SC-006 forbids editing a single 041/042 test, and `git diff` over those paths must
+stay empty. Three seams: a new pure `web/lib/onboarding/handoff.ts` (`resolvePostSignInRoute()`) is
+the first reader of 045's `ortho.onboardingFunnel` marker — marker present → clear it, mark the
+`financial-health` announcement seen (so nobody is asked twice, FR-006), return
+`/welcome/financial-profile`; absent → `/dashboard` with **zero** side effects. `app/sign-in/page.tsx`
+calls it in `verify()` (the successful-OTP path ONLY — the already-signed-in mount bounce stays
+literal, or a stale marker would greet a returning user). The crux: sign-in renders OUTSIDE
+`AppStateProvider` and cannot read the profile, so the "already has one?" check lives at the
+questionnaire's entry guard instead (`app/(app)/welcome/financial-profile/page.tsx`, renders `null`
+while redirecting — no flash) — that split is why FR-004 is separate from FR-001. Skip stays
+DISMISS-ONLY (no zero-income write; 042's reason still holds). No DB, no migration, no new dependency,
+no new copy — no catalog touched. Stacked on spec 045 (PR #108, unmerged); PR #111 targets
+`docs/onboarding-funnel-plan`. Fully TDD.
+Prior (unmerged, this branch builds on it): **spec 045 — onboarding foundation**. Plan:
 `specs/045-onboarding-foundation/plan.md` (spec/research/data-model/quickstart/contracts alongside it).
 The shared plumbing for a signed-out onboarding funnel — landing → tour → sign-in → financial health
 — planned end to end in `docs/plan/onboarding-funnel.md` as four features; this is the first, and it
