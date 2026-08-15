@@ -123,6 +123,25 @@ web/app/
      in tokens instead. Copy lives only inside the `spec 047` markers in `lib/i18n/landing/*.ts`,
      as a sibling named export typed at `lib/i18n/landing/tour.ts` — `index.ts` is untouched.
   Edge-case logic (`clampScreen`/`swipeIntent`/`formatPosition`) is pure, in `lib/onboarding/tour.ts`.
+- **New-user hand-off (spec 048)** — closes the funnel: `lib/onboarding/handoff.ts`
+  (`resolvePostSignInRoute()`) is `funnel.ts`'s reader. `app/sign-in/page.tsx` calls it in `verify()`
+  instead of hardcoding `/dashboard`; a marker means "clear it, mark the `financial-health`
+  announcement seen, go to `/welcome/financial-profile`", and no marker means `/dashboard` having
+  written *nothing*. Three things to keep straight:
+  1. **It is a SCOPED reversal of spec 042.** 041 hard-redirected every profile-less user, 042
+     deleted that on purpose. The hard hand-off is back for funnel-walkers *only* — which is why the
+     decision reads the marker and never profile absence. The spec 041/042 test files are the
+     regression lock: if a change needs one of them edited, the reversal has leaked.
+  2. **The profile check is at the destination, not at sign-in.** `app/sign-in/page.tsx` renders
+     outside `AppStateProvider` and cannot read `userFinancialProfile`, so
+     `app/(app)/welcome/financial-profile/page.tsx` carries the entry guard (renders `null` while
+     redirecting — no stepper flash). This split is the design, not an oversight.
+  3. **Only the successful-`verifyOtp` path is wired.** The already-signed-in mount bounce stays a
+     literal `/dashboard`; routing it through the hand-off would let a stale per-device marker greet
+     a returning user with a questionnaire.
+  Keeping the logic in `lib/onboarding/` also keeps 045's FR-019 guard test green — it asserts that
+  nothing outside `lib/onboarding/` imports `onboarding/funnel`, so inlining the read into the
+  sign-in page would have broken it.
 - **Reports mode was removed (spec 036)** — the Overview/Reports toggle (`ModeSwitch`) and the
   fetched `ReportsView`/`useReportsData` UI are gone; the savings-rate view now lives on the board as
   the local-compute `savings-trends` widget. The Dashboard is a single view. (The pure aggregate/

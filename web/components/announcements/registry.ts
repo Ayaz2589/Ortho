@@ -35,6 +35,16 @@ export interface Announcement {
 }
 
 /**
+ * Stable id of the Financial Health announcement — also its seen-ledger key.
+ *
+ * Named because a second module needs it: spec 048's post-sign-in hand-off marks
+ * this announcement seen when it routes a funnel newcomer straight into the
+ * questionnaire, so the same offer is not made twice (048 FR-006). The registry
+ * stays feature-agnostic — this is a shared constant, not a hook.
+ */
+export const FINANCIAL_HEALTH_ANNOUNCEMENT_ID = 'financial-health'
+
+/**
  * Ordered list of announcements. The first entry that is unseen AND relevant is
  * the one shown. Add a new feature's announcement by appending an entry here plus
  * its catalog strings — no changes to the host or the seen-ledger are needed.
@@ -42,7 +52,7 @@ export interface Announcement {
 export const ANNOUNCEMENTS: Announcement[] = [
   {
     // spec 041 Financial Health — the first adopter of the pattern.
-    id: 'financial-health',
+    id: FINANCIAL_HEALTH_ANNOUNCEMENT_ID,
     titleKey: 'Financial health',
     descriptionKey:
       "See how your money's doing with a calm 0–100 score — answer a few questions to start.",

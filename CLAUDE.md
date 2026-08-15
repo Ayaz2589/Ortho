@@ -31,12 +31,17 @@ state, never routes** (6 × 5 = 30 documents for nothing) and position is NOT in
 single most invertible requirement: Skip must ALSO call `markFunnelEntry()`** — Finish and Skip share
 one `leaveForSignIn()`, so Skip has no path of its own to forget. Pure logic in `lib/onboarding/tour.ts`.
 
-**048 (hand-off)** — after sign-in, a funnel-walker goes to `/welcome/financial-profile` instead of the
-dashboard, then the marker is cleared. A **scoped reversal of spec 042**, which deliberately deleted
-spec 041's forced redirect: it applies to funnel-walkers ONLY, the announcement drawer stays for
-everyone else, and every 041/042 test still passes. It keys on the marker, NOT profile absence —
-sign-in renders outside `AppStateProvider` and cannot read the profile, so the profile guard lives at
-the questionnaire's entry instead.
+**048 (hand-off)** — a new pure `lib/onboarding/handoff.ts` (`resolvePostSignInRoute()`) is the first
+reader of 045's marker: present → clear it, mark the `financial-health` announcement seen (so nobody
+is asked twice), return `/welcome/financial-profile`; absent → `/dashboard` with **zero** side
+effects. `app/sign-in/page.tsx` calls it in `verify()` — the successful-OTP path ONLY, since routing
+the already-signed-in mount bounce through it would let a stale per-device marker greet a returning
+user with a questionnaire. A **scoped reversal of spec 042**, which deliberately deleted 041's forced
+redirect: funnel-walkers ONLY, the announcement drawer stays for everyone else, and not one 041/042
+test may be edited — those files are the regression lock. It keys on the marker, NOT profile absence
+— sign-in renders outside `AppStateProvider` and cannot read the profile, so the "already has one?"
+guard lives at the questionnaire's entry (rendering `null` while redirecting, so no stepper flash).
+Keeping the read in `lib/onboarding/` also keeps 045's FR-019 guard green. Skip stays DISMISS-ONLY.
 
 Constraints that shaped all four: `output: 'export'` means no server, no middleware, no redirects —
 every routing decision is a client effect; pre-auth routes import neither `lib/store` nor
