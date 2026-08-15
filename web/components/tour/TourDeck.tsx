@@ -83,6 +83,10 @@ export function TourDeck({ locale, copy }: { locale: LandingLocale; copy: TourCo
     // act on.
     if (!checkedPlatform || native) return
     function onKeyDown(event: KeyboardEvent) {
+      // Cmd+← / Alt+← is browser Back (and →, Forward). Without this guard, that
+      // keystroke would BOTH navigate away and step the deck, so the visitor returns
+      // to a tour sitting on a different screen than the one they left.
+      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
       if (event.key === 'ArrowRight') goNext()
       else if (event.key === 'ArrowLeft') goPrev()
     }
@@ -140,11 +144,17 @@ export function TourDeck({ locale, copy }: { locale: LandingLocale; copy: TourCo
               transitions (press feedback), and those are CSS-only, so they are covered
               both by their own `motion-reduce:` opt-out and by the global
               prefers-reduced-motion reset in globals.css. */}
-          <div>
+          {/* Announced when the screen changes: advancing moves no focus, so without a
+              live region a screen-reader user gets silence after pressing Next. */}
+          <div aria-live="polite">
             <h1 className="text-[28px] font-light leading-tight tracking-tight text-text">
               {screen.title}
             </h1>
-            <p className="mt-4 text-[17px] leading-relaxed text-text-2">{screen.body}</p>
+            {/* Full-strength `text`, not `text-2`: on a tour screen the body IS the
+                primary reading text, and Principle V forbids secondary shades there
+                (text-2 measures 3.87:1 in light mode — below AA). Hierarchy is carried
+                by size and weight instead, which is what Principle I asks for anyway. */}
+            <p className="mt-4 text-[17px] leading-relaxed text-text">{screen.body}</p>
           </div>
         </div>
 
@@ -163,7 +173,10 @@ export function TourDeck({ locale, copy }: { locale: LandingLocale; copy: TourCo
                 />
               ))}
             </span>
-            <span className="text-[13px] tabular-nums text-text-3">
+            {/* text-2, not text-3: FR-007 requires the position to be VISIBLE, and
+                text-3 measures 2.18:1 in light and 2.85:1 in dark — unreadable, not
+                merely quiet. text-2 is the app's established secondary shade. */}
+            <span className="text-[13px] tabular-nums text-text-2">
               {formatPosition(copy.position, index + 1, total)}
             </span>
           </div>
@@ -196,11 +209,13 @@ export function TourDeck({ locale, copy }: { locale: LandingLocale; copy: TourCo
                 </button>
               ) : null}
 
-              {/* On every screen, including the last (FR-004). */}
+              {/* On every screen, including the last (FR-004). text-2 rather than
+                  text-3 for the same reason as the position: a required affordance may
+                  be quiet, but it may not be unreadable. */}
               <button
                 type="button"
                 onClick={leaveForSignIn}
-                className="flex h-12 flex-1 items-center justify-center rounded-full text-[15px] font-normal text-text-3 transition-opacity motion-reduce:transition-none"
+                className="flex h-12 flex-1 items-center justify-center rounded-full text-[15px] font-normal text-text-2 transition-opacity motion-reduce:transition-none"
               >
                 {copy.skip}
               </button>

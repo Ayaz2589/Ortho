@@ -292,6 +292,21 @@ describe('tour deck — keyboard (US2)', () => {
     expect(h.push).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ['metaKey', { metaKey: true }],
+    ['ctrlKey', { ctrlKey: true }],
+    ['altKey', { altKey: true }],
+  ])('ignores an arrow held with %s — that is browser back/forward', (_label, modifier) => {
+    // Cmd+← (macOS) and Alt+← (Windows/Linux) are browser Back. Acting on them too
+    // would navigate away AND step the deck, so returning lands on a different screen
+    // than the one they left.
+    renderDeck()
+    advanceTo(2)
+    fireEvent.keyDown(window, { key: 'ArrowLeft', ...modifier })
+    fireEvent.keyDown(window, { key: 'ArrowRight', ...modifier })
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(en.screens[2].title)
+  })
+
   it('stops listening once the deck is gone', () => {
     const view = renderDeck()
     view.unmount()
@@ -428,5 +443,29 @@ describe('tour deck — accessibility and motion (US2)', () => {
   it('hides the decorative position dots from assistive tech', () => {
     const { container } = renderDeck()
     expect(container.querySelector('[aria-hidden="true"]')).toBeTruthy()
+  })
+
+  it('announces the new screen, since advancing moves no focus', () => {
+    // Without a live region a screen-reader user presses Next and hears nothing: the
+    // heading changed, but focus stayed on the button.
+    renderDeck()
+    const live = screen.getByRole('heading', { level: 1 }).parentElement!
+    expect(live.getAttribute('aria-live')).toBe('polite')
+  })
+
+  it('reads body copy at full contrast, not a secondary shade', () => {
+    // On a tour screen the body IS the primary reading text, and Principle V forbids
+    // secondary shades there — `text-text-2` measures 3.87:1 in light mode, under AA.
+    renderDeck()
+    const body = screen.getByText(en.screens[0].body)
+    expect(body.className).toContain('text-text')
+    expect(body.className).not.toMatch(/text-text-[23]\b/)
+  })
+
+  it('never uses the text-3 shade, which fails AA in both themes', () => {
+    // 2.18:1 light, 2.85:1 dark. Fine for a hairline, not for anything anyone reads —
+    // and the position indicator and Skip are both required to be visible.
+    const { container } = renderDeck()
+    expect(container.innerHTML).not.toContain('text-text-3')
   })
 })

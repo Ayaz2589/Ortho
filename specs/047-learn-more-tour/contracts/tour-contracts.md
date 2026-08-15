@@ -112,9 +112,11 @@ What the behavior tests assert against — public, accessible structure, not int
 |---|---|
 | Deck region | `role="region"` with an accessible name from `copy.regionLabel`, and `lang` set to the locale's BCP-47 tag so assistive tech and font selection resolve correctly. |
 | Screen title | An `<h1>` — one per rendered screen. Only the current screen is in the DOM. |
+| Screen wrapper | `aria-live="polite"`. Advancing moves no focus, so without it a screen-reader user presses Next and hears nothing. |
+| Text contrast | The deck uses **no `text-text-3`** anywhere: measured against the tokens it is 2.18:1 in light and 2.85:1 in dark, failing AA in both. Body copy uses full-strength `text-text` (16.26:1) because on a tour screen the body *is* the primary reading text; the position indicator and Skip use `text-text-2`. |
 | Next / Back / Skip / Finish | Real `<button>` elements, reachable in DOM order **advance → back → skip** (advance first because it is what most visitors came to do; back and skip share the row beneath it, which also keeps ~50px of chrome off the fold on a small phone). Skip is present on **every** screen; Back is absent on the first; Next is replaced by Finish on the last. |
 | Position | Rendered as **text** (`copy.position` with `{0}`/`{1}` filled), not by colored dots alone — meaning is never carried by color (Principle I). Decorative dots accompany it and are `aria-hidden`. |
-| Keyboard | `ArrowRight` advances, `ArrowLeft` goes back, anywhere in the tour. |
+| Keyboard | `ArrowRight` advances, `ArrowLeft` goes back, anywhere in the tour — but **only unmodified**. `Cmd+←`/`Alt+←` is browser Back; acting on it too would navigate away *and* step the deck, so returning would land on a different screen than the one they left. |
 | Touch | `touchstart` + `touchend` on the deck; intent decided by `swipeIntent`. |
 | Motion | The screen content carries **no** `transition`/`animate` class — screens swap instantly, so there is no screen motion to suppress. The controls' press feedback is CSS and carries `motion-reduce:transition-none`, and is also covered by `globals.css`'s global `prefers-reduced-motion` reset (research §5). |
 
