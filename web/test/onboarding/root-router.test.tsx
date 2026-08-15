@@ -97,7 +97,7 @@ describe('root router — installed iOS app (FR-004)', () => {
     render(<Home />)
     await waitFor(() => expect(h.replace).toHaveBeenCalled())
     for (const slug of ['en', 'es'] as const) {
-      expect(screen.queryByText(LANDING_CATALOGS[slug].placeholderLine)).toBeNull()
+      expect(screen.queryByText(LANDING_CATALOGS[slug].landing.headline)).toBeNull()
     }
   })
 })

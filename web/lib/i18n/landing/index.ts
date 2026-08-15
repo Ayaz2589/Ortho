@@ -22,17 +22,56 @@ import ja from './ja'
 import zh from './zh'
 import ko from './ko'
 
+/** spec 046 — one supporting idea beneath the proposition. */
+export interface LandingPoint {
+  /** Short label. A phrase, not a sentence. */
+  title: string
+  /** One or two plain sentences expanding the title. */
+  body: string
+}
+
+/**
+ * spec 046 — one locale's marketing positioning, and the only thing a market needs to
+ * rewrite to speak differently. Editing a locale's block must touch no other locale
+ * and no component (SC-005).
+ */
+export interface LandingCopy {
+  /** The proposition. Largest text on the page, and the first thing read. */
+  headline: string
+  /** One sentence expanding the headline. */
+  subhead: string
+  /**
+   * Supporting ideas, rendered in order.
+   *
+   * AN ARRAY, DELIBERATELY — do not "simplify" this to point1/point2/point3. US3
+   * requires a market to be able to ship a different NUMBER of supporting ideas
+   * without a per-locale branch in the component, and the map over this array is the
+   * entire mechanism by which that holds. All six locales ship three today; that is a
+   * content decision, not a structural one.
+   */
+  points: LandingPoint[]
+  /** Label on the prominent action leading to /tour/{slug}. */
+  primaryCta: string
+  /** The quiet line before the sign-in link, e.g. "Already have an account?". */
+  secondaryPrompt: string
+  /** Label on the sign-in link. Matches the app catalogs' existing "Sign in" wording. */
+  secondaryCta: string
+}
+
 export interface LandingCatalog {
   /** <title> for this locale's entry point. */
   metaTitle: string
   /** <meta name="description"> for this locale's entry point. */
   metaDescription: string
-  /** The single line the placeholder renders. Feature 046 replaces this surface. */
-  placeholderLine: string
   /** not-found.tsx body. Pre-auth, so it cannot use the store's `t()`. */
   notFoundLine: string
   /** not-found.tsx back-affordance label. */
   notFoundCta: string
+  /**
+   * This locale's marketing page copy (spec 046). Required: a locale that reached the
+   * registry without words would render an empty front door.
+   */
+  landing: LandingCopy
 }
 
 /**

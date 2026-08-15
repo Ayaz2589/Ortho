@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { LandingPlaceholder } from '@/components/landing/LandingPlaceholder'
+import { LandingView } from '@/components/landing/LandingView'
 import { landingSlugs, localeForSlug } from '@/lib/onboarding/locales'
 import { landingCatalog, LANDING_CATALOGS } from '@/lib/i18n/landing'
 import { landingUrl } from '@/lib/siteUrl'
@@ -78,5 +78,5 @@ export default async function LandingPage({
   // Statically resolved: the catalog is in the initial chunk, so the first painted
   // frame is already in the right language (FR-009). A dynamic import here would
   // reintroduce exactly the English flash this design exists to avoid.
-  return <LandingPlaceholder locale={entry} copy={LANDING_CATALOGS[entry.slug]} />
+  return <LandingView locale={entry} copy={LANDING_CATALOGS[entry.slug]} />
 }

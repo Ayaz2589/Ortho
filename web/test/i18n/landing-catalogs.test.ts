@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { LANDING_CATALOGS, type LandingCatalog } from '@/lib/i18n/landing'
-import { landingSlugs, LANDING_LOCALES } from '@/lib/onboarding/locales'
+import { LANDING_CATALOGS } from '@/lib/i18n/landing'
+import { landingSlugs, LANDING_LOCALES, type LandingSlug } from '@/lib/onboarding/locales'
 
 // spec 045 — the funnel deliberately does NOT use the app catalogs. Those are 32–55 KB
 // each and `useTranslate` resolves them AFTER mount, which would flash English on a
@@ -10,10 +10,39 @@ import { landingSlugs, LANDING_LOCALES } from '@/lib/onboarding/locales'
 // imported instead, so first paint is already correct.
 
 const DIR = join(process.cwd(), 'lib/i18n/landing')
-const KEYS: Array<keyof LandingCatalog> = ['metaTitle', 'metaDescription', 'placeholderLine']
 
 function source(slug: string): string {
   return readFileSync(join(DIR, `${slug}.ts`), 'utf8')
+}
+
+/**
+ * spec 046 — every human-readable string a locale ships, flattened to `[path, value]`
+ * so the quality guards below cover the marketing copy and not just the two meta keys.
+ *
+ * Paths rather than plain values because the failure message is the whole point: a
+ * blank or untranslated string is useless to debug if the assertion can only say "one
+ * of them is wrong". `points` is walked by index because its LENGTH IS PER-LOCALE —
+ * that is the mechanism behind US3 (a market may ship two supporting ideas or four),
+ * so nothing here may assume a fixed count.
+ */
+function copyStrings(slug: LandingSlug): Array<[string, string]> {
+  const c = LANDING_CATALOGS[slug]
+  const out: Array<[string, string]> = [
+    ['metaTitle', c.metaTitle],
+    ['metaDescription', c.metaDescription],
+    ['notFoundLine', c.notFoundLine],
+    ['notFoundCta', c.notFoundCta],
+    ['landing.headline', c.landing.headline],
+    ['landing.subhead', c.landing.subhead],
+    ['landing.primaryCta', c.landing.primaryCta],
+    ['landing.secondaryPrompt', c.landing.secondaryPrompt],
+    ['landing.secondaryCta', c.landing.secondaryCta],
+  ]
+  c.landing.points.forEach((point, i) => {
+    out.push([`landing.points[${i}].title`, point.title])
+    out.push([`landing.points[${i}].body`, point.body])
+  })
+  return out
 }
 
 describe('landing catalogs — coverage', () => {
@@ -34,11 +63,26 @@ describe('landing catalogs — coverage', () => {
 
   it('defines every key in every catalog, none blank', () => {
     for (const slug of landingSlugs()) {
-      for (const key of KEYS) {
-        const value = LANDING_CATALOGS[slug][key]
-        expect(typeof value, `${slug}.${key}`).toBe('string')
-        expect(value.trim().length, `${slug}.${key} is blank`).toBeGreaterThan(0)
+      for (const [path, value] of copyStrings(slug)) {
+        expect(typeof value, `${slug}.${path}`).toBe('string')
+        expect(value.trim().length, `${slug}.${path} is blank`).toBeGreaterThan(0)
       }
+    }
+  })
+
+  it('gives every locale at least one supporting point, each with a title and a body', () => {
+    // spec 046 — `points` is an array, not point1/point2/point3, because US3 requires a
+    // market to be able to carry a different NUMBER of supporting ideas without a
+    // per-locale branch in the component. A locale shipping zero would render a hero
+    // with nothing under it, which is a content bug the type system can't catch.
+    for (const slug of landingSlugs()) {
+      const { points } = LANDING_CATALOGS[slug].landing
+      expect(Array.isArray(points), `${slug}.landing.points is not an array`).toBe(true)
+      expect(points.length, `${slug}.landing.points is empty`).toBeGreaterThan(0)
+      points.forEach((point, i) => {
+        expect(typeof point.title, `${slug}.landing.points[${i}].title`).toBe('string')
+        expect(typeof point.body, `${slug}.landing.points[${i}].body`).toBe('string')
+      })
     }
   })
 })
@@ -47,13 +91,15 @@ describe('landing catalogs — translation quality', () => {
   it('leaves no English string in a non-English catalog', () => {
     // The guard that stops a placeholder shipping as an untranslated stub.
     // Mirrors the existing i18n guards (test/i18n/routines-i18n.test.ts).
-    const en = LANDING_CATALOGS.en
+    const english = new Map(copyStrings('en'))
     for (const slug of landingSlugs()) {
       if (slug === 'en') continue
-      for (const key of KEYS) {
-        expect(LANDING_CATALOGS[slug][key], `${slug}.${key} is still the English string`).not.toBe(
-          en[key],
-        )
+      for (const [path, value] of copyStrings(slug)) {
+        // Compare by PATH, and only where English has the same one: a locale with a
+        // different number of points has paths English does not, and that is allowed
+        // by design (US3). Missing paths are skipped, never treated as a pass/fail.
+        if (!english.has(path)) continue
+        expect(value, `${slug}.${path} is still the English string`).not.toBe(english.get(path))
       }
     }
   })
@@ -69,8 +115,11 @@ describe('landing catalogs — translation quality', () => {
       ko: /[가-힯ᄀ-ᇿ]/, // Hangul
     }
     for (const [slug, pattern] of Object.entries(scripts)) {
-      const joined = KEYS.map((k) => LANDING_CATALOGS[slug as 'bn'][k]).join(' ')
-      expect(pattern!.test(joined), `${slug} catalog is not written in its own script`).toBe(true)
+      // Every string, not just the meta pair — the marketing copy is the bulk of what
+      // ships now, and it is the part most likely to be pasted from the wrong file.
+      for (const [path, value] of copyStrings(slug as LandingSlug)) {
+        expect(pattern!.test(value), `${slug}.${path} is not written in its own script`).toBe(true)
+      }
     }
   })
 
@@ -103,13 +152,20 @@ describe('landing catalogs — reserved regions for features 046/047', () => {
     expect(src.indexOf(OPEN_047)).toBeLessThan(src.indexOf(CLOSE_047))
   })
 
-  it.each(landingSlugs())('leaves both regions empty on delivery in %s.ts', (slug) => {
-    // FR-025: this feature adds no marketing or tour text.
-    const src = source(slug)
-    const between = (open: string, close: string) =>
-      src.slice(src.indexOf(open) + open.length, src.indexOf(close)).trim()
-    expect(between(OPEN_046, CLOSE_046)).toBe('')
-    expect(between(OPEN_047, CLOSE_047)).toBe('')
+  const between = (src: string, open: string, close: string) =>
+    src.slice(src.indexOf(open) + open.length, src.indexOf(close)).trim()
+
+  it.each(landingSlugs())('fills the spec 046 region in %s.ts', (slug) => {
+    // spec 046 — all of this feature's marketing copy lives here and nowhere else
+    // (FR-005). An empty region would mean a locale shipped without a proposition.
+    expect(between(source(slug), OPEN_046, CLOSE_046)).not.toBe('')
+  })
+
+  it.each(landingSlugs())('leaves the spec 047 region empty in %s.ts', (slug) => {
+    // The contract spec 047 depends on. Its tour copy is being written in a PARALLEL
+    // sandbox against these same six files; 046 must not consume, reorder or tidy
+    // away the region it will insert into.
+    expect(between(source(slug), OPEN_047, CLOSE_047)).toBe('')
   })
 
   it.each(landingSlugs())('separates the two regions by blank context in %s.ts', (slug) => {

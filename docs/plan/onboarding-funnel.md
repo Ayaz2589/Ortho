@@ -1,7 +1,8 @@
 # Onboarding funnel — landing page → tour → sign-in → financial health
 
-**Status:** **spec 045 (foundation) is implemented** — see `specs/045-onboarding-foundation/`.
-046, 047 and 048 are planned and ready to build in parallel Docker Sandboxes off 045.
+**Status:** **specs 045 (foundation) and 046 (landing pages) are implemented** — see
+`specs/045-onboarding-foundation/` and `specs/046-landing-pages/`. 047 and 048 are planned and ready
+to build in parallel Docker Sandboxes off 045.
 
 > **Two decisions below were superseded during 045's research and implementation.** They are marked
 > inline where they appear, and both are recorded in `specs/045-onboarding-foundation/research.md`:
@@ -135,7 +136,18 @@ operator-only (browser walkthrough, iOS device confirm, setting `NEXT_PUBLIC_SIT
 
 ---
 
-### Spec 046 — Per-language landing pages *(sandbox 1)*
+### Spec 046 — Per-language landing pages *(sandbox 1)* — **IMPLEMENTED**
+
+> **Shipped as `specs/046-landing-pages/`.** Three notes where the built thing differs from this
+> sketch, all recorded in that feature's `research.md`:
+> - **The primary label is "See how it works"**, not "Learn more". It says what actually happens
+>   next (a tour) rather than that something more exists, which is what the plainspoken-voice
+>   principle asks for. It is one string inside a swappable region if you disagree.
+> - **The secondary label is "Sign in"**, not "Log in" — matching the wording the app catalogs
+>   already use, so the funnel and the app never disagree with each other.
+> - **Open Graph / Twitter card images were deferred.** Under `output: 'export'` there is no
+>   request-time image generation, and a per-locale asset is not the "only if trivial" the spec
+>   scoped. The existing OG *tags* from 045 are unchanged.
 
 **Scope**
 - Real marketing content for all six locales at `/landing/{locale}`, built from the shared
