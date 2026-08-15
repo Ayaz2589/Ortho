@@ -130,7 +130,7 @@ If a change to any of them looks necessary, the feature has grown too wide — s
 - [X] T018 [P] Update the onboarding section of `docs/web.md` — record that `funnel.ts` now has its reader, and where the hand-off and the entry guard live.
 - [X] T019 Confirm the scope bounds hold in the diff: no migration under `supabase/migrations/`, no change to `web/package.json`, and no change to any `web/lib/i18n/` catalog (FR-010; research.md §6).
 - [X] T020 Run [quickstart.md](./quickstart.md) §1–3 end to end and tick its Definition of Done.
-- [ ] T021 Commit, push to `feat/048-new-user-handoff`, mark draft PR #111 ready for review, and watch the Capacitor iOS CI run: `GH_TOKEN=placeholder gh run watch --exit-status`.
+- [X] T021 Commit, push to `feat/048-new-user-handoff`, mark draft PR #111 ready for review, and watch the Capacitor iOS CI run: `GH_TOKEN=placeholder gh run watch --exit-status`.
 
 ---
 
