@@ -1,7 +1,13 @@
 # Onboarding funnel — landing page → tour → sign-in → financial health
 
-**Status:** planned, not yet specified. Breaks into four Spec Kit features (045–048), each built
-in its own Docker Sandbox by its own agent.
+**Status:** **spec 045 (foundation) is implemented** — see `specs/045-onboarding-foundation/`.
+046, 047 and 048 are planned and ready to build in parallel Docker Sandboxes off 045.
+
+> **Two decisions below were superseded during 045's research and implementation.** They are marked
+> inline where they appear, and both are recorded in `specs/045-onboarding-foundation/research.md`:
+> §3 (the funnel gets its own catalogs rather than reserved regions in the app catalogs) and §4
+> (one dynamic route rather than six hand-written folders). The sequencing — foundation first, then
+> three parallel features — is unchanged.
 
 The funnel: a language-specific marketing landing page → a ≤5-slide "what Ortho does" tour →
 the existing OTP sign-in → the existing Financial Health questionnaire. Today the app has no
@@ -86,10 +92,11 @@ These are the things an agent will get wrong if it doesn't read them first.
 
 ## Feature breakdown
 
-### Spec 045 — Onboarding foundation *(lands on main first; not parallel)*
+### Spec 045 — Onboarding foundation ✅ **IMPLEMENTED** *(lands on main first; not parallel)*
 
 Small, low-risk, unblocks everything else. Ships behind no user-visible change except the `/`
-router.
+router. Delivered in `specs/045-onboarding-foundation/` — 31 of 34 tasks, the remaining three being
+operator-only (browser walkthrough, iOS device confirm, setting `NEXT_PUBLIC_SITE_URL` in Vercel).
 
 **Scope**
 - `web/lib/onboarding/locales.ts` — single source of truth: `LANDING_LOCALES` = the six slugs, each
@@ -102,13 +109,18 @@ router.
   whole downstream flow continues in that language.
 - **`app/page.tsx` → the smart router** (native / signed-in / signed-out branches above). This is
   the one behavior change users see, and the one place iOS can regress — test it hard.
-- Route scaffolding: six `app/landing/{en,es,bn,ja,zh,ko}/page.tsx` server components exporting
-  per-locale `metadata`, each rendering a shared placeholder client body. Real content is 046.
+- ~~Six `app/landing/{en,es,…}/page.tsx` route folders.~~ **SUPERSEDED** (research §4): **one**
+  dynamic route `app/landing/[locale]/page.tsx` with `generateStaticParams()` derived from the
+  registry. Six hand-written folders would have made adding a seventh language a list edit *plus* a
+  new directory, failing SC-006. It is a server component (the codebase's first) exporting
+  per-locale `metadata`, rendering a shared placeholder client body. Real content is 046.
 - `app/robots.ts` + `app/sitemap.ts` covering the six landing routes.
-- **Catalog marker blocks**: append a delimited, empty region to each of
-  `web/lib/i18n/{bn,es,ja,zh,ko}.ts` — `// --- spec 046 landing ---`, `// --- spec 047 tour ---`.
-  046 and 047 then insert only inside their own non-adjacent region, so their branches auto-merge
-  instead of conflicting. *This is the mechanism that makes the parallel phase safe.*
+- ~~**Catalog marker blocks** appended to `web/lib/i18n/{bn,es,ja,zh,ko}.ts`.~~ **SUPERSEDED**
+  (research §3). The app catalogs are 32–55 KB each and `useTranslate` resolves them *after* mount,
+  which would flash English on a locale-fixed marketing page. The funnel got its **own** small
+  catalogs at `web/lib/i18n/landing/{en,es,bn,ja,zh,ko}.ts`, and the reserved marker regions live
+  there instead. The app catalogs are untouched by the funnel. Same guarantee, stronger: 046 and
+  047 no longer share an edit surface with the rest of the app at all.
 - Parity test: every `LANDING_LOCALES` entry has a route, a sitemap entry, and a catalog block.
 
 **Files touched:** `web/next.config.ts` (none expected), `web/app/page.tsx`, new
@@ -192,11 +204,16 @@ funnel-walker is new by definition) and the profile check moves to the welcome p
 
 ```
 main
- └─ feat/045-onboarding-foundation   ← build + merge FIRST (no sandbox needed; small)
+ └─ feat/045-onboarding-foundation   ← DONE; merge FIRST, before the three below start
      ├─ feat/046-landing-pages       ← sandbox 1  ┐
      ├─ feat/047-learn-more-tour     ← sandbox 2  ├─ parallel, branched off 045
      └─ feat/048-new-user-handoff    ← sandbox 3  ┘
 ```
+
+**045 must be on `main` before the three sandboxes are created**, so each clones a base that already
+contains `lib/onboarding/locales.ts`, `funnel.ts`, `adoptLanguage.ts` and the landing catalogs. A
+sandbox cut from a base without them would have to reinvent the contracts, which is the exact
+duplication the foundation exists to prevent.
 
 Use the `docker-sandbox` skill to spin these up (one microVM per feature, named by branch). Each
 sandbox needs: the GitHub secret, Claude login, `web/.env.local`, and network policy — the skill's
