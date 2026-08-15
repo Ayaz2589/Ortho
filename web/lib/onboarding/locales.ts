@@ -16,7 +16,10 @@
  */
 
 import { localeForLanguage, type Language } from '../language'
-import { effectiveLanguage } from '../i18n'
+// Imported from the leaf module, NOT from '../i18n': that barrel also exports
+// `useTranslate` and so depends on React hooks, which a Server Component (the landing
+// route) may not pull in. Same function either way.
+import { effectiveLanguage } from '../i18n/effectiveLanguage'
 
 /** Address segment for a landing page. ASCII, lowercase, stable — live ad links depend on it. */
 export type LandingSlug = 'en' | 'es' | 'bn' | 'ja' | 'zh' | 'ko'

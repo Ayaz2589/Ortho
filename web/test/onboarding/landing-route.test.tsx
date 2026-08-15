@@ -8,7 +8,12 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach } from 'vitest'
 
-import Page, { generateStaticParams, dynamicParams } from '@/app/landing/[locale]/page'
+import Page, {
+  generateStaticParams,
+  dynamicParams,
+  generateMetadata,
+} from '@/app/landing/[locale]/page'
+import { landingUrl } from '@/lib/siteUrl'
 import { LandingPlaceholder } from '@/components/landing/LandingPlaceholder'
 import { landingSlugs, localeForSlug } from '@/lib/onboarding/locales'
 import { LANDING_CATALOGS } from '@/lib/i18n/landing'
@@ -60,12 +65,60 @@ describe('LandingPlaceholder — the surface feature 046 replaces', () => {
     expect(container.querySelector('[lang="ja-JP"]')).toBeTruthy()
   })
 
+  it('corrects the document language, which the shared root layout hardcodes to en', () => {
+    document.documentElement.lang = 'en'
+    const locale = localeForSlug('es')!
+    render(<LandingPlaceholder locale={locale} copy={LANDING_CATALOGS.es} />)
+    expect(document.documentElement.lang).toBe('es-ES')
+  })
+
+  it('restores the document language on unmount, so it never leaks into the app', () => {
+    document.documentElement.lang = 'en'
+    const locale = localeForSlug('ko')!
+    const view = render(<LandingPlaceholder locale={locale} copy={LANDING_CATALOGS.ko} />)
+    expect(document.documentElement.lang).toBe('ko-KR')
+    view.unmount()
+    expect(document.documentElement.lang).toBe('en')
+  })
+
   it('ships no interactive controls yet — CTAs arrive with 046', () => {
     const locale = localeForSlug('en')!
     const { container } = render(
       <LandingPlaceholder locale={locale} copy={LANDING_CATALOGS.en} />,
     )
     expect(container.querySelectorAll('button, a, input')).toHaveLength(0)
+  })
+})
+
+describe('landing route — per-locale metadata (US4)', () => {
+  it.each(landingSlugs())('titles and describes %s in its own language', async (slug) => {
+    const meta = await generateMetadata({ params: Promise.resolve({ locale: slug }) })
+    expect(meta.title).toBe(LANDING_CATALOGS[slug].metaTitle)
+    expect(meta.description).toBe(LANDING_CATALOGS[slug].metaDescription)
+    if (slug !== 'en') {
+      // The whole point of US4: a Spanish search must not surface an English title.
+      expect(meta.title).not.toBe(LANDING_CATALOGS.en.metaTitle)
+    }
+  })
+
+  it.each(landingSlugs())('gives %s its own canonical URL', async (slug) => {
+    const meta = await generateMetadata({ params: Promise.resolve({ locale: slug }) })
+    expect(meta.alternates?.canonical).toBe(landingUrl(slug))
+  })
+
+  it.each(landingSlugs())('declares all six alternates plus x-default on %s', async (slug) => {
+    const meta = await generateMetadata({ params: Promise.resolve({ locale: slug }) })
+    const languages = (meta.alternates?.languages ?? {}) as Record<string, string>
+    expect(Object.keys(languages)).toHaveLength(landingSlugs().length + 1)
+    expect(languages['x-default']).toBe(landingUrl('en'))
+    for (const other of landingSlugs()) {
+      expect(languages[localeForSlug(other)!.locale]).toBe(landingUrl(other))
+    }
+  })
+
+  it('sets the OpenGraph locale to the BCP-47 tag', async () => {
+    const meta = await generateMetadata({ params: Promise.resolve({ locale: 'ja' }) })
+    expect((meta.openGraph as { locale?: string })?.locale).toBe('ja-JP')
   })
 })
 

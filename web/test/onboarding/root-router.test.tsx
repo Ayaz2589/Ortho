@@ -11,10 +11,14 @@ import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
+type AuthUser = { id: string } | null
+
 const h = vi.hoisted(() => ({
   replace: vi.fn(),
   isNativePlatform: vi.fn(() => false),
-  getUser: vi.fn(async () => ({ data: { user: null } })),
+  getUser: vi.fn(async (): Promise<{ data: { user: { id: string } | null } }> => ({
+    data: { user: null },
+  })),
 }))
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: h.replace, push: vi.fn() }) }))
@@ -30,8 +34,10 @@ function setLanguage(tag: string) {
   Object.defineProperty(window.navigator, 'language', { value: tag, configurable: true })
 }
 
-const signedIn = async () => ({ data: { user: { id: 'u1' } } })
-const signedOut = async () => ({ data: { user: null } })
+const signedIn = async (): Promise<{ data: { user: AuthUser } }> => ({
+  data: { user: { id: 'u1' } },
+})
+const signedOut = async (): Promise<{ data: { user: AuthUser } }> => ({ data: { user: null } })
 
 beforeEach(() => {
   h.replace.mockClear()

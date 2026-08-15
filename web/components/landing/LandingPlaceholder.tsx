@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import type { LandingLocale } from '@/lib/onboarding/locales'
 import type { LandingCatalog } from '@/lib/i18n/landing'
 
@@ -23,6 +24,28 @@ export function LandingPlaceholder({
   locale: LandingLocale
   copy: LandingCatalog
 }) {
+  /**
+   * Correct the DOCUMENT language. Only the root layout renders <html>, and it is
+   * shared with the entire signed-in app, so the exported file ships `lang="en"` even
+   * for /landing/es. The subtree `lang` below is what assistive tech actually resolves
+   * against for this content, and this effect fixes the document element too — so a
+   * real browser (screen readers, translation prompts, font selection) sees es-ES.
+   *
+   * KNOWN LIMITATION: the static HTML's initial `<html lang>` is still `en`, so a
+   * crawler that does not execute JS reads that. Language targeting is carried by the
+   * hreflang alternates, which ARE correct in the static output, so the SEO impact is
+   * limited. A complete fix means giving the landing routes their own root layout,
+   * which requires moving every existing route into a route group — out of scope here,
+   * and noted in specs/045-onboarding-foundation/quickstart.md.
+   */
+  useEffect(() => {
+    const previous = document.documentElement.lang
+    document.documentElement.lang = locale.locale
+    return () => {
+      document.documentElement.lang = previous
+    }
+  }, [locale.locale])
+
   return (
     // `lang` marks the subtree for assistive tech and for the correct font/line
     // handling of CJK and Bengali. The app ships a single English-tagged document

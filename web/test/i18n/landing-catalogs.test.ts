@@ -127,6 +127,16 @@ describe('landing catalogs — isolation from the app catalogs', () => {
     expect(src).not.toContain('@/lib/store')
   })
 
+  it('index.ts imports no app catalog', () => {
+    // test/i18n/no-eager-catalog.test.ts deliberately skips this directory (the
+    // landing siblings share basenames with the app catalogs), so the spec-023
+    // protection for these files is asserted here instead. `i18n/` must precede the
+    // basename, which distinguishes '@/lib/i18n/es' from the './es' sibling.
+    const src = readFileSync(join(DIR, 'index.ts'), 'utf8')
+    expect(src).not.toMatch(/^\s*import\s+[^;\n]*\s+from\s+['"][^'"]*i18n\/(bn|es|ja|zh|ko)['"]/m)
+    expect(src).not.toContain('@/lib/store')
+  })
+
   it('keeps the whole landing catalog set far smaller than one app catalog', () => {
     // The app catalogs are 32–55 KB each. All six landing catalogs together must
     // stay well under one of them, or the reason they exist has been lost.

@@ -58,34 +58,58 @@ Destination alone is not sufficient — the ordering is the regression risk (con
 ```bash
 cd web
 npm run build
-ls out/landing/                      # expect: en/ es/ bn/ ja/ zh/ ko/ (+ index.html for bare /landing)
+ls out/landing/*.html                # expect: en.html es.html bn.html ja.html zh.html ko.html
 ls out/robots.txt out/sitemap.xml    # both must exist
 ```
 
-**Expected**: six landing documents plus the two SEO files. If `out/landing/` is missing entries,
+**Expected**: six landing documents plus the two SEO files. If any are missing,
 `generateStaticParams()` is not deriving from the registry.
+
+> Note the layout: the export writes `out/landing/es.html` (plus a `es/` directory of segment
+> data), not `out/landing/es/index.html`. Static hosts serve it at the clean `/landing/es`.
+
+> `robots.ts` and `sitemap.ts` each need `export const dynamic = 'force-static'`. The
+> static-exports guide says Route Handlers render statically but does not mention this opt-in;
+> without it the build fails at "Collecting page data" with *export const dynamic =
+> "force-static" … not configured on route "/robots.txt"*.
 
 ### Verify the metadata actually rendered
 
 ```bash
 cd web
-grep -o 'hreflang="[^"]*"' out/landing/es/index.html | sort -u
-grep -o '<link rel="canonical"[^>]*>' out/landing/es/index.html
-grep -o '<html[^>]*lang="[^"]*"' out/landing/es/index.html
-grep -o '<title>[^<]*</title>' out/landing/es/index.html
+grep -oi 'hreflang="[^"]*"' out/landing/es.html | sort -u
+grep -o '<link rel="canonical"[^>]*>' out/landing/es.html
+grep -o '<title>[^<]*</title>' out/landing/es.html
 ```
 
 **Expected**:
-- Seven `hreflang` values: `en-US`, `es-ES`, `bn-BD-u-nu-latn`, `ja-JP`, `zh-Hans`, `ko-KR`, and
+- Seven hreflang values: `en-US`, `es-ES`, `bn-BD-u-nu-latn`, `ja-JP`, `zh-Hans`, `ko-KR`, and
   **`x-default`**.
 - Canonical pointing at `…/landing/es`.
-- `lang` on the document = `es-ES`, not the app default.
 - `<title>` in **Spanish**, not English.
 
-> **If `x-default` is absent**, Next 16.2.9 dropped the key (it is undocumented — research §2).
-> Apply the documented fallback: a literal `<link rel="alternate" hreflang="x-default" …>` in the
-> landing layout. Do not ship without it; it is what tells a search engine which page to serve for
-> an unmatched language.
+> **Grep case-insensitively (`-i`).** Next emits React's camelCase attribute name —
+> `hrefLang="x-default"` — into the static HTML. HTML attribute names are case-insensitive, so
+> browsers and crawlers read it as `hreflang` and this is correct output, but a case-sensitive
+> grep finds nothing and looks like a failure. (`x-default` turned out to work despite being
+> undocumented — research §2's fallback was not needed.)
+
+### Known limitation: the document `lang` attribute
+
+```bash
+grep -o '<html[^>]*lang="[^"]*"' out/landing/es.html   # shows lang="en"
+```
+
+Only the root layout renders `<html>`, and it is shared with the entire signed-in app, so every
+exported file carries `lang="en"`. Mitigations in place: the content subtree carries the correct
+`lang` (what assistive tech resolves against), and `LandingPlaceholder` sets
+`document.documentElement.lang` on mount, so any real browser sees `es-ES`. A crawler that does not
+execute JS still reads `en` from the static file; language targeting is carried by the hreflang
+alternates, which are correct there.
+
+A complete fix requires giving the landing routes their own root layout, which under the App Router
+means moving every existing route into a route group. That is a larger restructure than this
+feature should carry — worth doing if the landing pages ever become a significant organic channel.
 
 ### Verify the bundle stayed lean
 

@@ -3,8 +3,14 @@ import localFont from 'next/font/local'
 import './globals.css'
 import { THEME_VARS } from '@/components/settings/appearance'
 import { textSizeBootScript } from '@/components/settings/textSize'
+import { siteUrl } from '@/lib/siteUrl'
 
 export const metadata: Metadata = {
+  // spec 045: canonical and hreflang alternate links must be absolute. Next resolves
+  // URL-based metadata fields against `metadataBase`, and the docs place it in the
+  // root layout so it applies across all routes. `siteUrl()` is the single resolution
+  // point shared with the sitemap and robots, so the three can never disagree.
+  metadataBase: new URL(siteUrl()),
   title: 'Ortho',
   description: 'Household finance, in order.',
 }
