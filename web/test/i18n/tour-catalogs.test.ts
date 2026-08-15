@@ -151,11 +151,16 @@ describe('tour catalogs — reserved region (FR-009)', () => {
     expect(before).not.toContain('TourCopy')
   })
 
-  it.each(landingSlugs())('leaves the 046 region untouched in %s', (slug) => {
-    // 047 must not spend spec 046's budget. Its region stays empty until 046 lands.
+  it.each(landingSlugs())('puts no tour copy in the 046 region in %s', (slug) => {
+    // Originally "the 046 region stays empty **until 046 lands**" — true while 047 was
+    // being built in a parallel sandbox, and false the moment both merged. Narrowed on
+    // merge rather than deleted: the point was never that 046's region is empty, it was
+    // that 047 does not spend 046's budget. That still holds and is still worth pinning.
+    // (`landing-catalogs.test.ts` separately asserts BOTH regions are now populated.)
     const src = source(slug)
     const region = src.slice(src.indexOf(OPEN_046) + OPEN_046.length, src.indexOf(CLOSE_046))
-    expect(region.trim(), `${slug}.ts has content in the 046 region`).toBe('')
+    expect(region, `${slug}.ts has tour copy inside the 046 region`).not.toContain('Tour')
+    expect(region, `${slug}.ts has tour screens inside the 046 region`).not.toContain('screens:')
   })
 })
 
