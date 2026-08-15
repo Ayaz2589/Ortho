@@ -7,7 +7,7 @@
 //   - direction toggle income→expense resets source to first card
 //   - expense form is unaffected (uses cards, not deposit accounts)
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Transaction, User } from '@/lib/types'
 
@@ -102,7 +102,7 @@ describe('TxForm — income deposit accounts (spec 033)', () => {
   })
   afterEach(() => { vi.restoreAllMocks() })
 
-  it('income form shows deposit account names in the "Deposit to" select', async () => {
+  it('income form offers the configured deposit accounts under "Deposit to"', async () => {
     const { user, getApi } = setup()
     // Switch to income
     const incomeBtn = screen.getByText('Income')
@@ -113,9 +113,16 @@ describe('TxForm — income deposit accounts (spec 033)', () => {
     expect(screen.queryByText('ACH · Joint')).toBeNull()
     expect(screen.queryByText('Wire')).toBeNull()
 
-    // Should show configured deposit accounts
-    expect(screen.queryByText('Chase Checking')).toBeTruthy()
-    expect(screen.queryByText('Joint Savings')).toBeTruthy()
+    // Collapsed, the disclosure row shows the account currently selected.
+    const header = screen.getByRole('button', { name: 'Deposit to', expanded: false })
+    expect(header).toHaveTextContent('Chase Checking')
+
+    // Expanded, it lists every configured deposit account.
+    await user.click(header)
+    const panel = screen.getByRole('button', { name: 'Deposit to', expanded: true })
+      .nextElementSibling as HTMLElement
+    expect(within(panel).getByRole('button', { name: 'Chase Checking' })).toBeTruthy()
+    expect(within(panel).getByRole('button', { name: 'Joint Savings' })).toBeTruthy()
 
     void getApi
   })
