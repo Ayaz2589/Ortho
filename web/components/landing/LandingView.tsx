@@ -66,9 +66,21 @@ export function LandingView({
 
   return (
     // `lang` marks the subtree for assistive tech and for the correct font and line
-    // handling of CJK and Bengali. `min-h-screen`, never `h-screen`: a fixed viewport
-    // height fights spec 040's `zoom` on <html> and double-scrolls (PRs #104/#105).
-    <div lang={locale.locale} className="min-h-screen bg-bg">
+    // handling of CJK and Bengali.
+    //
+    // The height is the zoom-corrected viewport, not `min-h-screen`. Spec 040 applies
+    // `zoom: Z` to <html> (default Medium = 1.06, so this affects everyone, not only
+    // people who chose a larger size), and zoom scales the whole root — a plain
+    // `100vh`/`100dvh` minimum therefore resolves to viewport×Z and overflows,
+    // producing a spurious scrollbar on any screen tall enough for the minimum to
+    // bind. Dividing by the same `--ui-zoom` cancels it. This is the identical defect
+    // PRs #104/#105 fixed in the app shell; the guard for that one only scans
+    // app/(app)/layout.tsx, so this page carries its own in landing-view.test.tsx.
+    <div
+      lang={locale.locale}
+      className="bg-bg"
+      style={{ minHeight: 'calc(100dvh / var(--ui-zoom, 1))' }}
+    >
       {/* One centered reading column, capped at the constitution's 560px. On an
           ultrawide the margins stay empty, which is the intent — room to breathe,
           not room to cram — and it makes "no horizontal scroll at any width" a
@@ -76,8 +88,13 @@ export function LandingView({
       <main className="mx-auto w-full max-w-[560px] px-6 py-12 sm:py-16">
         <div className="text-center">
           {/* The wordmark treatment from app/sign-in/page.tsx — one product, one front
-              door. Not a heading: the proposition below is this page's <h1>. */}
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-text text-2xl font-light text-bg">
+              door. Not a heading: the proposition below is this page's <h1>. Hidden
+              from assistive tech because the "Ortho" line directly beneath it already
+              says the same thing — otherwise a screen reader announces "O, Ortho". */}
+          <div
+            aria-hidden="true"
+            className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-text text-2xl font-light text-bg"
+          >
             O
           </div>
           <p className="mt-3 text-sm text-text-2">Ortho</p>
@@ -88,11 +105,14 @@ export function LandingView({
           <p className="mt-4 text-[15px] leading-relaxed text-text-2">{landing.subhead}</p>
 
           {/* The prominent action. Carries PrimaryButton's treatment without importing
-              it — that primitive renders a <button>, which cannot hold an href. */}
+              it — that primitive renders a <button>, which cannot hold an href.
+              `min-h-12` rather than a fixed `h-12`: 48px is the touch floor, but a
+              long translated label has to be able to wrap to a second line instead of
+              overflowing its own pill (the spec's long-string edge case). */}
           <a
             href={`/tour/${locale.slug}`}
             onClick={adopt}
-            className="mt-8 flex h-12 w-full items-center justify-center rounded-full bg-text text-[15px] font-normal text-bg transition-opacity hover:opacity-90"
+            className="mt-8 flex min-h-12 w-full items-center justify-center rounded-full bg-text px-5 py-3 text-center text-[15px] font-normal text-bg transition-opacity hover:opacity-90"
           >
             {landing.primaryCta}
           </a>

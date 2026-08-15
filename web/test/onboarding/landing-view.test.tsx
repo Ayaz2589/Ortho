@@ -8,6 +8,8 @@
 // their own language unless they choose to go on (FR-003/FR-004).
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 import { LandingView } from '@/components/landing/LandingView'
 import { localeForSlug, landingSlugs, type LandingSlug } from '@/lib/onboarding/locales'
@@ -208,12 +210,15 @@ describe('LandingView — semantics and interaction (US2)', () => {
     )
   })
 
-  it('gives the primary action a real touch target', () => {
+  it('gives the primary action a real touch target that can still grow', () => {
     // A class-name proxy for a size the browser decides: jsdom loads no CSS, so
-    // computed height is meaningless here. h-12 is 48px, above the 44px touch floor.
-    // The honest check is quickstart §4 step 10, at every text-size level.
+    // computed height is meaningless here. The honest check is quickstart §4 step 10.
+    //
+    // `min-h-12` (48px floor), NOT `h-12`: a fixed height cannot wrap, and the spec's
+    // edge cases call out long translated strings explicitly. A locale whose call to
+    // action runs long must wrap to a second line rather than overflow its own pill.
     renderLocale('en')
-    expect(actions()[0].className).toContain('h-12')
+    expect(actions()[0].className).toContain('min-h-12')
   })
 
   it('leaves the global focus ring alone on both actions', () => {
@@ -224,6 +229,27 @@ describe('LandingView — semantics and interaction (US2)', () => {
       expect(action.className).not.toContain('outline-none')
       expect(action.className).not.toContain('focus:outline-none')
     }
+  })
+
+  it('sizes the page to the ZOOM-CORRECTED viewport, never a static 100vh', () => {
+    // The exact defect PRs #104/#105 fixed in the app shell, which this page would
+    // otherwise reintroduce on the pre-auth side. `zoom: Z` on <html> (spec 040's
+    // text size, default 1.06 — so this bites EVERY user, not just those who opted
+    // into a larger size) scales the whole root, so a `min-h-screen` box resolves to
+    // viewport×Z and overflows, adding a spurious scrollbar on any screen tall enough
+    // for the min to bind. Dividing by `--ui-zoom` cancels it.
+    //
+    // Asserted against the source, like test/appearance/mobile-scroll-nav-guard.test.ts
+    // does for the shell: jsdom has no layout engine and its CSS parser drops a
+    // `calc()` over a custom property, so a computed-style assertion here would be
+    // theatre. That guard only scans app/(app)/layout.tsx, which is why this one
+    // has to exist separately.
+    const src = readFileSync(join(process.cwd(), 'components/landing/LandingView.tsx'), 'utf8')
+    // Comments stripped first: the file explains this trap by name, and a guard that
+    // fires on its own documentation would push the explanation out of the code.
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+    expect(/calc\(\s*100dvh\s*\/\s*var\(--ui-zoom/.test(code)).toBe(true)
+    expect(code).not.toMatch(/\b(min-h-screen|h-screen|min-h-\[100vh\]|h-\[100vh\])\b/)
   })
 
   it('adds no tabindex, so keyboard order is DOM order', () => {
