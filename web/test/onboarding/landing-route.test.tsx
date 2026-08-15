@@ -14,7 +14,6 @@ import Page, {
   generateMetadata,
 } from '@/app/landing/[locale]/page'
 import { landingUrl } from '@/lib/siteUrl'
-import { LandingPlaceholder } from '@/components/landing/LandingPlaceholder'
 import { landingSlugs, localeForSlug } from '@/lib/onboarding/locales'
 import { LANDING_CATALOGS } from '@/lib/i18n/landing'
 
@@ -42,51 +41,37 @@ describe('landing route — renders in its own language', () => {
     async (slug) => {
       const ui = await Page({ params: Promise.resolve({ locale: slug }) })
       render(ui)
-      expect(screen.getByText(LANDING_CATALOGS[slug].placeholderLine)).toBeTruthy()
-      expect(screen.queryByText(LANDING_CATALOGS.en.placeholderLine)).toBeNull()
+      expect(screen.getByText(LANDING_CATALOGS[slug].landing.headline)).toBeTruthy()
+      expect(screen.queryByText(LANDING_CATALOGS.en.landing.headline)).toBeNull()
     },
   )
 
   it('renders English on the en route', async () => {
     const ui = await Page({ params: Promise.resolve({ locale: 'en' }) })
     render(ui)
-    expect(screen.getByText(LANDING_CATALOGS.en.placeholderLine)).toBeTruthy()
+    expect(screen.getByText(LANDING_CATALOGS.en.landing.headline)).toBeTruthy()
   })
 })
 
-describe('LandingPlaceholder — the surface feature 046 replaces', () => {
-  it('marks the content with the locale BCP-47 tag for assistive tech', () => {
+describe('landing route — the page the route renders (spec 046)', () => {
+  // 045 shipped a deliberately inert placeholder and asserted here that it had no
+  // controls, "CTAs arrive with 046". They have. The component's own contract lives in
+  // landing-view.test.tsx; what this file still owns is that the ROUTE wires it up.
+  it('renders the two actions through the route, with the locale-correct tour link', async () => {
+    const ui = await Page({ params: Promise.resolve({ locale: 'ko' }) })
+    render(ui)
+    const links = screen.getAllByRole('link') as HTMLAnchorElement[]
+    expect(links).toHaveLength(2)
+    expect(links[0].getAttribute('href')).toBe('/tour/ko')
+    expect(links[1].getAttribute('href')).toBe('/sign-in')
+  })
+
+  it('marks the content with the locale BCP-47 tag for assistive tech', async () => {
     // A per-locale document is only an accessibility gain if the language is
-    // actually declared — today the app ships one English-tagged document.
-    const locale = localeForSlug('ja')!
-    const { container } = render(
-      <LandingPlaceholder locale={locale} copy={LANDING_CATALOGS.ja} />,
-    )
+    // actually declared — the app otherwise ships one English-tagged document.
+    const ui = await Page({ params: Promise.resolve({ locale: 'ja' }) })
+    const { container } = render(ui)
     expect(container.querySelector('[lang="ja-JP"]')).toBeTruthy()
-  })
-
-  it('corrects the document language, which the shared root layout hardcodes to en', () => {
-    document.documentElement.lang = 'en'
-    const locale = localeForSlug('es')!
-    render(<LandingPlaceholder locale={locale} copy={LANDING_CATALOGS.es} />)
-    expect(document.documentElement.lang).toBe('es-ES')
-  })
-
-  it('restores the document language on unmount, so it never leaks into the app', () => {
-    document.documentElement.lang = 'en'
-    const locale = localeForSlug('ko')!
-    const view = render(<LandingPlaceholder locale={locale} copy={LANDING_CATALOGS.ko} />)
-    expect(document.documentElement.lang).toBe('ko-KR')
-    view.unmount()
-    expect(document.documentElement.lang).toBe('en')
-  })
-
-  it('ships no interactive controls yet — CTAs arrive with 046', () => {
-    const locale = localeForSlug('en')!
-    const { container } = render(
-      <LandingPlaceholder locale={locale} copy={LANDING_CATALOGS.en} />,
-    )
-    expect(container.querySelectorAll('button, a, input')).toHaveLength(0)
   })
 })
 
@@ -129,7 +114,7 @@ describe('landing route — module graph guard', () => {
   const files = [
     'app/landing/[locale]/page.tsx',
     'app/landing/page.tsx',
-    'components/landing/LandingPlaceholder.tsx',
+    'components/landing/LandingView.tsx',
     'app/not-found.tsx',
   ]
 

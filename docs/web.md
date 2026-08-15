@@ -36,7 +36,8 @@ web/app/
                         signed-in web → /dashboard; signed-out web → /landing/{detected}
   landing/page.tsx      bare /landing → forwards to the detected locale
   landing/[locale]/     SERVER component (the only one) — generateStaticParams from the
-                        registry, dynamicParams:false, per-locale metadata + hreflang
+                        registry, dynamicParams:false, per-locale metadata + hreflang;
+                        renders components/landing/LandingView.tsx (spec 046)
   not-found.tsx         calm 404; redirects ONLY paths under /landing/ (spec 045)
   robots.ts, sitemap.ts static Route Handlers — the app's first SEO surface
   sign-in/page.tsx      8-digit email OTP (signInWithOtp → verifyOtp(type:'email')); bounces
@@ -84,6 +85,22 @@ web/app/
   Pure modules live in `lib/onboarding/`: `locales.ts` (the registry — the single source of truth
   for the six slugs), `adoptLanguage.ts` (writes the existing `language` key on an explicit
   continue), `funnel.ts` (per-device marker, defined here but set by 047 and read by 048).
+- **Landing page content (spec 046)** — `components/landing/LandingView.tsx` replaced 045's inert
+  `LandingPlaceholder`: a hero (wordmark, `<h1>` proposition, subhead), a **variable-length** list of
+  supporting points, one prominent action to `/tour/{slug}` and one quieter link to `/sign-in`. Four
+  things here are load-bearing:
+  1. **Both actions are plain `<a href>` — deliberately not `next/link`.** A crawlable link from a
+     landing page to its tour is the whole SEO point of a per-language funnel, and `Link` would
+     prefetch `/tour/*`, a route spec 047 has not built yet. Don't "upgrade" this.
+  2. **Both call `adoptLandingLanguage(slug)` in `onClick`**, so the language carries into sign-in
+     and the app. It is a synchronous `localStorage` write, so no `preventDefault` is needed.
+     **Viewing a page must never adopt** — that view/act split is what lets a Spanish speaker open a
+     shared Japanese link without losing their preference, and it is pinned in both directions.
+  3. **Copy lives in the `spec 046` marker region** of each `lib/i18n/landing/*.ts` as a nested
+     `landing: LandingCopy`. The `spec 047` region is left empty for a parallel branch.
+  4. **`points` is an array, not `point1`/`point2`/`point3`.** That is the entire mechanism by which
+     a market can carry a different number of supporting ideas with no per-locale branch in the
+     component; a test renders 1/2/4/5-point catalogs to keep it that way.
 - **Reports mode was removed (spec 036)** — the Overview/Reports toggle (`ModeSwitch`) and the
   fetched `ReportsView`/`useReportsData` UI are gone; the savings-rate view now lives on the board as
   the local-compute `savings-trends` widget. The Dashboard is a single view. (The pure aggregate/

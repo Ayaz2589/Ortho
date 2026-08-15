@@ -1,5 +1,25 @@
 <!-- SPECKIT START -->
-Active feature: **spec 045 — onboarding foundation**. Plan:
+Active feature: **spec 046 — per-language landing pages**. Plan:
+`specs/046-landing-pages/plan.md` (spec/research/data-model/quickstart/contracts alongside it).
+Feature 2 of 4 in the onboarding funnel: fills spec 045's six structural placeholders with the real
+marketing page. Replaces `web/components/landing/LandingPlaceholder.tsx` with **`LandingView.tsx`** —
+a hero (wordmark, headline, subhead), a variable-length list of supporting points, one prominent
+`<a href="/tour/{slug}">` and one quieter `<a href="/sign-in">`, both calling spec 045's
+`adoptLandingLanguage(slug)` in their click handler (synchronous localStorage, so "adopt then
+navigate" needs no preventDefault). **Plain anchors, NOT `next/link`** — crawlability is the funnel's
+whole purpose, and `Link` would prefetch `/tour/*`, which spec 047 has not built yet. Copy lives ONLY
+inside the `spec 046` marker region of `web/lib/i18n/landing/*.ts` as a nested `landing: LandingCopy`
+(`headline`/`subhead`/`points[]`/`primaryCta`/`secondaryPrompt`/`secondaryCta`); the app catalogs
+`web/lib/i18n/{bn,es,ja,zh,ko}.ts` stay untouched, and the `spec 047` region is left empty and intact
+for a parallel branch. **`points` is an ARRAY** — that is the mechanism for US3: a market can carry a
+different number of supporting ideas with no per-locale branch in the component. `placeholderLine` is
+removed (the headline supersedes it), which retargets four spec-045 tests. Layout is one centered
+560px reading column, `min-h-screen` never `h-screen`, hero above the fold and points below; tokens
+only, no new CSS (the global focus-visible ring and `.ortho-interactive` already cover it), and
+`components/ui.tsx` is deliberately NOT touched. Six locales ship a faithful translation of one
+English proposition whose every claim traces to a shipped feature — per-market positioning is the
+product owner's, and any locale is a one-region edit. No DB, no migration, no new dependency. Fully TDD.
+Prior shipped: **spec 045 — onboarding foundation**. Plan:
 `specs/045-onboarding-foundation/plan.md` (spec/research/data-model/quickstart/contracts alongside it).
 The shared plumbing for a signed-out onboarding funnel — landing → tour → sign-in → financial health
 — planned end to end in `docs/plan/onboarding-funnel.md` as four features; this is the first, and it

@@ -49,7 +49,7 @@ describe('/landing (no slug)', () => {
     setLanguage('ja-JP')
     render(<LandingIndex />)
     for (const slug of ['en', 'es', 'ja'] as const) {
-      expect(screen.queryByText(LANDING_CATALOGS[slug].placeholderLine)).toBeNull()
+      expect(screen.queryByText(LANDING_CATALOGS[slug].landing.headline)).toBeNull()
     }
   })
 
