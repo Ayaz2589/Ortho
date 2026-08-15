@@ -114,10 +114,13 @@ describe('funnel marker — FR-019: defined here, used by 047/048', () => {
     expect(importers()).toEqual(['components/tour/TourDeck.tsx'])
   })
 
-  it('is still READ by nothing — that belongs to spec 048', () => {
-    // The half of FR-019 that has not been claimed yet. Acting on the marker (and
-    // clearing it so the hand-off fires exactly once) is 048's job; until then, a
-    // reader in production would be a behavior leak.
+  it('is READ only from within lib/onboarding — spec 048 owns that', () => {
+    // Narrowed on merge. This said "still READ by nothing — that belongs to spec 048",
+    // which was true while 048 was unbuilt but went quietly VACUOUS once it landed:
+    // 048's reader is lib/onboarding/handoff.ts, which the filter below excludes, so
+    // the test kept passing while its stated claim became false. The durable invariant
+    // is the one it actually checks — the marker is read through handoff.ts and nowhere
+    // else, so no page inlines the read and re-derives the hand-off rules.
     const src = execSync("grep -rn 'readFunnelEntry\\|clearFunnelEntry' app components lib 2>/dev/null || true", {
       cwd: process.cwd(),
       encoding: 'utf8',

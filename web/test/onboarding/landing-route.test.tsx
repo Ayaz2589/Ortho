@@ -130,4 +130,21 @@ describe('landing route — module graph guard', () => {
     const src = readFileSync(join(process.cwd(), rel), 'utf8')
     expect(src).not.toContain('@/lib/supabase/client')
   })
+
+  it.each(files)('%s does not import components/ui', (rel) => {
+    // Added on merge, matching the guard spec 047 wrote for the tour. `components/ui.tsx`
+    // itself imports `@/lib/store`, so pulling `PrimaryButton` would drag Supabase and
+    // the whole household data layer onto a signed-out page WITHOUT tripping the direct
+    // `@/lib/store` check above. LandingView is clean today; this stops it regressing.
+    const src = readFileSync(join(process.cwd(), rel), 'utf8')
+    expect(src).not.toContain("from '@/components/ui'")
+  })
+
+  it('the components/ui guard is worth having — that file really does import the store', () => {
+    // Pins the premise. If components/ui ever stops importing the store, the guard above
+    // becomes cargo-cult and should be reconsidered rather than left in place.
+    expect(readFileSync(join(process.cwd(), 'components/ui.tsx'), 'utf8')).toContain(
+      '@/lib/store',
+    )
+  })
 })
