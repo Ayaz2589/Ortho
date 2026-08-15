@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { PrimaryButton } from '@/components/ui'
 import { useTranslate } from '@/lib/i18n'
 import { asLanguage, DEFAULT_LANGUAGE, type Language } from '@/lib/language'
+import { resolvePostSignInRoute } from '@/lib/onboarding/handoff'
 
 function SignIn() {
   const router = useRouter()
@@ -78,7 +79,12 @@ function SignIn() {
       setError(e.message)
       return
     }
-    router.replace('/dashboard')
+    // spec 048: a visitor who travelled the onboarding funnel continues into the
+    // financial-health questionnaire rather than stopping at an empty dashboard.
+    // Everyone else gets '/dashboard', exactly as before. Scoped to this
+    // just-created-an-account path only — the already-signed-in bounce above stays
+    // literal, so a stale marker can never greet a returning user.
+    router.replace(resolvePostSignInRoute())
     router.refresh()
   }
 

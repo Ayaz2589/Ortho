@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApp } from '@/lib/store'
 import { ReadingColumn } from '@/components/layout'
@@ -19,12 +19,29 @@ import { useFinancialProfileForm } from '@/components/financial-health/useFinanc
  * snapshot and lands on the dashboard. Skipping is DISMISS-ONLY — it writes no
  * profile (so the widget honestly shows its "set up your profile" prompt) and
  * just returns to the dashboard.
+ *
+ * spec 048 adds the entry guard below. The hand-off that sends a funnel newcomer
+ * here decides from the funnel marker alone — app/sign-in/page.tsx renders outside
+ * AppStateProvider and cannot read the profile — so "do they already have one?" is
+ * answered here, at the destination, where useApp() is available.
  */
 export default function FinancialProfileWelcomePage() {
-  const { t } = useApp()
+  const { t, loading, userFinancialProfile } = useApp()
   const router = useRouter()
   const form = useFinancialProfileForm()
   const [step, setStep] = useState(0)
+
+  // spec 048 (FR-004): never ask someone to redo a questionnaire they have already
+  // answered — whatever brought them here, including a stale funnel marker left by
+  // a different visitor on this device (FR-009). Waiting for `loading` keeps `null`
+  // meaning "no profile" rather than "not fetched yet"; the (app) Shell already
+  // gates children on it, so this is belt-and-braces against that gate moving.
+  const alreadyAnswered = !loading && userFinancialProfile != null
+  useEffect(() => {
+    if (alreadyAnswered) router.replace('/dashboard')
+  }, [alreadyAnswered, router])
+  // Render nothing rather than flashing the stepper for a frame before bouncing.
+  if (alreadyAnswered) return null
 
   const isLast = step === SECTION_COUNT - 1
   const canAdvance = step !== 0 || form.incomeValid

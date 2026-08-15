@@ -44,7 +44,7 @@ If a change to any of them looks necessary, the feature has grown too wide — s
 
 **Purpose**: a working suite and a recorded baseline to measure regressions against.
 
-- [ ] T001 Install dependencies and capture the pre-implementation baseline: `cd web && npm install && npm test`. Record the totals (expected: 275 files, 2569 passed, 3 expected fail) — every later run is compared against this.
+- [X] T001 Install dependencies and capture the pre-implementation baseline: `cd web && npm install && npm test`. Record the totals (expected: 275 files, 2569 passed, 3 expected fail) — every later run is compared against this.
 
 ---
 
@@ -54,10 +54,10 @@ If a change to any of them looks necessary, the feature has grown too wide — s
 
 **⚠️ CRITICAL**: no user story work can begin until this phase is complete.
 
-- [ ] T002 [P] RED — write `web/test/onboarding/handoff.test.ts` covering the full behavior table in [contracts/post-sign-in-handoff.md](./contracts/post-sign-in-handoff.md): marker present → returns `HANDOFF_ROUTE`, marker cleared, announcement marked seen; marker absent → returns `DEFAULT_POST_SIGN_IN_ROUTE` with **no** writes; called twice → second call returns the default; storage throwing on read → returns the default without throwing. Run it and confirm it FAILS (module does not exist yet).
-- [ ] T003 [P] Add the named export `FINANCIAL_HEALTH_ANNOUNCEMENT_ID = 'financial-health'` to `web/components/announcements/registry.ts` and use it as the existing entry's `id`, so the string has exactly one definition.
-- [ ] T004 GREEN — implement `web/lib/onboarding/handoff.ts` with `DEFAULT_POST_SIGN_IN_ROUTE`, `HANDOFF_ROUTE`, and `resolvePostSignInRoute()` per the contract (clear → mark seen → return, in that order). Depends on T002, T003. Run `npx vitest run test/onboarding/handoff.test.ts` — must pass.
-- [ ] T005 Confirm `web/test/announcements/registry.test.ts` still passes **unedited** after T003: `npx vitest run test/announcements/registry.test.ts`.
+- [X] T002 [P] RED — write `web/test/onboarding/handoff.test.ts` covering the full behavior table in [contracts/post-sign-in-handoff.md](./contracts/post-sign-in-handoff.md): marker present → returns `HANDOFF_ROUTE`, marker cleared, announcement marked seen; marker absent → returns `DEFAULT_POST_SIGN_IN_ROUTE` with **no** writes; called twice → second call returns the default; storage throwing on read → returns the default without throwing. Run it and confirm it FAILS (module does not exist yet).
+- [X] T003 [P] Add the named export `FINANCIAL_HEALTH_ANNOUNCEMENT_ID = 'financial-health'` to `web/components/announcements/registry.ts` and use it as the existing entry's `id`, so the string has exactly one definition.
+- [X] T004 GREEN — implement `web/lib/onboarding/handoff.ts` with `DEFAULT_POST_SIGN_IN_ROUTE`, `HANDOFF_ROUTE`, and `resolvePostSignInRoute()` per the contract (clear → mark seen → return, in that order). Depends on T002, T003. Run `npx vitest run test/onboarding/handoff.test.ts` — must pass.
+- [X] T005 Confirm `web/test/announcements/registry.test.ts` still passes **unedited** after T003: `npx vitest run test/announcements/registry.test.ts`.
 
 **Checkpoint**: the hand-off decision is provable in isolation. Every FR except FR-004/007/008 is now covered without a component having been touched.
 
@@ -73,12 +73,12 @@ If a change to any of them looks necessary, the feature has grown too wide — s
 
 > Write first; confirm FAIL before implementing.
 
-- [ ] T006 [US1] RED — write `web/test/onboarding/sign-in-handoff.test.tsx`, mirroring the hoisted-mock shape of `web/test/sign-in.test.tsx` (mock `next/navigation`, `@/lib/supabase/client`, `@capacitor/splash-screen`). With the marker seeded, drive the real two-step form and assert `router.replace('/welcome/financial-profile')`, that the marker is cleared, and that `financial-health` is in the seen-ledger. Confirm it FAILS.
+- [X] T006 [US1] RED — write `web/test/onboarding/sign-in-handoff.test.tsx`, mirroring the hoisted-mock shape of `web/test/sign-in.test.tsx` (mock `next/navigation`, `@/lib/supabase/client`, `@capacitor/splash-screen`). With the marker seeded, drive the real two-step form and assert `router.replace('/welcome/financial-profile')`, that the marker is cleared, and that `financial-health` is in the seen-ledger. Confirm it FAILS.
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] GREEN — in `web/app/sign-in/page.tsx`, import `resolvePostSignInRoute` and replace the literal `router.replace('/dashboard')` inside `verify()` with `router.replace(resolvePostSignInRoute())`. Leave `router.refresh()` and all error handling untouched. Do **not** touch the already-signed-in mount effect (research.md §2).
-- [ ] T008 [US1] Confirm `web/test/sign-in.test.tsx` passes **unedited**: `npx vitest run test/sign-in.test.tsx`.
+- [X] T007 [US1] GREEN — in `web/app/sign-in/page.tsx`, import `resolvePostSignInRoute` and replace the literal `router.replace('/dashboard')` inside `verify()` with `router.replace(resolvePostSignInRoute())`. Leave `router.refresh()` and all error handling untouched. Do **not** touch the already-signed-in mount effect (research.md §2).
+- [X] T008 [US1] Confirm `web/test/sign-in.test.tsx` passes **unedited**: `npx vitest run test/sign-in.test.tsx`.
 
 **Checkpoint**: US1 is functional. FR-001, FR-002, FR-006 hold.
 
@@ -92,12 +92,12 @@ If a change to any of them looks necessary, the feature has grown too wide — s
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T009 [US2] Extend `web/test/onboarding/sign-in-handoff.test.tsx` with the no-marker cases: the full OTP flow lands on `/dashboard`; the seen-ledger is **not** written; and the already-signed-in mount bounce still replaces to `/dashboard` even when a marker is present. (Same file as T006, so not parallel with it.)
+- [X] T009 [US2] Extend `web/test/onboarding/sign-in-handoff.test.tsx` with the no-marker cases: the full OTP flow lands on `/dashboard`; the seen-ledger is **not** written; and the already-signed-in mount bounce still replaces to `/dashboard` even when a marker is present. (Same file as T006, so not parallel with it.)
 
 ### Verification for User Story 2
 
-- [ ] T010 [US2] Run the full spec 041/042 regression lock and confirm every test passes: `npx vitest run test/sign-in.test.tsx test/announcements/ test/financial-health-onboarding.test.tsx test/financial-health-settings.test.tsx test/widgets/financial-health.test.tsx`.
-- [ ] T011 [US2] Confirm none of the locked files appear in the diff: `git diff --stat origin/main...HEAD -- web/test/sign-in.test.tsx web/test/announcements web/test/financial-health-onboarding.test.tsx web/test/widgets/financial-health.test.tsx` must print nothing.
+- [X] T010 [US2] Run the full spec 041/042 regression lock and confirm every test passes: `npx vitest run test/sign-in.test.tsx test/announcements/ test/financial-health-onboarding.test.tsx test/financial-health-settings.test.tsx test/widgets/financial-health.test.tsx`.
+- [X] T011 [US2] Confirm none of the locked files appear in the diff: `git diff --stat origin/main...HEAD -- web/test/sign-in.test.tsx web/test/announcements web/test/financial-health-onboarding.test.tsx web/test/widgets/financial-health.test.tsx` must print nothing.
 
 **Checkpoint**: FR-003, FR-005, SC-002 and SC-006 hold. The reversal is contained.
 
@@ -111,12 +111,12 @@ If a change to any of them looks necessary, the feature has grown too wide — s
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T012 [US3] RED — write `web/test/onboarding/financial-profile-guard.test.tsx` per [contracts/questionnaire-entry-guard.md](./contracts/questionnaire-entry-guard.md): profile present → no questionnaire heading rendered, `router.replace('/dashboard')` called, `saveFinancialHealth` never called; profile absent → the questionnaire renders with no navigation on mount, and Skip still writes no profile and lands on `/dashboard`. Confirm the profile-present cases FAIL.
+- [X] T012 [US3] RED — write `web/test/onboarding/financial-profile-guard.test.tsx` per [contracts/questionnaire-entry-guard.md](./contracts/questionnaire-entry-guard.md): profile present → no questionnaire heading rendered, `router.replace('/dashboard')` called, `saveFinancialHealth` never called; profile absent → the questionnaire renders with no navigation on mount, and Skip still writes no profile and lands on `/dashboard`. Confirm the profile-present cases FAIL.
 
 ### Implementation for User Story 3
 
-- [ ] T013 [US3] GREEN — add the entry guard to `web/app/(app)/welcome/financial-profile/page.tsx`: read `loading` + `userFinancialProfile` from `useApp()`, `router.replace('/dashboard')` in a mount effect when a profile exists, and return `null` while redirecting so the stepper never flashes. Change nothing inside the existing stepper, `finish`, or `skip`.
-- [ ] T014 [US3] Confirm `web/test/financial-health-onboarding.test.tsx` and `web/test/widgets/financial-health.test.tsx` pass **unedited**.
+- [X] T013 [US3] GREEN — add the entry guard to `web/app/(app)/welcome/financial-profile/page.tsx`: read `loading` + `userFinancialProfile` from `useApp()`, `router.replace('/dashboard')` in a mount effect when a profile exists, and return `null` while redirecting so the stepper never flashes. Change nothing inside the existing stepper, `finish`, or `skip`.
+- [X] T014 [US3] Confirm `web/test/financial-health-onboarding.test.tsx` and `web/test/widgets/financial-health.test.tsx` pass **unedited**.
 
 **Checkpoint**: all three user stories are independently functional. FR-004, FR-007, FR-008, FR-009 hold.
 
@@ -124,12 +124,12 @@ If a change to any of them looks necessary, the feature has grown too wide — s
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T015 Run the full suite and compare against the T001 baseline: `npm test`. Must be ≥ 275 files / 2569 passed, plus the new tests. Any drop is a regression.
-- [ ] T016 [P] Typecheck: `npx tsc --noEmit` — clean.
-- [ ] T017 [P] Confirm no money/date logic moved: `npm run gen:vectors` produces no diff.
-- [ ] T018 [P] Update the onboarding section of `docs/web.md` — record that `funnel.ts` now has its reader, and where the hand-off and the entry guard live.
-- [ ] T019 Confirm the scope bounds hold in the diff: no migration under `supabase/migrations/`, no change to `web/package.json`, and no change to any `web/lib/i18n/` catalog (FR-010; research.md §6).
-- [ ] T020 Run [quickstart.md](./quickstart.md) §1–3 end to end and tick its Definition of Done.
+- [X] T015 Run the full suite and compare against the T001 baseline: `npm test`. Must be ≥ 275 files / 2569 passed, plus the new tests. Any drop is a regression.
+- [X] T016 [P] Typecheck: `npx tsc --noEmit` — clean.
+- [X] T017 [P] Confirm no money/date logic moved: `npm run gen:vectors` produces no diff.
+- [X] T018 [P] Update the onboarding section of `docs/web.md` — record that `funnel.ts` now has its reader, and where the hand-off and the entry guard live.
+- [X] T019 Confirm the scope bounds hold in the diff: no migration under `supabase/migrations/`, no change to `web/package.json`, and no change to any `web/lib/i18n/` catalog (FR-010; research.md §6).
+- [X] T020 Run [quickstart.md](./quickstart.md) §1–3 end to end and tick its Definition of Done.
 - [ ] T021 Commit, push to `feat/048-new-user-handoff`, mark draft PR #111 ready for review, and watch the Capacitor iOS CI run: `GH_TOKEN=placeholder gh run watch --exit-status`.
 
 ---
