@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Transaction, User } from '@/lib/types'
 
@@ -50,12 +50,21 @@ function Harness({ onApi, editing = null }: { onApi?: (api: TxFormApi) => void; 
 function setup() {
   let api: TxFormApi | null = null
   render(<Harness onApi={(a) => (api = a)} />)
+  const user = userEvent.setup()
   return {
-    user: userEvent.setup(),
+    user,
     getApi: () => api as TxFormApi,
     addBtn: () => screen.getByRole('button', { name: 'Add' }),
     amount: () => document.querySelector('.ow-amount-input') as HTMLInputElement,
     merchant: () => screen.getByPlaceholderText('e.g. Whole Foods') as HTMLInputElement,
+    /** Toggle a household member's ownership through the Owners accordion,
+     *  expanding it first if it is still collapsed. */
+    toggleOwner: async (name: string) => {
+      const collapsed = screen.queryByRole('button', { name: 'Owners', expanded: false })
+      if (collapsed) await user.click(collapsed)
+      const header = screen.getByRole('button', { name: 'Owners', expanded: true })
+      await user.click(within(header.nextElementSibling as HTMLElement).getByRole('button', { name }))
+    },
   }
 }
 
@@ -83,7 +92,7 @@ describe('split editor', () => {
     const h = setup()
     await h.user.type(h.amount(), '100')
     await h.user.type(h.merchant(), 'Dinner')
-    await h.user.click(screen.getByRole('button', { name: /Bob/ }))
+    await h.toggleOwner('Bob')
     // Even method present + each owner shows $50.00.
     expect(screen.getByRole('tab', { name: 'Even' })).toBeInTheDocument()
     expect(h.getApi().shares).toEqual({ p1: 5000, p2: 5000 })
@@ -93,7 +102,7 @@ describe('split editor', () => {
     const h = setup()
     await h.user.type(h.amount(), '100')
     await h.user.type(h.merchant(), 'Dinner')
-    await h.user.click(screen.getByRole('button', { name: /Bob/ }))
+    await h.toggleOwner('Bob')
     await h.user.click(screen.getByRole('tab', { name: '%' }))
 
     // Seeded even — the editor opens valid.
@@ -120,7 +129,7 @@ describe('split editor', () => {
     const h = setup()
     await h.user.type(h.amount(), '100')
     await h.user.type(h.merchant(), 'Dinner')
-    await h.user.click(screen.getByRole('button', { name: /Bob/ }))
+    await h.toggleOwner('Bob')
     await h.user.click(screen.getByRole('tab', { name: '$' }))
 
     // Seeded to an even split of the entered amount.
@@ -141,16 +150,17 @@ describe('split editor', () => {
     const h = setup()
     await h.user.type(h.amount(), '100')
     await h.user.type(h.merchant(), 'Dinner')
-    await h.user.click(screen.getByRole('button', { name: /Bob/ })) // add
+    await h.toggleOwner('Bob') // add
     expect(h.getApi().owners).toHaveLength(2)
-    await h.user.click(screen.getByRole('button', { name: /Bob/ })) // remove
+    await h.toggleOwner('Bob') // remove
     expect(h.getApi().owners).toEqual(['p1'])
     expect(screen.queryByRole('tab', { name: 'Even' })).toBeNull()
   })
 
   it('edit mode still renders an owner who was since removed from the household', () => {
     // A 50/50 expense owned by Alice (active) + Carol (removed). The removed
-    // owner must still show as a chip and a named split row — not "—".
+    // owner must still appear in the Owners summary and as a named split row —
+    // not "—".
     const editing: Transaction = {
       id: 'tx1', household_id: 'h1', merchant: 'Dinner', category: 'dining', kind: 'expense',
       amount_cents: 10000, source: 'Visa', date: '2026-01-01T12:00:00.000Z', created_by: 'p1',

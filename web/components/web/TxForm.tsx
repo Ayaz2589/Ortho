@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { readCollapsedCategories, writeCollapsedCategories } from '@/lib/txCopyCollapse'
 import { useApp } from '@/lib/store'
 import { CATEGORY_GROUPS, categoryMeta } from '@/lib/categories'
@@ -11,6 +11,7 @@ import { mostCommonTransactions, knownNamesForKind, groupByCategory } from '@/li
 import { parseMoney, CalendarPanel } from '@/components/inputs'
 import { mediumDate } from '@/lib/format'
 import { Avatar } from '@/components/ui'
+import type { User } from '@/lib/types'
 import { computeShares, validateSplit, orderedOwnerIds, seedSplit, type SplitInput, type SplitMethod } from '@/lib/splits'
 import { evenPercentStrings, evenValueStrings, rebalancePercents } from '@/lib/splitFields'
 import type { Transaction, TransactionCategory, TransactionKind } from '@/lib/types'
@@ -49,6 +50,53 @@ function isoToLocalDate(iso: string): Date | null {
   return isNaN(d.getTime()) ? null : d
 }
 
+/** Scroll container shared by every picker panel, so a long member/card/category
+ *  list grows the card only up to a bound and then scrolls inside it. */
+function PickerPanel({ children }: { children: ReactNode }) {
+  return (
+    <div style={{ maxHeight: 264, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+      {children}
+    </div>
+  )
+}
+
+/** One selectable row inside a picker panel: an optional leading visual, the
+ *  label, and a checkmark when active. Every picker on the form (category,
+ *  member, payment source) is built from this row, so they all read the same.
+ *  The leading visual is `aria-hidden` — an avatar's initial would otherwise
+ *  bleed into the row's accessible name ("A Alice"). */
+function PickerRow({
+  active,
+  onClick,
+  lead,
+  label,
+}: {
+  active: boolean
+  onClick: () => void
+  lead?: ReactNode
+  label: string
+}) {
+  return (
+    <button
+      type="button"
+      className="ow-btn"
+      aria-pressed={active}
+      onClick={onClick}
+      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '7px 8px', borderRadius: 9, textAlign: 'left', background: active ? 'var(--chip-bg)' : 'transparent' }}
+    >
+      {lead ? <span aria-hidden="true" style={{ display: 'flex', flexShrink: 0 }}>{lead}</span> : null}
+      <span style={{ flex: 1, fontSize: 14.5, fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.1px' }}>
+        {label}
+      </span>
+      {active && (
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+          <path d="M3.5 8.5l3 3 6-6.5" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </button>
+  )
+}
+
 /** The grouped category list shown inside the category accordion — one calm
  *  selectable row per subcategory, grouped under its parent's label, the active
  *  one softly highlighted. Picking a row calls `onPick`. */
@@ -63,55 +111,78 @@ function CategoryPanel({
 }) {
   const { t } = useApp()
   return (
-    <div style={{ maxHeight: 264, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+    <PickerPanel>
       {groups.map((group) => (
         <div key={group.key}>
           <div style={{ padding: '8px 8px 4px', fontSize: 11.5, fontWeight: 500, letterSpacing: '0.4px', textTransform: 'uppercase', color: 'var(--text-3)' }}>
             {t(group.label)}
           </div>
-          {group.children.map((c) => {
-            const on = c === value
-            return (
-              <button
-                key={c}
-                type="button"
-                className="ow-btn"
-                aria-pressed={on}
-                onClick={() => onPick(c)}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '7px 8px', borderRadius: 9, textAlign: 'left', background: on ? 'var(--chip-bg)' : 'transparent' }}
-              >
-                <CatTile category={c} size={26} />
-                <span style={{ flex: 1, fontSize: 14.5, fontWeight: 400, color: 'var(--text)', letterSpacing: '-0.1px' }}>
-                  {t(categoryMeta(c).label)}
-                </span>
-                {on && (
-                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
-                    <path d="M3.5 8.5l3 3 6-6.5" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </button>
-            )
-          })}
+          {group.children.map((c) => (
+            <PickerRow
+              key={c}
+              active={c === value}
+              onClick={() => onPick(c)}
+              lead={<CatTile category={c} size={26} />}
+              label={t(categoryMeta(c).label)}
+            />
+          ))}
         </div>
       ))}
-    </div>
+    </PickerPanel>
   )
 }
 
-function selectStyle(): React.CSSProperties {
-  return {
-    appearance: 'none',
-    border: 0,
-    background: 'transparent',
-    outline: 'none',
-    fontFamily: 'inherit',
-    fontSize: 15,
-    fontWeight: 400,
-    color: 'var(--text)',
-    textAlign: 'right',
-    letterSpacing: '-0.2px',
-    cursor: 'pointer',
-  }
+/** The household-member list shown inside a member accordion. Drives both the
+ *  single-select rows (Paid by, transfer From/To) and the multi-select Owners
+ *  row — `isActive` decides the checkmark, `onPick` decides what a tap means. */
+function MemberPanel({
+  members,
+  isActive,
+  onPick,
+}: {
+  members: User[]
+  isActive: (id: string) => boolean
+  onPick: (id: string) => void
+}) {
+  return (
+    <PickerPanel>
+      {members.map((m) => (
+        <PickerRow
+          key={m.id}
+          active={isActive(m.id)}
+          onClick={() => onPick(m.id)}
+          lead={<Avatar user={m} size={26} />}
+          label={m.name}
+        />
+      ))}
+    </PickerPanel>
+  )
+}
+
+/** The payment-source list (cards for an expense, deposit accounts for income). */
+function SourcePanel({
+  sources,
+  value,
+  onPick,
+}: {
+  sources: string[]
+  value: string
+  onPick: (s: string) => void
+}) {
+  const { t } = useApp()
+  return (
+    <PickerPanel>
+      {sources.map((s) => (
+        <PickerRow
+          key={s}
+          active={s === value}
+          onClick={() => onPick(s)}
+          lead={<SourceDot size={9} />}
+          label={s || t('Not set')}
+        />
+      ))}
+    </PickerPanel>
+  )
 }
 
 /** Shared form state + submit for the New/Edit transaction surfaces (modal + drawer). */
@@ -544,38 +615,46 @@ export function useTxForm({
 
 export type TxFormApi = ReturnType<typeof useTxForm>
 
-/** A member `<select>` used for "Paid by" and the transfer From/To rows. */
-function MemberSelect({
-  value,
-  onChange,
-  members,
-  ariaLabel,
-}: {
-  value: string
-  onChange: (id: string) => void
-  members: { id: string; name: string }[]
-  ariaLabel: string
-}) {
-  return (
-    <select aria-label={ariaLabel} value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle()}>
-      {members.map((m) => (
-        <option key={m.id} value={m.id}>
-          {m.name}
-        </option>
-      ))}
-    </select>
-  )
+/** Every in-card picker on the form. All are `AccordionRow`s, and at most one is
+ *  open at a time. */
+type PickerField =
+  | 'category'
+  | 'date'
+  | 'transferDate'
+  | 'owners'
+  | 'paidBy'
+  | 'source'
+  | 'transferFrom'
+  | 'transferTo'
+
+/**
+ * The collapsed Owners summary. Deliberately never wraps: one or two owners read
+ * as names, three or more collapse to a count. The old control was a row of
+ * wrapping avatar chips, so selecting another owner could push the row onto a
+ * second line and jump the height of the card (and everything below it) on every
+ * click. A fixed one-line summary is what keeps the form still.
+ */
+function ownersSummary(
+  owners: string[],
+  members: User[],
+  t: (k: string, ...a: Array<string | number>) => string
+): string {
+  // Household order, not click order, so the label is stable as owners toggle.
+  const names = members.filter((m) => owners.includes(m.id)).map((m) => m.name)
+  if (names.length === 0) return ''
+  if (names.length <= 2) return names.join(', ')
+  return t('{0} people', names.length)
 }
 
 /** The shared field stack (amount hero, toggles, rows) used by both the modal and the drawer. */
 export function TxFormFields({ form }: { form: TxFormApi }) {
   const { currency, isIncome, isTransfer } = form
   const { formatMoney, t, transactions, locale } = useApp()
-  // Which in-card picker is expanded — category and the date(s) are mutually
-  // exclusive disclosure rows, so at most one is open at a time.
-  const [openField, setOpenField] = useState<null | 'category' | 'date' | 'transferDate'>(null)
-  const toggle = (f: 'category' | 'date' | 'transferDate') =>
-    setOpenField((cur) => (cur === f ? null : f))
+  // Which in-card picker is expanded — every picker is a mutually exclusive
+  // disclosure row, so at most one is open at a time.
+  const [openField, setOpenField] = useState<null | PickerField>(null)
+  const toggle = (f: PickerField) => setOpenField((cur) => (cur === f ? null : f))
+  const memberName = (id: string) => form.members.find((m) => m.id === id)?.name ?? '—'
   const dateObj = isoToLocalDate(form.date)
   const dateLabel = dateObj ? mediumDate(dateObj, locale) : t('Select date')
   // Merchant/payer name suggestions from the household's own ledger — kind-aware
@@ -626,12 +705,39 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
         /* Reimbursement: From -> To + date. No merchant/category/split/source. */
         <>
           <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-            <Row label={t('From')} first>
-              <MemberSelect value={form.transferFrom} onChange={form.setTransferFrom} members={form.members} ariaLabel={t('Transfer from')} />
-            </Row>
-            <Row label={t('To')}>
-              <MemberSelect value={form.transferTo} onChange={form.setTransferTo} members={form.members} ariaLabel={t('Transfer to')} />
-            </Row>
+            <AccordionRow
+              label={t('From')}
+              ariaLabel={t('From')}
+              value={memberName(form.transferFrom)}
+              open={openField === 'transferFrom'}
+              onToggle={() => toggle('transferFrom')}
+              first
+            >
+              <MemberPanel
+                members={form.members}
+                isActive={(id) => id === form.transferFrom}
+                onPick={(id) => {
+                  form.setTransferFrom(id)
+                  setOpenField(null)
+                }}
+              />
+            </AccordionRow>
+            <AccordionRow
+              label={t('To')}
+              ariaLabel={t('To')}
+              value={memberName(form.transferTo)}
+              open={openField === 'transferTo'}
+              onToggle={() => toggle('transferTo')}
+            >
+              <MemberPanel
+                members={form.members}
+                isActive={(id) => id === form.transferTo}
+                onPick={(id) => {
+                  form.setTransferTo(id)
+                  setOpenField(null)
+                }}
+              />
+            </AccordionRow>
             <AccordionRow
               label={t('Date')}
               ariaLabel={t('Transfer date')}
@@ -695,30 +801,43 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
           {/* Owners + who paid */}
           {showOwners && (
             <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-              <Row label={t('Owners')} first>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  {form.members.map((u) => {
-                    const on = form.owners.includes(u.id)
-                    return (
-                      <button
-                        key={u.id}
-                        type="button"
-                        aria-pressed={on}
-                        className="ow-btn"
-                        onClick={() => form.toggleOwner(u.id)}
-                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 9px 3px 4px', borderRadius: 999, background: 'var(--chip-bg)', boxShadow: on ? 'inset 0 0 0 1.5px var(--text)' : 'none' }}
-                      >
-                        <Avatar user={u} size={20} />
-                        <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text)' }}>{u.name}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </Row>
+              {/* Multi-select: the panel stays OPEN as owners toggle, so picking
+                  two or three people is one gesture. */}
+              <AccordionRow
+                label={t('Owners')}
+                ariaLabel={t('Owners')}
+                value={
+                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {ownersSummary(form.owners, form.members, t)}
+                  </span>
+                }
+                open={openField === 'owners'}
+                onToggle={() => toggle('owners')}
+                first
+              >
+                <MemberPanel
+                  members={form.members}
+                  isActive={(id) => form.owners.includes(id)}
+                  onPick={form.toggleOwner}
+                />
+              </AccordionRow>
               {!isIncome && (
-                <Row label={t('Paid by')}>
-                  <MemberSelect value={form.paidBy} onChange={form.setPaidBy} members={form.members} ariaLabel={t('Paid by')} />
-                </Row>
+                <AccordionRow
+                  label={t('Paid by')}
+                  ariaLabel={t('Paid by')}
+                  value={memberName(form.paidBy)}
+                  open={openField === 'paidBy'}
+                  onToggle={() => toggle('paidBy')}
+                >
+                  <MemberPanel
+                    members={form.members}
+                    isActive={(id) => id === form.paidBy}
+                    onPick={(id) => {
+                      form.setPaidBy(id)
+                      setOpenField(null)
+                    }}
+                  />
+                </AccordionRow>
               )}
             </div>
           )}
@@ -782,25 +901,32 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
 
           {/* Source + date */}
           <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-            <Row label={isIncome ? t('Deposit to') : t('Paid with')} first>
-              {form.sources.length === 0 ? (
+            {form.sources.length === 0 ? (
+              <Row label={isIncome ? t('Deposit to') : t('Paid with')} first>
                 <span style={{ color: 'var(--text-3)' }}>{isIncome ? t('No accounts yet') : t('No cards yet')}</span>
-              ) : (
-                <select value={form.source} onChange={(e) => form.setSource(e.target.value)} style={selectStyle()}>
-                  {/* An imported (or old) row may carry no source, or one whose
-                      card was removed — keep the control in sync by offering that
-                      value explicitly ("Not set" for an empty source). */}
-                  {!form.sources.includes(form.source) && (
-                    <option value={form.source}>{form.source || t('Not set')}</option>
-                  )}
-                  {form.sources.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </Row>
+              </Row>
+            ) : (
+              <AccordionRow
+                label={isIncome ? t('Deposit to') : t('Paid with')}
+                ariaLabel={isIncome ? t('Deposit to') : t('Paid with')}
+                value={form.source || t('Not set')}
+                open={openField === 'source'}
+                onToggle={() => toggle('source')}
+                first
+              >
+                {/* An imported (or old) row may carry no source, or one whose card
+                    was removed — offer that value explicitly so the control still
+                    reflects what is stored. */}
+                <SourcePanel
+                  sources={form.sources.includes(form.source) ? form.sources : [form.source, ...form.sources]}
+                  value={form.source}
+                  onPick={(s) => {
+                    form.setSource(s)
+                    setOpenField(null)
+                  }}
+                />
+              </AccordionRow>
+            )}
             <AccordionRow
               label={t('Date')}
               ariaLabel={t('Transaction date')}
@@ -846,19 +972,44 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
   )
 }
 
+/** How long the "Saved" confirmation stays up after a batch entry. */
+const SAVED_CONFIRM_MS = 2000
+
 /** Secondary "Save and add another" capsule rendered below the form in add
  *  mode (batch entry). Submits and resets the form for the next entry without
- *  closing the surface — mirrors iOS `saveAndAddAnotherButton`. */
+ *  closing the surface — mirrors iOS `saveAndAddAnotherButton`.
+ *
+ *  Because the surface stays open and the fields keep their values, a save left
+ *  NOTHING on screen to show it happened — the button just looked inert. It now
+ *  answers with a transient confirmation in a live region, in the calm sage
+ *  `--positive`, which fades on its own. The slot below the button is always
+ *  reserved, so the confirmation appearing never shifts the layout. */
 export function SaveAndAddAnotherButton({ form }: { form: TxFormApi }) {
   const { t } = useApp()
+  const [saved, setSaved] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current)
+    },
+    []
+  )
+
+  const saveAnother = () => {
+    if (!form.submit()) return
+    form.resetForAnother()
+    setSaved(true)
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => setSaved(false), SAVED_CONFIRM_MS)
+  }
+
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', padding: '0 20px 24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '0 20px 24px' }}>
       <button
         className="ow-btn"
         disabled={!form.canSave}
-        onClick={() => {
-          if (form.submit()) form.resetForAnother()
-        }}
+        onClick={saveAnother}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -877,6 +1028,21 @@ export function SaveAndAddAnotherButton({ form }: { form: TxFormApi }) {
         </svg>
         {t('Save and add another')}
       </button>
+      {/* Height reserved whether or not the confirmation is up, so the capsule
+          never moves. */}
+      <span style={{ display: 'flex', alignItems: 'center', minHeight: 17 }}>
+        {saved ? (
+          <span
+            role="status"
+            style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: 'var(--positive)' }}
+          >
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M3.5 8.5l3 3 6-6.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {t('Saved')}
+          </span>
+        ) : null}
+      </span>
     </div>
   )
 }
