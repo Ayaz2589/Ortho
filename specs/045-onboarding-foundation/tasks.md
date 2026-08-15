@@ -72,31 +72,31 @@ recoverable from a bare or stale address.
 **Independent test**: visit `/landing/es` directly and see Spanish on first paint; visit `/landing`
 and `/landing/fr` and land on the detected locale.
 
-- [ ] T008 [P] [US1] Write failing tests in `web/test/onboarding/landing-route.test.tsx`: the route
+- [X] T008 [P] [US1] Write failing tests in `web/test/onboarding/landing-route.test.tsx`: the route
       renders its locale's copy (not English) for at least `es` and `ja`; the document's `lang` is
       the entry's BCP-47 locale; `generateStaticParams()` returns exactly `landingSlugs()`;
       `dynamicParams` is `false`. Include the module-graph guard asserting the route's imports
       exclude `@/lib/store` AND every `@/lib/i18n/{bn,es,ja,zh,ko}` app catalog — this is the
       first-paint constraint and the reason the funnel has its own catalogs.
-- [ ] T009 [US1] Create `web/components/landing/LandingPlaceholder.tsx` — a client component taking
+- [X] T009 [US1] Create `web/components/landing/LandingPlaceholder.tsx` — a client component taking
       `{ locale, copy }`, rendering the wordmark treatment from `web/app/sign-in/page.tsx` plus the
       one localized `placeholderLine`. Tokens only, content capped and centered, no interactive
       controls, no `lib/store`, no network. This is the single file feature 046 replaces.
-- [ ] T010 [US1] Create `web/app/landing/[locale]/page.tsx` as a SERVER component (the codebase's
+- [X] T010 [US1] Create `web/app/landing/[locale]/page.tsx` as a SERVER component (the codebase's
       first — no `'use client'`): `generateStaticParams()` from `landingSlugs()`,
       `export const dynamicParams = false`, and a `generateMetadata()` returning that locale's
       `metaTitle`/`metaDescription`. It renders `<LandingPlaceholder>` with the statically imported
       catalog. Metadata `alternates` are added in T021 — keep this task to structure and copy.
-- [ ] T011 [P] [US1] Write a failing test in `web/test/onboarding/landing-index.test.tsx`: the bare
+- [X] T011 [P] [US1] Write a failing test in `web/test/onboarding/landing-index.test.tsx`: the bare
       `/landing` route renders no content of its own and replaces to `/landing/{detected}`.
-- [ ] T012 [US1] Create `web/app/landing/page.tsx` — a client route that on mount calls
+- [X] T012 [US1] Create `web/app/landing/page.tsx` — a client route that on mount calls
       `router.replace('/landing/' + detectLandingSlug(navigator.language))`, rendering the neutral
       holding state meanwhile.
-- [ ] T013 [P] [US1] Write failing tests in `web/test/onboarding/not-found.test.tsx` for BOTH
+- [X] T013 [P] [US1] Write failing tests in `web/test/onboarding/not-found.test.tsx` for BOTH
       branches: a path beginning `/landing/` replaces to `/landing/{detected}`; and — the negative
       case that matters — `/transactions/typo` renders the calm not-found page and does NOT redirect
       to marketing.
-- [ ] T014 [US1] Create `web/app/not-found.tsx` (the codebase's first): scoped recovery per
+- [X] T014 [US1] Create `web/app/not-found.tsx` (the codebase's first): scoped recovery per
       `contracts/root-router.md` §4. Calm and non-alarmist per Constitution II/IV — no red, no error
       chrome, no apology — with a single real `<a>`/`<button>` back-affordance carrying a visible
       focus ring. Must not import `lib/store`.
