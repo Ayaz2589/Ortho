@@ -1,4 +1,5 @@
 import type { Transaction } from '@/lib/types'
+import { effectiveShares } from '@/lib/format'
 import type { Interval } from '@/components/dashboard/range'
 
 export type HeatmapLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6
@@ -35,8 +36,19 @@ function startOfLocalDay(d: Date): Date {
  * spending days, where the mid-percentile would otherwise fall short) still shows
  * its busiest day darkest. 0 = a no-spend day. Pure + deterministic; cents in,
  * buckets out (the render layer maps levels → token tints, never red).
+ *
+ * `personId` follows the dashboard's member scope: given one, a day counts only
+ * that person's SHARE of each expense they own (the golden-locked
+ * `effectiveShares`, the same basis as `personSummary`), so the grid and the hero
+ * figures beside it always agree. Levels are then ranked within that person's own
+ * spending, so their quiet and busy days still separate. Null/undefined is the
+ * household view.
  */
-export function buildSpendHeatmap(transactions: Transaction[], interval: Interval): HeatmapDay[] {
+export function buildSpendHeatmap(
+  transactions: Transaction[],
+  interval: Interval,
+  personId?: string | null
+): HeatmapDay[] {
   const startMs = interval.start.getTime()
   const endMs = interval.end.getTime()
 
@@ -45,8 +57,14 @@ export function buildSpendHeatmap(transactions: Transaction[], interval: Interva
     if (tx.kind !== 'expense') continue
     const ms = new Date(tx.date).getTime()
     if (ms < startMs || ms >= endMs) continue
+    let cents = tx.amount_cents
+    if (personId) {
+      if (!tx.owner_ids.includes(personId)) continue
+      cents = effectiveShares(tx)[personId] ?? 0
+      if (cents === 0) continue
+    }
     const key = startOfLocalDay(new Date(tx.date)).getTime()
-    byDay.set(key, (byDay.get(key) ?? 0) + tx.amount_cents)
+    byDay.set(key, (byDay.get(key) ?? 0) + cents)
   }
 
   const raw: { date: Date; cents: number }[] = []

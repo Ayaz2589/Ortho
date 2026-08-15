@@ -28,8 +28,8 @@ vi.mock('@/components/widgets/WidgetBoard', () => ({
 vi.mock('@/components/dashboard/NetSummaryHero', () => ({
   NetSummaryHero: () => <div data-testid="net-hero" />,
 }))
-vi.mock('@/components/dashboard/MemberSummary', () => ({
-  MemberSummary: () => <div data-testid="member-summary" />,
+vi.mock('@/components/dashboard/MemberScopePicker', () => ({
+  MemberScopePicker: () => <div data-testid="member-scope-picker" />,
 }))
 
 beforeEach(() => localStorage.clear())

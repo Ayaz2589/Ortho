@@ -1,17 +1,21 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useApp } from '@/lib/store'
-import { stepMonth } from './range'
 import { monthLabel } from '@/lib/useDashboardRange'
 
 /**
- * Specific-month selector that sits beside the relative range picker. A prev/next
- * stepper (clamped to the months the data spans) with a tap-to-open list to jump,
- * plus a "Latest" control to return to the relative ranges. Selecting a month is a
- * transient override handled by the dashboard scope hook.
+ * Specific-month selector that sits beside the relative range picker.
+ *
+ * One control: a trigger showing the active month over a list of every month the
+ * data spans, with "Latest" at the top to return to the relative ranges.
+ * Previously this was a prev/next stepper AND the list AND a separate "Latest"
+ * button — three affordances for one choice, and the two extra ones only became
+ * usable once a month had already been picked, so choosing a month made the
+ * control sprout controls. Selecting a month is a transient override handled by
+ * the dashboard scope hook.
  */
 export function MonthPicker({
   availableMonths,
@@ -47,55 +51,24 @@ export function MonthPicker({
   // No months in the data → nothing to pick; the relative range stands alone.
   if (availableMonths.length === 0) return null
 
-  const older = selectedMonth ? stepMonth(availableMonths, selectedMonth, 'prev') : null
-  const newer = selectedMonth ? stepMonth(availableMonths, selectedMonth, 'next') : null
   const label = selectedMonth ? monthLabel(selectedMonth, locale) : t('Pick a month')
 
   return (
-    <div ref={ref} className="relative flex items-center gap-1">
-      <button
-        type="button"
-        aria-label={t('Previous month')}
-        disabled={!older}
-        onClick={() => older && onSelectMonth(older)}
-        className="flex h-10 w-10 items-center justify-center rounded-lg text-text-2 transition-colors hover:bg-[var(--chip-bg)] disabled:pointer-events-none disabled:text-text-3 disabled:opacity-40"
-      >
-        <ChevronLeft size={18} />
-      </button>
-
+    <div ref={ref} className="relative flex items-center">
       <button
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          'min-w-[124px] rounded-lg px-3 py-2.5 text-sm font-normal tabular-nums transition-colors',
+          'inline-flex min-w-[124px] items-center justify-between gap-1.5 rounded-lg px-3 py-2.5 text-sm font-normal tabular-nums transition-colors',
           selectedMonth ? 'text-text' : 'text-text-2'
         )}
         style={{ background: 'var(--chip-bg)' }}
       >
         {label}
+        <ChevronDown size={14} className="shrink-0 text-text-3" />
       </button>
-
-      <button
-        type="button"
-        aria-label={t('Next month')}
-        disabled={!newer}
-        onClick={() => newer && onSelectMonth(newer)}
-        className="flex h-10 w-10 items-center justify-center rounded-lg text-text-2 transition-colors hover:bg-[var(--chip-bg)] disabled:pointer-events-none disabled:text-text-3 disabled:opacity-40"
-      >
-        <ChevronRight size={18} />
-      </button>
-
-      {selectedMonth && (
-        <button
-          type="button"
-          onClick={onClear}
-          className="ml-1 rounded-lg px-2 py-2 text-[13px] font-normal text-text-3 transition-colors hover:text-text"
-        >
-          {t('Latest')}
-        </button>
-      )}
 
       {open && (
         <div
@@ -104,26 +77,56 @@ export function MonthPicker({
           className="absolute left-0 top-full z-50 mt-1 max-h-72 w-44 overflow-auto rounded-xl border border-hairline bg-surface py-1"
           style={{ boxShadow: 'var(--shadow-sheet)' }}
         >
+          {/* The way back to the relative ranges lives in the list, so the
+              control never grows a second button. Absent when already there. */}
+          {selectedMonth && (
+            <Option
+              label={t('Latest')}
+              selected={false}
+              onClick={() => {
+                onClear()
+                setOpen(false)
+              }}
+            />
+          )}
           {availableMonths.map((m) => (
-            <button
+            <Option
               key={m}
-              type="button"
-              role="option"
-              aria-selected={m === selectedMonth}
+              label={monthLabel(m, locale)}
+              selected={m === selectedMonth}
               onClick={() => {
                 onSelectMonth(m)
                 setOpen(false)
               }}
-              className={cn(
-                'flex w-full items-center px-3 py-2 text-left text-sm tabular-nums transition-colors hover:bg-[var(--chip-bg)]',
-                m === selectedMonth ? 'text-text' : 'text-text-2'
-              )}
-            >
-              {monthLabel(m, locale)}
-            </button>
+            />
           ))}
         </div>
       )}
     </div>
+  )
+}
+
+function Option({
+  label,
+  selected,
+  onClick,
+}: {
+  label: string
+  selected: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={selected}
+      onClick={onClick}
+      className={cn(
+        'flex w-full items-center px-3 py-2 text-left text-sm tabular-nums transition-colors hover:bg-[var(--chip-bg)]',
+        selected ? 'text-text' : 'text-text-2'
+      )}
+    >
+      {label}
+    </button>
   )
 }
