@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 //
-// MonthPicker — the dashboard stepper + month list (US1). Stepping is clamped to
-// the available months; the label opens a list to jump; "Latest" returns to the
+// MonthPicker — the dashboard's specific-month control. It used to be a
+// prev/next stepper AND a jump list AND a separate "Latest" button: three
+// affordances for one choice, two of which only became usable once a month was
+// already picked. It is now just the dropdown — the trigger shows the active
+// month, and the list carries every month plus "Latest" to return to the
 // relative range.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
@@ -39,28 +42,22 @@ describe('MonthPicker', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('shows the selected month and steps to adjacent months', async () => {
-    const user = userEvent.setup()
-    const { onSelectMonth } = setup({ selectedMonth: '2026-05' })
+  it('is a single control — no stepper arrows, no separate Latest button', () => {
+    setup({ selectedMonth: '2026-05' })
+    expect(screen.queryByRole('button', { name: 'Previous month' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Next month' })).toBeNull()
+    // Exactly one button before the list is opened: the trigger.
+    expect(screen.getAllByRole('button')).toHaveLength(1)
+  })
+
+  it('shows the selected month', () => {
+    setup({ selectedMonth: '2026-05' })
     expect(screen.getByRole('button', { expanded: false })).toHaveTextContent('May 2026')
-
-    await user.click(screen.getByRole('button', { name: 'Previous month' }))
-    expect(onSelectMonth).toHaveBeenCalledWith('2026-04') // older
-
-    await user.click(screen.getByRole('button', { name: 'Next month' }))
-    expect(onSelectMonth).toHaveBeenCalledWith('2026-06') // newer
   })
 
-  it('disables Previous at the earliest month', () => {
-    setup({ selectedMonth: '2026-04' })
-    expect(screen.getByRole('button', { name: 'Previous month' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Next month' })).toBeEnabled()
-  })
-
-  it('disables Next at the latest month', () => {
-    setup({ selectedMonth: '2026-06' })
-    expect(screen.getByRole('button', { name: 'Next month' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Previous month' })).toBeEnabled()
+  it('prompts to pick when no month is selected', () => {
+    setup({ selectedMonth: null })
+    expect(screen.getByRole('button', { expanded: false })).toHaveTextContent('Pick a month')
   })
 
   it('opens the list and jumps to a chosen month', async () => {
@@ -69,21 +66,35 @@ describe('MonthPicker', () => {
     await user.click(screen.getByRole('button', { expanded: false }))
     const list = screen.getByRole('listbox')
     expect(within(list).getByRole('option', { name: 'June 2026' })).toBeInTheDocument()
+    expect(within(list).getByRole('option', { name: 'May 2026' })).toHaveAttribute('aria-selected', 'true')
+
     await user.click(within(list).getByRole('option', { name: 'April 2026' }))
     expect(onSelectMonth).toHaveBeenCalledWith('2026-04')
+    expect(screen.queryByRole('listbox')).toBeNull()
   })
 
-  it('"Latest" returns to the relative range', async () => {
+  it('offers "Latest" inside the list to return to the relative range', async () => {
     const user = userEvent.setup()
     const { onClear } = setup({ selectedMonth: '2026-05' })
-    await user.click(screen.getByRole('button', { name: 'Latest' }))
+    await user.click(screen.getByRole('button', { expanded: false }))
+    await user.click(within(screen.getByRole('listbox')).getByRole('option', { name: 'Latest' }))
     expect(onClear).toHaveBeenCalled()
+    expect(screen.queryByRole('listbox')).toBeNull()
   })
 
-  it('with no month selected, the stepper arrows are disabled', () => {
+  it('omits "Latest" when already on the relative range', async () => {
+    const user = userEvent.setup()
     setup({ selectedMonth: null })
-    expect(screen.getByRole('button', { name: 'Previous month' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Next month' })).toBeDisabled()
-    expect(screen.getByRole('button', { expanded: false })).toHaveTextContent('Pick a month')
+    await user.click(screen.getByRole('button', { expanded: false }))
+    expect(within(screen.getByRole('listbox')).queryByRole('option', { name: 'Latest' })).toBeNull()
+  })
+
+  it('closes on Escape', async () => {
+    const user = userEvent.setup()
+    setup({ selectedMonth: '2026-05' })
+    await user.click(screen.getByRole('button', { expanded: false }))
+    expect(screen.getByRole('listbox')).toBeTruthy()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('listbox')).toBeNull()
   })
 })

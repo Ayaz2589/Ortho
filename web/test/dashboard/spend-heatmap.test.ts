@@ -93,3 +93,41 @@ describe('buildSpendHeatmap', () => {
     expect(days.every((d) => d.cents === 0)).toBe(true)
   })
 })
+
+// The heatmap follows the dashboard's member scope: with a person selected it
+// must show THEIR share of each day's spending, not the household's total —
+// otherwise the hero figures and the grid beside them disagree.
+describe('buildSpendHeatmap scoped to one person', () => {
+  const split = (day: number, cents: number, shares: Record<string, number>) =>
+    tx({
+      id: `s${day}`,
+      amount_cents: cents,
+      date: `2026-08-${String(day).padStart(2, '0')}T12:00:00.000Z`,
+      owner_ids: Object.keys(shares),
+      shares,
+    })
+
+  it('counts only the person’s share of a split expense', () => {
+    const days = buildSpendHeatmap([split(5, 10000, { p1: 6000, p2: 4000 })], AUG, 'p1')
+    expect(days[4].cents).toBe(6000)
+  })
+
+  it('ignores expenses the person does not own', () => {
+    const days = buildSpendHeatmap([split(5, 10000, { p2: 10000 })], AUG, 'p1')
+    expect(days[4].cents).toBe(0)
+    expect(days[4].level).toBe(0)
+  })
+
+  it('every member’s scoped day totals sum to the household’s', () => {
+    const txns = [split(5, 10000, { p1: 6000, p2: 4000 }), split(12, 3000, { p1: 1500, p2: 1500 })]
+    const all = buildSpendHeatmap(txns, AUG)
+    const a = buildSpendHeatmap(txns, AUG, 'p1')
+    const b = buildSpendHeatmap(txns, AUG, 'p2')
+    all.forEach((d, i) => expect(a[i].cents + b[i].cents).toBe(d.cents))
+  })
+
+  it('an undefined person id is the household view', () => {
+    const txns = [split(5, 10000, { p1: 6000, p2: 4000 })]
+    expect(buildSpendHeatmap(txns, AUG, null)).toEqual(buildSpendHeatmap(txns, AUG))
+  })
+})

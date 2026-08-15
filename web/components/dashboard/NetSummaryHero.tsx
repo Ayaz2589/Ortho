@@ -1,9 +1,10 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, type CSSProperties } from 'react'
 import { useApp } from '@/lib/store'
 import { useDashboardScopeContext } from '@/lib/widgets/DashboardScopeContext'
 import { SpendHeatmap } from '@/components/dashboard/SpendHeatmap'
+import { personSummary } from '@/lib/finance/personSummary'
 
 /**
  * Net-summary HERO (spec 036 follow-up). Income minus expenses over the shared
@@ -11,16 +12,25 @@ import { SpendHeatmap } from '@/components/dashboard/SpendHeatmap'
  * directly into the overview, NOT a toggleable widget and NOT wrapped in a card
  * (no `ow-card` surface): the big net figure sits on the page background above the
  * widget board. Reads the same data + shared scope as everything else
- * (`useApp()` + `useDashboardScopeContext()`); transfers count as neither income
- * nor expense; loss is NEVER red (a negative net keeps the neutral `--text` tint).
- * Deliberately minimal for now — income/expense split + a proportion bar — with
- * room to extend later.
+ * (`useApp()` + `useDashboardScopeContext()`); loss is NEVER red (a negative net
+ * keeps the neutral `--text` tint).
+ *
+ * `personId` is the dashboard's member scope, set by `MemberScopePicker` above.
+ * Null is the household: transfers count as neither income nor expense, so no
+ * transfers figure is shown. With a member picked, the SAME hero — figure, bar,
+ * split, and heatmap — becomes theirs, via the pure `personSummary` (their income
+ * share, their share of shared expenses); at that scope transfers between members
+ * are real money in and out, so a net Transfers figure joins the row.
  */
-export function NetSummaryHero() {
+export function NetSummaryHero({ personId = null }: { personId?: string | null }) {
   const { transactions, formatMoney, t } = useApp()
   const { interval, now, periodLabel } = useDashboardScopeContext()
 
-  const { income, expenses } = useMemo(() => {
+  const { income, expenses, transfers } = useMemo(() => {
+    if (personId) {
+      const s = personSummary(transactions, personId, interval.start, interval.end)
+      return { income: s.income, expenses: s.expenses, transfers: s.transfersReceived - s.transfersSent }
+    }
     const startMs = interval.start.getTime()
     const endMs = interval.end.getTime()
     let inc = 0
@@ -31,13 +41,13 @@ export function NetSummaryHero() {
       if (tx.kind === 'income') inc += tx.amount_cents
       else if (tx.kind === 'expense') exp += tx.amount_cents
     }
-    return { income: inc, expenses: exp }
-  }, [transactions, interval.start, interval.end])
+    return { income: inc, expenses: exp, transfers: null as number | null }
+  }, [personId, transactions, interval.start, interval.end])
 
-  const net = income - expenses
+  const net = income - expenses + (transfers ?? 0)
   // Share of this period's income that spending has consumed — the bar FILLS as
-  // the household runs down its income (expenses ÷ income), clamped at 100% and
-  // drawn in calm sand, never red. With no income, a full bar iff any spend.
+  // income is run down (expenses ÷ income), clamped at 100% and drawn in calm
+  // sand, never red. With no income, a full bar iff any spend.
   const spentPct =
     income > 0 ? Math.min(100, (expenses / income) * 100) : expenses > 0 ? 100 : 0
 
@@ -63,6 +73,7 @@ export function NetSummaryHero() {
           </div>
 
           <p
+            data-testid="hero-net"
             className="mt-1 truncate text-[44px] font-light leading-none tracking-[-1px] tabular-nums sm:text-[56px]"
             style={{ color: net >= 0 ? 'var(--positive)' : 'var(--text)' }}
           >
@@ -84,17 +95,17 @@ export function NetSummaryHero() {
             />
           </div>
 
-          <div className="mt-3 flex items-baseline gap-8">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-xs text-text-2">{t('Income')}</span>
-              <span className="text-[17px] tabular-nums" style={{ color: 'var(--positive)' }}>
-                {formatMoney(income)}
-              </span>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="text-xs text-text-2">{t('Expenses')}</span>
-              <span className="text-[17px] tabular-nums text-text">{formatMoney(expenses)}</span>
-            </div>
+          <div className="mt-3 flex flex-wrap items-baseline gap-x-8 gap-y-2">
+            <Figure testid="hero-income" label={t('Income')} value={formatMoney(income)} color="var(--positive)" />
+            <Figure testid="hero-expenses" label={t('Expenses')} value={formatMoney(expenses)} color="var(--text)" />
+            {transfers !== null ? (
+              <Figure
+                testid="hero-transfers"
+                label={t('Transfers')}
+                value={formatMoney(transfers)}
+                color="var(--text)"
+              />
+            ) : null}
             {isCurrentMonthWindow ? (
               <div className="ml-auto self-end">
                 <span className="text-xs tabular-nums text-text-3">
@@ -105,13 +116,35 @@ export function NetSummaryHero() {
           </div>
         </div>
 
-        {/* Right: daily-spending heatmap for the same window. The heatmap owns its
-            own horizontal scroll (scrollbar hidden) and click-to-pin tooltip, so
-            the wrapper just lets it shrink without clipping the tooltip. */}
+        {/* Right: daily-spending heatmap over the same window and the same member
+            scope. The heatmap owns its own horizontal scroll (scrollbar hidden)
+            and click-to-pin tooltip, so the wrapper just lets it shrink without
+            clipping the tooltip. */}
         <div className="min-w-0">
-          <SpendHeatmap interval={interval} />
+          <SpendHeatmap interval={interval} personId={personId} />
         </div>
       </div>
     </section>
+  )
+}
+
+function Figure({
+  label,
+  value,
+  testid,
+  color,
+}: {
+  label: string
+  value: string
+  testid: string
+  color: CSSProperties['color']
+}) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-xs text-text-2">{label}</span>
+      <span data-testid={testid} className="text-[17px] tabular-nums" style={{ color }}>
+        {value}
+      </span>
+    </div>
   )
 }

@@ -37,11 +37,22 @@ function weekdayInitials(locale: string): string[] {
  * the heatmap conveys per-day detail rather than reading as anonymous dots. The
  * grid scrolls horizontally (scrollbar hidden) so a long range never overflows the
  * hero, while the tooltip sits outside the scroll area so it is never clipped.
- * Reads data from `useApp()`; the window is the hero's shared scope.
+ * Reads data from `useApp()`; the window is the hero's shared scope, and
+ * `personId` its member scope — with a member picked each day shows THAT person's
+ * share of the spending, so the grid agrees with the hero figures beside it.
  */
-export function SpendHeatmap({ interval }: { interval: Interval }) {
+export function SpendHeatmap({
+  interval,
+  personId = null,
+}: {
+  interval: Interval
+  personId?: string | null
+}) {
   const { transactions, formatMoney, t, locale } = useApp()
-  const days = useMemo(() => buildSpendHeatmap(transactions, interval), [transactions, interval])
+  const days = useMemo(
+    () => buildSpendHeatmap(transactions, interval, personId),
+    [transactions, interval, personId]
+  )
   const [selected, setSelected] = useState<HeatmapDay | null>(null)
   const [hovered, setHovered] = useState<HeatmapDay | null>(null)
   const ref = useRef<HTMLDivElement>(null)

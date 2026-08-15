@@ -1,11 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import { useApp } from '@/lib/store'
 import { WidgetBoard } from '@/components/widgets/WidgetBoard'
 import { MonthPicker } from '@/components/dashboard/MonthPicker'
 import { RangePicker } from '@/components/dashboard/RangePicker'
 import { NetSummaryHero } from '@/components/dashboard/NetSummaryHero'
-import { MemberSummary } from '@/components/dashboard/MemberSummary'
+import { MemberScopePicker } from '@/components/dashboard/MemberScopePicker'
 import {
   DashboardScopeProvider,
   useDashboardScopeContext,
@@ -48,23 +49,28 @@ function DashboardHeader() {
  * Dashboard.
  *
  * The overview is a single responsive composition (spec 034): the shared
- * time-scope bar, the baked-in **net-summary hero** (`NetSummaryHero` — the most
- * prominent element, always shown, not a toggleable widget), and the
- * `WidgetBoard` below. All three read one shared period via `DashboardScopeProvider`
- * so the whole dashboard reflects the same window; which widgets appear is a
- * per-browser preference toggled in Settings → Widgets.
+ * time-scope bar, the **member scope** selector, the baked-in **net-summary
+ * hero** (`NetSummaryHero` — the most prominent element, always shown, not a
+ * toggleable widget), and the `WidgetBoard` below. All read one shared period via
+ * `DashboardScopeProvider` so the whole dashboard reflects the same window; which
+ * widgets appear is a per-browser preference toggled in Settings → Widgets.
+ *
+ * Member scope is deliberately page-level state, not context: it re-scopes the
+ * hero (and the heatmap inside it) only. The widget board stays household-wide,
+ * so a widget never silently changes meaning under a control it doesn't show.
  *
  * The former Reports MODE (spec 027) is gone — its savings-rate view now lives on
  * the board as the `savings-trends` widget (spec 036 follow-up), so the Dashboard
  * is a single view with no Overview/Reports toggle.
  */
 export default function DashboardPage() {
+  const [personId, setPersonId] = useState<string | null>(null)
   return (
     <div className="mx-auto w-full max-w-[1080px]">
       <DashboardScopeProvider>
         <DashboardHeader />
-        <NetSummaryHero />
-        <MemberSummary />
+        <MemberScopePicker personId={personId} onChange={setPersonId} />
+        <NetSummaryHero personId={personId} />
         <WidgetBoard />
       </DashboardScopeProvider>
     </div>
