@@ -13,6 +13,15 @@ import { fileURLToPath } from 'node:url'
 const WEB_ROOT = fileURLToPath(new URL('../../', import.meta.url))
 const SCAN_DIRS = ['lib', 'app', 'components']
 const CATALOGS = ['bn', 'es', 'ja', 'zh', 'ko']
+// spec 045: lib/i18n/landing/ holds the SMALL funnel-only catalogs, which share these
+// basenames but are a different module set. They are statically imported on purpose —
+// a landing page's locale is fixed by its URL, so its text must be right on the first
+// frame, and these files are a few hundred bytes rather than 32-55 KB. Scanning them
+// here would flag `import es from './es'` (a landing sibling) as if it were an app
+// catalog. The equivalent guard for this directory — that a landing catalog never
+// imports an APP catalog, and that the set stays small — lives in
+// test/i18n/landing-catalogs.test.ts.
+const EXCLUDED_DIRS = ['lib/i18n/landing']
 // A STATIC default/namespace import of a catalog module by any path ending in the
 // catalog basename (`'./bn'`, `'@/lib/i18n/es'`, `'../i18n/ja'`, …).
 const STATIC_CATALOG_IMPORT = new RegExp(
@@ -22,6 +31,7 @@ const STATIC_CATALOG_IMPORT = new RegExp(
 
 function tsFiles(dir: string): string[] {
   const out: string[] = []
+  if (EXCLUDED_DIRS.some((d) => dir.endsWith(d))) return out
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, entry.name)
     if (entry.isDirectory()) out.push(...tsFiles(p))
