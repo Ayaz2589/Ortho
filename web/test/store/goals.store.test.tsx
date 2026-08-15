@@ -156,3 +156,57 @@ describe('goal CRUD is optimistic with rollback', () => {
     expect(probe!.goalContributions.map((c) => c.id)).not.toContain('gc-2')
   })
 })
+
+// ── spec 045 US3: a contribution can be corrected, not only added or dropped ────
+describe('updateContribution is optimistic with rollback', () => {
+  it('applies the corrected amount immediately', async () => {
+    await boot(dataset())
+    await act(async () => { probe!.updateContribution({ ...CONTRIB, amount_cents: 75000 }) })
+    expect(probe!.goalContributions.find((c) => c.id === 'gc-1')!.amount_cents).toBe(75000)
+  })
+
+  it('corrects the date and the note too', async () => {
+    await boot(dataset())
+    await act(async () => {
+      probe!.updateContribution({ ...CONTRIB, date: '2026-04-15', note: 'tax refund' })
+    })
+    const c = probe!.goalContributions.find((x) => x.id === 'gc-1')!
+    expect(c.date).toBe('2026-04-15')
+    expect(c.note).toBe('tax refund')
+  })
+
+  it('persists to goal_contributions', async () => {
+    await boot(dataset())
+    await act(async () => { probe!.updateContribution({ ...CONTRIB, amount_cents: 75000 }) })
+    const writes = h.mock!.callsFor('goal_contributions').filter((c) => c.op === 'update')
+    expect(writes).toHaveLength(1)
+    expect(writes[0].payload).toMatchObject({ amount_cents: 75000 })
+  })
+
+  it('never re-parents a contribution — goal_id is not in the payload', async () => {
+    // Moving a contribution between goals would silently change TWO goals' saved
+    // totals from a form that shows only one, so the write must not carry it.
+    await boot(dataset())
+    await act(async () => { probe!.updateContribution({ ...CONTRIB, amount_cents: 75000 }) })
+    const payload = h.mock!.callsFor('goal_contributions').find((c) => c.op === 'update')!
+      .payload as Record<string, unknown>
+    expect(Object.keys(payload).sort()).toEqual(['amount_cents', 'date', 'note'])
+  })
+
+  it('rolls back to the stored amount on a write error', async () => {
+    await boot(dataset({ updateErrors: { goal_contributions: 'denied' } } as Partial<SupabaseMockDataset>))
+    await act(async () => { probe!.updateContribution({ ...CONTRIB, amount_cents: 75000 }) })
+    await waitFor(() =>
+      expect(probe!.goalContributions.find((c) => c.id === 'gc-1')!.amount_cents).toBe(50000)
+    )
+    expect(probe!.error).toBeTruthy()
+  })
+
+  it('leaves other contributions untouched', async () => {
+    await boot(dataset())
+    const other: GoalContribution = { ...CONTRIB, id: 'gc-2', amount_cents: 10000 }
+    await act(async () => { probe!.addContribution(other) })
+    await act(async () => { probe!.updateContribution({ ...CONTRIB, amount_cents: 75000 }) })
+    expect(probe!.goalContributions.find((c) => c.id === 'gc-2')!.amount_cents).toBe(10000)
+  })
+})

@@ -27,12 +27,16 @@ export function MoneyInput({
   placeholder,
   autoFocus,
   big,
+  ariaLabel,
 }: {
   value: string
   onChange: (v: string) => void
   placeholder?: string
   autoFocus?: boolean
   big?: boolean
+  /** Accessible name. `FieldRow`'s label is a plain span with no `for`, so an
+   *  unlabelled money field reads as nothing to a screen reader. */
+  ariaLabel?: string
 }) {
   const { currency } = useApp()
   return (
@@ -43,6 +47,7 @@ export function MoneyInput({
       <input
         inputMode="decimal"
         autoFocus={autoFocus}
+        aria-label={ariaLabel}
         value={value}
         onChange={(e) => onChange(e.target.value.replace(/[^0-9.,]/g, ''))}
         placeholder={placeholder ?? '0.00'}
