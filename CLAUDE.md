@@ -1,5 +1,29 @@
 <!-- SPECKIT START -->
-Active feature: **spec 044 — financial routines**. Plan:
+Active feature: **spec 045 — onboarding foundation**. Plan:
+`specs/045-onboarding-foundation/plan.md` (spec/research/data-model/quickstart/contracts alongside it).
+The shared plumbing for a signed-out onboarding funnel — landing → tour → sign-in → financial health
+— planned end to end in `docs/plan/onboarding-funnel.md` as four features; this is the first, and it
+must land on main before 046 (landing content), 047 (guided tour) and 048 (new-user hand-off) build
+in parallel sandboxes. Ships: a locale registry `web/lib/onboarding/locales.ts` (`LANDING_LOCALES`,
+`detectLandingSlug`) that is the ONLY place the six landing slugs (`en/es/bn/ja/zh/ko`) are listed —
+adding a 7th language must be one list edit; `funnel.ts` (per-device `ortho.onboardingFunnel` marker,
+defined here but set by 047 and read by 048 — 045 never calls it) and `adoptLanguage.ts` (writes the
+EXISTING `language` localStorage key, on explicit continue only); a rewritten `app/page.tsx` **smart
+router** whose FIRST branch is `Capacitor.isNativePlatform() → /dashboard` (the installed iOS app must
+never show marketing — the guard test asserts `getUser()` is never called on native, ordering being
+the real regression risk), then signed-in → `/dashboard`, else → `/landing/{detected}`; six statically
+exported placeholder pages from ONE dynamic route `app/landing/[locale]/` + `generateStaticParams`
+(six hand-written folders would fail SC-006); the app's first SEO surface (`app/robots.ts`,
+`app/sitemap.ts`, `metadataBase`) and its first `not-found.tsx`, whose redirect is scoped to
+`/landing/` so a typo'd in-app URL never throws a signed-in user out to marketing. Two research
+findings drove the design: the funnel gets its OWN small catalogs `web/lib/i18n/landing/*.ts` (the app
+catalogs are 32–55 KB and `useTranslate` resolves AFTER mount, which would flash English on a
+locale-fixed page) — this supersedes the "reserved regions in the app catalogs" idea in the plan doc,
+though the reserved-region markers themselves survive inside the new landing catalogs; and under
+`output: 'export'` there are no redirects/rewrites/middleware, so every routing decision is a client
+effect. These landing routes are the codebase's FIRST server components (Next only allows a `metadata`
+export from one). No DB, no migration, no new dependency. Fully TDD.
+Prior shipped: **spec 044 — financial routines**. Plan:
 `specs/044-financial-routines/plan.md` (spec/plan/research/data-model/quickstart/contracts alongside it).
 Learns a household's recurring spend patterns and habits over time, grounded in the prior decision
 record (github.com/Ayaz2589/Ortho/pull/5, `findings.md`). Four user stories: (1) **Recurring-charge

@@ -25,10 +25,16 @@ const CATALOG_LOADERS: Record<CatalogLang, () => Promise<{ default: Record<strin
 }
 
 /** Resolve "System" to a named language via the browser's language tag,
- *  mirroring iOS's system-language behavior. Unsupported tags → English. */
-export function effectiveLanguage(language: Language): Language {
+ *  mirroring iOS's system-language behavior. Unsupported tags → English.
+ *
+ *  spec 045: `tagOverride` lets a caller resolve an explicit tag instead of reading
+ *  `navigator.language` — used by the landing-locale registry's `detectLandingSlug`,
+ *  so browser-tag parsing lives in exactly one place rather than being duplicated
+ *  there. Omitted everywhere else, so existing behavior is unchanged. */
+export function effectiveLanguage(language: Language, tagOverride?: string): Language {
   if (language !== 'System') return language
-  const tag = (typeof navigator !== 'undefined' ? navigator.language : '') || ''
+  const tag =
+    tagOverride ?? ((typeof navigator !== 'undefined' ? navigator.language : '') || '')
   const prefix = tag.toLowerCase().split('-')[0]
   switch (prefix) {
     case 'bn': return 'বাংলা'
