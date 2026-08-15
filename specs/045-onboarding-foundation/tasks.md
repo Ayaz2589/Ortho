@@ -147,18 +147,18 @@ show zero changes to tests this feature did not add.
 **Goal**: the modules that let an entry point hand its language and funnel provenance forward.
 This feature ships the contracts and their tests; 046 wires the CTAs and 047/048 use the marker.
 
-- [ ] T018 [P] [US3] Write failing tests in `web/test/onboarding/adoptLanguage.test.ts`:
+- [X] T018 [P] [US3] Write failing tests in `web/test/onboarding/adoptLanguage.test.ts`:
       `adoptLandingLanguage('es')` writes `'Español'` (the `Language` value, NOT the slug — writing
       a slug would silently fall back via `asLanguage()`) to the existing `language` localStorage
       key; an unknown slug writes nothing; and with `localStorage.setItem` throwing, the call is a
       silent no-op that does not propagate (FR-015).
-- [ ] T019 [US3] Implement `web/lib/onboarding/adoptLanguage.ts` per `contracts/locale-registry.md`.
-- [ ] T020 [P] [US3] Write failing tests in `web/test/onboarding/funnel.test.ts`: `markFunnelEntry`
+- [X] T019 [US3] Implement `web/lib/onboarding/adoptLanguage.ts` per `contracts/locale-registry.md`.
+- [X] T020 [P] [US3] Write failing tests in `web/test/onboarding/funnel.test.ts`: `markFunnelEntry`
       /`readFunnelEntry`/`clearFunnelEntry` round-trip on key `ortho.onboardingFunnel`;
       `readFunnelEntry()` is strict (only exactly `'1'` is true — absent, malformed and truncated
       values all read false); every function tolerates `localStorage` throwing. Add the FR-019
       guard: no production module outside `web/lib/onboarding/` imports this module yet.
-- [ ] T021 [US3] Implement `web/lib/onboarding/funnel.ts`, mirroring
+- [X] T021 [US3] Implement `web/lib/onboarding/funnel.ts`, mirroring
       `web/components/announcements/announcementsSeen.ts`. Define it only — this feature must not
       call it anywhere in production code (FR-019).
 
