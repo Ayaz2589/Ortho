@@ -18,8 +18,13 @@ function source(slug: string): string {
 
 describe('landing catalogs — coverage', () => {
   it('has exactly one catalog file per registry slug', () => {
+    // Non-catalog modules in this directory are excluded by name, so the check stays a
+    // real "one file per slug" assertion rather than drifting into a file count:
+    //   index.ts — the LandingCatalog type + LANDING_CATALOGS registry (spec 045)
+    //   tour.ts  — the TourCopy type + TOUR_CATALOGS registry (spec 047)
+    const NOT_A_CATALOG = ['index.ts', 'tour.ts']
     const files = readdirSync(DIR)
-      .filter((f) => f.endsWith('.ts') && f !== 'index.ts')
+      .filter((f) => f.endsWith('.ts') && !NOT_A_CATALOG.includes(f))
       .map((f) => f.replace(/\.ts$/, ''))
       .sort()
     expect(files).toEqual([...landingSlugs()].sort())
@@ -103,13 +108,18 @@ describe('landing catalogs — reserved regions for features 046/047', () => {
     expect(src.indexOf(OPEN_047)).toBeLessThan(src.indexOf(CLOSE_047))
   })
 
-  it.each(landingSlugs())('leaves both regions empty on delivery in %s.ts', (slug) => {
-    // FR-025: this feature adds no marketing or tour text.
+  it.each(landingSlugs())('leaves the 046 region empty in %s.ts', (slug) => {
+    // FR-025: spec 045 itself added no marketing or tour text.
+    //
+    // This originally asserted BOTH regions were empty — a statement about what 045
+    // delivered, not a standing invariant. Spec 047 has since filled the 047 region with
+    // the tour copy, which is the marker mechanism working exactly as designed. Narrowed
+    // rather than deleted: the 046 region is still unclaimed, and this keeps the guard
+    // live for it. The 047 region has its own guards in test/i18n/tour-catalogs.test.ts.
     const src = source(slug)
     const between = (open: string, close: string) =>
       src.slice(src.indexOf(open) + open.length, src.indexOf(close)).trim()
     expect(between(OPEN_046, CLOSE_046)).toBe('')
-    expect(between(OPEN_047, CLOSE_047)).toBe('')
   })
 
   it.each(landingSlugs())('separates the two regions by blank context in %s.ts', (slug) => {

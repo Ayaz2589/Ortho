@@ -4,7 +4,12 @@
 
 **Created**: 2026-08-15
 
-**Status**: Draft — scaffolded for a sandbox agent. Run `/speckit-plan` next.
+**Status**: Implemented. `/speckit-plan` → `/speckit-tasks` → `/speckit-implement` complete — see
+[plan.md](./plan.md), [research.md](./research.md), [data-model.md](./data-model.md),
+[contracts/](./contracts/tour-contracts.md), [quickstart.md](./quickstart.md) and
+[tasks.md](./tasks.md). Never went through `/speckit-clarify`; the two ambiguities it would have
+raised (whether screen position belongs in the address, and where exactly the copy lives) were
+resolved in research §2 and §3 with the reasoning recorded.
 
 **Input**: Feature 3 of 4 in the onboarding funnel (`docs/plan/onboarding-funnel.md`). A short guided tour between the landing page and sign-in, in each of the six supported languages.
 

@@ -24,7 +24,7 @@ Finance-engine math lives in [./finance.md](./finance.md); schema/RLS in
 - The package also hosts the deterministic bank-statement import + tx CRUD CLI
   (`web/scripts/import/`), driven by the root Makefile — internals in [./makefile.md](./makefile.md).
 
-## 2. Route tree (all `'use client'` except the landing route — see below)
+## 2. Route tree (all `'use client'` except the landing and tour routes — see below)
 
 ```
 web/app/
@@ -35,8 +35,12 @@ web/app/
   page.tsx              SMART ROUTER (spec 045): native → /dashboard (FIRST, synchronous);
                         signed-in web → /dashboard; signed-out web → /landing/{detected}
   landing/page.tsx      bare /landing → forwards to the detected locale
-  landing/[locale]/     SERVER component (the only one) — generateStaticParams from the
-                        registry, dynamicParams:false, per-locale metadata + hreflang
+  landing/[locale]/     SERVER component — generateStaticParams from the registry,
+                        dynamicParams:false, per-locale metadata + hreflang
+  tour/[locale]/        SERVER component (spec 047) — the ≤5-screen learn-more tour;
+                        same static-params shape, metadata is noindex (funnel step, not
+                        a search destination); screens are CLIENT STATE, so six
+                        documents, not thirty
   not-found.tsx         calm 404; redirects ONLY paths under /landing/ (spec 045)
   robots.ts, sitemap.ts static Route Handlers — the app's first SEO surface
   sign-in/page.tsx      8-digit email OTP (signInWithOtp → verifyOtp(type:'email')); bounces
@@ -73,9 +77,10 @@ web/app/
      root router's native branch is therefore first and synchronous — a marketing page must never
      paint inside the App Store build. The guard test asserts `getUser()` is never *called* on
      native, because destination alone would still pass with the race present.
-  2. **`landing/[locale]/page.tsx` is the codebase's only server component.** Next permits a
-     `metadata` export from nothing else, and per-locale titles/hreflang are the point. One dynamic
-     route, not six folders, so adding a language is a single edit to `LANDING_LOCALES`.
+  2. **`landing/[locale]/page.tsx` and `tour/[locale]/page.tsx` are the codebase's only server
+     components.** Next permits a `metadata` export from nothing else, and per-locale
+     titles/hreflang are the point. One dynamic route each, not six folders, so adding a language
+     is a single edit to `LANDING_LOCALES`.
   3. **The funnel has its OWN catalogs** (`lib/i18n/landing/*.ts`). The app catalogs are 32–55 KB
      and `useTranslate` resolves them *after* mount — fine for the app, but it would flash English
      on a locale-fixed marketing page. Never add funnel copy to `lib/i18n/{bn,es,ja,zh,ko}.ts`.
@@ -84,6 +89,21 @@ web/app/
   Pure modules live in `lib/onboarding/`: `locales.ts` (the registry — the single source of truth
   for the six slugs), `adoptLanguage.ts` (writes the existing `language` key on an explicit
   continue), `funnel.ts` (per-device marker, defined here but set by 047 and read by 048).
+- **Learn-more tour (spec 047)** — `/tour/{locale}`, five screens between the landing page and
+  sign-in, built on 045's contracts. Three things are easy to get wrong:
+  1. **Skip must ALSO call `markFunnelEntry()`.** The intuitive reading ("they opted out") is
+     wrong: a visitor who skips is still a funnel visitor, and dropping the marker silently costs
+     them the guided hand-off 048 provides. Both exits therefore route through one
+     `leaveForSignIn()` — adopt language → mark funnel → `push('/sign-in')` — so Skip has no path
+     of its own to forget.
+  2. **Screens are client state, and position is NOT in the URL.** `useSearchParams` fails a
+     production build without a Suspense boundary, and a pushed history entry per screen would
+     mean pressing Back five times to leave. Back leaves the tour in one press.
+  3. **No `components/ui`.** That module imports `lib/store`, so `PrimaryButton` would drag
+     Supabase and the household data layer onto a signed-out page. The tour reproduces its recipe
+     in tokens instead. Copy lives only inside the `spec 047` markers in `lib/i18n/landing/*.ts`,
+     as a sibling named export typed at `lib/i18n/landing/tour.ts` — `index.ts` is untouched.
+  Edge-case logic (`clampScreen`/`swipeIntent`/`formatPosition`) is pure, in `lib/onboarding/tour.ts`.
 - **Reports mode was removed (spec 036)** — the Overview/Reports toggle (`ModeSwitch`) and the
   fetched `ReportsView`/`useReportsData` UI are gone; the savings-rate view now lives on the board as
   the local-compute `savings-trends` widget. The Dashboard is a single view. (The pure aggregate/

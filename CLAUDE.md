@@ -1,5 +1,29 @@
 <!-- SPECKIT START -->
-Active feature: **spec 045 — onboarding foundation**. Plan:
+Active feature: **spec 047 — learn-more tour**. Plan:
+`specs/047-learn-more-tour/plan.md` (spec/research/data-model/quickstart/contracts alongside it).
+Feature 3 of 4 in the onboarding funnel, branched off 045 (not yet on main). A ≤5-screen, skippable
+tour at `/tour/{locale}` for the same six locales, sitting between the landing page and sign-in.
+Shape: one thin SERVER component `app/tour/[locale]/page.tsx` (the codebase's *second*; mirrors
+045's landing route — `generateStaticParams` from `landingSlugs()`, `dynamicParams:false`, per-locale
+metadata, `robots:{index:false}` since the tour is a funnel step, not a search destination) rendering
+one client `components/tour/TourDeck.tsx` that holds the whole deck in `useState`. **Screens are
+client state, never routes** (6 locales × 5 screens = 30 static documents for nothing), and position
+is deliberately NOT in the URL: `useSearchParams` fails a static build without a Suspense boundary,
+and a pushed history entry per screen would trap the Back button. Pure edge-case logic
+(`clampScreen`/`nextScreen`/`prevScreen`/`swipeIntent`/`formatPosition`, `SWIPE_THRESHOLD_PX=44`)
+lives in `lib/onboarding/tour.ts`. **The single most invertible requirement: Skip must ALSO call
+`markFunnelEntry()`** — both Finish and Skip route through one `leaveForSignIn()` (adopt language →
+mark funnel → `push('/sign-in')`), so Skip has no path of its own to forget. Copy lives strictly
+inside the `spec 047` reserved region of `lib/i18n/landing/*.ts` as a *sibling named export*
+(`enTour` etc.) with the type + `TOUR_CATALOGS` registry in a new `lib/i18n/landing/tour.ts` — a
+`LandingCatalog` field was impossible (the object literal sits outside the markers) and this leaves
+`index.ts` untouched, so 046 has zero conflict surface. Five screens, each mapping to a shipped
+feature: transactions+splits, planning, financial health, routines, language+household privacy; no
+example money anywhere. Swipe via React touch handlers with a vertical-dominance guard; reduced
+motion inherited from globals.css's global reset (CSS transitions only, never JS). No `lib/store`,
+no Supabase, no `components/ui` (it imports the store). No DB, no migration, no new dependency.
+Fully TDD.
+Prior shipped: **spec 045 — onboarding foundation**. Plan:
 `specs/045-onboarding-foundation/plan.md` (spec/research/data-model/quickstart/contracts alongside it).
 The shared plumbing for a signed-out onboarding funnel — landing → tour → sign-in → financial health
 — planned end to end in `docs/plan/onboarding-funnel.md` as four features; this is the first, and it
