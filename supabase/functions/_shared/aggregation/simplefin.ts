@@ -177,7 +177,10 @@ export interface UpsertPayload {
     source: string
     date: string
     created_by: string
-    paid_by: null
+    // spec 053 — was `null`, a type-level assertion that sync never records a payer. It now
+    // carries the connected account's owning person for expenses (null for income), so synced
+    // rows reach the balance engine instead of being invisible to it.
+    paid_by: string | null
     notes: string | null
   }
   shares: Array<{ person_id: string; amount_cents: number }>
