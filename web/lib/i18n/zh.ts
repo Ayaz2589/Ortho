@@ -609,6 +609,12 @@ const catalog: Record<string, string> = {
   "Just me": "仅我",
   "Shared by default": "默认共享",
   "New transactions start owned by everyone in your household.": "新交易默认由家庭中的每个人共同拥有。",
+  // spec 053 — household balances
+  "{0} owes {1}": "{0} 欠 {1}",
+  "All settled up.": "已全部结清。",
+  "Add someone to your household to track who owes whom.": "在家庭中添加成员，即可查看谁欠谁钱。",
+  "Who owes whom": "谁欠谁",
+  "Outstanding balances between the people in your household.": "家庭成员之间未结清的余额。",
 }
 
 export default catalog

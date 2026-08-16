@@ -609,6 +609,12 @@ const catalog: Record<string, string> = {
   "Just me": "Solo yo",
   "Shared by default": "Compartido por defecto",
   "New transactions start owned by everyone in your household.": "Las transacciones nuevas empiezan siendo de todas las personas de tu hogar.",
+  // spec 053 — household balances
+  "{0} owes {1}": "{0} le debe a {1}",
+  "All settled up.": "Todo saldado.",
+  "Add someone to your household to track who owes whom.": "Añade a alguien a tu hogar para ver quién le debe a quién.",
+  "Who owes whom": "Quién le debe a quién",
+  "Outstanding balances between the people in your household.": "Saldos pendientes entre las personas de tu hogar.",
 }
 
 export default catalog

@@ -48,6 +48,16 @@ vi.mock('@/lib/store', () => ({
     // their headings still count toward WIDGETS.length.
     properties: [],
     ownersDisplay: () => ({ avatarUser: {}, label: 'Maya', count: 1 }),
+    // spec 053 — the household-balances widget needs a roster to resolve names against.
+    // Two people, so it renders its real (all-settled) state rather than the solo prompt:
+    // the fixture transactions carry no payer, so no balance can arise.
+    householdMembers: [
+      { id: 'p1', name: 'Maya', initial: 'M', color_key: 'sage', created_at: firstOfMonth },
+      { id: 'p2', name: 'Jordan', initial: 'J', color_key: 'slate', created_at: firstOfMonth },
+    ],
+    currentPersonId: 'p1',
+    resolveUser: (id: string) => ({ id, name: id === 'p1' ? 'Maya' : 'Jordan', initial: 'M', color_key: 'sage', created_at: firstOfMonth }),
+    routines: [],
   }),
 }))
 

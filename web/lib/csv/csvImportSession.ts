@@ -39,6 +39,7 @@ export type CsvImportAction =
       statement: ParsedStatement
       bankLabel: string
       defaultOwnerIds?: string[]
+      defaultPayerId?: string | null
       // Card name matching the imported bank, seeded as every row's payment
       // source ('' when no card matches).
       defaultSource?: string
@@ -79,6 +80,7 @@ export function csvImportReducer(state: CsvImportState, action: CsvImportAction)
           tx,
           duplicateOf,
           action.defaultOwnerIds ?? [],
+          action.defaultPayerId ?? null,
           action.defaultSource ?? ''
         )
         drafts[draft.id] = draft

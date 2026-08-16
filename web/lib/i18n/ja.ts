@@ -609,6 +609,12 @@ const catalog: Record<string, string> = {
   "Just me": "自分だけ",
   "Shared by default": "デフォルトで共有",
   "New transactions start owned by everyone in your household.": "新しい取引は世帯の全員が所有する状態で始まります。",
+  // spec 053 — household balances
+  "{0} owes {1}": "{0} が {1} に支払います",
+  "All settled up.": "すべて精算済みです。",
+  "Add someone to your household to track who owes whom.": "誰が誰に支払うかを把握するには、世帯に人を追加してください。",
+  "Who owes whom": "貸し借り",
+  "Outstanding balances between the people in your household.": "世帯の人どうしの未精算の残高。",
 }
 
 export default catalog

@@ -109,6 +109,7 @@ function baseCandidate(params: {
     guesses,
     categoryGuess: null,
     ownersGuess: null,
+    paidByGuess: null,
     duplicateOf: null,
   }
 }

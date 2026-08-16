@@ -103,6 +103,8 @@ export interface ParsedCandidate {
   /** Owners of the most recent matching history transaction; split method
    *  stays the form's default (even) — custom split guessing is out of scope. */
   ownersGuess: string[] | null
+  /** spec 053 — who usually fronts this merchant, from the household's own history. */
+  paidByGuess: string | null
   /** At most one claimed existing transaction. */
   duplicateOf: string | null
 }
@@ -127,6 +129,8 @@ export interface MerchantHistory {
   lastDay: PartialDate | null
   /** Owners of the most recent matching transaction. */
   owners: string[]
+  /** spec 053 — the payer on the most recent matching transaction. */
+  paidBy: string | null
 }
 
 /** Existing-transaction shadow used for duplicate matching. */

@@ -609,6 +609,12 @@ const catalog: Record<string, string> = {
   "Just me": "나만",
   "Shared by default": "기본적으로 공유",
   "New transactions start owned by everyone in your household.": "새 거래는 가구의 모든 사람이 소유한 상태로 시작됩니다.",
+  // spec 053 — household balances
+  "{0} owes {1}": "{0}님이 {1}님에게 갚을 금액",
+  "All settled up.": "모두 정산되었습니다.",
+  "Add someone to your household to track who owes whom.": "누가 누구에게 갚아야 하는지 보려면 가구에 사람을 추가하세요.",
+  "Who owes whom": "정산 현황",
+  "Outstanding balances between the people in your household.": "가구 구성원 간의 미정산 잔액.",
 }
 
 export default catalog

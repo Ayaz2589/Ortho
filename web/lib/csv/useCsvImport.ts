@@ -48,6 +48,8 @@ function buildTransaction(
     created_by: currentUserId,
     created_at: now,
     updated_at: now,
+    // spec 053 — an imported row records who fronted it, so it reaches the balance engine.
+    paid_by: draft.source.kind === 'income' ? null : (draft.paidById ?? currentPersonId),
     owner_ids: owners,
     shares,
     tags: draft.tags,
@@ -81,6 +83,7 @@ export function useCsvImport() {
     currentUserId,
     readSharedByDefault()
   ).filter(Boolean)
+  const defaultPayerId = resolveDefaultOwnerId(currentPersonId, householdMembers, currentUserId) || null
 
   const cardNames = useMemo(() => cards.map((c) => c.name), [cards])
 
@@ -107,11 +110,12 @@ export function useCsvImport() {
         statement,
         bankLabel: result.profile.label,
         defaultOwnerIds,
+        defaultPayerId,
         defaultSource,
         existing,
       })
     },
-    [dispatch, defaultOwnerIds, existing, cardNames]
+    [dispatch, defaultOwnerIds, defaultPayerId, existing, cardNames]
   )
 
   const toggleChecked = useCallback(

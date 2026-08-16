@@ -609,6 +609,12 @@ const catalog: Record<string, string> = {
   "Just me": "শুধু আমি",
   "Shared by default": "ডিফল্টভাবে ভাগ করা",
   "New transactions start owned by everyone in your household.": "নতুন লেনদেন শুরু হয় আপনার পরিবারের সবার মালিকানায়।",
+  // spec 053 — household balances
+  "{0} owes {1}": "{0} {1}-কে দিতে হবে",
+  "All settled up.": "সব মিটে গেছে।",
+  "Add someone to your household to track who owes whom.": "কে কাকে কত দেবে তা দেখতে আপনার পরিবারে কাউকে যোগ করুন।",
+  "Who owes whom": "কে কাকে দেবে",
+  "Outstanding balances between the people in your household.": "আপনার পরিবারের সদস্যদের মধ্যে বকেয়া হিসাব।",
 }
 
 export default catalog

@@ -13,6 +13,10 @@ export interface CsvDraftRow {
   amountCents: number
   dateISO: string
   ownerIds: string[]
+  // spec 053 — who fronted the money. Seeded from the importing person; null for income
+  // (income has no payer). Without this an imported statement is invisible to the balance
+  // engine no matter how carefully its owners are set.
+  paidById: string | null
   // How to split the amount among ownerIds. null = even (the default). The
   // per-row editor sets this to a percent/value split — same vocabulary as the
   // new-transaction form; shares are computed from it on commit (useCsvImport).
@@ -39,6 +43,7 @@ export function parsedTransactionToDraft(
   tx: ParsedTransaction,
   duplicateOf: string | null = null,
   defaultOwnerIds: string[] = [],
+  defaultPayerId: string | null = null,
   defaultSource = ''
 ): CsvDraftRow {
   const isPaymentRow = tx.excluded && tx.excludeReason === 'card-payment'
@@ -60,6 +65,7 @@ export function parsedTransactionToDraft(
     amountCents: tx.amountCents,
     dateISO: tx.dateISO,
     ownerIds,
+    paidById: tx.kind === 'income' ? null : defaultPayerId,
     split,
     paymentSource: defaultSource,
     tags: [],

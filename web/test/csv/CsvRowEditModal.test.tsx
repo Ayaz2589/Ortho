@@ -51,6 +51,7 @@ const baseDraft: CsvDraftRow = {
   amountCents: 4250,
   dateISO: '2026-06-15',
   ownerIds: ['u1'],
+  paidById: null,
   split: null,
   paymentSource: 'Chase Sapphire',
   tags: [],

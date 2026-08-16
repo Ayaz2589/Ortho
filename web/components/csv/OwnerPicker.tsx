@@ -17,11 +17,17 @@ export function OwnerPicker({
   members,
   resolveUser,
   onChange,
+  paidById = null,
+  onChangePayer,
 }: {
   ownerIds: string[]
   members: User[]
   resolveUser: (id: string) => User
   onChange: (ownerIds: string[]) => void
+  /** spec 053 — who fronted the money. `undefined` onChangePayer hides the section
+   *  (income has no payer, and a one-person household has nothing to choose). */
+  paidById?: string | null
+  onChangePayer?: (personId: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null)
@@ -177,6 +183,57 @@ export function OwnerPicker({
                   </button>
                 )
               })}
+
+              {/* spec 053 — who fronted the money. Single-select, and only rendered when the
+                  caller supplies a handler: income has no payer, and a one-person household
+                  has nothing to choose. Without this an imported statement is invisible to
+                  the balance engine however carefully its owners are set. */}
+              {onChangePayer && members.length > 1 && (
+                <>
+                  <div
+                    style={{
+                      marginTop: 4,
+                      paddingTop: 6,
+                      borderTop: '0.5px solid var(--hairline)',
+                      padding: '10px 10px 6px',
+                      fontSize: 11.5,
+                      fontWeight: 400,
+                      letterSpacing: '0.4px',
+                      textTransform: 'uppercase',
+                      color: 'var(--text-3)',
+                    }}
+                  >
+                    Paid by
+                  </div>
+                  {members.map((u) => {
+                    const on = u.id === paidById
+                    return (
+                      <button
+                        key={`payer-${u.id}`}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={on}
+                        aria-label={`Paid by ${u.name}`}
+                        className="ow-btn"
+                        onClick={() => onChangePayer(u.id)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          width: '100%',
+                          padding: '8px 10px',
+                          borderRadius: 9,
+                          textAlign: 'left',
+                        }}
+                      >
+                        <Avatar user={u} size={24} />
+                        <span style={{ flex: 1, fontSize: 14, color: 'var(--text)' }}>{u.name}</span>
+                        {on && <Check size={16} style={{ color: 'var(--accent)' }} strokeWidth={2.4} />}
+                      </button>
+                    )
+                  })}
+                </>
+              )}
             </div>,
             document.body
           )

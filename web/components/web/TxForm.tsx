@@ -514,7 +514,11 @@ export function useTxForm({
     setMerchant(candidate.merchant)
     if (candidate.categoryGuess) setCategory(candidate.categoryGuess)
     const validOwners = (candidate.ownersGuess ?? []).filter((id) => memberIds.has(id))
-    setOwners(validOwners.length ? validOwners : [defaultOwner])
+    // No history match falls back to the household default, which since spec 050 is the
+    // whole household — a scanned receipt should not quietly produce a solo row.
+    setOwners(validOwners.length ? validOwners : defaultOwners)
+    // spec 053 — adopt the remembered payer when it is still a member.
+    if (isMember(candidate.paidByGuess)) setPaidBy(candidate.paidByGuess)
     if (candidate.date) {
       const { year, month, day } = candidate.date
       setDate(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`)

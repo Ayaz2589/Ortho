@@ -159,6 +159,7 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
                 onToggle={toggleChecked}
                 onConfirm={startImport}
                 onSetOwners={(id, ownerIds) => updateDraft(id, { ownerIds, split: null })}
+                onSetPayer={(id, personId) => updateDraft(id, { paidById: personId })}
               />
             </TrayBody>
           </>
