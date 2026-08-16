@@ -615,6 +615,8 @@ const catalog: Record<string, string> = {
   "Add someone to your household to track who owes whom.": "在家庭中添加成员，即可查看谁欠谁钱。",
   "Who owes whom": "谁欠谁",
   "Outstanding balances between the people in your household.": "家庭成员之间未结清的余额。",
+  // spec 051 — money scope
+  "Whose money": "谁的钱",
 }
 
 export default catalog

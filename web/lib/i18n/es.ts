@@ -615,6 +615,8 @@ const catalog: Record<string, string> = {
   "Add someone to your household to track who owes whom.": "Añade a alguien a tu hogar para ver quién le debe a quién.",
   "Who owes whom": "Quién le debe a quién",
   "Outstanding balances between the people in your household.": "Saldos pendientes entre las personas de tu hogar.",
+  // spec 051 — money scope
+  "Whose money": "De quién es el dinero",
 }
 
 export default catalog

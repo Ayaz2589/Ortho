@@ -11,6 +11,7 @@ import { goalProgress, goalPacing, contributionsByGoal } from '../finance/goals'
 import { monthBounds } from '../transactionFilters'
 import { parseLocalDate } from '../format'
 import { PLANNING } from './thresholds'
+import { HOUSEHOLD_SCOPE, scopeTransactions, type MoneyScope } from '../scope/moneyScope'
 
 export type PaceState = 'under' | 'attention' | 'over'
 
@@ -73,6 +74,11 @@ export interface PlanSummaryInput {
   goalContributions: GoalContribution[]
   transactions: Transaction[]
   monthKey: string
+  /** spec 051 — whose money this plan is about. Omitted/household ⇒ byte-identical to the
+   *  pre-051 behavior, because scopeTransactions returns the input array unchanged. A person
+   *  scope narrows every spend figure to that person's stored share; budget LIMITS are
+   *  unchanged (they are household-level), so what moves is the spend measured against them. */
+  scope?: MoneyScope
 }
 
 export interface PlanSummary {
@@ -387,12 +393,16 @@ export function buildPlanSummary(input: PlanSummaryInput, now: Date): PlanSummar
   const referenceDate = planReferenceDate(input.monthKey, now)
   const elapsed = monthElapsedFraction(input.monthKey, now)
   const by = contributionsByGoal(input.goalContributions)
+  // Project ONCE at the entry point rather than inside each rule, so the attribution rule
+  // lives in exactly one place and every figure below agrees on whose money it is.
+  const transactions = scopeTransactions(input.transactions, input.scope ?? HOUSEHOLD_SCOPE)
+  const scopedInput = { ...input, transactions }
   return {
     monthKey: input.monthKey,
     referenceDate,
-    health: planHealth(input, referenceDate),
-    budgets: budgetSummary(input.budgets, input.transactions, referenceDate, elapsed),
+    health: planHealth(scopedInput, referenceDate),
+    budgets: budgetSummary(input.budgets, transactions, referenceDate, elapsed),
     goals: rankGoals(input.goals, by, referenceDate),
-    sinkingFunds: sinkingFunds(input.budgets, input.transactions, referenceDate),
+    sinkingFunds: sinkingFunds(input.budgets, transactions, referenceDate),
   }
 }

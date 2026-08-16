@@ -615,6 +615,8 @@ const catalog: Record<string, string> = {
   "Add someone to your household to track who owes whom.": "কে কাকে কত দেবে তা দেখতে আপনার পরিবারে কাউকে যোগ করুন।",
   "Who owes whom": "কে কাকে দেবে",
   "Outstanding balances between the people in your household.": "আপনার পরিবারের সদস্যদের মধ্যে বকেয়া হিসাব।",
+  // spec 051 — money scope
+  "Whose money": "কার টাকা",
 }
 
 export default catalog

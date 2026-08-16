@@ -615,6 +615,8 @@ const catalog: Record<string, string> = {
   "Add someone to your household to track who owes whom.": "누가 누구에게 갚아야 하는지 보려면 가구에 사람을 추가하세요.",
   "Who owes whom": "정산 현황",
   "Outstanding balances between the people in your household.": "가구 구성원 간의 미정산 잔액.",
+  // spec 051 — money scope
+  "Whose money": "누구의 돈",
 }
 
 export default catalog
