@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-16
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Default to shared, and make 'who is this for?' one tap. Nothing else works without it. Until transactions carry more than one owner, every downstream fix operates on an empty set — and under the handler pattern the current default is systematically wrong, not merely ambiguous."
 

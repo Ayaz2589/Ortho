@@ -1,52 +1,54 @@
-<!-- SPECKIT START -->
-Active feature: **the onboarding funnel — specs 045-048**, all four now on the integration branch.
-Plans: `specs/{045-onboarding-foundation,046-landing-pages,047-learn-more-tour,048-new-user-handoff}/plan.md`
-(spec/research/data-model/quickstart/contracts alongside each), over `docs/plan/onboarding-funnel.md`.
-A signed-out front door: `/landing/{en|es|bn|ja|zh|ko}` → `/tour/{locale}` → sign-in → the existing
-financial-health questionnaire.
+Active feature: **household wiring — specs 050-053**, all four on one integration branch.
+Plans: `specs/{050-shared-ownership-default,051-person-scoped-engines,052-financial-health-scope,053-payer-capture-balances}/plan.md`
+(spec/tasks alongside each). The diagnosis behind them: the household **schema** is sound —
+account-free `household_people`, exact-cent `transaction_shares`, atomic `upsert_transaction`,
+soft-deleted people — but almost nothing was plugged into it. The system was **descriptive, not
+operational**: it labelled money and never changed what the app computed. These four wire it up.
+No migration, no new dependency, no schema change anywhere.
 
-**045 (foundation)** — `lib/onboarding/locales.ts` is THE single source of truth for the six slugs
-(`LANDING_LOCALES`/`detectLandingSlug`); `funnel.ts` (per-device `ortho.onboardingFunnel` marker) and
-`adoptLanguage.ts` (writes the EXISTING `language` key, on explicit continue only). `app/page.tsx` is a
-**smart router** whose FIRST branch is `Capacitor.isNativePlatform() → /dashboard` — the installed iOS
-app must never show marketing, and the guard test asserts `getUser()` is never *called* on native,
-ordering being the real regression. Six landing documents come from ONE dynamic route
-`app/landing/[locale]/` + `generateStaticParams` (six folders would fail SC-006). Also the app's first
-SEO surface (`robots.ts`, `sitemap.ts`, `metadataBase`) and its first `not-found.tsx`, whose redirect is
-scoped to `/landing/` so a typo'd in-app URL never ejects a signed-in user to marketing. The funnel has
-its OWN small catalogs `lib/i18n/landing/*.ts` — the app catalogs are 32-55 KB and `useTranslate`
-resolves AFTER mount, which would flash English on a locale-fixed page; `lib/i18n/effectiveLanguage.ts`
-was split out of the i18n barrel so a Server Component can import it without pulling React hooks.
+**050 (shared by default)** — every ingest path defaulted a new transaction to ONE owner (the
+logged-in person), so a multi-adult household produced a ledger indistinguishable from a solo one.
+Under the **handler pattern** (one person entering for several who have no account — Ortho's normal
+case, not an edge case) that default is systematically wrong, since nobody else is there to notice.
+`resolveDefaultOwnerIds()` in `lib/defaultOwner.ts` is now the single rule for the form AND CSV
+import: every active person, split evenly, when the household has >1 and `ortho.sharedByDefault`
+(per-device, default on) is set. A **"Who is this for?"** Seg (Everyone / Just me) makes narrowing
+one tap; the preset is DERIVED from the owner set, so a custom subset activates neither. Editing and
+copying never apply the default — a default must not re-attribute recorded money. Five existing form
+suites pin the preference OFF and pass **unmodified**, which is the proof only the default moved.
 
-**046 (landing pages)** — `components/landing/LandingView.tsx` replaced 045's placeholder: hero, a
-**variable-length** `points[]` array (the mechanism that lets a market carry a different number of
-ideas with no per-locale branch), one prominent `<a href="/tour/{slug}">` and one quieter
-`<a href="/sign-in">`. **Plain anchors, NOT `next/link`** — crawlability is the funnel's purpose.
-Both adopt the language on click; viewing never adopts.
+**051 (person-scoped engines)** — the missing PEOPLE axis, sibling to the existing time axis.
+`lib/scope/moneyScope.ts` is THE one place the attribution rule lives: household scope returns the
+**same array reference** (a strict no-op — this is what keeps every golden vector byte-identical),
+person scope replaces each amount with that person's **stored** share and keeps transfers
+directional at full amount. `buildPlanSummary` and `generateInsights` take an optional scope and
+project ONCE at their entry point, never per rule. `PlanScopeBar` on the Planning hub. Budget
+LIMITS stay household-level — what moves is the spend measured against them.
 
-**047 (tour)** — `app/tour/[locale]/` (the second server component; `robots:{index:false}` since a
-funnel step is not a search destination) renders `components/tour/TourDeck.tsx`. **Screens are client
-state, never routes** (6 × 5 = 30 documents for nothing) and position is NOT in the URL
-(`useSearchParams` fails a static build without Suspense; per-screen history would trap Back). **The
-single most invertible requirement: Skip must ALSO call `markFunnelEntry()`** — Finish and Skip share
-one `leaveForSignIn()`, so Skip has no path of its own to forget. Pure logic in `lib/onboarding/tour.ts`.
+**052 (health scope fix)** — a live correctness defect: the questionnaire is USER-PRIVATE but was
+scored against HOUSEHOLD-WIDE spend, so `cash_flow = (my income − the household's spend) / my
+income`. Two adults each earning $4k in a household spending $6k were BOTH told they were $2k down,
+and whoever logged more spending scored worse from identical facts. `scoreFinancialHealth` gains
+`scopedTransactions?`; omitted ⇒ falls back to `transactions`, so 041/044 behavior and one-person
+households are unchanged. `plan_engagement` and `routine_awareness` stay household-scoped BY DESIGN
+— budgets/goals/routines are household facts.
 
-**048 (hand-off)** — a new pure `lib/onboarding/handoff.ts` (`resolvePostSignInRoute()`) is the first
-reader of 045's marker: present → clear it, mark the `financial-health` announcement seen (so nobody
-is asked twice), return `/welcome/financial-profile`; absent → `/dashboard` with **zero** side
-effects. `app/sign-in/page.tsx` calls it in `verify()` — the successful-OTP path ONLY, since routing
-the already-signed-in mount bounce through it would let a stale per-device marker greet a returning
-user with a questionnaire. A **scoped reversal of spec 042**, which deliberately deleted 041's forced
-redirect: funnel-walkers ONLY, the announcement drawer stays for everyone else, and not one 041/042
-test may be edited — those files are the regression lock. It keys on the marker, NOT profile absence
-— sign-in renders outside `AppStateProvider` and cannot read the profile, so the "already has one?"
-guard lives at the questionnaire's entry (rendering `null` while redirecting, so no stepper flash).
-Keeping the read in `lib/onboarding/` also keeps 045's FR-019 guard green. Skip stays DISMISS-ONLY.
+**053 (payer capture + balances)** — `paid_by` was written in exactly TWO lines app-wide (both in
+the manual form), so any household that imported had no payer data at all; and nothing read it.
+Capture now happens on CSV import (a payer section in the row popover), scan (carried forward from
+matched merchant history), CLI import, and bank sync (the account's owning person — a feed can't
+know who paid, but null is the one answer that's certainly wrong). Income keeps a null payer
+everywhere. `lib/finance/balances.ts` replaces the viewer-anchored function spec 043 deleted as
+broken — it was broken for a real reason: in a 3-adult household what one roommate owed another was
+invisible to the third. `allPairBalances` is antisymmetric by construction; `outstandingBalances`
+takes its roster from the LEDGER so a removed member's debt stays settle-able; null-payer rows
+contribute nothing (historical rows must not invent debts); co-owned **income** now accrues a debt
+in the mirror direction. The nine `member-balance.json` cases and their generator block are restored
+from `c70acef^` and regenerate **byte-identically** — the rebuild reproduces the old pairwise rules
+exactly. ⚠️ **FR-014 (settle-up prefill) is DEFERRED** — spec 043 removed the plumbing; settle via
+the New form's Transfer kind for now.
 
-Constraints that shaped all four: `output: 'export'` means no server, no middleware, no redirects —
-every routing decision is a client effect; pre-auth routes import neither `lib/store` nor
-`components/ui` (which imports the store) nor an app catalog. No DB, no migration, no new dependency
-anywhere in the funnel. Fully TDD.
+Prior shipped: **the onboarding funnel — specs 045-048**.
 Prior shipped: **spec 045 — onboarding foundation**. Plan:
 `specs/045-onboarding-foundation/plan.md` (spec/research/data-model/quickstart/contracts alongside it).
 The shared plumbing for a signed-out onboarding funnel — landing → tour → sign-in → financial health

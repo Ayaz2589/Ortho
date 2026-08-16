@@ -64,7 +64,7 @@ forward (see `./web.md`, `./finance.md`).
   `DesignSystem/Money.swift`+`Models/Currency.swift` ↔ `web/lib/finance/{money,currency}.ts`;
   `Features/Transactions/TransactionSplits.swift` ↔ `lib/splits.ts`;
   `TransactionFilters.swift` ↔ `lib/transactionFilters.ts`; `Services/Balances.swift` ↔
-  `lib/balances.ts`; `Services/InsightEngine.swift` ↔ `lib/finance/insights.ts`;
+  `lib/finance/balances.ts`; `Services/InsightEngine.swift` ↔ `lib/finance/insights.ts`;
   `Models/MortgageInfo.swift` ↔ `lib/finance/mortgage.ts`;
   `Features/Dashboard/DashboardRange.swift` ↔ `components/dashboard/range.ts`;
   `Models/Property.swift` (`HousingMath`) ↔ `lib/finance/housing.ts`;

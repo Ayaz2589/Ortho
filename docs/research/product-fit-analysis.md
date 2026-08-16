@@ -146,7 +146,7 @@ wallet**, while the ledger beneath them does not:
 
 | Layer | Multi-adult aware? | Evidence |
 |---|---|---|
-| `web/lib/splits.ts`, `web/lib/balances.ts` | **Yes** — N-person, deterministic to the cent, vector-locked | 2 and 4 references to `shares`/`paid_by`/`owner_ids` |
+| `web/lib/splits.ts`, `web/lib/finance/balances.ts` | **Yes** — N-person, deterministic to the cent, vector-locked | 2 and 4 references to `shares`/`paid_by`/`owner_ids` |
 | `store.spentBy` + `PerOwnerBreakdownCard` (mounted on both dashboards) + the `household_owner_spend` SQL aggregate | **Yes** — shares-weighted per-person spend ships today | `web/lib/store.tsx:893`; `web/app/(app)/dashboard/page.tsx:90`; `web/components/web/DashboardDesktop.tsx:330`; `supabase/migrations/20260611120000_aggregates.sql:26` |
 | `web/lib/finance/budgets.ts` (157 ln) | **No** | **0** references |
 | `web/lib/finance/insights.ts` (399 ln) | **No** | **0** references |
@@ -162,9 +162,17 @@ not.**
 rent first, split per adult, seeded from the lease.* Untested with a real household; it is
 hypothesis **H1**.
 
-**A concrete symptom:** `balanceBetween(viewer, other, …)` (`web/lib/balances.ts:19-38`) is
-viewer-anchored, so in a 3-adult household **what Amir owes Fatima is invisible to the third
-roommate.** Correct for two people; wrong for the target household.
+**A concrete symptom:** `balanceBetween(viewer, other, …)` was viewer-anchored, so in a 3-adult
+household **what Amir owes Fatima was invisible to the third roommate.** Correct for two people;
+wrong for the target household.
+
+> **UPDATE 2026-08-16.** This section is written against the 2026-07-20 tree and has since moved
+> twice. Spec 043 **deleted** both shares-aware surfaces this scope correction relied on
+> (`balances.ts`/settle-up and `PerOwnerBreakdownCard`), leaving `MemberSummary` as the only one.
+> Specs 050–053 then rebuilt the story properly: transactions default to shared ownership, a
+> `MoneyScope` primitive threads the person axis through planning/insights/financial-health, and
+> an N-person balance engine (`lib/finance/balances.ts`) replaces the viewer-anchored one. The
+> "~670 lines model a merged wallet" claim below no longer holds as stated.
 
 ### Defects that are true regardless of which direction wins
 

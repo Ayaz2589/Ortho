@@ -1,7 +1,7 @@
 # finance.md — the pure finance engines
 
 > **Read this when** touching any pure money/date logic: `web/lib/finance/*`, `web/lib/splits.ts`,
-> `web/lib/balances.ts`, `web/lib/transactionFilters.ts`, `web/lib/reports/*`,
+> `web/lib/finance/balances.ts`, `web/lib/scope/moneyScope.ts`, `web/lib/transactionFilters.ts`, `web/lib/reports/*`,
 > `web/components/dashboard/range.ts`, or `web/components/housing/lease.ts`.
 >
 > Companions: [`shared.md`](./shared.md) (vector harness mechanics), [`web.md`](./web.md) (UI
@@ -22,7 +22,8 @@ vectors are a single-implementation regression lock, not a cross-language parity
 | Cents brand | `web/lib/finance/cents.ts` | — (type-level) |
 | Budget rollover | `web/lib/finance/budgets.ts` | `budget-rollover.json` |
 | Splits | `web/lib/splits.ts` | `transaction-splits.json` |
-| Member balances | `web/lib/balances.ts` | `member-balance.json` |
+| Member balances (spec 053) | `web/lib/finance/balances.ts` | `member-balance.json` |
+| Money scope (spec 051) | `web/lib/scope/moneyScope.ts` | — (unit/property tests) |
 | Transaction filters | `web/lib/transactionFilters.ts` | `transaction-filters.json` |
 | Dashboard month scope | `web/components/dashboard/range.ts` | `dashboard-month-scope.json` |
 | Mortgage | `web/lib/finance/mortgage.ts` | `mortgage.json` |
@@ -175,18 +176,24 @@ incl. negative, non_monthly, empty series). Insights **rule 3 is rollover-aware*
 
 Vector: `transaction-splits.json` — sections `{cases: 13, validations: 4, seeds: 6, ownerOrdering: 5}`.
 
-## 7. Member balances (`web/lib/balances.ts`, 39 lines) + `transaction.ts`
+## 7. Member balances (`web/lib/finance/balances.ts` — spec 053) + `transaction.ts`
 
-`balanceBetween(viewer, other, transactions)` → net cents from the viewer's perspective
-(positive ⇒ other owes viewer). Integer cents, no rounding:
+`balanceBetween(a, b, transactions)` → net cents (positive ⇒ `b` owes `a`). Integer cents, no
+rounding. Spec 043 deleted the original viewer-anchored version — it could not express what one
+roommate owed another from a third person's view; spec 053 rebuilt it for N people
+(`allPairBalances` is antisymmetric by construction, `outstandingBalances` returns creditor-first
+rows, `peopleInLedger` takes the roster from the ledger so a removed member's debt survives).
+The nine vector cases are unchanged and regenerate byte-identically.
 
 - Expense with `paid_by`: payer===viewer ⇒ `+ shares[other]`; payer===other ⇒ `− shares[viewer]`;
   else ignored (payer's own share is owed by nobody).
 - Transfer via `transferParties(tx)` (`web/lib/transaction.ts`): `from = paid_by`,
   `to = owner_ids[0]`; other→viewer ⇒ `− amount_cents`; viewer→other ⇒ `+ amount_cents`.
 
-Expenses accrue debt, transfers settle it. `isTransfer(tx)` = `kind === 'transfer'`. Vector:
-`member-balance.json` (9 cases).
+Expenses accrue debt, transfers settle it, and since spec 053 **co-owned income** accrues it in
+the mirror direction (a recipient owes co-owners their share). A row with **no payer** contributes
+nothing — historical rows predate payer capture and must not invent debts.
+`isTransfer(tx)` = `kind === 'transfer'`. Vector: `member-balance.json` (9 cases).
 
 ## 8. Transaction filters (`web/lib/transactionFilters.ts`, 107 lines — incl. spec-027 tags, PR #32)
 
@@ -415,6 +422,12 @@ Deliberately **unvectored** (unit tests only; documented policy in `PARITY.md`).
 - `PALETTE` (6 member colors), `paletteFor`, `deriveInitial` ("A & B" → "A+B").
 
 ## 15. Cross-cutting conventions
+
+- **Money scope (spec 051)** — `scopeTransactions(txs, scope)` is the ONE place the
+  person-attribution rule lives. Household scope returns the *same array reference* (a strict
+  no-op), which is what keeps every vector byte-identical; a person scope replaces each amount
+  with that person's **stored** share and keeps transfers directional at full amount. Engines take
+  a scope and project once at their entry point — never per rule.
 
 - **Integer USD cents** everywhere (§2); floats only for rates/percents/fractions/display.
 - **Round half away from zero** on signed money — never bare `Math.round`.

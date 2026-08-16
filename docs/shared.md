@@ -48,7 +48,7 @@ Generator: `web/scripts/gen-vectors.ts` (~794 lines, one script writes all 13). 
 | `currency-names.json` | `lib/finance/currency.ts` `CURRENCY_NAMES` | fixed table, 7 |
 | `currency-symbols.json` | `lib/finance/currency.ts` `currencySymbol()` (`cny` = `CN¥`) | fixed table, 7 |
 | `dashboard-month-scope.json` | `components/dashboard/range.ts` | `{availableMonths: 6, availableRanges: 11, monthReferenceDate: 4, stepMonth: 5}` |
-| `member-balance.json` | `lib/balances.ts` `balanceBetween` | `{cases: 9}` (incl. `transfer`-kind reimbursements) |
+| `member-balance.json` | `lib/finance/balances.ts` `balanceBetween` | `{cases: 9}` (incl. `transfer`-kind reimbursements) |
 | `housing-net-rental.json` | `lib/finance/housing.ts` `occupiedRentCents`/`netRentalCents` | array, 6 (occupancy pre-resolved to boolean) |
 | `lease.json` | `components/housing/lease.ts` `rentDueDay`/`daysUntilNextRent`/`daysUntilEnd`/`isRenewalSoon` | array, 6, injected `asOf` |
 | `budget-rollover.json` | `lib/finance/budgets.ts` `computeRolloverLedger` (spec 027; contract `specs/027-budget-rollover/contracts/rollover-math.md`) | array, 11 (fixed/flex/non_monthly, cap, negative opening carry) |

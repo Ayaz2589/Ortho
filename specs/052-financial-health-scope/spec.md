@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-16
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Fix the financial-health scope. It compares one person's private income against the entire household's spending. Two earners in a comfortable household are both told they're in deficit. Wrong on screen today; no new tables to fix it."
 

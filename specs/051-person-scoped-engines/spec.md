@@ -4,7 +4,7 @@
 
 **Created**: 2026-08-16
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Let the money engines see people. Budgets, goals, planning, insights and reports don't know people exist. This is the difference between a labelling system and a household system — and it's the step that makes per-person contribution real."
 
