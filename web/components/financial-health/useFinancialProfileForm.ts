@@ -6,6 +6,7 @@ import { parseMoney } from '@/components/inputs'
 import { toDisplayAmount } from '@/lib/finance/money'
 import { contributionsByGoal } from '@/lib/finance/goals'
 import { scoreFinancialHealth, deriveProfile } from '@/lib/finance/financialHealth'
+import { HOUSEHOLD_SCOPE, personScope, scopeTransactions } from '@/lib/scope/moneyScope'
 import { FINANCIAL_HEALTH_THRESHOLDS as T } from '@/lib/finance/financial-health-thresholds'
 import type {
   EmergencyFundLevel,
@@ -73,6 +74,7 @@ export function useFinancialProfileForm() {
     goals,
     goalContributions,
     routines,
+    currentPersonId,
     saveFinancialHealth,
   } = useApp()
 
@@ -149,6 +151,12 @@ export function useFinancialProfileForm() {
     const result = scoreFinancialHealth({
       profile: derived,
       transactions,
+      // spec 052 — same scoping as the widget, so the baseline snapshot this writes
+      // agrees with the score the dashboard will show.
+      scopedTransactions: scopeTransactions(
+        transactions,
+        currentPersonId ? personScope(currentPersonId) : HOUSEHOLD_SCOPE
+      ),
       budgets,
       goals,
       contributionsByGoal: contributionsByGoal(goalContributions),

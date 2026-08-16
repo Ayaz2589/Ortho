@@ -56,7 +56,18 @@ export interface HealthAction {
 
 export interface FinancialHealthInput {
   profile: DerivedFinancialProfile | null
+  /** HOUSEHOLD-scoped ledger. Feeds the dimensions that are household facts by nature:
+   *  plan_engagement (budgets/goals belong to the household) and routine_awareness. */
   transactions: Transaction[]
+  /** spec 052 — the PROFILE OWNER's share of `transactions`, used by the spend-driven
+   *  dimensions (cash_flow, savings_momentum). The profile is user-private (one adult's
+   *  income, their share of housing, their fixed costs), so scoring it against the whole
+   *  household's spend gave a ratio with mismatched numerator and denominator — two earners
+   *  in a comfortable household were both told they were in deficit.
+   *
+   *  Omitted ⇒ falls back to `transactions`, which is exactly the spec 041/044 behavior and
+   *  is identical by construction for a one-person household. */
+  scopedTransactions?: Transaction[]
   budgets: Budget[]
   goals: Goal[]
   contributionsByGoal: Record<string, GoalContribution[]>
@@ -325,9 +336,14 @@ export function scoreFinancialHealth(input: FinancialHealthInput): FinancialHeal
   const { profile, transactions, budgets, goals, contributionsByGoal, routines, weights, now } = input
   const hasProfile = profile != null
 
+  // spec 052 — the spend figure the PRIVATE profile is compared against must be the profile
+  // owner's own share, not the household total. Defaults to the household ledger so every
+  // pre-052 caller (and a one-person household) is unchanged.
+  const ownScoped = input.scopedTransactions ?? transactions
+
   // Computed once and shared by cash-flow + savings (both scan expenses this month).
-  const monthSpend = monthSpendCents(transactions, now)
-  const hasHistory = transactions.some((t) => t.kind === 'expense')
+  const monthSpend = monthSpendCents(ownScoped, now)
+  const hasHistory = ownScoped.some((t) => t.kind === 'expense')
   const routineAwareness = routineAwarenessScore(routines ?? [], transactions, now)
 
   const rawScores: Record<HealthDimension, number> = {
