@@ -148,6 +148,13 @@ Carry is **derived from history on every render — never stored**; no month-clo
   (`{effectiveLimitCents, spentCents, remainingCents, carriedInCents}`). Deliberately unvectored
   (pure reduction over the vectored core).
 
+**Whose budget (spec 054)**: a `Budget` carries `person_id` — `null` = the household's, a person
+id = that person's own limit for the category. Neither function above knows about it: a personal
+budget's carry is derived from the *scoped* ledger the caller passes in, exactly as a household
+one is derived from the household ledger, so `budget-rollover.json` is unaffected. Selection is
+`scopeBudgets` (§ "Money scope"); the DB enforces one budget per (household, category, person)
+with `unique nulls not distinct`.
+
 Vector: `budget-rollover.json` — array of **11 cases** (fixed, flex uncapped/capped, opening carry
 incl. negative, non_monthly, empty series). Insights **rule 3 is rollover-aware** (§12).
 
@@ -423,11 +430,16 @@ Deliberately **unvectored** (unit tests only; documented policy in `PARITY.md`).
 
 ## 15. Cross-cutting conventions
 
-- **Money scope (spec 051)** — `scopeTransactions(txs, scope)` is the ONE place the
+- **Money scope (spec 051, 054)** — `scopeTransactions(txs, scope)` is the ONE place the
   person-attribution rule lives. Household scope returns the *same array reference* (a strict
   no-op), which is what keeps every vector byte-identical; a person scope replaces each amount
   with that person's **stored** share and keeps transfers directional at full amount. Engines take
   a scope and project once at their entry point — never per rule.
+  Spec 054 adds the LIMIT half: `scopeBudgets(budgets, scope)` in the same module. Household scope
+  keeps only unowned budgets (`person_id == null`, and returns the input reference when none are
+  owned); a person scope keeps only that person's, with **no fallback** to the household limit —
+  a household allowance is sized for everyone, so measuring one person's share against it is the
+  spec-052 error class. `buildPlanSummary`/`generateInsights` project both arrays together.
 
 - **Integer USD cents** everywhere (§2); floats only for rates/percents/fractions/display.
 - **Round half away from zero** on signed money — never bare `Math.round`.

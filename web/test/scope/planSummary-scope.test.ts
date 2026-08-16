@@ -38,6 +38,7 @@ const budget: Budget = {
   household_id: 'h',
   category: 'groceries',
   monthly_limit_cents: 40000,
+  person_id: null,
   budget_type: 'fixed',
   rollover_cap_cents: null,
   created_at: '2026-08-01T00:00:00Z',
@@ -70,10 +71,16 @@ describe('planSummary — household scope is a no-op', () => {
 })
 
 describe('planSummary — a person scope measures only their share', () => {
-  it('halves the spend measured against an unchanged limit', () => {
+  // AMENDED BY SPEC 054. Spec 051 asserted here that a person's halved spend was measured
+  // against the UNCHANGED household limit ($400) — the deliberate v1 boundary of that spec.
+  // 054 removed it: limits carry an owner now, and `budget` above is the household's, so a
+  // person who has set no budget of their own has no limit rather than a borrowed one
+  // (FR-003). The spend projection this test really guards is unchanged.
+  it('halves the spend, and borrows no household limit', () => {
     const mine = base(personScope(A))
-    expect(mine.budgets.totalSpentCents).toBe(15000)
-    expect(mine.budgets.atRisk[0].effectiveLimitCents).toBe(40000)
+    expect(mine.health.unbudgetedSpentCents).toBe(15000)
+    expect(mine.budgets.atRisk).toEqual([])
+    expect(mine.budgets.totalLimitCents).toBe(0)
   })
 
   it('halves income for left-to-plan', () => {
@@ -97,8 +104,11 @@ describe('planSummary — a person scope measures only their share', () => {
   })
 
   it('reconciles: both people’s scoped spend sums to the household figure', () => {
+    // Measured through the health hero rather than the budget card, since after spec 054
+    // a person with no budget of their own has no budgeted spend to total — the ledger
+    // projection being reconciled here is the same one either way.
     const total = [A, B]
-      .map((p) => base(personScope(p)).budgets.totalSpentCents)
+      .map((p) => base(personScope(p)).health.unbudgetedSpentCents)
       .reduce((s, n) => s + n, 0)
     expect(total).toBe(base().budgets.totalSpentCents)
   })

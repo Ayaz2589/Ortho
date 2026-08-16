@@ -5,6 +5,7 @@ import { useApp } from '@/lib/store'
 import { useDashboardScopeContext } from '@/lib/widgets/DashboardScopeContext'
 import { categoryMeta } from '@/lib/categories'
 import { budgetStatusForMonth } from '@/lib/finance/budgets'
+import { HOUSEHOLD_SCOPE, scopeBudgets } from '@/lib/scope/moneyScope'
 
 /** Bar tint: the sand `--accent` near/over the limit, else sage `--positive`.
  *  Never red — an overspend is a nudge, not an alarm (money-first system). */
@@ -25,7 +26,10 @@ export function BudgetsBody() {
   const { referenceDate } = useDashboardScopeContext()
 
   const rows = useMemo(() => {
-    return budgets
+    // spec 054 — household budgets only. The board carries no "whose money" control
+    // (that decision is documented on the dashboard page), so a personal envelope must
+    // never appear here or be summed into a household total.
+    return scopeBudgets(budgets, HOUSEHOLD_SCOPE)
       .filter((b) => b.monthly_limit_cents > 0)
       .map((b) => {
         const status = budgetStatusForMonth(b, transactions, referenceDate)

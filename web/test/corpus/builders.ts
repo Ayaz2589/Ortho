@@ -93,6 +93,7 @@ export function buildBudget(
     monthly_limit_cents: monthlyLimitCents,
     budget_type: budgetType,
     rollover_cap_cents: rolloverCapCents,
+    person_id: null,
     // Carry anchor for flex/non_monthly rollover. Omitted when unset so existing
     // fixed budgets serialize byte-identically to the spec-026 snapshot.
     ...(createdAt !== undefined ? { created_at: createdAt } : {}),

@@ -9,6 +9,8 @@ import { ReadingColumn } from '@/components/layout'
 import { CATEGORY_GROUPS, CATEGORIES } from '@/lib/categories'
 import type { BudgetType, TransactionCategory } from '@/lib/types'
 import { BudgetDrawer } from '@/components/budgets/BudgetDrawer'
+import { PlanScopeBar } from '@/components/planning/PlanScopeBar'
+import { HOUSEHOLD_SCOPE, resolveScope, scopeBudgets, type MoneyScope } from '@/lib/scope/moneyScope'
 
 // A non-fixed bucket surfaces its type as a small caption; fixed is the quiet default.
 const TYPE_LABEL: Record<BudgetType, string> = {
@@ -18,8 +20,17 @@ const TYPE_LABEL: Record<BudgetType, string> = {
 }
 
 export default function BudgetsPage() {
-  const { budgets, formatMoney, t } = useApp()
+  const { budgets, householdMembers, formatMoney, t } = useApp()
   const [editing, setEditing] = useState<TransactionCategory | null>(null)
+  // spec 054 — whose budgets. Re-resolved every render so a person removed mid-session
+  // degrades to the household instead of showing an empty page (the resolveScope rule).
+  const [rawScope, setScope] = useState<MoneyScope>(HOUSEHOLD_SCOPE)
+  const scope = resolveScope(rawScope, householdMembers.map((m) => m.id))
+  const personId = scope.kind === 'person' ? scope.personId : null
+  const personName = householdMembers.find((m) => m.id === personId)?.name ?? null
+  // Only the selected scope's limits — a personal budget is a separate row, and the
+  // household number is never borrowed for a person who hasn't set one (FR-003).
+  const visible = scopeBudgets(budgets, scope)
 
   return (
     <ReadingColumn>
@@ -30,6 +41,8 @@ export default function BudgetsPage() {
         </Link>
       </div>
       <PageHeader title={t('Budgets')} />
+
+      <PlanScopeBar scope={scope} onChange={setScope} />
 
       <div className="flex flex-col gap-4">
         {CATEGORY_GROUPS.expense.map((group) => (
@@ -47,7 +60,7 @@ export default function BudgetsPage() {
               {group.children.map((cat) => {
                 const meta = CATEGORIES[cat]
                 const Icon = meta.icon
-                const budget = budgets.find((b) => b.category === cat) ?? null
+                const budget = visible.find((b) => b.category === cat) ?? null
                 return (
                   <button
                     key={cat}
@@ -89,10 +102,20 @@ export default function BudgetsPage() {
       </div>
 
       <p className="px-1 pt-3 text-[13px] leading-relaxed text-text-3">
-        {t("Budgets drive the spending insights on your dashboard. Set a monthly limit for any category and you'll see progress + alerts when you're close to or over the limit.")}
+        {personName
+          ? t(
+              "Only {0}'s limits are shown here, measured against their share of what the household spends. The household's own budgets stay under Everyone.",
+              personName,
+            )
+          : t("Budgets drive the spending insights on your dashboard. Set a monthly limit for any category and you'll see progress + alerts when you're close to or over the limit.")}
       </p>
 
-      <BudgetDrawer category={editing} onClose={() => setEditing(null)} />
+      <BudgetDrawer
+        category={editing}
+        personId={personId}
+        personName={personName}
+        onClose={() => setEditing(null)}
+      />
     </ReadingColumn>
   )
 }

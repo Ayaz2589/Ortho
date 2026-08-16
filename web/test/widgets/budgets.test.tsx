@@ -70,4 +70,25 @@ describe('BudgetsBody', () => {
     const { container } = render(<BudgetsBody />)
     expect((container.firstChild as HTMLElement).className).toContain('h-full')
   })
+
+  // spec 054 FR-006 — the widget board is deliberately household-wide (spec 034/043:
+  // "a widget never silently changes meaning under a control it doesn't show"), so a
+  // personal envelope must not appear here or be summed into a household figure.
+  it('ignores personal budgets', () => {
+    h.budgets = [
+      { id: 'b1', category: 'groceries', monthly_limit_cents: 50000, budget_type: 'fixed', rollover_cap_cents: null, person_id: null, created_at: '2026-08-01T00:00:00.000Z' },
+      { id: 'b2', category: 'dining', monthly_limit_cents: 10000, budget_type: 'fixed', rollover_cap_cents: null, person_id: 'p-a', created_at: '2026-08-01T00:00:00.000Z' },
+    ]
+    render(<BudgetsBody />)
+    expect(screen.getByText('Groceries')).toBeTruthy()
+    expect(screen.queryByText('Dining')).toBeNull()
+  })
+
+  it('shows the empty state when every budget is personal', () => {
+    h.budgets = [
+      { id: 'b2', category: 'dining', monthly_limit_cents: 10000, budget_type: 'fixed', rollover_cap_cents: null, person_id: 'p-a', created_at: '2026-08-01T00:00:00.000Z' },
+    ]
+    render(<BudgetsBody />)
+    expect(screen.getByText('No budgets yet.')).toBeTruthy()
+  })
 })

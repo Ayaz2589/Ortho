@@ -617,6 +617,9 @@ const catalog: Record<string, string> = {
   "Outstanding balances between the people in your household.": "Saldos pendientes entre las personas de tu hogar.",
   // spec 051 — money scope
   "Whose money": "De quién es el dinero",
+  // spec 054 — per-person budgets
+  "{0}'s budget": "Presupuesto de {0}",
+  "Only {0}'s limits are shown here, measured against their share of what the household spends. The household's own budgets stay under Everyone.": "Aquí solo se muestran los límites de {0}, comparados con su parte de lo que gasta el hogar. Los presupuestos del hogar están en Todos.",
 }
 
 export default catalog

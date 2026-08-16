@@ -19,7 +19,7 @@ a public value (it appears in the client URL) — in CI it is a repo **Variable*
 supabase/
 ├── config.toml        # ports, auth, session timebox, [functions.stripe-webhook] verify_jwt=false
 ├── seed.sql           # intentionally EMPTY (db reset = migrations only, no data)
-├── migrations/        # 19 files — the entire schema in timestamp order (§3)
+├── migrations/        # 22 files — the entire schema in timestamp order (§3)
 ├── functions/         # 10 Deno edge functions + _shared/ (§7)
 └── tests/upsert_transaction_authz.sql   # SQL authz regression test for the money-write RPC (§9)
 ```
@@ -47,12 +47,12 @@ config.toml == production.
 `[functions.stripe-webhook] verify_jwt = false` is the **only** JWT-off function — the Stripe
 signature is its auth. All 9 others keep `verify_jwt = true`.
 
-## 3. Migrations — 19 files
+## 3. Migrations — 22 files
 
 | File | Effect |
 |---|---|
 | `20260521120000_initial_schema.sql` | 5 enums, 12 tables, indexes, `touch_updated_at()`, RLS helpers + policies, `accept_invite()`, pgcrypto |
-| `20260521150000_budgets.sql` | `budgets`, UNIQUE `(household_id, category)`, member RLS |
+| `20260521150000_budgets.sql` | `budgets`, UNIQUE `(household_id, category)`, member RLS (widened to include `person_id` by spec 054) |
 | `20260522170000_add_entertainment_category.sql` | `ALTER TYPE transaction_category ADD VALUE 'entertainment'` — the enum-addition pattern (§10) |
 | `20260610000000_platform_locks.sql` | `platform_locks` — feature retired in clients (010); zombie table |
 | `20260611120000_aggregates.sql` | 4 household aggregate RPCs (half-open date ranges) |
@@ -70,6 +70,9 @@ signature is its auth. All 9 others keep `verify_jwt = true`.
 | `20260719130001_simplefin_sync.sql` | SimpleFIN sync state: `linked_institutions.last_synced_at`/`last_manual_refresh_at`/`sync_cursor` + `linked_accounts.currency`; the two SimpleFIN service-role RPCs `complete_simplefin_link()` + `mark_simplefin_synced()` |
 | `20260724120000_category_expansion.sql` | 28 idempotent `ADD VALUE` on `transaction_category` (spec 031 subcategories) |
 | `20260730120000_deposit_accounts.sql` | `deposit_accounts` table (mirrors `cards`), member RLS (spec 033) |
+| `20260806120000_financial_health_profile.sql` | 4 USER-scoped tables (`user_financial_profile`, `user_fixed_costs`, `user_dimension_weights`, `financial_health_snapshots`); RLS `user_id = auth.uid()` (spec 041) |
+| `20260811120000_financial_routines.sql` | `recognized_routine_states` + `merchant_geocodes` (household RLS); `user_location_consent` + `user_routine_visits` (user RLS) (spec 044) |
+| `20260816120000_person_budgets.sql` | `budgets.person_id` → `household_people` (null = the household's); replaces the old 2-column UNIQUE with `unique nulls not distinct (household_id, category, person_id)` (spec 054) |
 
 **Conventions**: heavily-commented headers naming the spec; `snake_case`; unprefixed enum types;
 indexes `<table>_<cols>_idx`; `timestamptz` for transactions, plain `date` for housing/goals dates.

@@ -617,6 +617,9 @@ const catalog: Record<string, string> = {
   "Outstanding balances between the people in your household.": "世帯の人どうしの未精算の残高。",
   // spec 051 — money scope
   "Whose money": "誰のお金",
+  // spec 054 — per-person budgets
+  "{0}'s budget": "{0}さんの予算",
+  "Only {0}'s limits are shown here, measured against their share of what the household spends. The household's own budgets stay under Everyone.": "ここには{0}さんの上限のみが表示され、世帯の支出のうちご本人の負担分と比較されます。世帯全体の予算は「全員」にあります。",
 }
 
 export default catalog

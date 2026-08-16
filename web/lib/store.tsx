@@ -889,6 +889,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         monthly_limit_cents: r.monthly_limit_cents,
         budget_type: r.budget_type ?? 'fixed',
         rollover_cap_cents: r.rollover_cap_cents ?? null,
+        // spec 054: absent column (pre-migration read) ⇒ a household budget.
+        person_id: r.person_id ?? null,
         created_at: r.created_at ?? undefined,
       })),
     )
@@ -1363,12 +1365,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }
 
   const addOrUpdateBudget = (b: Budget) => {
+    // spec 054: a budget's identity is (household, category, PERSON) — a household
+    // budget and one person's budget can both cover Dining, and saving one must never
+    // overwrite the other. Mirrors the DB's `unique nulls not distinct` constraint.
+    const sameBudget = (x: Budget) =>
+      x.category === b.category &&
+      x.household_id === b.household_id &&
+      (x.person_id ?? null) === (b.person_id ?? null)
     let prevBudget: Budget | undefined
     setBudgets((prev) => {
-      prevBudget = prev.find((x) => x.category === b.category && x.household_id === b.household_id)
-      return prevBudget
-        ? prev.map((x) => (x.category === b.category && x.household_id === b.household_id ? b : x))
-        : [...prev, b]
+      prevBudget = prev.find(sameBudget)
+      return prevBudget ? prev.map((x) => (sameBudget(x) ? b : x)) : [...prev, b]
     })
     ;(async () => {
       const { error: e } = await supabase.from('budgets').upsert(
@@ -1380,16 +1387,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           budget_type: b.budget_type,
           // flex-only; store null for the other types so a stale cap never lingers.
           rollover_cap_cents: b.budget_type === 'flex' ? b.rollover_cap_cents : null,
+          person_id: b.person_id,
         },
-        { onConflict: 'household_id,category' }
+        { onConflict: 'household_id,category,person_id' }
       )
       if (e) {
         // Roll back the optimistic value (matches iOS) — keeping it would
         // show a limit the server never accepted.
         setBudgets((prev) =>
           prevBudget
-            ? prev.map((x) => (x.category === b.category && x.household_id === b.household_id ? prevBudget! : x))
-            : prev.filter((x) => !(x.category === b.category && x.household_id === b.household_id))
+            ? prev.map((x) => (sameBudget(x) ? prevBudget! : x))
+            : prev.filter((x) => !sameBudget(x))
         )
         setError(e.message)
       }

@@ -234,6 +234,9 @@ export interface BudgetRow {
   // columns' absence — the store defaults them at the row→domain boundary.
   budget_type?: 'fixed' | 'flex' | 'non_monthly' | null
   rollover_cap_cents?: number | null
+  // spec 054: nullable/optional for the same deploy-before-migrate reason — a client
+  // reading before the migration lands sees no column at all, which means "household".
+  person_id?: string | null
   created_at?: string | null
 }
 

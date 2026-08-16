@@ -60,6 +60,7 @@ function makeBudget(o: Partial<Budget> = {}): Budget {
     monthly_limit_cents: o.monthly_limit_cents ?? 100000,
     budget_type: o.budget_type ?? 'fixed',
     rollover_cap_cents: o.rollover_cap_cents ?? null,
+    person_id: o.person_id ?? null,
     created_at: o.created_at ?? '2026-01-01T00:00:00.000Z',
     ...o,
   }
@@ -365,7 +366,12 @@ describe('Planning hub — whose money (spec 051)', () => {
       { id: 'u-me', name: 'Me' },
       { id: 'u-them', name: 'Sam' },
     ]
-    store.budgets = [makeBudget({ category: 'groceries', monthly_limit_cents: 40000 })]
+    // A household grocery budget AND one person's own (spec 054) — the two must not
+    // be confused for each other when the scope changes.
+    store.budgets = [
+      makeBudget({ category: 'groceries', monthly_limit_cents: 40000 }),
+      makeBudget({ id: 'b-mine', category: 'groceries', monthly_limit_cents: 20000, person_id: 'u-me' }),
+    ]
     store.transactions = [
       {
         id: 't1',
@@ -388,14 +394,19 @@ describe('Planning hub — whose money (spec 051)', () => {
     const { container } = render(<PlanningPage />)
     const bar = screen.getByRole('tablist', { name: 'Whose money' })
 
-    // Household scope counts the whole $300 of shared spend.
+    // Household scope counts the whole $300 of shared spend against the household's
+    // $400 limit, and never shows the personal $200 one.
     expect(container.textContent).toContain('$300.00')
     expect(container.textContent).not.toContain('$150.00')
+    expect(container.textContent).toContain('$400.00')
+    expect(container.textContent).not.toContain('$200.00')
 
-    // Scoping to one person counts only their $150 share; the LIMIT is unchanged.
+    // Scoping to one person counts only their $150 share, measured against THEIR OWN
+    // $200 limit — the $400 household allowance is not borrowed (spec 054, FR-003).
     fireEvent.click(within(bar).getByRole('tab', { name: 'Me' }))
     expect(within(bar).getByRole('tab', { name: 'Me' })).toHaveAttribute('aria-selected', 'true')
     expect(container.textContent).toContain('$150.00')
-    expect(container.textContent).toContain('$400.00')
+    expect(container.textContent).toContain('$200.00')
+    expect(container.textContent).not.toContain('$400.00')
   })
 })

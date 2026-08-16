@@ -316,6 +316,11 @@ export interface Budget {
   budget_type: BudgetType
   /** Flex-only cap on accumulated carry (cents); null = uncapped. */
   rollover_cap_cents: number | null
+  /** Whose budget this is (spec 054). `null` = the household's — the pre-054 meaning
+   *  of every row. A person id makes it that person's personal limit, measured against
+   *  their scoped spend. Required (not optional) so every construction site says which
+   *  it is: a silently-defaulted owner is the failure spec 050 was written about. */
+  person_id: string | null
   /** Carry anchor — the month carry begins accruing. Present from the DB row. */
   created_at?: string
 }

@@ -617,6 +617,9 @@ const catalog: Record<string, string> = {
   "Outstanding balances between the people in your household.": "家庭成员之间未结清的余额。",
   // spec 051 — money scope
   "Whose money": "谁的钱",
+  // spec 054 — per-person budgets
+  "{0}'s budget": "{0}的预算",
+  "Only {0}'s limits are shown here, measured against their share of what the household spends. The household's own budgets stay under Everyone.": "这里只显示{0}的限额，并与其在家庭支出中所占的份额进行比较。家庭本身的预算在“所有人”中。",
 }
 
 export default catalog

@@ -49,6 +49,7 @@ function budget(monthly_limit_cents: number, created_at = '2026-08-01T00:00:00Z'
     monthly_limit_cents,
     budget_type: 'fixed',
     rollover_cap_cents: null,
+    person_id: null,
     created_at,
   }
 }
