@@ -3,7 +3,6 @@ import type { Transaction } from '@/lib/types'
 import {
   allPairBalances,
   balanceBetween,
-  netPositionFor,
   outstandingBalances,
   peopleInLedger,
 } from '@/lib/finance/balances'
@@ -94,7 +93,9 @@ describe('the matrix is antisymmetric', () => {
   })
 
   it('sums every net position to zero across the household', () => {
-    const total = [A, B, C].reduce((s, p) => s + netPositionFor(p, [A, B, C], txs), 0)
+    const net = (p: string) =>
+      [A, B, C].filter((o) => o !== p).reduce((s, o) => s + balanceBetween(p, o, txs), 0)
+    const total = [A, B, C].reduce((s, p) => s + net(p), 0)
     expect(total).toBe(0)
   })
 
@@ -122,7 +123,9 @@ describe('the matrix is antisymmetric', () => {
           expect(m.get(x)!.get(y)).toBe(-m.get(y)!.get(x)!)
         }
       }
-      expect(people.reduce((s, p) => s + netPositionFor(p, people, txs), 0)).toBe(0)
+      const net = (p: string) =>
+        people.filter((o) => o !== p).reduce((s, o) => s + balanceBetween(p, o, txs), 0)
+      expect(people.reduce((s, p) => s + net(p), 0)).toBe(0)
     }
   })
 })

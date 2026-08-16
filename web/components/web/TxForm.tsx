@@ -224,11 +224,15 @@ export function useTxForm({
   // spec 050 — a NEW transaction starts owned by the whole household (when there is one and
   // the preference is on); an EXISTING or COPIED one keeps its own owners verbatim, so a
   // default can never silently re-attribute money the user already recorded (FR-005).
-  const defaultOwners = resolveDefaultOwnerIds(
-    currentPersonId,
-    householdMembers,
-    currentUserId,
-    readSharedByDefault()
+  // Read ONCE at mount, not on every render: this sits in the component body, so an
+  // un-memoized call would hit localStorage on every keystroke in the amount field. A lazy
+  // useState initializer also pins the value to the client, so the static export's prerender
+  // (where localStorage throws and the read falls back to `true`) can't hydrate-mismatch a
+  // user who turned the preference off.
+  const [sharedByDefault] = useState(readSharedByDefault)
+  const defaultOwners = useMemo(
+    () => resolveDefaultOwnerIds(currentPersonId, householdMembers, currentUserId, sharedByDefault),
+    [currentPersonId, householdMembers, currentUserId, sharedByDefault]
   )
   const initialOwners = (() => {
     if (!src || src.owner_ids.length === 0) return defaultOwners

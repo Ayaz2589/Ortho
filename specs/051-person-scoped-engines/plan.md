@@ -88,9 +88,14 @@ attribution rule lives.
 
 ### UI
 
-`web/lib/scope/MoneyScopeContext.tsx` — a small provider mirroring `DashboardScopeContext`, holding
-the selected scope in React state (not persisted, per spec Assumptions). Hidden when the household
-has fewer than two active people.
+The Planning hub owns the selected scope in local React state (not persisted, per spec Assumptions)
+and re-resolves it every render, so a person removed mid-session degrades to the household rather
+than blanking the page. `PlanScopeBar` is hidden when the household has fewer than two active people.
+
+A shared `MoneyScopeContext` provider was written and then **removed before merge**: with exactly one
+scoped surface it had no consumers, and shipping an unused provider is speculative. It should return
+the moment a second surface needs the same lens — the resolve-on-read behavior above is the piece to
+lift into it.
 
 ## Project Structure
 
@@ -101,8 +106,10 @@ specs/051-person-scoped-engines/
 └── tasks.md
 
 web/lib/scope/
-├── moneyScope.ts            # the primitive
-└── MoneyScopeContext.tsx    # provider + hook
+└── moneyScope.ts            # the primitive
+
+web/components/planning/
+└── PlanScopeBar.tsx         # the Everyone / person selector
 
 web/test/scope/
 ├── moneyScope.test.ts       # unit + property

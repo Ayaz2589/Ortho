@@ -142,17 +142,3 @@ export function outstandingBalances(
       x.toId.localeCompare(y.toId)
   )
 }
-
-/** Net standing position for one person: positive ⇒ they are owed overall. */
-export function netPositionFor(
-  personId: string,
-  personIds: readonly string[],
-  transactions: Transaction[]
-): number {
-  let net = 0
-  for (const other of personIds) {
-    if (other === personId) continue
-    net += balanceBetween(personId, other, transactions)
-  }
-  return net
-}

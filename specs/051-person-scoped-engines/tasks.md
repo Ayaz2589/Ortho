@@ -11,7 +11,9 @@
       non-owners dropped; inputs never mutated.
 - [x] T004 Reconciliation property — scoped amounts sum back to the household total, sizes 1–6.
 - [x] T005 `resolveScope` degrades a removed person to household scope.
-- [x] T006 `MoneyScopeContext` provider + hook, mirroring the time-axis context.
+- [~] T006 A `MoneyScopeContext` provider was built and then **removed before merge** — with one
+      scoped surface it had no consumers. The Planning hub owns its scope in local state and
+      re-resolves it on every render. Bring the provider back with the second scoped surface.
 
 ## US2 — budgets and the plan answer for one person (P1)
 
