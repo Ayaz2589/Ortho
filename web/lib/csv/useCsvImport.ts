@@ -8,7 +8,8 @@ import { csvImportReducer, initialCsvImportState } from './csvImportSession'
 import { checkedDrafts, totalSpendCents } from './csvImportModels'
 import type { CsvDraftRow } from './csvImportModels'
 import type { DuplicateCandidate } from './duplicateMatch'
-import { resolveDefaultOwnerId } from '../defaultOwner'
+import { resolveDefaultOwnerId, resolveDefaultOwnerIds } from '../defaultOwner'
+import { readSharedByDefault } from '../../components/settings/sharedByDefault'
 import { matchSourceForBank } from './matchSource'
 import { loadCsvSession, saveCsvSession } from './csvImportPersistence'
 import type { CsvImportState } from './csvImportSession'
@@ -72,7 +73,14 @@ export function useCsvImport() {
 
   // The importing user, shared with the transaction form so imported and
   // hand-entered rows resolve their owner identically.
-  const defaultOwnerId = resolveDefaultOwnerId(currentPersonId, householdMembers, currentUserId) || null
+  // spec 050 — imports inherit the same shared-by-default owner set as the New form, so
+  // importing a statement does not quietly produce a solo ledger for a shared household.
+  const defaultOwnerIds = resolveDefaultOwnerIds(
+    currentPersonId,
+    householdMembers,
+    currentUserId,
+    readSharedByDefault()
+  ).filter(Boolean)
 
   const cardNames = useMemo(() => cards.map((c) => c.name), [cards])
 
@@ -98,12 +106,12 @@ export function useCsvImport() {
         type: 'file/parsed',
         statement,
         bankLabel: result.profile.label,
-        defaultOwnerId,
+        defaultOwnerIds,
         defaultSource,
         existing,
       })
     },
-    [dispatch, defaultOwnerId, existing, cardNames]
+    [dispatch, defaultOwnerIds, existing, cardNames]
   )
 
   const toggleChecked = useCallback(

@@ -604,6 +604,11 @@ const catalog: Record<string, string> = {
   "Location enrichment isn't available yet.": "অবস্থান সমৃদ্ধকরণ এখনো উপলব্ধ নয়।",
   "A place you visit often": "একটি জায়গা যেখানে আপনি প্রায়ই যান",
   "Noticed {0} times — might be worth logging as a routine.": "{0} বার লক্ষ্য করা হয়েছে — এটি একটি রুটিন হিসেবে লগ করা মূল্যবান হতে পারে।",
+  // spec 050 — shared ownership by default
+  "Who is this for?": "এটি কার জন্য?",
+  "Just me": "শুধু আমি",
+  "Shared by default": "ডিফল্টভাবে ভাগ করা",
+  "New transactions start owned by everyone in your household.": "নতুন লেনদেন শুরু হয় আপনার পরিবারের সবার মালিকানায়।",
 }
 
 export default catalog

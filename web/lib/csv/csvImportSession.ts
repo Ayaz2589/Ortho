@@ -38,7 +38,7 @@ export type CsvImportAction =
       type: 'file/parsed'
       statement: ParsedStatement
       bankLabel: string
-      defaultOwnerId?: string | null
+      defaultOwnerIds?: string[]
       // Card name matching the imported bank, seeded as every row's payment
       // source ('' when no card matches).
       defaultSource?: string
@@ -78,7 +78,7 @@ export function csvImportReducer(state: CsvImportState, action: CsvImportAction)
         const draft = parsedTransactionToDraft(
           tx,
           duplicateOf,
-          action.defaultOwnerId ?? null,
+          action.defaultOwnerIds ?? [],
           action.defaultSource ?? ''
         )
         drafts[draft.id] = draft

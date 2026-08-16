@@ -38,15 +38,16 @@ export interface CsvDraftRow {
 export function parsedTransactionToDraft(
   tx: ParsedTransaction,
   duplicateOf: string | null = null,
-  defaultOwnerId: string | null = null,
+  defaultOwnerIds: string[] = [],
   defaultSource = ''
 ): CsvDraftRow {
   const isPaymentRow = tx.excluded && tx.excludeReason === 'card-payment'
   const isExcluded = tx.excluded
-  // Seed the owner from the parsed row if present, else the importing user —
-  // so every reviewed row already has an owner, just like a hand-entered one.
-  const ownerIds =
-    tx.ownerIds && tx.ownerIds.length > 0 ? tx.ownerIds : defaultOwnerId ? [defaultOwnerId] : []
+  // Seed the owners from the parsed row if present, else the household default —
+  // so every reviewed row already has owners, just like a hand-entered one. Since spec 050
+  // that default is the whole household (when there is one and the preference is on), so an
+  // imported statement produces the same shared ownership a hand-entered transaction would.
+  const ownerIds = tx.ownerIds && tx.ownerIds.length > 0 ? tx.ownerIds : defaultOwnerIds
   // A parser-provided split arrives as per-owner percentages; carry it as a
   // percent SplitInput, else default to even (null).
   const split: SplitInput | null =

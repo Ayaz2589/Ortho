@@ -19,7 +19,8 @@ import type { ParsedCandidate } from '@/lib/scan/scanModels'
 import { Seg, CatTile, SourceDot, FormRow as Row, AccordionRow } from './kit'
 import type { CategoryGroup } from '@/lib/categories'
 import { TagEditor } from './TagEditor'
-import { resolveDefaultOwnerId } from '@/lib/defaultOwner'
+import { resolveDefaultOwnerId, resolveDefaultOwnerIds } from '@/lib/defaultOwner'
+import { readSharedByDefault } from '@/components/settings/sharedByDefault'
 
 
 function centsToDisplay(cents: number, rate: number, fd: number): string {
@@ -220,11 +221,20 @@ export function useTxForm({
   const memberIds = useMemo(() => new Set(householdMembers.map((m) => m.id)), [householdMembers])
   const isMember = (id: string | null | undefined): id is string => !!id && memberIds.has(id)
 
+  // spec 050 — a NEW transaction starts owned by the whole household (when there is one and
+  // the preference is on); an EXISTING or COPIED one keeps its own owners verbatim, so a
+  // default can never silently re-attribute money the user already recorded (FR-005).
+  const defaultOwners = resolveDefaultOwnerIds(
+    currentPersonId,
+    householdMembers,
+    currentUserId,
+    readSharedByDefault()
+  )
   const initialOwners = (() => {
-    if (!src || src.owner_ids.length === 0) return [defaultOwner]
+    if (!src || src.owner_ids.length === 0) return defaultOwners
     if (editing) return src.owner_ids
     const kept = src.owner_ids.filter((id) => memberIds.has(id))
-    return kept.length ? kept : [defaultOwner]
+    return kept.length ? kept : defaultOwners
   })()
 
   // Selectable member list. Edit mode keeps stored people verbatim, so a
@@ -420,6 +430,16 @@ export function useTxForm({
     // Re-balance to an even default whenever the owner set changes.
     resetSplitsToEven()
   }
+  /** spec 050 — "Who is this for?" presets. One tap between the two cases that cover almost
+   *  every entry; the Owners picker remains for a genuine custom subset. */
+  function ownAll() {
+    setOwners(householdMembers.map((m) => m.id))
+    resetSplitsToEven()
+  }
+  function ownJustMe() {
+    setOwners([resolveDefaultOwnerId(currentPersonId, householdMembers, currentUserId)])
+    resetSplitsToEven()
+  }
   /** Switch the split method, seeding even values so the editor opens valid
    *  (mirrors iOS `setSplitMethod` → seedEvenPercents/seedEvenValues). */
   function chooseSplitMethod(m: SplitMethod) {
@@ -575,6 +595,9 @@ export function useTxForm({
     setIncomeCategory,
     owners,
     toggleOwner,
+    ownAll,
+    ownJustMe,
+    currentPersonId: resolveDefaultOwnerId(currentPersonId, householdMembers, currentUserId),
     paidBy,
     setPaidBy,
     transferFrom,
@@ -670,6 +693,15 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
   // Owner / payer pickers appear whenever the household has more than one person.
   const showOwners = form.members.length > 1
   const multi = form.owners.length >= 2
+  // spec 050 — derived, never stored: 'everyone' when the owner set is the whole household,
+  // 'me' when it is exactly the current person, and '' (no segment active) for a custom subset.
+  const ownershipPreset: 'everyone' | 'me' | '' =
+    form.owners.length === form.members.length &&
+    form.members.every((m) => form.owners.includes(m.id))
+      ? 'everyone'
+      : form.owners.length === 1 && form.owners[0] === form.currentPersonId
+        ? 'me'
+        : ''
   const heroColor = isIncome ? 'var(--positive)' : 'var(--text)'
   return (
     <>
@@ -801,6 +833,20 @@ export function TxFormFields({ form }: { form: TxFormApi }) {
           {/* Owners + who paid */}
           {showOwners && (
             <div className="ow-card" style={{ margin: '0 20px 14px' }}>
+              {/* spec 050 — "Who is this for?": one tap between the two cases that cover
+                  almost every entry. A custom subset matches neither, so no segment reads
+                  as active and the Owners picker below stays the way to build one. */}
+              <Row label={t('Who is this for?')} first>
+                <Seg
+                  value={ownershipPreset}
+                  onChange={(v) => (v === 'everyone' ? form.ownAll() : form.ownJustMe())}
+                  options={[
+                    { value: 'everyone' as const, label: t('Everyone') },
+                    { value: 'me' as const, label: t('Just me') },
+                  ]}
+                  size="sm"
+                />
+              </Row>
               {/* Multi-select: the panel stays OPEN as owners toggle, so picking
                   two or three people is one gesture. */}
               <AccordionRow

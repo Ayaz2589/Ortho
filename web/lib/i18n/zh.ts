@@ -604,6 +604,11 @@ const catalog: Record<string, string> = {
   "Location enrichment isn't available yet.": "位置增强功能暂不可用。",
   "A place you visit often": "您经常光顾的地点",
   "Noticed {0} times — might be worth logging as a routine.": "已发现 {0} 次——或许值得记录为一个常规。",
+  // spec 050 — shared ownership by default
+  "Who is this for?": "这是给谁的？",
+  "Just me": "仅我",
+  "Shared by default": "默认共享",
+  "New transactions start owned by everyone in your household.": "新交易默认由家庭中的每个人共同拥有。",
 }
 
 export default catalog

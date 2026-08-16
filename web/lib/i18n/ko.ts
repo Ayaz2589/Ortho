@@ -604,6 +604,11 @@ const catalog: Record<string, string> = {
   "Location enrichment isn't available yet.": "위치 보강 기능은 아직 이용할 수 없습니다.",
   "A place you visit often": "자주 방문하는 장소",
   "Noticed {0} times — might be worth logging as a routine.": "{0}번 감지됨 — 루틴으로 기록해볼 만할 수도 있습니다.",
+  // spec 050 — shared ownership by default
+  "Who is this for?": "누구를 위한 것인가요?",
+  "Just me": "나만",
+  "Shared by default": "기본적으로 공유",
+  "New transactions start owned by everyone in your household.": "새 거래는 가구의 모든 사람이 소유한 상태로 시작됩니다.",
 }
 
 export default catalog
