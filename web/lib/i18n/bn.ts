@@ -617,6 +617,9 @@ const catalog: Record<string, string> = {
   "Outstanding balances between the people in your household.": "আপনার পরিবারের সদস্যদের মধ্যে বকেয়া হিসাব।",
   // spec 051 — money scope
   "Whose money": "কার টাকা",
+  // spec 054 — per-person budgets
+  "{0}'s budget": "{0}-এর বাজেট",
+  "Only {0}'s limits are shown here, measured against their share of what the household spends. The household's own budgets stay under Everyone.": "এখানে শুধু {0}-এর সীমা দেখানো হচ্ছে, পরিবারের খরচে তাঁর অংশের সঙ্গে মিলিয়ে। পরিবারের নিজস্ব বাজেট সবাই-এর মধ্যে থাকে।",
 }
 
 export default catalog

@@ -285,7 +285,8 @@ All 233 test files pass (`npm test`). TypeScript clean
 > at `lib/finance/balances.ts`. Shipped since: **§11.3.B** income balance effects, **§11.3.C** the
 > N-person matrix and **§11.3.E** the balance widget (all spec 053); **§11.6 Phase 1** shared-by-
 > default ownership and split presets (spec 050); the person-scoped engines that §11.7's
-> budget question anticipated (spec 051). Still open: solo-mode UX polish, debt simplification,
+> budget question anticipated (spec 051), and **per-person budget LIMITS** answering it outright
+> (spec 054 — §11.7). Still open: solo-mode UX polish, debt simplification,
 > the settle-up prefill, settlement history, recurring split memory, and the invite flow.
 
 Written 2026-07-24 after auditing the existing system against the product vision and market
@@ -522,11 +523,13 @@ From `docs/research/finance-habits-budgeting-apps.md` §4 and `docs/research/pro
   mixed-income households, not every expense should be visible to all members. This is a non-goal
   for now but will come up once households have 3+ members.
 
-- **Household-level vs per-person budgets**: partially answered by spec 051 — a `MoneyScope`
-  narrows the **spend measured against** a budget, while the LIMIT stays household-level.
-  Per-person limits still need a `person_id` column and a validated pooling model.
-  (`lib/finance/budgets.ts` still has zero references to `owner_ids`.) As households grow to 3+ people,
-  "who is over budget" becomes ambiguous. This is deferred but the architecture has a seam here.
+- **Household-level vs per-person budgets**: ANSWERED by specs 051 + 054. Spec 051 narrowed the
+  **spend measured against** a budget; spec 054 gave the LIMIT the same owner — `budgets.person_id`
+  (null = the household's), selected by `scopeBudgets` and enforced by
+  `unique nulls not distinct (household_id, category, person_id)`. Person scope never falls back to
+  the household limit, so "who is over budget" is now answerable per person. What remains deferred
+  is the **pooling model** — automatically dividing one household allowance into per-person shares
+  is the same unvalidated question spec 050 left open, and 054 deliberately does not answer it.
 
 - **Income split UI language**: "Received by" vs "Who earned it" vs "Who gets credit" — the right
   framing for income splits needs a user test, not a design assumption.

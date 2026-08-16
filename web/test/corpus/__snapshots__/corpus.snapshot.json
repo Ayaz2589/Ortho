@@ -1,5 +1,5 @@
 {
-  "corpusHash": "b753b6d46787ac83e2585c72b1e3a165f0bddcb7c2010a839f3c7cd126351956",
+  "corpusHash": "6eb39bb43809aec87364952c3339f1e29c3d35aac9b5a1971312b1db555e8bb7",
   "scenarioCount": 236,
   "scenarios": [
     {
@@ -12,7 +12,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "79edf246cdb7c566e7f60340482b4e1bceca105b5a70394f5c875f9e7a442bc0",
+      "hash": "f256bcf28c07df1eaf1c70a2ed66ae0694e614801a11eca971316a33eeacab72",
       "label": "joint-even-usd",
       "rows": {
         "budgets": 3,
@@ -463,7 +463,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "497b45356a716dbc45625a10cf3ee9f32f962fa257c8152e22444b9274ae8f72",
+      "hash": "5911978fe9d18a4ebbca82a80753c1b83114ed3cc7a34321f0dd3b7455516bcc",
       "label": "budget-bands",
       "rows": {
         "budgets": 3,
@@ -497,7 +497,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "600f7c4be67f5d0780f63024b7479297d6b05567fa1adf833eba7e64beaa2cce",
+      "hash": "7b54630c7ed943180b83a04a918007cf525d76e92fbffd1c2405ac368d3ad14b",
       "label": "subscription-creep",
       "rows": {
         "budgets": 1,
@@ -606,7 +606,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "a7a82407445024fe42d60d114beabf6b6034fdc50b6a352894e900e74a64e0d5",
+      "hash": "81c27bce4ae6c859cb9eb50f52c5d72c44c294f3075d3cced88bf3497d35e6bb",
       "label": "budget-types",
       "rows": {
         "budgets": 2,
@@ -672,7 +672,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "439bd2d8958c300ac9b436f6bfa8a301ca96ca5d7b0221e8a6ed3f96acdaf255",
+      "hash": "aaba6390dbb44cbf8f51e8e426a850079ccd1fb0a27b9944ab848719061bf56e",
       "label": "fam-usd-even-sparse-joint-0",
       "rows": {
         "budgets": 1,
@@ -704,7 +704,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "15fd9866be914d073999bbab3c955be1fc530fc3cc19697f94ac82d432f99f75",
+      "hash": "49da4341ef54bb20385542ab01d8a0f378b7cde159c771361e180666a67efc39",
       "label": "fam-usd-even-sparse-joint-1",
       "rows": {
         "budgets": 1,
@@ -736,7 +736,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "ef6b252c0f193c5e247f0a42d9c7073fe3f15db712134057968a515fd1218ae5",
+      "hash": "84ec574b35819e1303bd70b652ab629d2d6233a573cfa9d576caaac505a9fd59",
       "label": "fam-usd-even-sparse-joint-2",
       "rows": {
         "budgets": 1,
@@ -768,7 +768,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "e41ef4d7bb9bce29d9cb786d4bd8381c08c773a24c715b6341b837a68b2401a3",
+      "hash": "a3bd7369ecf415973dec8197f01e697e8b691d8985aae46c57238b588dd7e293",
       "label": "fam-usd-even-sparse-sep-0",
       "rows": {
         "budgets": 1,
@@ -800,7 +800,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "fac4bfb5250f870b4b92e362f21d1ea415d314648cbc1eee1bde189159f39f97",
+      "hash": "2672baeab3ef3d3c5ef5450d5f118a51eaeab96b14a5d5b486df7e4225d80848",
       "label": "fam-usd-even-sparse-sep-1",
       "rows": {
         "budgets": 1,
@@ -832,7 +832,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "b14ac89b0535f84932b1178ff6c1410f74b9434fcad1723f97a0fce30570862a",
+      "hash": "efd996c07fd9773dd1ed114e4a58ce74807c036d8d6c24755f16fead7679b9f8",
       "label": "fam-usd-even-sparse-sep-2",
       "rows": {
         "budgets": 1,
@@ -863,7 +863,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "baa410a86603560664dd40af590e1a8dd986eee463d38686f018c492f539043c",
+      "hash": "8b6257a6473f8e880e614eea0bf426904b303ebcc7b6ccf743e8eaea7cdabad0",
       "label": "fam-usd-even-normal-joint-0",
       "rows": {
         "budgets": 1,
@@ -894,7 +894,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "5007eaca709dfbcd7e6c831d8945bd3df00b9c6e1129c03542a3db90c55d920c",
+      "hash": "a737657e339196949a45ff917fa8c43b8086202a0cac5ce70be2c6f32d38a150",
       "label": "fam-usd-even-normal-joint-1",
       "rows": {
         "budgets": 1,
@@ -925,7 +925,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "c25633ddcedabba8f503d9275dcf60cdb02a6eceba2e3c07bca0f583ced9833f",
+      "hash": "d3aaa1fe2063154201cc2e55a2639d694ace7d5b0dbed71b880e3cd75ce1c9f9",
       "label": "fam-usd-even-normal-joint-2",
       "rows": {
         "budgets": 1,
@@ -956,7 +956,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "2db525fe5709f67a846c0ec131bf221052ef997a28e6168ea6dc141e863818fc",
+      "hash": "1af46623871d3ceebfbc22f7d596b15dfde080e6313d9b2b20e4baad81824fd9",
       "label": "fam-usd-even-normal-sep-0",
       "rows": {
         "budgets": 1,
@@ -987,7 +987,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "7ea2df8ad784f60d429e55ddbfd55c377aad0ef613ee5ef055fb2ee8b29f00b1",
+      "hash": "ad2e9d6307baf31f79b3d91a54397e5d2af66b8779001f912983ca77f5f20dfe",
       "label": "fam-usd-even-normal-sep-1",
       "rows": {
         "budgets": 1,
@@ -1018,7 +1018,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "5f9a868b216b7baa187c011d818da69814cf15703e53a03e9d6798615e75e8e6",
+      "hash": "3ea31dc8758ab2eef6f1ea9fab11e1f8f36f5866b07a0233a1d13654b37a8916",
       "label": "fam-usd-even-normal-sep-2",
       "rows": {
         "budgets": 1,
@@ -1050,7 +1050,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "50a7d93b3012238ab1f1d7f59e60937cc7e30cccae8d32c9bc8697c074d17b37",
+      "hash": "e024a8c8642af8fe2779737396ce3af6089b5689fbf3693856c1644f77426539",
       "label": "fam-usd-even-dense-joint-0",
       "rows": {
         "budgets": 1,
@@ -1082,7 +1082,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "71dadb12200c8d44f0486b8b0085a61c0aaa5bb2100b62b6929ec093f0bd7d2b",
+      "hash": "62f9513ca2e3430f75700acf4bd8f98c1a91b6e355b23997e7480a52c81facf3",
       "label": "fam-usd-even-dense-joint-1",
       "rows": {
         "budgets": 1,
@@ -1114,7 +1114,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "77bf69f4b928c21984ea379d57d4d3bd0d57f1aef46f7382579f88febf9c8aa7",
+      "hash": "e213b454a1906cd5e7142d664dfd73812a23058f4addc0762bcadaad600fbccf",
       "label": "fam-usd-even-dense-joint-2",
       "rows": {
         "budgets": 1,
@@ -1146,7 +1146,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "bb6159ce080aaad2b8a74ebc9b4360a029e27438aa29a38d52a38e86b500535a",
+      "hash": "79f7a5cd63cd41db0531f539f8aece132f6b1cb89921154ffa8467293c61cf02",
       "label": "fam-usd-even-dense-sep-0",
       "rows": {
         "budgets": 1,
@@ -1178,7 +1178,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "8f871c16c012f45f6918e402d9499c6724f3021d57b813dc301770394af72dca",
+      "hash": "d21bb838d04d1f458c3d4639f08c6d5023f2f6d99a96219b96ba33775ec00a23",
       "label": "fam-usd-even-dense-sep-1",
       "rows": {
         "budgets": 1,
@@ -1210,7 +1210,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "9c07a47d092178c87ef94d3a924e333142a13bf8ade6630fa76f4bc56c3e0c67",
+      "hash": "8e8de47a312b3cc491725db03444ea18444a2994c78c3c24bcb7d5bb080d1c19",
       "label": "fam-usd-even-dense-sep-2",
       "rows": {
         "budgets": 1,
@@ -1242,7 +1242,7 @@
         "split-percent"
       ],
       "displayCurrency": "usd",
-      "hash": "91e386741b5452af6b119ecb2eb6b276f2adbaf6b054701d59d8378a4ea517fa",
+      "hash": "a236ae08f7c7ebd9d2d2b2b707197f08e32d13e676aa6489bd71cdeed12b84d0",
       "label": "fam-usd-percent-sparse-joint-0",
       "rows": {
         "budgets": 1,
@@ -1274,7 +1274,7 @@
         "split-percent"
       ],
       "displayCurrency": "usd",
-      "hash": "2dd5a64dc351b47cd4946953581b40848cb0956c0535f169c728bdfbe0303535",
+      "hash": "64533a9c846345c0db2ec1081a8810a712cc9a31765d01a779353b0c4b4cc8e7",
       "label": "fam-usd-percent-sparse-joint-1",
       "rows": {
         "budgets": 1,
@@ -1306,7 +1306,7 @@
         "split-percent"
       ],
       "displayCurrency": "usd",
-      "hash": "68a2d5d7043687ceffd307e473e1e2df7eb1c05fa79f551165e30a799056eb78",
+      "hash": "c5cf3ff2d5c8026ffe061cd9c76358a40a8ceb9f8c93f54c5211f5468acd0bf9",
       "label": "fam-usd-percent-sparse-joint-2",
       "rows": {
         "budgets": 1,
@@ -1338,7 +1338,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "d54d7f56540e9386a87a34ae0388d98a1cf5ac31da592c576538893cca912a89",
+      "hash": "726e85fdd087b8d014749f882cff721e95d209a30a32edc4f365ded772357007",
       "label": "fam-usd-percent-sparse-sep-0",
       "rows": {
         "budgets": 1,
@@ -1370,7 +1370,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "1221b431da0622a19311dd25fb060323312d3f8d52bc8212ad5d8f9c56faf7de",
+      "hash": "8ea1dad2f6a41f3de71236296e63bfd70b451458a1325bbf27ea45ec8d702722",
       "label": "fam-usd-percent-sparse-sep-1",
       "rows": {
         "budgets": 1,
@@ -1402,7 +1402,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "4f687fc785d4fc392886ea6eb79fb4b53094b691e6f6b2917ad924d0fa1a6693",
+      "hash": "4e88ea9398a29ebc41bbcd6ce5a9fcf96794a1a2e94b93be3a48511fbe34d794",
       "label": "fam-usd-percent-sparse-sep-2",
       "rows": {
         "budgets": 1,
@@ -1433,7 +1433,7 @@
         "split-percent"
       ],
       "displayCurrency": "usd",
-      "hash": "920eb5f88ff33abb081cc1a293c95b725f3e71a75f54b189db8d493f536fb408",
+      "hash": "80982e5a8cfea26ca4b9af109480c5e1ad0f52e1211503145a9d60b8165ef64d",
       "label": "fam-usd-percent-normal-joint-0",
       "rows": {
         "budgets": 1,
@@ -1464,7 +1464,7 @@
         "split-percent"
       ],
       "displayCurrency": "usd",
-      "hash": "999708c2f4e4b05f61cc5f46290636326042259b0542ac81d2c22033339ec382",
+      "hash": "27674a5d5bad1a161ea7b8b4af191002d451ee213c446946a74158b018d61c7e",
       "label": "fam-usd-percent-normal-joint-1",
       "rows": {
         "budgets": 1,
@@ -1495,7 +1495,7 @@
         "split-percent"
       ],
       "displayCurrency": "usd",
-      "hash": "37ebeb81cd575415756b367f3b2e0cb496132bd7ecd8d20096a0a1174e990a0c",
+      "hash": "18b73468eabd6a8b7661553c3351904fc4811cff392cd9344d0fe7eae0f440be",
       "label": "fam-usd-percent-normal-joint-2",
       "rows": {
         "budgets": 1,
@@ -1526,7 +1526,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "dc0a2af87dc47971143a61faba5bae95a29b31dbb9b7ee89df2c70b7df66d8e6",
+      "hash": "cc24a9a839daa1d304af2359d46f74b8b9b0acb4c4e1b5217a319ebff67ad1bc",
       "label": "fam-usd-percent-normal-sep-0",
       "rows": {
         "budgets": 1,
@@ -1557,7 +1557,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "44d5f8df7b10da65db2840bb43df56b9841ca617df1c29c979f7ac5fed57deb9",
+      "hash": "aa8107de9f0890490d25dbc1d3c840dbe8d7193848f562b886c3ae31f32b513c",
       "label": "fam-usd-percent-normal-sep-1",
       "rows": {
         "budgets": 1,
@@ -1588,7 +1588,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "eb69a2fd9cc0592f7471dca49bc1003eb6cc78f22df720704f00ff08548011a3",
+      "hash": "13dbb0c6dc5498a80e912bba13d5f6f310caa44d0ad11788e3451c35113a2be9",
       "label": "fam-usd-percent-normal-sep-2",
       "rows": {
         "budgets": 1,
@@ -1620,7 +1620,7 @@
         "split-percent"
       ],
       "displayCurrency": "usd",
-      "hash": "c93d295621750985fc51f4dad3ca9553a51339fa6c3ceb7ee839b95385307c04",
+      "hash": "e2137ef8a3302546c78ce0c766585660c0cde5f04adb64b101673921e968d5c9",
       "label": "fam-usd-percent-dense-joint-0",
       "rows": {
         "budgets": 1,
@@ -1652,7 +1652,7 @@
         "split-percent"
       ],
       "displayCurrency": "usd",
-      "hash": "97435cf5438e57c1f1112212c8fdc2a82c7bc28b8872ecab740278e0413a0890",
+      "hash": "97de42b875b63e3b34860ff22e17f90cc9ab863056f38c4cb1a0885a6b1a5a8e",
       "label": "fam-usd-percent-dense-joint-1",
       "rows": {
         "budgets": 1,
@@ -1684,7 +1684,7 @@
         "split-percent"
       ],
       "displayCurrency": "usd",
-      "hash": "fbac1b6c847179b5d84d95169b2b7456d73763a34a1826010f6c2392d07d43d0",
+      "hash": "ccb8ee836828a73b5cd7899758f93af19b3375dde1fa34e9111c24186180e645",
       "label": "fam-usd-percent-dense-joint-2",
       "rows": {
         "budgets": 1,
@@ -1716,7 +1716,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "e06cac0d3d0c4ea113257c597154eae029e38e9b16aba772e37b319355441d6c",
+      "hash": "0f3396b0196ada63fc53e37a5d52b57174078826064ccd589b85f7764b2644a8",
       "label": "fam-usd-percent-dense-sep-0",
       "rows": {
         "budgets": 1,
@@ -1748,7 +1748,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "1a0ee299a0d68188de08e9bbbbae29ce06166f56db7b24e3b69b06e4b8d1493c",
+      "hash": "7f0e3f8b8775535e18cb1791287df56768cdefb23b8506dd5f4c28b5c25c063c",
       "label": "fam-usd-percent-dense-sep-1",
       "rows": {
         "budgets": 1,
@@ -1780,7 +1780,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "8c44c6fcd66661f6308cfa4ce9a40c378d0fb3f09b7f45d80cb4ce45b551f968",
+      "hash": "f40719ceeb96364a9b98e6768bfbd51b491b0eec57512cd5ad82485061270682",
       "label": "fam-usd-percent-dense-sep-2",
       "rows": {
         "budgets": 1,
@@ -1812,7 +1812,7 @@
         "split-value"
       ],
       "displayCurrency": "usd",
-      "hash": "54dc46ef2e4a768928d2c536bab0265d54f8433455b2a64f576e7ec63e9a3850",
+      "hash": "d431353fff9e79dfbf900f33bcf3c75ae1ce0acd53da7a0b79fac452403b1db5",
       "label": "fam-usd-value-sparse-joint-0",
       "rows": {
         "budgets": 1,
@@ -1844,7 +1844,7 @@
         "split-value"
       ],
       "displayCurrency": "usd",
-      "hash": "7d00fc54bbc95c3d277a1a1da8621d482a23d1af2175a455d7af61840af08b5c",
+      "hash": "7c7d42a3307baf8d84b408518baaaf45634b85c79d6d758d7fbbcf501b08f997",
       "label": "fam-usd-value-sparse-joint-1",
       "rows": {
         "budgets": 1,
@@ -1876,7 +1876,7 @@
         "split-value"
       ],
       "displayCurrency": "usd",
-      "hash": "450f693606d78b8968a8a9b182d47d5cf9471ab58695ea7d7fd2713a74c347e0",
+      "hash": "89ca3313cd58dad8e2b1e0ecbdfe4216aa87dae6fb93138ed34e2870e5c94eef",
       "label": "fam-usd-value-sparse-joint-2",
       "rows": {
         "budgets": 1,
@@ -1908,7 +1908,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "ce198fc61b1805c370b3e86bd00388b40573ea4b6cf418ccdb225f8f98f074e9",
+      "hash": "cd8623bae8e87888d543bacece7c61f2f426e10897f0565923ddb1ec92e9e085",
       "label": "fam-usd-value-sparse-sep-0",
       "rows": {
         "budgets": 1,
@@ -1940,7 +1940,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "760abad14f5bc4c5403f360e060dfc3bf4bd6309d624a2c964d9fbf23090e156",
+      "hash": "f5540839faa9cf8331c446664639bc53f804929fc9a3085001d6383e7a018702",
       "label": "fam-usd-value-sparse-sep-1",
       "rows": {
         "budgets": 1,
@@ -1972,7 +1972,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "82add2f3eb44a7163d25ed24950f8bb1c8cb7a1b84307e7c37cb61bab3212701",
+      "hash": "ca2358358325dfb23d21e23668483015953afe01d98f010ac25da5ad12e32d3b",
       "label": "fam-usd-value-sparse-sep-2",
       "rows": {
         "budgets": 1,
@@ -2003,7 +2003,7 @@
         "split-value"
       ],
       "displayCurrency": "usd",
-      "hash": "ec0d7e4723531d2d3f46b7053b5d00b977900114ae20d8b089178aa5b527c122",
+      "hash": "9929adf22b4919906ec4d98170828e996765aa4ac12b6f527212d70d306c11c9",
       "label": "fam-usd-value-normal-joint-0",
       "rows": {
         "budgets": 1,
@@ -2034,7 +2034,7 @@
         "split-value"
       ],
       "displayCurrency": "usd",
-      "hash": "73ecd601c2d6110e53c9690787246550f90bed9b9b80a361e241f59ed7f2101e",
+      "hash": "69fc89e8058be07fbd324e044ffa896bf2cb337609cddb336e150d2d561f23fb",
       "label": "fam-usd-value-normal-joint-1",
       "rows": {
         "budgets": 1,
@@ -2065,7 +2065,7 @@
         "split-value"
       ],
       "displayCurrency": "usd",
-      "hash": "648d8d2c6a2ddfb0666d5c962990e60f78b1b6e2829a72bb5ed7dbd620ff1b1b",
+      "hash": "950d62144ec24d15f26d4344c0a09f8c9fd56d65771dc581c7e91aa17e0985a7",
       "label": "fam-usd-value-normal-joint-2",
       "rows": {
         "budgets": 1,
@@ -2096,7 +2096,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "37dcf7f9fdc7884a74f08ed5e27fe6dfb4ffb756bac10d9013e208cb95bfd264",
+      "hash": "efb0bc1618b306f8714e3a647ada2c1cf4c1ba39db31b69cbbf667d51a580000",
       "label": "fam-usd-value-normal-sep-0",
       "rows": {
         "budgets": 1,
@@ -2127,7 +2127,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "c4424a96ae74b8c78b933f13bfc4edd5e543a15049d04be80868a896f2054347",
+      "hash": "31f83f97c69328cfe1c643148af1f9d062c5b616ed8514dd8eb74777fe7565f8",
       "label": "fam-usd-value-normal-sep-1",
       "rows": {
         "budgets": 1,
@@ -2158,7 +2158,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "b09dd508fcafb35655c04dcbbe57019ffcd51ff04b3f223f68987d733724ef7e",
+      "hash": "f9f52d7a6309ea08bdaf37867901c3d51671e0c38dd81ded2c11b409653b4325",
       "label": "fam-usd-value-normal-sep-2",
       "rows": {
         "budgets": 1,
@@ -2190,7 +2190,7 @@
         "split-value"
       ],
       "displayCurrency": "usd",
-      "hash": "066ffd1ffa4f019b69856bd04c6c2d431e9ca65b874995746a699cc8ab2b80df",
+      "hash": "2e6a3adbcd257792004b20e827674654ebb46b44b8c5670526b8aa2ea65c654f",
       "label": "fam-usd-value-dense-joint-0",
       "rows": {
         "budgets": 1,
@@ -2222,7 +2222,7 @@
         "split-value"
       ],
       "displayCurrency": "usd",
-      "hash": "8b52073336b5b8a216edf6f70f8f67aca5eeaca889256f1fa1cc258481220a40",
+      "hash": "8f3600747ff0cb1d52decf38df4d5eb173ee814a3f343eb8796653ac00ee9487",
       "label": "fam-usd-value-dense-joint-1",
       "rows": {
         "budgets": 1,
@@ -2254,7 +2254,7 @@
         "split-value"
       ],
       "displayCurrency": "usd",
-      "hash": "25d2107bc45a4767904b9493c08daec57d31944922ce72c578e4416be7aba021",
+      "hash": "cf2be6df4ce99938770a5203cf3937850b401e3cb65e2309ed08a51ca5710c09",
       "label": "fam-usd-value-dense-joint-2",
       "rows": {
         "budgets": 1,
@@ -2286,7 +2286,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "d9142f8d35905a02ceb1aba3b8edc21e93fb3160be2daecda183df61610ac312",
+      "hash": "803aa3cc03a86c585edbf7cda83cafb4bf716b374ca2477c914ce8e9f7e6ca7f",
       "label": "fam-usd-value-dense-sep-0",
       "rows": {
         "budgets": 1,
@@ -2318,7 +2318,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "804ee1a0667225c6bb16d60dd24121208145f537071c13fa03c440d600427488",
+      "hash": "958015a49724a5df1fd2927af20299d00dd0158d15bc9a795ec084234cee7991",
       "label": "fam-usd-value-dense-sep-1",
       "rows": {
         "budgets": 1,
@@ -2350,7 +2350,7 @@
         "split-even"
       ],
       "displayCurrency": "usd",
-      "hash": "7f6507a8168573580fd0d9ecd60b9639a4c31333d28074d6f80418d4b7c040d0",
+      "hash": "8da63eafbd90304962d4a2f4171fff4676335e1e4815d8adffa5b3c42b2a1879",
       "label": "fam-usd-value-dense-sep-2",
       "rows": {
         "budgets": 1,
@@ -2382,7 +2382,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "12b8dac8e30c4f90fd854ac6fa692086e529725febc51d31a200f5a4007aed87",
+      "hash": "51dffc8dd86ac42fde1616d73af42a5a40f325c5b3837871279ff088e1e4a695",
       "label": "fam-eur-even-sparse-joint-0",
       "rows": {
         "budgets": 1,
@@ -2414,7 +2414,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "362a8e347e836d4c18fe3cf40b461df41d526bf912df83e26d6d3f385458a3dd",
+      "hash": "533f1b53fdd4d530b4336c5396852c2a3b25ee3afdbab77acb74a1a3b88617ab",
       "label": "fam-eur-even-sparse-joint-1",
       "rows": {
         "budgets": 1,
@@ -2446,7 +2446,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "56b9901e580798d389beaa3ca67063c1a204c683b057f675abe77ee813713015",
+      "hash": "a08f253ba80eed496671f9a70f43837c18763174639d37818d96afe36f998fb0",
       "label": "fam-eur-even-sparse-joint-2",
       "rows": {
         "budgets": 1,
@@ -2478,7 +2478,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "1fdcf8cdb7055e4622c8bef65a2ae8fbd462d30c29c8aa928583620eccb30924",
+      "hash": "f134e3158393a356df33c7e065baf568a2bf74da9c270a3b5f7b1c2b11133929",
       "label": "fam-eur-even-sparse-sep-0",
       "rows": {
         "budgets": 1,
@@ -2510,7 +2510,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "7bf98aa6bb3bf4125f6b1959290ee82fb3bd15ee19ad8d8516cc0dac88cee03c",
+      "hash": "da1638e5dc2de59113a83fd37bd1eee48cd7bd48f8501dda367a925880250559",
       "label": "fam-eur-even-sparse-sep-1",
       "rows": {
         "budgets": 1,
@@ -2542,7 +2542,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "052c4b981f1ab9ad1ff1d54eeacf5f1604cd24a388743efeaacc5f5ab5ac5748",
+      "hash": "f5e0c2c2fd1387d57a4db75bbba26cec59c208f466d8baadea145df890caabe3",
       "label": "fam-eur-even-sparse-sep-2",
       "rows": {
         "budgets": 1,
@@ -2573,7 +2573,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "66f63e2edd48925070d295f8caab5d4273059a8c967b5eb2de699a34266c4aa3",
+      "hash": "158d01fdf433c1facb47150a39ae1af4914e42e497a675d5518cb07d7d693fb7",
       "label": "fam-eur-even-normal-joint-0",
       "rows": {
         "budgets": 1,
@@ -2604,7 +2604,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "6754c555546fe96879d92246f56dbd46dde9f6d7ec35cb7cd3a66e88cb1377ad",
+      "hash": "cbfbe58cf1870180facaeb6d2928213fa67ae0d645b02379312477f1d9edd962",
       "label": "fam-eur-even-normal-joint-1",
       "rows": {
         "budgets": 1,
@@ -2635,7 +2635,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "f71531bc7c57197a072240dd63f20a858a0fdea2ec704d394d2556b9c08c3168",
+      "hash": "014afa9f22ff98d8c80146646449ae7d96cef1ccaac6b3dd7cbdfb1d8d76ebaa",
       "label": "fam-eur-even-normal-joint-2",
       "rows": {
         "budgets": 1,
@@ -2666,7 +2666,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "788e1cd14356b31ed5e162589389248e5c9a961bf0e0291a06eb447e615ece27",
+      "hash": "db8d56164b255852c90c22df6cc19a62c361dd6ccc964144220a5beda7632dfe",
       "label": "fam-eur-even-normal-sep-0",
       "rows": {
         "budgets": 1,
@@ -2697,7 +2697,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "a5dad27b0120a75d851ca60d3e711c352ab77457d86cbb7889b899cc90b6868e",
+      "hash": "e51749a83dd49dd67fd2aa13af4738b7b2e40e6256d02b50cc6f0c4bd8db1047",
       "label": "fam-eur-even-normal-sep-1",
       "rows": {
         "budgets": 1,
@@ -2728,7 +2728,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "0daa21595538c48493a3c9195489f24a2b3f3a40914e17c1bf5b3fe7cb3f35d6",
+      "hash": "5ee56a88a5d3733695c2bf07cca6e88436af1f5860fb16dc4716622154ad137d",
       "label": "fam-eur-even-normal-sep-2",
       "rows": {
         "budgets": 1,
@@ -2760,7 +2760,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "c40c28d67f83a702691db0d544fdada5c20a136d32f2243b46c3ebefc667e121",
+      "hash": "60457120a5f42e4271d7f07204f92c00058fbc01e6fceabd20a8b8432f96ede7",
       "label": "fam-eur-even-dense-joint-0",
       "rows": {
         "budgets": 1,
@@ -2792,7 +2792,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "d0a75aed4e19797e36361508aca3d57d3247ac7be1e7464ca26510be14576f4b",
+      "hash": "07ed0faa4e11be881763b39388b1ab7d7559eecb3f79807f31668caf019eafd6",
       "label": "fam-eur-even-dense-joint-1",
       "rows": {
         "budgets": 1,
@@ -2824,7 +2824,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "bd2065ce65cc4b5b81126bdf5ee10dd14d8bdeedf0c08b4562a17079c5dfa1f3",
+      "hash": "a8586781ac4ce265b12ef460332385d76b204accd66c80d24968d4af5eff8798",
       "label": "fam-eur-even-dense-joint-2",
       "rows": {
         "budgets": 1,
@@ -2856,7 +2856,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "c358f3322cff558384b6d9a420db4b7c2948ac5c2010564110f1a077f4d9f188",
+      "hash": "4a5639ca608fdba0ce0d9401dbb205886f0d9116405839c1cdb0b8581014b090",
       "label": "fam-eur-even-dense-sep-0",
       "rows": {
         "budgets": 1,
@@ -2888,7 +2888,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "8c9ad5cbfc47ca41709ac18abab15428448c6aa1016ebacda625fda38d91102d",
+      "hash": "5c603e7bee642d01b411d608bc2c21ef42810f100dcfc0ce4b8e67e306f0ea76",
       "label": "fam-eur-even-dense-sep-1",
       "rows": {
         "budgets": 1,
@@ -2920,7 +2920,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "383d88708e4b571e30f26244404a1325aeac96d82ef609576cead3619ff62178",
+      "hash": "aef2964306c718a1cb7b9ff1c847006e91335965e12862d5b79e134fa6db8f06",
       "label": "fam-eur-even-dense-sep-2",
       "rows": {
         "budgets": 1,
@@ -2952,7 +2952,7 @@
         "split-percent"
       ],
       "displayCurrency": "eur",
-      "hash": "cbbe52a71cb17ddcf8bf525675f72a263b4288404d69249b06f5870157787e7e",
+      "hash": "a5edd11cf11fe58f8fecc0ab606c52187e0560019c027bb258bbe988d6fccf1a",
       "label": "fam-eur-percent-sparse-joint-0",
       "rows": {
         "budgets": 1,
@@ -2984,7 +2984,7 @@
         "split-percent"
       ],
       "displayCurrency": "eur",
-      "hash": "8c59f46c5315ce8c67b3742b2497eb120df9a41cf12a4779001bd9339a72bd04",
+      "hash": "56d688cd17540a74dca781cb42332c6ecb6320afc23fb57b5509a8f242cab116",
       "label": "fam-eur-percent-sparse-joint-1",
       "rows": {
         "budgets": 1,
@@ -3016,7 +3016,7 @@
         "split-percent"
       ],
       "displayCurrency": "eur",
-      "hash": "c9a10bb28691fc9363eff0e8a006244749c31d688c87484785dd1b769874d96a",
+      "hash": "d1cf71cb82fdd3c02ea5cd4644a9c0d5e7618bbc90b500ae01b9208c105c62dc",
       "label": "fam-eur-percent-sparse-joint-2",
       "rows": {
         "budgets": 1,
@@ -3048,7 +3048,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "a39bfeceaaf9fc0aec911409a341cb4826daa8d0dccac45e1ae5174052468e61",
+      "hash": "8f21c204433610968ae4d82891f12a0e45cce6fba733f1bb21b92b67f4a29aca",
       "label": "fam-eur-percent-sparse-sep-0",
       "rows": {
         "budgets": 1,
@@ -3080,7 +3080,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "1ac40d6d347391e1081a526310231cd342675346f138886bc86bb36b36495719",
+      "hash": "846ff241776fa4e2bbd9ca07f67e123470850db9aa98b1b3257a232ce819f977",
       "label": "fam-eur-percent-sparse-sep-1",
       "rows": {
         "budgets": 1,
@@ -3112,7 +3112,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "16cda05639447048657a2676060027c693a971660090f364df3afd4a6e469735",
+      "hash": "3f2cf8ef38027ca9189c2635764b9cc84cafae817f8db669484aa3d690b7cf21",
       "label": "fam-eur-percent-sparse-sep-2",
       "rows": {
         "budgets": 1,
@@ -3143,7 +3143,7 @@
         "split-percent"
       ],
       "displayCurrency": "eur",
-      "hash": "ede4fdb01a11d674963d4ab351c9f506589cebefe15ac7eca42d0ccb0b6115c1",
+      "hash": "baac117174c12a856d3dadc861a0cfb6a18eae94a42f751a075f0215edfde443",
       "label": "fam-eur-percent-normal-joint-0",
       "rows": {
         "budgets": 1,
@@ -3174,7 +3174,7 @@
         "split-percent"
       ],
       "displayCurrency": "eur",
-      "hash": "a7cf7b3f821596be008e5cfdfbe061cdebee4b967b6c33420415462d07ff0a93",
+      "hash": "e9d195eb014d1d251f8618f65c8d61e37a5fb2789a0c20eb803f556636210a64",
       "label": "fam-eur-percent-normal-joint-1",
       "rows": {
         "budgets": 1,
@@ -3205,7 +3205,7 @@
         "split-percent"
       ],
       "displayCurrency": "eur",
-      "hash": "bb9ce079d0ad41f172f93046aeef92398f91f5cc18a600d5566da80cdefad26b",
+      "hash": "60a49ef30796e79c81a60e3b4ffb4af85941f070b1912a8e53a84fd9a62d7d28",
       "label": "fam-eur-percent-normal-joint-2",
       "rows": {
         "budgets": 1,
@@ -3236,7 +3236,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "23598ca783a59a6ff46cee4890e0f00e49e3e8d88d7aac08d4460e194b50aea7",
+      "hash": "1f8bac1d39b08ee17569fe9037a1698f60bbbc2782da728f7db301cc167a0ee9",
       "label": "fam-eur-percent-normal-sep-0",
       "rows": {
         "budgets": 1,
@@ -3267,7 +3267,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "d813ddea1ee05a485d1893dfc8fd121cc9e52b60f500f877c3108e8a27284891",
+      "hash": "88ea606e631b1aee6b396acf9097c9def4babe24ba7ca40e248b46823cab568d",
       "label": "fam-eur-percent-normal-sep-1",
       "rows": {
         "budgets": 1,
@@ -3298,7 +3298,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "6f7084cf31249cccd4d464755a30a419d70136201194ac64d994feeed7813ea2",
+      "hash": "10f53863e57c99309d1904aad009ed5e806e861b7263b08c5b6d1f3de7d9d7e3",
       "label": "fam-eur-percent-normal-sep-2",
       "rows": {
         "budgets": 1,
@@ -3330,7 +3330,7 @@
         "split-percent"
       ],
       "displayCurrency": "eur",
-      "hash": "cfdd3f2867f97019c5ed87c61e10b52843c9de7842b0dd6b3b1b1d1362a9f199",
+      "hash": "9710701565571eb2b8c47b44e8dfa3c7719301ffaeaac54f2871e96fde4384be",
       "label": "fam-eur-percent-dense-joint-0",
       "rows": {
         "budgets": 1,
@@ -3362,7 +3362,7 @@
         "split-percent"
       ],
       "displayCurrency": "eur",
-      "hash": "caf576cede8d2030456db3b55dbf5e0a46b09ff5745f64d06626b82a4e2daaf2",
+      "hash": "4239fcea6a02154a1657f485eadce2ed78cc5ee4129c7c5227e1398497af8ce2",
       "label": "fam-eur-percent-dense-joint-1",
       "rows": {
         "budgets": 1,
@@ -3394,7 +3394,7 @@
         "split-percent"
       ],
       "displayCurrency": "eur",
-      "hash": "f07c2c86e9a406ba1bd1529dd2b83b01170301e78ff4bd2fe92f966aed342913",
+      "hash": "26df3a492317105cceb0a758d72f3675b2f0d4f88eb09fb35c605421f8a73854",
       "label": "fam-eur-percent-dense-joint-2",
       "rows": {
         "budgets": 1,
@@ -3426,7 +3426,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "ea0f1af8ec0dce5eca7e0e4c2dda5660658b6a5e857b6e6fbadd16d07671c498",
+      "hash": "99fd0995c4bb42b6326b1ff2bddbae3f107b5ba121801512638882dc64610a0c",
       "label": "fam-eur-percent-dense-sep-0",
       "rows": {
         "budgets": 1,
@@ -3458,7 +3458,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "8d1a7d7d7b75e673b13df3c8c7b5ba3bfcaa8d68d65cf99f4815c1d67c7574b8",
+      "hash": "7d9dc34b937c4cf7c4ec71e0c44912bea0cd55b4cc53c7dc60c518f28c60057e",
       "label": "fam-eur-percent-dense-sep-1",
       "rows": {
         "budgets": 1,
@@ -3490,7 +3490,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "66363e1c3571e528eee0293e57985bdf25d8cbb87541fa05d9e725f36d8b7a3f",
+      "hash": "f39bf2f6932335031009a1dc865eb86a93cc5f32f68b2baa1b3aaebde903f45e",
       "label": "fam-eur-percent-dense-sep-2",
       "rows": {
         "budgets": 1,
@@ -3522,7 +3522,7 @@
         "split-value"
       ],
       "displayCurrency": "eur",
-      "hash": "50e8d9ff08845c1618a78220d77b6b6cf8b6b0a216c82b159668fa4b17ae43a2",
+      "hash": "493f63574e7a20c40dc6eccb7ab1d15e3ba5819258a48c38ae841ceff882be62",
       "label": "fam-eur-value-sparse-joint-0",
       "rows": {
         "budgets": 1,
@@ -3554,7 +3554,7 @@
         "split-value"
       ],
       "displayCurrency": "eur",
-      "hash": "6046b85527a2a6868a1a30fdd326bd81a61ebc2ab6ae212aca0e73067892b5ca",
+      "hash": "abc6b0371d87a668d177b152dfdb0b102e5290f8fd97197086fef812b7084172",
       "label": "fam-eur-value-sparse-joint-1",
       "rows": {
         "budgets": 1,
@@ -3586,7 +3586,7 @@
         "split-value"
       ],
       "displayCurrency": "eur",
-      "hash": "4425cfb8bff60dd4ad5e736ecc23adc2cbda44b4b8dfd6b0a8bada0c48439579",
+      "hash": "13d46ac78de8f4f39545ea6e2b35ce62f20ef4ff603ff1f3412efe42434f822f",
       "label": "fam-eur-value-sparse-joint-2",
       "rows": {
         "budgets": 1,
@@ -3618,7 +3618,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "db06777254c7aed7f1fa49940ba1f04367b1bebb65c85fa8bd4823b60e4fac02",
+      "hash": "c072433d8d4eb8c4bc3f2e62ea8073fc8e7b476ec63ea4545d0989a34967d51b",
       "label": "fam-eur-value-sparse-sep-0",
       "rows": {
         "budgets": 1,
@@ -3650,7 +3650,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "6c022587b383509aaad69c942f25a757aefe994beb5aeee9cc665acda388d0f8",
+      "hash": "05a81dc15e1c37318f7977d3fb6eec728f226b062d6b1dfb6d919ada2905a302",
       "label": "fam-eur-value-sparse-sep-1",
       "rows": {
         "budgets": 1,
@@ -3682,7 +3682,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "1e14a77f01a87c78bd6fe7ac7d5ea75d8238d912c156fcb9dac1ae2531fe0877",
+      "hash": "8a6c0ebcf545df67b6fb4ff2c2e7974ae80465196c035aaffae525d439576ad8",
       "label": "fam-eur-value-sparse-sep-2",
       "rows": {
         "budgets": 1,
@@ -3713,7 +3713,7 @@
         "split-value"
       ],
       "displayCurrency": "eur",
-      "hash": "fd6c2198a1831e7fb24401d65ad99b3491e6a683a1f96484d8eae8a568aaa93a",
+      "hash": "8c39f1d689c26f33d8a84844bdc89140719cf330a7e1cdc9d9a520ead2fe8122",
       "label": "fam-eur-value-normal-joint-0",
       "rows": {
         "budgets": 1,
@@ -3744,7 +3744,7 @@
         "split-value"
       ],
       "displayCurrency": "eur",
-      "hash": "1a9fde62edce1e235c7fdbe14174a49b9e0c2a4f47435e599b3755186f31b64c",
+      "hash": "83add50485b783f7bc3bf4490768d008fe250802f415cea979e77fad2a0672da",
       "label": "fam-eur-value-normal-joint-1",
       "rows": {
         "budgets": 1,
@@ -3775,7 +3775,7 @@
         "split-value"
       ],
       "displayCurrency": "eur",
-      "hash": "a2fa28988f8c1728042b4aca32382402681a90f310fc0f81841ac298aeb7ef2e",
+      "hash": "5405492db5c6da51b4061c8a50fa9930a452bff7149769ec11bbdf593724410a",
       "label": "fam-eur-value-normal-joint-2",
       "rows": {
         "budgets": 1,
@@ -3806,7 +3806,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "a321189bf4007653a31a9499e8a91844ed3ad3bef4ad0fb99b583aa1d28db49e",
+      "hash": "0f60dbea09dd87e0cdaa43f90c672028d45ecf343485fc2734cde51153610c1d",
       "label": "fam-eur-value-normal-sep-0",
       "rows": {
         "budgets": 1,
@@ -3837,7 +3837,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "008140dd494067fc4f269009e50c35c1a142ea78193eca40c988be5ad0605c1a",
+      "hash": "c151a57ffb5a8b3ee0f6dfc2337070a5ff4b7b9a9a62309a2dbef3d14f157750",
       "label": "fam-eur-value-normal-sep-1",
       "rows": {
         "budgets": 1,
@@ -3868,7 +3868,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "b232fca992625ac0cd04fdbbc2fd7f515634844969954279cf8ed95f5339d089",
+      "hash": "721c492ea2ecb6713107d2d7beb4269b7f75b6fa8726e1031a353d17fe1b0261",
       "label": "fam-eur-value-normal-sep-2",
       "rows": {
         "budgets": 1,
@@ -3900,7 +3900,7 @@
         "split-value"
       ],
       "displayCurrency": "eur",
-      "hash": "d32fd7eb1675cc06e83362e180b2ad19dfd87ead99ca9c6f15a38d7f88259e26",
+      "hash": "a5e9d8b961c889ceae815309d482690fab7a306dcad8a2fc8b4aed6f94afc0c2",
       "label": "fam-eur-value-dense-joint-0",
       "rows": {
         "budgets": 1,
@@ -3932,7 +3932,7 @@
         "split-value"
       ],
       "displayCurrency": "eur",
-      "hash": "d17a797c46dfbd6dbb3a18f88bf5576211804fc646e9091c8be8be92169e0ab0",
+      "hash": "08a0eccc134b566677f5f7819d4760c490f33b24755acbf946eff363a0a4466d",
       "label": "fam-eur-value-dense-joint-1",
       "rows": {
         "budgets": 1,
@@ -3964,7 +3964,7 @@
         "split-value"
       ],
       "displayCurrency": "eur",
-      "hash": "4fa30de9a17f45e9f01b181bc683077716b95bfb63dfbce415fa59fcce00d8a0",
+      "hash": "6f7d9f433b0cbc2ad9415340e88bcdfde984ee6c4c7afb7a13198e7880e91b94",
       "label": "fam-eur-value-dense-joint-2",
       "rows": {
         "budgets": 1,
@@ -3996,7 +3996,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "63c0a32e8ec83d3177765c47d75f576f4e2677d581a32cd6a2f5d44a4eef985d",
+      "hash": "838f4547b5438a6602568a6cedbcbf08dd1f1aeacb9f459f8d3fa48556475e39",
       "label": "fam-eur-value-dense-sep-0",
       "rows": {
         "budgets": 1,
@@ -4028,7 +4028,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "9594ac526d2afaf6cda5617531e6287f60688b88912a30125e1cdc6b0524272c",
+      "hash": "7d11338036ab0cf0eddf79e8cbc34b25557a9d4f643ba1eb469498d683748376",
       "label": "fam-eur-value-dense-sep-1",
       "rows": {
         "budgets": 1,
@@ -4060,7 +4060,7 @@
         "split-even"
       ],
       "displayCurrency": "eur",
-      "hash": "88bd1e968fda5744912519f4c23bf140ac1662bb8b16a20bf5a367c6465ef126",
+      "hash": "379c230fd5f9cf22a31abf3435c3ef41ef756c1b91d9f0c9b009766c6a233137",
       "label": "fam-eur-value-dense-sep-2",
       "rows": {
         "budgets": 1,
@@ -4092,7 +4092,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "45ccfd7e6c18d939cb19924d0138e64015fe57e6da4d8581b403cc3363c0d942",
+      "hash": "d6bbb14ed9b47730309bc7f7d06f50f85d93715becc0b3e671ea1a026c7623b4",
       "label": "fam-jpy-even-sparse-joint-0",
       "rows": {
         "budgets": 1,
@@ -4124,7 +4124,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "3c62f53bec8a68483c926a9b4ad391f6bcd6dfc3a052b857269d616ccb38ca14",
+      "hash": "ec3ee334c02f39acf5ddfe74a7b889f2f0fc9ab88ddf3fce39d7314f71a4b015",
       "label": "fam-jpy-even-sparse-joint-1",
       "rows": {
         "budgets": 1,
@@ -4156,7 +4156,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "a9042cebc5e18b7acfb0f4abba1fe8cf1170036016a9aa4c8e5743cae8cde69c",
+      "hash": "193bc1011e46cbddc82e32ed56f968c151a1f015c1571ff2c7e443f913abe995",
       "label": "fam-jpy-even-sparse-joint-2",
       "rows": {
         "budgets": 1,
@@ -4188,7 +4188,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "ce59a43c0d45976bf91d351aecd7be31e7efe0155a250fd93a4cbfe79e57d429",
+      "hash": "48c31805aad8339e3583cc5855f57dcafdbd48d65623fb9870bbdbcf6d61bf14",
       "label": "fam-jpy-even-sparse-sep-0",
       "rows": {
         "budgets": 1,
@@ -4220,7 +4220,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "e02ee945e5c08fd321fab2e1557bcfdf4a5ba774d204a30ed8fb784b7746457d",
+      "hash": "0f5b36ddf04b2c3476854da40918449036ff47a135bfd6d5c6b8a152b385352c",
       "label": "fam-jpy-even-sparse-sep-1",
       "rows": {
         "budgets": 1,
@@ -4252,7 +4252,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "53de2dd57a10a5c0d09a1f3ca6648a64de68b307ed4b1821a6192be149700abc",
+      "hash": "f1cecba6db4d1b894ffcb1cf86e6460f8fa45db097fe3a9ddee7359fb1e56717",
       "label": "fam-jpy-even-sparse-sep-2",
       "rows": {
         "budgets": 1,
@@ -4283,7 +4283,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "fde83fbe319272be341be561427b2dd49f42ad38c052f68fe807904dbf3a5b27",
+      "hash": "1dddc7293a5092df5b5ecd8528d0439140717abb7db6d72d7a1f8ade8af8eff6",
       "label": "fam-jpy-even-normal-joint-0",
       "rows": {
         "budgets": 1,
@@ -4314,7 +4314,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "c68fe4dbd765f99d2ccf2b91b462242eb49ff337a6f3a9b9d22bf63a9bf28155",
+      "hash": "30557f4247118d8dc70057600acc86d53416b9c9c36c62c6b1ce5fa5c24db4ee",
       "label": "fam-jpy-even-normal-joint-1",
       "rows": {
         "budgets": 1,
@@ -4345,7 +4345,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "435b01836c49154a520c8d38b43f19bd7cdf2e0936473d246fe01d914d9209d3",
+      "hash": "b11cf93c1364da44295be6352fb71bf310308e54430de1b7234a1d849bb4e76e",
       "label": "fam-jpy-even-normal-joint-2",
       "rows": {
         "budgets": 1,
@@ -4376,7 +4376,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "cfb650c687809c50518df4f6e85d89a14028ef093d68dcfbd793f8eb906ee78c",
+      "hash": "176c177acb2deca42237d2e4bbfc05c79f47d586ce01750683d06546b6843f2f",
       "label": "fam-jpy-even-normal-sep-0",
       "rows": {
         "budgets": 1,
@@ -4407,7 +4407,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "47425457299ddaf3bc8e2f5ebf1197a9bc29d2606e5afbb770a37db593491161",
+      "hash": "30b64f94f69ff9573877c51434339ce665bb25d83d1fd8cbdd56a20c53b38d94",
       "label": "fam-jpy-even-normal-sep-1",
       "rows": {
         "budgets": 1,
@@ -4438,7 +4438,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "60ff20dae1b02cc36b2a8ee018fc55547a3d4e00d48e7d6ff9d8b52b9bd8c21f",
+      "hash": "febbdfc5bffd52d90693e0d91623398174cc54e603bd5a1c12257748df4bdff5",
       "label": "fam-jpy-even-normal-sep-2",
       "rows": {
         "budgets": 1,
@@ -4470,7 +4470,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "87a15f51f332892223d0b7565d9b60fc3cf452842622e89bf2ae870482191596",
+      "hash": "3f90d73f00993d16699fcb678d91009b9e6adf1272f0e5bbbc2872b2e09e64e9",
       "label": "fam-jpy-even-dense-joint-0",
       "rows": {
         "budgets": 1,
@@ -4502,7 +4502,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "10968a030556be26b2d88d02e92d824cfec33d1e055de69947ef86a20bf8a183",
+      "hash": "8476dc30e0d0c86918727aea2186e34ea98c18c748cc249ec8418118ee15e01a",
       "label": "fam-jpy-even-dense-joint-1",
       "rows": {
         "budgets": 1,
@@ -4534,7 +4534,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "6e7e81455dc474cb1696d8b8c3446ecdb1e271bf0f9084a5e3f1ea48292c5476",
+      "hash": "62419d7167a91d1c2cb6e6bb5efaf3470c96a0e16069b303118ac5faf635e07d",
       "label": "fam-jpy-even-dense-joint-2",
       "rows": {
         "budgets": 1,
@@ -4566,7 +4566,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "9ba2b2712e5b7bfc81198205a02e8d72953e11971d6f34ec5dd648c1dfcd47ba",
+      "hash": "bb703634cec2fd64a0540d49620c373983ddca73bcfedcac32b70c7c65066b59",
       "label": "fam-jpy-even-dense-sep-0",
       "rows": {
         "budgets": 1,
@@ -4598,7 +4598,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "f1ed66ab29267716eb0a79097687849cc364ee6a5440638c85a61159e0d747d6",
+      "hash": "ed1f11d0b0014bf817352ae314f4c7ff794dd1631a13bfe40e7cc947bc6f2394",
       "label": "fam-jpy-even-dense-sep-1",
       "rows": {
         "budgets": 1,
@@ -4630,7 +4630,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "33ba01d2a03c17e009056c2377574f2b25ecb659873574e7589d27c253089292",
+      "hash": "c26ba1409202e3cf097740c53447e7bf0a430f313416a96d97a52e95f6be9725",
       "label": "fam-jpy-even-dense-sep-2",
       "rows": {
         "budgets": 1,
@@ -4662,7 +4662,7 @@
         "split-percent"
       ],
       "displayCurrency": "jpy",
-      "hash": "99b61003d4d64854706edf677f1b239b9aba4845460685e7049587660d8e8d90",
+      "hash": "82ce9f59596d12545ac0d335b10c61191898d91583492e78e9108f0eb2af3e59",
       "label": "fam-jpy-percent-sparse-joint-0",
       "rows": {
         "budgets": 1,
@@ -4694,7 +4694,7 @@
         "split-percent"
       ],
       "displayCurrency": "jpy",
-      "hash": "d3c9701882ae3a05c765c1ffa309f50031a5afccde51da48c186d4f7613cb558",
+      "hash": "22078bfd864428a20dd1c5980ac229b19612fba5f1ebad595071f8a916f934c7",
       "label": "fam-jpy-percent-sparse-joint-1",
       "rows": {
         "budgets": 1,
@@ -4726,7 +4726,7 @@
         "split-percent"
       ],
       "displayCurrency": "jpy",
-      "hash": "1ccb62caef092f3a969ed9828399c64de20c8aba2cdcec174ee4b0dbacd94d69",
+      "hash": "77ce73ef135cde0d70874a7adbcaca90328caa51997abe7262ddd1ded5976b04",
       "label": "fam-jpy-percent-sparse-joint-2",
       "rows": {
         "budgets": 1,
@@ -4758,7 +4758,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "ba86c4f177f1c23c0f1726f4ce13ac74aecfa9365cd42a36da4983cb0d2922e3",
+      "hash": "452fad4b4837541349b27b817a3da87bb896ea0aeaf8d064dd67e1b2faac2622",
       "label": "fam-jpy-percent-sparse-sep-0",
       "rows": {
         "budgets": 1,
@@ -4790,7 +4790,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "72495689a08bed4825681a0f8571f8c8d7d3aae9b5601195f272ad0b4479d386",
+      "hash": "106182744f8e5f65eb366aa27fd368e789124b23a6bb6f19ccc7620b8eca442a",
       "label": "fam-jpy-percent-sparse-sep-1",
       "rows": {
         "budgets": 1,
@@ -4822,7 +4822,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "b7afdf0f604ee4f36d31e422321a75db9798533497466e66bc33d0b5369e8c80",
+      "hash": "80374e7d2f6ecdc678a9ff2e125ff24d74de2405dcc99de6f5082c02272b06e2",
       "label": "fam-jpy-percent-sparse-sep-2",
       "rows": {
         "budgets": 1,
@@ -4853,7 +4853,7 @@
         "split-percent"
       ],
       "displayCurrency": "jpy",
-      "hash": "2eb67d55fdc35f48b5d45ef91c616f4bb6969d45951044c4bef84ba6746310a8",
+      "hash": "cc065d2ab2c93a2eb2b18e9c7affcb26e28bea6b114e600574fe8be7b380361c",
       "label": "fam-jpy-percent-normal-joint-0",
       "rows": {
         "budgets": 1,
@@ -4884,7 +4884,7 @@
         "split-percent"
       ],
       "displayCurrency": "jpy",
-      "hash": "f774d4d21cb7d6bcfc1e410401f56594d6f9bacb649d6e64f900926e856c617f",
+      "hash": "1bbbb9a2a7b2abb6956ef4970be9030dbfd3e1d8d493c8e1f6c2b2e03fdd8402",
       "label": "fam-jpy-percent-normal-joint-1",
       "rows": {
         "budgets": 1,
@@ -4915,7 +4915,7 @@
         "split-percent"
       ],
       "displayCurrency": "jpy",
-      "hash": "9a193a26134b2c54217e275e0c0d9a3b7452900bb2b6a678219e9a29a2a28bae",
+      "hash": "5ba8295d2d2813132884fbe8c5909902afaca40e598f4d255f8b5ba7d801601e",
       "label": "fam-jpy-percent-normal-joint-2",
       "rows": {
         "budgets": 1,
@@ -4946,7 +4946,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "757e0a368d9835666d092dc50e42f1a567184161c402fc30fd53dfd838d91780",
+      "hash": "0bcc668cde97a07d25c8dda2298448528eda451ad70d887def94fc3f85d969a5",
       "label": "fam-jpy-percent-normal-sep-0",
       "rows": {
         "budgets": 1,
@@ -4977,7 +4977,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "f7c589efad42827de936adac2ee4acd5e0e9649851f9bc72bdeda485490fb1d5",
+      "hash": "550cec4cc7166e6acce1d5f6d81ef310a88537e5e1593c19c07c37a833f006cf",
       "label": "fam-jpy-percent-normal-sep-1",
       "rows": {
         "budgets": 1,
@@ -5008,7 +5008,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "09dc142f44694911cf5b3c33b60fd96abe7ce2842d9f6bf3137fd7dfbd8bdafd",
+      "hash": "e78f891907e0947df3aa2bba0bc322dbddc9ec7bf2c082c8cb03e48eb4d9bcad",
       "label": "fam-jpy-percent-normal-sep-2",
       "rows": {
         "budgets": 1,
@@ -5040,7 +5040,7 @@
         "split-percent"
       ],
       "displayCurrency": "jpy",
-      "hash": "896bbff0d0df850b4341b06080dce6c7951a44b984d8448aa8440231dbc61259",
+      "hash": "2fc837ef24d47268742b87f8bef0da82b74e41bcb4dc1b21ed020e16ee9c85ea",
       "label": "fam-jpy-percent-dense-joint-0",
       "rows": {
         "budgets": 1,
@@ -5072,7 +5072,7 @@
         "split-percent"
       ],
       "displayCurrency": "jpy",
-      "hash": "d4d1aaa736a784a51d204ef00a23eb77068c845f68e1e84a569516f8ef57d542",
+      "hash": "e10afde98db7a2cc9406136df58feb6a11fa2ab5d3bb25ad9f73daacf3e0d2a2",
       "label": "fam-jpy-percent-dense-joint-1",
       "rows": {
         "budgets": 1,
@@ -5104,7 +5104,7 @@
         "split-percent"
       ],
       "displayCurrency": "jpy",
-      "hash": "5f2f4b2d7f999dfce19caa14e7fc8fc56ba9495f5cc72d95be6750c9147e9252",
+      "hash": "f8d1988c036a7619345ac5e75ee533320403b8d1c54f4589238c2318cc146172",
       "label": "fam-jpy-percent-dense-joint-2",
       "rows": {
         "budgets": 1,
@@ -5136,7 +5136,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "323609d1dbd745a4cde8a0198ff76d5b353986261d847c62af0fc5ff35950537",
+      "hash": "9152f5339dc853cece0a9d247095b880def6093daca4b1755af6ee537afe387a",
       "label": "fam-jpy-percent-dense-sep-0",
       "rows": {
         "budgets": 1,
@@ -5168,7 +5168,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "edb0fce26e9a67451225982fd469df61efd5642f600d93d5d762d7bda421fb1a",
+      "hash": "01969bcf39a19c1b94d86a7b8e0638a8c412d0755d3f8c8e0f1da1cd84c7cd6d",
       "label": "fam-jpy-percent-dense-sep-1",
       "rows": {
         "budgets": 1,
@@ -5200,7 +5200,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "acc1cd16f538e27132516480712f3426684cb45ba5e3c2141e1a9a7a50492978",
+      "hash": "c2fad11d7b6b1be975240d9a4e0b5a6f69580a7bef2f25f58125a63b321a7d75",
       "label": "fam-jpy-percent-dense-sep-2",
       "rows": {
         "budgets": 1,
@@ -5232,7 +5232,7 @@
         "split-value"
       ],
       "displayCurrency": "jpy",
-      "hash": "49f21c3dd58ed9244195f93dd6ca9ee14adef4780d20e374a2f54f32208093f1",
+      "hash": "2c3404c32094ec95a037d7844a1931fb2efd9a29a8d8ac3f2b42a622027e1ef1",
       "label": "fam-jpy-value-sparse-joint-0",
       "rows": {
         "budgets": 1,
@@ -5264,7 +5264,7 @@
         "split-value"
       ],
       "displayCurrency": "jpy",
-      "hash": "b0355c70763e15411f9f2bd247d299f4fff1f5712d5177a8b61a7697789fd44f",
+      "hash": "c200b7d791f98d8e34818d70ad3c341591e20b8c095f32e5707dbc9952b4d081",
       "label": "fam-jpy-value-sparse-joint-1",
       "rows": {
         "budgets": 1,
@@ -5296,7 +5296,7 @@
         "split-value"
       ],
       "displayCurrency": "jpy",
-      "hash": "d8d9522eda988b470413d9b1fc90c0491f5e30cb87b7779ddf46296d7b57136d",
+      "hash": "a001524bc16d525c9c866b566c05551c98b37da59c5dcd2f978481bd9c59ff48",
       "label": "fam-jpy-value-sparse-joint-2",
       "rows": {
         "budgets": 1,
@@ -5328,7 +5328,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "b152e7c95abe48338c3ac8f1e0571ec9fe6747a7bbdcf1097400006276346e28",
+      "hash": "e7c86f1082dc41a88b5aa414ed464f401e88ecba4b6bd8d1bc095d2e2b69a3a9",
       "label": "fam-jpy-value-sparse-sep-0",
       "rows": {
         "budgets": 1,
@@ -5360,7 +5360,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "e4b2864c658b415d8ba70e25f9d6852c3e507f747a1575aef9b10d076de338ee",
+      "hash": "9c4b5f6f4e6432c329f04d229e4db9c79b83689d1d9546f14df99de0bba8c191",
       "label": "fam-jpy-value-sparse-sep-1",
       "rows": {
         "budgets": 1,
@@ -5392,7 +5392,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "03aac894271f850df46209b1b19ee050d0fb9116a56f3f73adc3475f4a277c79",
+      "hash": "7346ccc99707776e2a2ae15912e7b2b8794165e99e5792100878c58784768f48",
       "label": "fam-jpy-value-sparse-sep-2",
       "rows": {
         "budgets": 1,
@@ -5423,7 +5423,7 @@
         "split-value"
       ],
       "displayCurrency": "jpy",
-      "hash": "da07d855111e550af23c16bd83b39a16e8dd49c77ebefc2a81ec7134a3d9bc84",
+      "hash": "ea8b2754225766939fa8c254f8df734b871d81d04f3f7f59ab05c10853afff27",
       "label": "fam-jpy-value-normal-joint-0",
       "rows": {
         "budgets": 1,
@@ -5454,7 +5454,7 @@
         "split-value"
       ],
       "displayCurrency": "jpy",
-      "hash": "827413e2abf417665b21310d6bfb6516865fd2eff9d1daf7acf72959eedbbe1b",
+      "hash": "c5bd79359f53b88f4659663a1b25be59c683bdfbad8eb61f059ab5091d1f086a",
       "label": "fam-jpy-value-normal-joint-1",
       "rows": {
         "budgets": 1,
@@ -5485,7 +5485,7 @@
         "split-value"
       ],
       "displayCurrency": "jpy",
-      "hash": "cceb4e5900d787171c9a556bcae40c504c4db4c1936a27071b29c7db6532909a",
+      "hash": "df3b591dd396459212c2eb456a1d01a4dfdba86b8e6fa9e31908afa3c954ef9e",
       "label": "fam-jpy-value-normal-joint-2",
       "rows": {
         "budgets": 1,
@@ -5516,7 +5516,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "39c1047bc965c7138845f922b5aa95da0e1a64077f13a1911c730a73411e6dbf",
+      "hash": "c90eac10ef1a96abb57f1dce463c5df730c2af559fd190fe5f22daffad71ebc5",
       "label": "fam-jpy-value-normal-sep-0",
       "rows": {
         "budgets": 1,
@@ -5547,7 +5547,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "c0d4a08686559a4a9ad94c1745f01e8b751bc18d2d1c44683dc71729b28d9f46",
+      "hash": "7882bcabf8c41151c3bd8aa16ed6a6791a3c9c683f8455dfc286de9141ffe6cf",
       "label": "fam-jpy-value-normal-sep-1",
       "rows": {
         "budgets": 1,
@@ -5578,7 +5578,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "a80c5777a8bd681e577b7ba0172a86a03425d056d8183ef0f616f464f65d69d9",
+      "hash": "7b9656584926e79fce9e044b0f278a1b3e2bc14a4390a1e330747707b6d3b842",
       "label": "fam-jpy-value-normal-sep-2",
       "rows": {
         "budgets": 1,
@@ -5610,7 +5610,7 @@
         "split-value"
       ],
       "displayCurrency": "jpy",
-      "hash": "0cd98341cd663a384d22bbd3e70baf9fecc7defdbb7367ccfa150819a2e1e9ec",
+      "hash": "41b71b4227cd47a010945eacab5f358a2e0d6a8a4a30bcf96b35f800a3274aec",
       "label": "fam-jpy-value-dense-joint-0",
       "rows": {
         "budgets": 1,
@@ -5642,7 +5642,7 @@
         "split-value"
       ],
       "displayCurrency": "jpy",
-      "hash": "f072bd8cf9c87ff58b85fa5610a6febaec13bb9ebb27586a0355139c685c6eaf",
+      "hash": "af13929b5aac549f48953089d516994d2349a8ae7298ba2b205a8087c45bf21a",
       "label": "fam-jpy-value-dense-joint-1",
       "rows": {
         "budgets": 1,
@@ -5674,7 +5674,7 @@
         "split-value"
       ],
       "displayCurrency": "jpy",
-      "hash": "c35f9b0d18a0926c0ea3be66ee3399135fb874ffd3c47137acef33ef28782328",
+      "hash": "142651be0b85637a1346b9388d68a24d8520f1d5287b0eac409beb18240f4ada",
       "label": "fam-jpy-value-dense-joint-2",
       "rows": {
         "budgets": 1,
@@ -5706,7 +5706,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "40faa73cb46ccb137de422ebd32e6f4f8656ab80fd5ac7fd2227b21c104a681e",
+      "hash": "a168d2d4128748e6fca138911e6b3d600644e841a11f6ce41d1a3c2cedf8984d",
       "label": "fam-jpy-value-dense-sep-0",
       "rows": {
         "budgets": 1,
@@ -5738,7 +5738,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "a28955f8a1c4635157ddc84172c5199a43ba94c354f24a90a8b30b959b061efd",
+      "hash": "ae03c48ab0de39795f70c2273aa123b7226362589d29a46dfab59f50ebf00928",
       "label": "fam-jpy-value-dense-sep-1",
       "rows": {
         "budgets": 1,
@@ -5770,7 +5770,7 @@
         "split-even"
       ],
       "displayCurrency": "jpy",
-      "hash": "b6765cb2a5097794a8cbd85d0e8e9ed08a0a012e34a4c30b5e81d0235748831d",
+      "hash": "73657c651455d74b1520d9da9fb4d9a12968d30c071111489bc2a6c3d6a77e4a",
       "label": "fam-jpy-value-dense-sep-2",
       "rows": {
         "budgets": 1,
@@ -5802,7 +5802,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "6b7aee123ed56020f3e8ab7d546dfec62058ce5667c2e272e426e8028a62bb8c",
+      "hash": "21b115e13b28c536e95318f4b25f3d8fc02fb26e2c26fafb9269538f8ca61306",
       "label": "fam-bdt-even-sparse-joint-0",
       "rows": {
         "budgets": 1,
@@ -5834,7 +5834,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "a007b882eec2ceb801da087275e75864df6d5f06bccc4d2f543544ffecd07e92",
+      "hash": "74cc98970b632c91844c8904a7185cd85f3223ad8e188fe020b478606bcb74e7",
       "label": "fam-bdt-even-sparse-joint-1",
       "rows": {
         "budgets": 1,
@@ -5866,7 +5866,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "575613eb8f0fac18b337d27652b0e08d4df8ca084726fe1cd0dfb5c0d80b2abc",
+      "hash": "ab824a1227b74d57a0dac5b59df608fbc70430d69593b3390fdc62002f85489c",
       "label": "fam-bdt-even-sparse-joint-2",
       "rows": {
         "budgets": 1,
@@ -5898,7 +5898,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "ba8b86e07a1a861d51bb32a6f4bb017e2d342241d1d7fc0d8d4d9f5bfb331bad",
+      "hash": "5a0e1f99a5143d92962bd7901902f16ba145938c1bba32160264a1bbea76f4b9",
       "label": "fam-bdt-even-sparse-sep-0",
       "rows": {
         "budgets": 1,
@@ -5930,7 +5930,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "b542ed1af34c717db126b95b92d57536e5d8310963e189cfd4352790d5b3d57b",
+      "hash": "7b3f3cdf8230ad60190eb7d9243a690c3146266ff982c0afaf269f86d2dc648b",
       "label": "fam-bdt-even-sparse-sep-1",
       "rows": {
         "budgets": 1,
@@ -5962,7 +5962,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "c008cd0af3cdd9282e9017a0ea3e458203632e9d403f2c2f8e0700136965e7e8",
+      "hash": "d19b5f8ab20417595e0f3fb9e2f541c0dc467f8007b98a8b91e4c8a4e52bba66",
       "label": "fam-bdt-even-sparse-sep-2",
       "rows": {
         "budgets": 1,
@@ -5993,7 +5993,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "6ece1a39f77dabd51e0b577237faabf55dc51ef3d04f13a5f69b2fd94a33f5e9",
+      "hash": "d8041d28848b3e03d4abfa487fa93c2ff2e4050a3a085dd08155ed008407bd80",
       "label": "fam-bdt-even-normal-joint-0",
       "rows": {
         "budgets": 1,
@@ -6024,7 +6024,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "bde8547f838ab6f0536d6ba35290438e174b18d4fdcf82bb4ebb7ac714d1bc82",
+      "hash": "878a1089ab8f728d64a5d34a32481e10586a615b6916cc699e549223b57b2dc0",
       "label": "fam-bdt-even-normal-joint-1",
       "rows": {
         "budgets": 1,
@@ -6055,7 +6055,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "16b59bbc5cff342b332a41fe35e278a9355bd1bb8e3da09a3dfdde070d0b4eec",
+      "hash": "9f00116a8f2a108d3f9fce50a91721d08e8b6b23188e1304c076588a476cfdd7",
       "label": "fam-bdt-even-normal-joint-2",
       "rows": {
         "budgets": 1,
@@ -6086,7 +6086,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "b39f931b217ec8635da51e1920fffef969b6d8f628e28807621e4eebd1578ef7",
+      "hash": "05ceac80b89c5465b7114b685458fc00961c9248fd8c5ee8657cc119929804cd",
       "label": "fam-bdt-even-normal-sep-0",
       "rows": {
         "budgets": 1,
@@ -6117,7 +6117,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "fc3c1483e23cf08a1a2c06c02fd30132430c5474fd61e73d1ab6a28bdc427c8b",
+      "hash": "e7140811ab9196ef5db3a958fe31052a6bbc8915ca506decabf595dd24f11fc7",
       "label": "fam-bdt-even-normal-sep-1",
       "rows": {
         "budgets": 1,
@@ -6148,7 +6148,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "69630c4a616fe333ef06a54889fb3fd92d96f55c6555044b130d3871890728e2",
+      "hash": "af8f7b3bcfda84ed024798c03e344d76dee54a720566c859720407f5530b86c2",
       "label": "fam-bdt-even-normal-sep-2",
       "rows": {
         "budgets": 1,
@@ -6180,7 +6180,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "9459d23fb6ad35baf009266f9090d338f6c2865953045f025bfdec69749b42c6",
+      "hash": "44f02b1a63fcd2086563713c69a9810491fb97e380da11cddd600f0e4ff77087",
       "label": "fam-bdt-even-dense-joint-0",
       "rows": {
         "budgets": 1,
@@ -6212,7 +6212,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "64ba207f287811c31cd552840dbbec2f54c82eca1077e1af6f5b730036ac5ab0",
+      "hash": "5a8538e41f66c3850f4c3f858cfc177b368802134b08fa137d55d4af8f3d26a5",
       "label": "fam-bdt-even-dense-joint-1",
       "rows": {
         "budgets": 1,
@@ -6244,7 +6244,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "ac9462fb6ba8b653f610759110a688decf1e9910c92efbe2ac3d50e1d9d8d30b",
+      "hash": "901c6a697a79d2d7de9d4f4bd85e437fec2d8ff53479bcc474767ba334c74b09",
       "label": "fam-bdt-even-dense-joint-2",
       "rows": {
         "budgets": 1,
@@ -6276,7 +6276,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "8a45f47d9677c3820fec3681cb22a1890a787862dcff8f83173fddcdd557e1b3",
+      "hash": "76132b566a664e9f2fabe37d78f5627829ff8d13d3b9bff4f200470f7e07b113",
       "label": "fam-bdt-even-dense-sep-0",
       "rows": {
         "budgets": 1,
@@ -6308,7 +6308,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "46f82171881870d08440fcad91f525d15cb7c30a9041fbdcf945c7229acef9d5",
+      "hash": "c0f2e77a5cf57b12299b455e39f821f5b15fa5a10cb92a4c97cc2bbca529944f",
       "label": "fam-bdt-even-dense-sep-1",
       "rows": {
         "budgets": 1,
@@ -6340,7 +6340,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "0b09b8f963359407768a8aad49ffcba1196ea063a2418e0c0bc4e12792dd89ce",
+      "hash": "a21dc69c2cb109b96657caa47ed321b832a1d4f68db1796b0647ea5fdf51085d",
       "label": "fam-bdt-even-dense-sep-2",
       "rows": {
         "budgets": 1,
@@ -6372,7 +6372,7 @@
         "split-percent"
       ],
       "displayCurrency": "bdt",
-      "hash": "2b46be483f70f66ccdaebea07c480369c9c0215e4dea65408503e70475f56b35",
+      "hash": "2a232923d9bc0d2d94670fbce4d130e5bd46ce65f605b0e93b836781a10fee8b",
       "label": "fam-bdt-percent-sparse-joint-0",
       "rows": {
         "budgets": 1,
@@ -6404,7 +6404,7 @@
         "split-percent"
       ],
       "displayCurrency": "bdt",
-      "hash": "dddca77541e4952dfe8fadc8cadf9bab790e4234676c3bf724309abae53e951e",
+      "hash": "54664cd052e470e3817ed6497d1393a77af9eabccc3861d55ddf1c2797442db8",
       "label": "fam-bdt-percent-sparse-joint-1",
       "rows": {
         "budgets": 1,
@@ -6436,7 +6436,7 @@
         "split-percent"
       ],
       "displayCurrency": "bdt",
-      "hash": "8f26850bc406958f0055b724edd66edd9b53fa2e4c66a32f2e56fb9d048327a9",
+      "hash": "96e37ebf4c3ac9d91d207bbb4c63d7dd4df92afcf19b673d8acca85d399a0853",
       "label": "fam-bdt-percent-sparse-joint-2",
       "rows": {
         "budgets": 1,
@@ -6468,7 +6468,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "e364ed47d3117732d9f30b8b720ed9cdf2372fcfcb7a562276d21da031034536",
+      "hash": "a9178e98dbaccf72268d9c80c990c3d1144006fe9c6a7cfdc701fa80f4c457c9",
       "label": "fam-bdt-percent-sparse-sep-0",
       "rows": {
         "budgets": 1,
@@ -6500,7 +6500,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "4815c79430513b0dbc897915a55d7c57454e6c968b475e58eb9aac727cde20a5",
+      "hash": "64dc86029eaa11c13add500369bafaf9ec0ea4f81532a6b951c6263d808bb410",
       "label": "fam-bdt-percent-sparse-sep-1",
       "rows": {
         "budgets": 1,
@@ -6532,7 +6532,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "50153a47f30c93a3b0d996b01ac70f36a03fb4072ad486a81b8b50cfb89fa939",
+      "hash": "cdf034aa027f90d57ae1d170ccf53c8e821f620f567cc6836265585dda8ba175",
       "label": "fam-bdt-percent-sparse-sep-2",
       "rows": {
         "budgets": 1,
@@ -6563,7 +6563,7 @@
         "split-percent"
       ],
       "displayCurrency": "bdt",
-      "hash": "fbdf67f04ec997d7e9af09c4571ceefacbf80950677ec4d8ee4198654719ac64",
+      "hash": "cf8472cc4a3903589241addef71490299afeb456a96a15c175209cc929936d25",
       "label": "fam-bdt-percent-normal-joint-0",
       "rows": {
         "budgets": 1,
@@ -6594,7 +6594,7 @@
         "split-percent"
       ],
       "displayCurrency": "bdt",
-      "hash": "9b09f938f1b4f2fe59ea1f95309b9bded08111571c6074f5f2eaf84d488ebec3",
+      "hash": "2c79307cafdfe16b2b9efd5e22e79a2bf8a3c105770109b8526666c417e4ff41",
       "label": "fam-bdt-percent-normal-joint-1",
       "rows": {
         "budgets": 1,
@@ -6625,7 +6625,7 @@
         "split-percent"
       ],
       "displayCurrency": "bdt",
-      "hash": "51f67b049fb5d75daaa6fc87ad28240d9664cb6ffa26e44ade375147f16ff2f3",
+      "hash": "f39150a032bfd87b7cc99608e770a7f5bbed0ead51800caae7de0c8e476b0900",
       "label": "fam-bdt-percent-normal-joint-2",
       "rows": {
         "budgets": 1,
@@ -6656,7 +6656,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "f60484fa8419e7623123817ab0b8ece013af88ae45344e078ca9158e9230b8cb",
+      "hash": "35629fbf27180e0a7be1eed85c8d0880e70ebe01bf0282311c8854c33cafb578",
       "label": "fam-bdt-percent-normal-sep-0",
       "rows": {
         "budgets": 1,
@@ -6687,7 +6687,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "6a83d75d382191a219e788c822b65d61ff4772be6e843f2678a5462c1fb4a2c9",
+      "hash": "621929acd4de8e55d8ca1aad5f4db6d1a7d9c878da3aee10a58f625062c23040",
       "label": "fam-bdt-percent-normal-sep-1",
       "rows": {
         "budgets": 1,
@@ -6718,7 +6718,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "84b8fbe02c060068804e7d140df819a88dc4a7a905d9b774a5d0705e1b142d58",
+      "hash": "9675db856055b57212df60c5af6f8a64feea70fb249735c98b780a81e8816bf2",
       "label": "fam-bdt-percent-normal-sep-2",
       "rows": {
         "budgets": 1,
@@ -6750,7 +6750,7 @@
         "split-percent"
       ],
       "displayCurrency": "bdt",
-      "hash": "1a6b6f9844e261555ba1bb4a59fc699d27fff91b410d2153ad60b6149ffe03b1",
+      "hash": "1cc3c7d42621808a8a180fb00978daad8282519b717827be24523e4c49bf1581",
       "label": "fam-bdt-percent-dense-joint-0",
       "rows": {
         "budgets": 1,
@@ -6782,7 +6782,7 @@
         "split-percent"
       ],
       "displayCurrency": "bdt",
-      "hash": "d73e1c085f0587c1f10a7449a8c5f69fc2ff70c9b51e828690508a3fd442c8e7",
+      "hash": "48229ba3d67168306b8b704304589d6e1a5f727dfe44c40a8429995951f99018",
       "label": "fam-bdt-percent-dense-joint-1",
       "rows": {
         "budgets": 1,
@@ -6814,7 +6814,7 @@
         "split-percent"
       ],
       "displayCurrency": "bdt",
-      "hash": "4bee49cede10dcc38e7dec6b941be30204d78163136da81cb54905dd425d4f99",
+      "hash": "4131dc789fb8833489354f61e628bb672c3dcc78fcffd12b676c16ee5e1e8bba",
       "label": "fam-bdt-percent-dense-joint-2",
       "rows": {
         "budgets": 1,
@@ -6846,7 +6846,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "cf5948a7c997077cb58ef53c55e8870bbd44cd3107b3e4e6c97d28d7830e6a25",
+      "hash": "a43d37536308b5102f5b174bc0ccdb45af23d3fdafce2e98e17d4de5c76a464a",
       "label": "fam-bdt-percent-dense-sep-0",
       "rows": {
         "budgets": 1,
@@ -6878,7 +6878,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "047f1d6fd61330309296b7494e10e85e60d8ecee8ab87b39f0ed2244fc7fcfe6",
+      "hash": "d7dba269b383959e8f7a386a099ef1983d200acc534f4ca32c9f1e250f3e8549",
       "label": "fam-bdt-percent-dense-sep-1",
       "rows": {
         "budgets": 1,
@@ -6910,7 +6910,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "61c4abd0c7875ff113d916d61582ce6536f72e4783249b5748ff8eeb735a25cc",
+      "hash": "1c7caa8921e1441311166762410f59cb1b028734917994c884d94b05046b15c0",
       "label": "fam-bdt-percent-dense-sep-2",
       "rows": {
         "budgets": 1,
@@ -6942,7 +6942,7 @@
         "split-value"
       ],
       "displayCurrency": "bdt",
-      "hash": "9a69845d0e0fc75c102081d44cd21c936f1d4af4a1f821e7b2752a7cad539500",
+      "hash": "1dabeb7b701063642c290d8fe35cac8609e396dac1166dbe7bf4e0575daed812",
       "label": "fam-bdt-value-sparse-joint-0",
       "rows": {
         "budgets": 1,
@@ -6974,7 +6974,7 @@
         "split-value"
       ],
       "displayCurrency": "bdt",
-      "hash": "4380906587bd0d1fda80ff9e9d5f89e52aff36038f5b338cc34fb91774417293",
+      "hash": "5457ca689a523e51e0fa71a4f01360669eb54fddab14046078b4b8337abb28c3",
       "label": "fam-bdt-value-sparse-joint-1",
       "rows": {
         "budgets": 1,
@@ -7006,7 +7006,7 @@
         "split-value"
       ],
       "displayCurrency": "bdt",
-      "hash": "a8be4ae5238faf699f828577f4ac00b35b2beafdd8c3ae88dab448c5913f7ce9",
+      "hash": "00774976d8aa5c0a3521e684213efe088d4a63bb449bddb6a666139038a994a7",
       "label": "fam-bdt-value-sparse-joint-2",
       "rows": {
         "budgets": 1,
@@ -7038,7 +7038,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "6a425538aad8d53df6a018b0b4088f5460e877d9c3e9dde58b811a7595e5ec15",
+      "hash": "452c9d8b518ed55e10e8cd359b4ea78486cf1c176f97b2be30f957c80483103f",
       "label": "fam-bdt-value-sparse-sep-0",
       "rows": {
         "budgets": 1,
@@ -7070,7 +7070,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "c13cf8f84cfb1db846359a177266efc06fe88086aafe4526ecc11b25e560cbaa",
+      "hash": "e803a97eefdfc232b594222040441c89b792800c46027941f82df0b05362f54b",
       "label": "fam-bdt-value-sparse-sep-1",
       "rows": {
         "budgets": 1,
@@ -7102,7 +7102,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "ec347d32e2546da34edce8c73b830c56d7d68b5f34d30ad38f230379290aad66",
+      "hash": "0c5f941cc8ef4c1048b6f9087e93fcdd012d9d32f94dfcc239ced13577fb0bcc",
       "label": "fam-bdt-value-sparse-sep-2",
       "rows": {
         "budgets": 1,
@@ -7133,7 +7133,7 @@
         "split-value"
       ],
       "displayCurrency": "bdt",
-      "hash": "6eeac5b1ba4938a6f2b50940b1f9712c16732b2c42f676f5dcbbdbdaeb3ae4aa",
+      "hash": "4682d8d59151147c4aafec6b5441a48c4cf93554a63fbb6aab92571ce3c4a4aa",
       "label": "fam-bdt-value-normal-joint-0",
       "rows": {
         "budgets": 1,
@@ -7164,7 +7164,7 @@
         "split-value"
       ],
       "displayCurrency": "bdt",
-      "hash": "ee0a59fd0176e60b95beb603429f409128daa63e7b4bc328b5a40b6bd10b5536",
+      "hash": "a7a55ec6ecc092f6b5e22525201e6b688ae822bf91658dd34900bf6fefd00066",
       "label": "fam-bdt-value-normal-joint-1",
       "rows": {
         "budgets": 1,
@@ -7195,7 +7195,7 @@
         "split-value"
       ],
       "displayCurrency": "bdt",
-      "hash": "f98512c26fb0ccbeba2974ef77ad30ad14b6ecbf67d7c6db49283c7975f60c9c",
+      "hash": "bed67c82ae7c304638a6616b2f593bf20b6fdc52d8d51a030fabf80959fdccea",
       "label": "fam-bdt-value-normal-joint-2",
       "rows": {
         "budgets": 1,
@@ -7226,7 +7226,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "5ec324d1d71abd3b342fac291866de5c89f9224b80750b6c31dbebb5c32d444a",
+      "hash": "a4192d1267c4083d9b30a3019b094585d70dc6976df4658478b117cf90bbd8ee",
       "label": "fam-bdt-value-normal-sep-0",
       "rows": {
         "budgets": 1,
@@ -7257,7 +7257,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "e7088e88a253606b3cf77dab37003636877209de02d9006fd191da08724322f0",
+      "hash": "6a2a1dab5af584dfb0a6c55dd6213dac1e030b52f7876f7441be6b0196777bb3",
       "label": "fam-bdt-value-normal-sep-1",
       "rows": {
         "budgets": 1,
@@ -7288,7 +7288,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "0297942750da73bdcc0004a11bcda46a3387a2fd73c10e24142fe6410fb839a0",
+      "hash": "4e4bb15190f5ba5663f40c792c0ca0920be8a169300e45f83fb7b0d2819968bc",
       "label": "fam-bdt-value-normal-sep-2",
       "rows": {
         "budgets": 1,
@@ -7320,7 +7320,7 @@
         "split-value"
       ],
       "displayCurrency": "bdt",
-      "hash": "a301a4d0129a2dd4740baf8d837c22a648bc9099871222f337a66f8bc925d32c",
+      "hash": "db83cc8d34e9ab2de930634213edba4fd20da9b998cf1ad4b840d20951395f91",
       "label": "fam-bdt-value-dense-joint-0",
       "rows": {
         "budgets": 1,
@@ -7352,7 +7352,7 @@
         "split-value"
       ],
       "displayCurrency": "bdt",
-      "hash": "5f0fc393d26519315a69d2d649c6f850be30b23a794fb7446cb69063f8f0a057",
+      "hash": "06803d6b0c7755f042b065e4680cfa5dc7fada7fb208e7a8048625504e0ab22f",
       "label": "fam-bdt-value-dense-joint-1",
       "rows": {
         "budgets": 1,
@@ -7384,7 +7384,7 @@
         "split-value"
       ],
       "displayCurrency": "bdt",
-      "hash": "768eb7b817b9b8c9c1ad8ee619a82a87436a00ddf672c4870878a78d17ba74a3",
+      "hash": "9c1cc1ecacfa783148f701f81c8426dafd6d5fc63f1afe02270ffb2103d35811",
       "label": "fam-bdt-value-dense-joint-2",
       "rows": {
         "budgets": 1,
@@ -7416,7 +7416,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "8e51a2e9b88317911d9d6b7dba91c20c9693450c95519a112e4f929eae525412",
+      "hash": "aff7318fc5a4bb05735b01dac65b9b87bf04d1028d5a6766be6cb8958575c394",
       "label": "fam-bdt-value-dense-sep-0",
       "rows": {
         "budgets": 1,
@@ -7448,7 +7448,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "70174694974e369786d532caea25a7044096c35e0258a82909eb9103b10fd2bf",
+      "hash": "73fbc41d913b52862025beb74c8171b4c36009e3b21857e5a91fb8d4a5fa9ab5",
       "label": "fam-bdt-value-dense-sep-1",
       "rows": {
         "budgets": 1,
@@ -7480,7 +7480,7 @@
         "split-even"
       ],
       "displayCurrency": "bdt",
-      "hash": "6cc6c3c673f65eef0ee67c0bcd05625df9d36ab174a0387862844ce1e6591443",
+      "hash": "bac72f4d8625c843cd5c8d561621783bf898ea6e80c741802765163a8aa2f27f",
       "label": "fam-bdt-value-dense-sep-2",
       "rows": {
         "budgets": 1,

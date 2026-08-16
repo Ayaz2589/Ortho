@@ -1,4 +1,23 @@
-Active feature: **household wiring — specs 050-053**, all four on one integration branch.
+Active feature: **spec 054 — per-person budgets**. Plan: `specs/054-per-person-budgets/plan.md`
+(spec/tasks alongside it). Budget LIMITS were the last household number with no PEOPLE axis: spec
+051 gave *spend* a scope but deliberately left limits household-level, so choosing a person on the
+Planning hub measured their share against an allowance sized for everyone — a milder form of the
+error 052 fixed. A budget row now carries `person_id`: **null = the household's** (every existing
+row, meaning unchanged), a person id = that person's own limit. One additive migration
+(`20260816120000_person_budgets.sql`) swaps the old `unique (household_id, category)` for
+`unique nulls not distinct (household_id, category, person_id)` — `NULLS NOT DISTINCT` is
+load-bearing (the default would let duplicate SHARED budgets accumulate) and keeps PostgREST's
+upsert working unchanged. `scopeBudgets(budgets, scope)` joins `scopeTransactions` in
+`lib/scope/moneyScope.ts` and is projected at the SAME entry point in `buildPlanSummary` and
+`generateInsights`, so both halves of "spent X of Y" have one owner. **Person scope never falls
+back to the household limit** (FR-003) — that fallback is the spec-052 error class, so a person
+who has set no budget sees "Not set", not a borrowed number. `/planning/budget` gets the Planning
+hub's `PlanScopeBar`; the drawer takes `personId`/`personName`. The dashboard Budgets widget stays
+household-only (the board shows no whose-money control). Golden vectors regenerate byte-identically.
+Deliberately unchanged: financial health's `plan_engagement` (household-scoped by design) and any
+automatic pooling of one allowance into per-person shares (spec 050's deferred question).
+
+Prior shipped: **household wiring — specs 050-053**, all four on one integration branch.
 Plans: `specs/{050-shared-ownership-default,051-person-scoped-engines,052-financial-health-scope,053-payer-capture-balances}/plan.md`
 (spec/tasks alongside each). The diagnosis behind them: the household **schema** is sound —
 account-free `household_people`, exact-cent `transaction_shares`, atomic `upsert_transaction`,

@@ -9,7 +9,7 @@
 //
 // Contract: specs/051-person-scoped-engines/spec.md.
 
-import type { Transaction } from '../types'
+import type { Budget, Transaction } from '../types'
 import { effectiveShares } from '../format'
 import { isTransfer, transferParties } from '../transaction'
 
@@ -71,6 +71,30 @@ export function scopeTransactions(txs: Transaction[], scope: MoneyScope): Transa
     if (projected) out.push(projected)
   }
   return out
+}
+
+/**
+ * Narrow a set of budget LIMITS to a scope (spec 054) — the companion to
+ * `scopeTransactions`, so both halves of "spent X of Y" are projected by one rule.
+ *
+ * - household scope — only budgets with no owner (`person_id == null`), so a personal
+ *   envelope never inflates a household total.
+ * - person scope — only that person's budgets, with **no fallback** to the household
+ *   limit. A household allowance is sized for everyone; measuring one person's share
+ *   against it is the same error class spec 052 fixed for financial health.
+ *
+ * Like `scopeTransactions`, the household no-op returns the SAME array reference when
+ * nothing is owned — which is every household that has not used the feature, keeping
+ * existing renders and golden vectors untouched (FR-007).
+ */
+export function scopeBudgets(budgets: Budget[], scope: MoneyScope): Budget[] {
+  if (scope.kind === 'household') {
+    // `== null` on purpose: a pre-migration row read has no person_id at all.
+    return budgets.some((b) => b.person_id != null)
+      ? budgets.filter((b) => b.person_id == null)
+      : budgets
+  }
+  return budgets.filter((b) => b.person_id === scope.personId)
 }
 
 /**

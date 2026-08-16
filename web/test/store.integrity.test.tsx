@@ -290,10 +290,74 @@ describe('budget rollback', () => {
     await renderStore()
 
     act(() =>
-      api.addOrUpdateBudget({ id: 'b-new', household_id: 'hh-1', category: 'dining', monthly_limit_cents: 20_000, budget_type: 'fixed', rollover_cap_cents: null })
+      api.addOrUpdateBudget({ id: 'b-new', household_id: 'hh-1', category: 'dining', monthly_limit_cents: 20_000, budget_type: 'fixed', rollover_cap_cents: null, person_id: null })
     )
     await waitFor(() => expect(api.error).toMatch(/budget save failed/))
     expect(api.budgets.find((b) => b.category === 'dining')).toBeUndefined()
+  })
+})
+
+// spec 054 — a personal budget is a SEPARATE row that happens to share a category,
+// so the store's identity for a budget is (household, category, person), not
+// (household, category). Getting this wrong would make saving Priya's dining limit
+// silently overwrite the household's.
+describe('per-person budgets (spec 054)', () => {
+  const dining = (over: Partial<Parameters<typeof api.addOrUpdateBudget>[0]> = {}) => ({
+    id: 'b-dining',
+    household_id: 'hh-1',
+    category: 'dining' as const,
+    monthly_limit_cents: 20_000,
+    budget_type: 'fixed' as const,
+    rollover_cap_cents: null,
+    person_id: null,
+    ...over,
+  })
+
+  it('reads person_id from the row, defaulting a pre-migration row to the household', async () => {
+    const data = dataset()
+    data.tables!.budgets = [
+      { id: 'b-1', household_id: 'hh-1', category: 'groceries', monthly_limit_cents: 40_000 },
+      { id: 'b-2', household_id: 'hh-1', category: 'dining', monthly_limit_cents: 20_000, person_id: 'u-me' },
+    ]
+    h.mock = makeSupabaseMock(data)
+    await renderStore()
+
+    expect(api.budgets.find((b) => b.id === 'b-1')?.person_id).toBeNull()
+    expect(api.budgets.find((b) => b.id === 'b-2')?.person_id).toBe('u-me')
+  })
+
+  it('sends person_id and conflicts on (household, category, person)', async () => {
+    h.mock = makeSupabaseMock(dataset())
+    await renderStore()
+
+    act(() => api.addOrUpdateBudget(dining({ person_id: 'u-me' })))
+    await waitFor(() => expect(h.mock!.callsFor('budgets').length).toBe(1))
+    const call = h.mock!.callsFor('budgets')[0]
+    expect((call.payload as { person_id?: string }).person_id).toBe('u-me')
+  })
+
+  it('keeps a household and a personal budget for the same category side by side', async () => {
+    h.mock = makeSupabaseMock(dataset())
+    await renderStore()
+
+    act(() => api.addOrUpdateBudget(dining({ id: 'b-shared', person_id: null })))
+    act(() => api.addOrUpdateBudget(dining({ id: 'b-mine', person_id: 'u-me', monthly_limit_cents: 5_000 })))
+
+    const both = api.budgets.filter((b) => b.category === 'dining')
+    expect(both.map((b) => b.id).sort()).toEqual(['b-mine', 'b-shared'])
+    expect(both.find((b) => b.id === 'b-shared')?.monthly_limit_cents).toBe(20_000)
+  })
+
+  it('updates in place when the same person’s budget is saved again', async () => {
+    h.mock = makeSupabaseMock(dataset())
+    await renderStore()
+
+    act(() => api.addOrUpdateBudget(dining({ id: 'b-mine', person_id: 'u-me' })))
+    act(() => api.addOrUpdateBudget(dining({ id: 'b-mine', person_id: 'u-me', monthly_limit_cents: 9_000 })))
+
+    const mine = api.budgets.filter((b) => b.category === 'dining' && b.person_id === 'u-me')
+    expect(mine).toHaveLength(1)
+    expect(mine[0].monthly_limit_cents).toBe(9_000)
   })
 })
 

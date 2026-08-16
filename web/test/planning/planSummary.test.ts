@@ -32,6 +32,7 @@ function makeBudget(o: Partial<Budget> = {}): Budget {
     monthly_limit_cents: o.monthly_limit_cents ?? 100000,
     budget_type: o.budget_type ?? 'fixed',
     rollover_cap_cents: o.rollover_cap_cents ?? null,
+    person_id: o.person_id ?? null,
     created_at: o.created_at ?? '2026-01-01T00:00:00.000Z',
     ...o,
   }

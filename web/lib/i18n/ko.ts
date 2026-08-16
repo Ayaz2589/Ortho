@@ -617,6 +617,9 @@ const catalog: Record<string, string> = {
   "Outstanding balances between the people in your household.": "가구 구성원 간의 미정산 잔액.",
   // spec 051 — money scope
   "Whose money": "누구의 돈",
+  // spec 054 — per-person budgets
+  "{0}'s budget": "{0} 님의 예산",
+  "Only {0}'s limits are shown here, measured against their share of what the household spends. The household's own budgets stay under Everyone.": "여기에는 {0} 님의 한도만 표시되며, 가구 지출 중 본인 몫과 비교됩니다. 가구 자체 예산은 '모두'에 있습니다.",
 }
 
 export default catalog

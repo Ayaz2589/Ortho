@@ -45,6 +45,7 @@ function budget(category: Budget['category'], monthly_limit_cents: number): Budg
     monthly_limit_cents,
     budget_type: 'fixed',
     rollover_cap_cents: null,
+    person_id: null,
   }
 }
 
@@ -648,6 +649,7 @@ describe('budget insights are rollover-aware (spec 027)', () => {
     monthly_limit_cents: limit,
     budget_type: 'flex',
     rollover_cap_cents: null,
+    person_id: null,
     created_at,
   })
 
