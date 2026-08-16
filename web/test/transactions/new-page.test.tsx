@@ -45,6 +45,15 @@ vi.mock('@/lib/store', () => {
 
 import NewTransactionPage from '@/app/(app)/transactions/new/page'
 
+// spec 050 made the shared owner set the DEFAULT for new transactions. These tests
+// exercise mechanics that start from a single owner, so they pin the preference OFF —
+// their subject is not the default. The shared default has its own coverage in
+// test/transactions/shared-ownership-default.test.ts and shared-default-form.test.tsx.
+beforeEach(() => {
+  localStorage.setItem('ortho.sharedByDefault', 'false')
+})
+
+
 function setUrl(search: string) {
   window.history.replaceState({}, '', `/transactions/new${search}`)
 }

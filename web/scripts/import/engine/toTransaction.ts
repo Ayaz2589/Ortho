@@ -43,6 +43,11 @@ export function toTransaction(
     created_at: nowISO,
     updated_at: nowISO,
     owner_ids: owners,
+    // spec 053 — a statement cannot say who physically paid, but writing null makes every
+    // imported row invisible to the balance engine. The import context's default person is
+    // the only defensible signal, and it can be corrected by editing the transaction.
+    // Income keeps a null payer — income has no payer (FR-006).
+    paid_by: p.kind === 'income' ? null : ctx.defaultOwnerId,
     shares,
   }
 }

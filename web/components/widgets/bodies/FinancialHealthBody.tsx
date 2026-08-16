@@ -9,6 +9,7 @@ import {
   deriveProfile,
   weightsToRecord,
 } from '@/lib/finance/financialHealth'
+import { HOUSEHOLD_SCOPE, personScope, scopeTransactions } from '@/lib/scope/moneyScope'
 import type { HealthBand } from '@/lib/types'
 
 /**
@@ -38,6 +39,7 @@ export function FinancialHealthBody() {
     goals,
     goalContributions,
     routines,
+    currentPersonId,
     t,
     locale,
   } = useApp()
@@ -48,6 +50,14 @@ export function FinancialHealthBody() {
       scoreFinancialHealth({
         profile: deriveProfile(userFinancialProfile, userFixedCosts),
         transactions,
+        // spec 052 — the questionnaire captures ONE person's income, housing share and fixed
+        // costs, so the spend it is measured against must be that person's share too. Falls
+        // back to household scope when the signed-in user has no person row (FR-003) —
+        // scoring against an empty ledger would report a flattering, meaningless 100.
+        scopedTransactions: scopeTransactions(
+          transactions,
+          currentPersonId ? personScope(currentPersonId) : HOUSEHOLD_SCOPE
+        ),
         budgets,
         goals,
         contributionsByGoal: contributionsByGoal(goalContributions),
@@ -55,7 +65,7 @@ export function FinancialHealthBody() {
         weights: weightsToRecord(userDimensionWeights),
         now,
       }),
-    [userFinancialProfile, userFixedCosts, userDimensionWeights, transactions, budgets, goals, goalContributions, routines, now]
+    [userFinancialProfile, userFixedCosts, userDimensionWeights, transactions, budgets, goals, goalContributions, routines, currentPersonId, now]
   )
 
   // spec 044 — routine awareness (6th dimension): resolve cited routine keys back to

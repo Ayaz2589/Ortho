@@ -604,6 +604,19 @@ const catalog: Record<string, string> = {
   "Location enrichment isn't available yet.": "위치 보강 기능은 아직 이용할 수 없습니다.",
   "A place you visit often": "자주 방문하는 장소",
   "Noticed {0} times — might be worth logging as a routine.": "{0}번 감지됨 — 루틴으로 기록해볼 만할 수도 있습니다.",
+  // spec 050 — shared ownership by default
+  "Who is this for?": "누구를 위한 것인가요?",
+  "Just me": "나만",
+  "Shared by default": "기본적으로 공유",
+  "New transactions start owned by everyone in your household.": "새 거래는 가구의 모든 사람이 소유한 상태로 시작됩니다.",
+  // spec 053 — household balances
+  "{0} owes {1}": "{0}님이 {1}님에게 갚을 금액",
+  "All settled up.": "모두 정산되었습니다.",
+  "Add someone to your household to track who owes whom.": "누가 누구에게 갚아야 하는지 보려면 가구에 사람을 추가하세요.",
+  "Who owes whom": "정산 현황",
+  "Outstanding balances between the people in your household.": "가구 구성원 간의 미정산 잔액.",
+  // spec 051 — money scope
+  "Whose money": "누구의 돈",
 }
 
 export default catalog

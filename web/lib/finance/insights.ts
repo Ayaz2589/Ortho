@@ -3,6 +3,7 @@ import { CATEGORIES } from '../categories'
 import { monthlyPaymentCents } from './mortgage'
 import { budgetStatusForMonth } from './budgets'
 import { INSIGHT_THRESHOLDS as T } from './insights-thresholds'
+import { HOUSEHOLD_SCOPE, scopeTransactions, type MoneyScope } from '../scope/moneyScope'
 import { parseLocalDate } from '../format'
 
 // Insights mirror the iOS InsightEngine. Money is rendered in USD with 2
@@ -74,8 +75,12 @@ export function generateInsights(
   // Display locale for the outlier date (iOS renders it via
   // Localizer.currentLocale). The default keeps the golden vectors and any
   // store-less caller on canonical en-US.
-  locale: string = 'en-US'
+  locale: string = 'en-US',
+  // spec 051 — whose money these observations are about. Household (the default) returns
+  // the input array unchanged, so the golden vectors stay byte-identical.
+  scope: MoneyScope = HOUSEHOLD_SCOPE
 ): Insight[] {
+  transactions = scopeTransactions(transactions, scope)
   const out: Insight[] = []
   const [mStart, mEnd] = monthInterval(now)
   const [pStart, pEnd] = monthInterval(new Date(now.getFullYear(), now.getMonth() - 1, 1))

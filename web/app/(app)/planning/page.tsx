@@ -9,6 +9,8 @@ import { PlanHealthHero } from '@/components/planning/PlanHealthHero'
 import { BudgetSummaryCard } from '@/components/planning/BudgetSummaryCard'
 import { GoalsSummaryCard } from '@/components/planning/GoalsSummaryCard'
 import { SinkingFundsPanel } from '@/components/planning/SinkingFundsPanel'
+import { PlanScopeBar } from '@/components/planning/PlanScopeBar'
+import { HOUSEHOLD_SCOPE, resolveScope, type MoneyScope } from '@/lib/scope/moneyScope'
 
 /**
  * Planning hub (spec 038) — a top-level destination alongside Dashboard,
@@ -25,19 +27,24 @@ import { SinkingFundsPanel } from '@/components/planning/SinkingFundsPanel'
  * card. Selecting a month re-scopes everything.
  */
 export default function PlanningPage() {
-  const { budgets, goals, goalContributions, transactions, t } = useApp()
+  const { budgets, goals, goalContributions, transactions, householdMembers, t } = useApp()
   const now = useMemo(() => new Date(), [])
   const [monthKey, setMonthKey] = useState(() => currentMonthKey(now))
+  // spec 051 — whose money. Re-resolved on every render so a person removed mid-session
+  // degrades to the household rather than blanking the page.
+  const [rawScope, setScope] = useState<MoneyScope>(HOUSEHOLD_SCOPE)
+  const scope = resolveScope(rawScope, householdMembers.map((m) => m.id))
 
   const summary = useMemo(
-    () => buildPlanSummary({ budgets, goals, goalContributions, transactions, monthKey }, now),
-    [budgets, goals, goalContributions, transactions, monthKey, now],
+    () => buildPlanSummary({ budgets, goals, goalContributions, transactions, monthKey, scope }, now),
+    [budgets, goals, goalContributions, transactions, monthKey, scope, now],
   )
 
   return (
     <div className="mx-auto w-full max-w-[720px]">
       <PageHeader title={t('Planning')} />
       <PlanningMonthBar monthKey={monthKey} now={now} onChange={setMonthKey} />
+      <PlanScopeBar scope={scope} onChange={setScope} />
       <PlanHealthHero health={summary.health} />
       <BudgetSummaryCard summary={summary.budgets} />
       <GoalsSummaryCard summary={summary.goals} />

@@ -205,6 +205,7 @@ describe('parseScan', () => {
             count: 5,
             lastDay: { year: 2026, month: 6, day: 20 },
             owners: ['person-1'],
+            paidBy: null,
           },
         ],
       })

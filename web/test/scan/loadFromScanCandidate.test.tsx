@@ -63,6 +63,7 @@ function candidate(over: Partial<ParsedCandidate> = {}): ParsedCandidate {
     guesses: new Set(),
     categoryGuess: null,
     ownersGuess: null,
+    paidByGuess: null,
     duplicateOf: null,
     ...over,
   }
@@ -114,13 +115,30 @@ describe('loadFromScanCandidate', () => {
     expect(getApi().cents).toBe(2554)
   })
 
-  it('adopts a valid ownersGuess, falling back to the default owner when guessed owners are not current members', () => {
+  it('adopts a valid ownersGuess, falling back to the household default when guessed owners are not current members', () => {
     const getApi = setup()
     act(() => getApi().loadFromScanCandidate(candidate({ ownersGuess: ['u2'] })))
     expect(getApi().owners).toEqual(['u2'])
 
+    // spec 050 — the fallback is the household DEFAULT, which is now the whole household.
+    // A scanned receipt whose remembered owners have all left should not quietly become a
+    // solo row for whoever happens to be signed in.
     act(() => getApi().loadFromScanCandidate(candidate({ ownersGuess: ['not-a-member'] })))
-    expect(getApi().owners).toEqual(['u1'])
+    expect(getApi().owners).toEqual(['u1', 'u2'])
+  })
+
+  // spec 053 — the payer travels with the owners.
+  it('adopts a remembered payer when it is still a household member', () => {
+    const getApi = setup()
+    act(() => getApi().loadFromScanCandidate(candidate({ paidByGuess: 'u2' })))
+    expect(getApi().paidBy).toBe('u2')
+  })
+
+  it('ignores a remembered payer who has left the household', () => {
+    const getApi = setup()
+    const before = getApi().paidBy
+    act(() => getApi().loadFromScanCandidate(candidate({ paidByGuess: 'not-a-member' })))
+    expect(getApi().paidBy).toBe(before)
   })
 
   it('leaves category untouched when categoryGuess is null', () => {

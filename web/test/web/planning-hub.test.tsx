@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import type { Budget, Goal, GoalContribution, Transaction } from '@/lib/types'
 import { buildPlanSummary, currentMonthKey, type SinkingFund } from '@/lib/planning/planSummary'
 
@@ -19,6 +19,8 @@ interface StoreView {
   goals: Goal[]
   goalContributions: GoalContribution[]
   transactions: Transaction[]
+  // spec 051 — the hub's scope bar reads the roster; a solo household hides it entirely.
+  householdMembers: Array<{ id: string; name: string }>
   formatMoney: (cents: number, opts?: { leadingPlus?: boolean }) => string
   t: (key: string, ...args: (string | number)[]) => string
   locale: string
@@ -117,6 +119,7 @@ beforeEach(() => {
     goals: [],
     goalContributions: [],
     transactions: [],
+    householdMembers: [{ id: 'u-me', name: 'Me' }],
     formatMoney: money,
     t: (key, ...args) => (args.length ? key.replace(/\{(\d+)\}/g, (_m, i) => String(args[Number(i)])) : key),
     locale: 'en-US',
@@ -334,5 +337,65 @@ describe('Settings › Planning redirect (US1, FR-004)', () => {
   it('redirects the old location to the new top-level hub', () => {
     render(<SettingsPlanningRedirect />)
     expect(replaceSpy).toHaveBeenCalledWith('/planning')
+  })
+})
+
+// ── spec 051: the money-scope bar ────────────────────────────────────────────
+
+describe('Planning hub — whose money (spec 051)', () => {
+  it('hides the scope bar for a one-person household', () => {
+    render(<PlanningPage />)
+    expect(screen.queryByRole('tablist', { name: 'Whose money' })).toBeNull()
+  })
+
+  it('offers Everyone plus each person once there are two', () => {
+    store.householdMembers = [
+      { id: 'u-me', name: 'Me' },
+      { id: 'u-them', name: 'Sam' },
+    ]
+    render(<PlanningPage />)
+    const bar = screen.getByRole('tablist', { name: 'Whose money' })
+    expect(within(bar).getByRole('tab', { name: 'Everyone' })).toHaveAttribute('aria-selected', 'true')
+    expect(within(bar).getByRole('tab', { name: 'Me' })).toBeInTheDocument()
+    expect(within(bar).getByRole('tab', { name: 'Sam' })).toBeInTheDocument()
+  })
+
+  it('re-scopes the figures to one person’s share', () => {
+    store.householdMembers = [
+      { id: 'u-me', name: 'Me' },
+      { id: 'u-them', name: 'Sam' },
+    ]
+    store.budgets = [makeBudget({ category: 'groceries', monthly_limit_cents: 40000 })]
+    store.transactions = [
+      {
+        id: 't1',
+        household_id: 'hh-1',
+        merchant: 'Grocer',
+        category: 'groceries',
+        kind: 'expense',
+        amount_cents: 30000,
+        source: '',
+        date: new Date().toISOString(),
+        created_by: 'u-me',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        paid_by: 'u-me',
+        owner_ids: ['u-me', 'u-them'],
+        shares: { 'u-me': 15000, 'u-them': 15000 },
+        notes: null,
+      } as Transaction,
+    ]
+    const { container } = render(<PlanningPage />)
+    const bar = screen.getByRole('tablist', { name: 'Whose money' })
+
+    // Household scope counts the whole $300 of shared spend.
+    expect(container.textContent).toContain('$300.00')
+    expect(container.textContent).not.toContain('$150.00')
+
+    // Scoping to one person counts only their $150 share; the LIMIT is unchanged.
+    fireEvent.click(within(bar).getByRole('tab', { name: 'Me' }))
+    expect(within(bar).getByRole('tab', { name: 'Me' })).toHaveAttribute('aria-selected', 'true')
+    expect(container.textContent).toContain('$150.00')
+    expect(container.textContent).toContain('$400.00')
   })
 })

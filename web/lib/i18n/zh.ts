@@ -604,6 +604,19 @@ const catalog: Record<string, string> = {
   "Location enrichment isn't available yet.": "位置增强功能暂不可用。",
   "A place you visit often": "您经常光顾的地点",
   "Noticed {0} times — might be worth logging as a routine.": "已发现 {0} 次——或许值得记录为一个常规。",
+  // spec 050 — shared ownership by default
+  "Who is this for?": "这是给谁的？",
+  "Just me": "仅我",
+  "Shared by default": "默认共享",
+  "New transactions start owned by everyone in your household.": "新交易默认由家庭中的每个人共同拥有。",
+  // spec 053 — household balances
+  "{0} owes {1}": "{0} 欠 {1}",
+  "All settled up.": "已全部结清。",
+  "Add someone to your household to track who owes whom.": "在家庭中添加成员，即可查看谁欠谁钱。",
+  "Who owes whom": "谁欠谁",
+  "Outstanding balances between the people in your household.": "家庭成员之间未结清的余额。",
+  // spec 051 — money scope
+  "Whose money": "谁的钱",
 }
 
 export default catalog

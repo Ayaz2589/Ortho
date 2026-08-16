@@ -439,3 +439,106 @@ describe('scoreFinancialHealth — routine awareness (spec 044)', () => {
     expect(weighted.score).toBeGreaterThanOrEqual(unweighted.score)
   })
 })
+
+// --- spec 052: scope correction ---------------------------------------------
+
+describe('spec 052 — the profile is scored against its owner’s own share', () => {
+  const ME = 'me'
+  const PARTNER = 'partner'
+
+  /** A shared expense: both people own half. */
+  function shared(amount_cents: number, date: string): Transaction {
+    const half = amount_cents / 2
+    return {
+      id: `sh-${date}-${amount_cents}`,
+      household_id: 'h',
+      merchant: 'm',
+      category: 'groceries',
+      kind: 'expense',
+      amount_cents,
+      source: 's',
+      date,
+      created_by: 'u',
+      created_at: `${date}T12:00:00Z`,
+      updated_at: `${date}T12:00:00Z`,
+      owner_ids: [ME, PARTNER],
+      shares: { [ME]: half, [PARTNER]: half },
+    }
+  }
+
+  it('omitting scopedTransactions preserves the pre-052 household behavior', () => {
+    const txs = [shared(600000, '2026-08-05')]
+    const withHousehold = scoreFinancialHealth(input({ transactions: txs }))
+    const explicit = scoreFinancialHealth(input({ transactions: txs, scopedTransactions: txs }))
+    expect(explicit).toEqual(withHousehold)
+  })
+
+  it('measures cash flow against the owner’s half, not the household total', () => {
+    const txs = [shared(600000, '2026-08-05')] // $6,000 household, $3,000 mine
+    const scoped = [{ ...txs[0], amount_cents: 300000, owner_ids: [ME], shares: { [ME]: 300000 } }]
+
+    // Profile: $4,000 income, $2,000 committed.
+    const household = scoreFinancialHealth(input({ transactions: txs }))
+    const mine = scoreFinancialHealth(input({ transactions: txs, scopedTransactions: scoped }))
+
+    // Household spend ($6,000) exceeds income ($4,000) → floor. Own share ($3,000) does not.
+    expect(byKey(household).cash_flow).toBeLessThan(byKey(mine).cash_flow)
+    expect(byKey(mine).cash_flow).toBeGreaterThan(0)
+  })
+
+  it('gives two members with identical profiles identical scores', () => {
+    const txs = [shared(600000, '2026-08-05')]
+    const mineScoped = [{ ...txs[0], amount_cents: 300000, owner_ids: [ME], shares: { [ME]: 300000 } }]
+    const theirsScoped = [
+      { ...txs[0], amount_cents: 300000, owner_ids: [PARTNER], shares: { [PARTNER]: 300000 } },
+    ]
+    const mine = scoreFinancialHealth(input({ transactions: txs, scopedTransactions: mineScoped }))
+    const theirs = scoreFinancialHealth(input({ transactions: txs, scopedTransactions: theirsScoped }))
+    expect(mine.score).toBe(theirs.score)
+    expect(mine.band).toBe(theirs.band)
+  })
+
+  it('keeps plan engagement on HOUSEHOLD budgets even when spend is scoped', () => {
+    const txs = [shared(600000, '2026-08-05')]
+    const scoped: Transaction[] = [] // this member owns nothing
+    const withBudget = scoreFinancialHealth(
+      input({ transactions: txs, scopedTransactions: scoped, budgets: [budget(500000)] })
+    )
+    const withoutBudget = scoreFinancialHealth(
+      input({ transactions: txs, scopedTransactions: scoped, budgets: [] })
+    )
+    expect(byKey(withBudget).plan_engagement).toBeGreaterThan(byKey(withoutBudget).plan_engagement)
+  })
+
+  it('keeps routine awareness household-scoped', () => {
+    const txs = [shared(600000, '2026-08-05')]
+    const routines = [
+      {
+        routineKey: 'rc:netflix',
+        kind: 'recurring_charge',
+        merchantKey: 'netflix',
+        merchantLabel: 'Netflix',
+        category: 'subs',
+        weekday: null,
+        hourBucket: null,
+        personId: null,
+        typicalAmountCents: 1500,
+        amountVarianceCents: 0,
+        occurrenceCount: 6,
+        firstSeenAt: '2026-03-01',
+        lastSeenAt: '2026-08-01',
+        confidence: 90,
+        derivedStatus: 'recognized',
+        evidenceTransactionIds: [],
+        status: 'confirmed',
+        label: null,
+      } as RoutineWithState,
+    ]
+    // Scoped ledger is empty; routine awareness must still find household spend to divide by.
+    const r = scoreFinancialHealth(
+      input({ transactions: txs, scopedTransactions: [], routines })
+    )
+    const dim = r.dimensions.find((d) => d.key === 'routine_awareness')!
+    expect(dim.contributingRoutineKeys).toEqual(['rc:netflix'])
+  })
+})

@@ -40,6 +40,7 @@ function candidate(overrides: Partial<ParsedCandidate> = {}): ParsedCandidate {
     guesses: new Set(),
     categoryGuess: null,
     ownersGuess: null,
+    paidByGuess: null,
     duplicateOf: null,
     ...overrides,
   }
@@ -63,6 +64,7 @@ function history(overrides: Partial<MerchantHistory> = {}): MerchantHistory {
     count: 5,
     lastDay: { year: 2026, month: 6, day: 1 },
     owners: [],
+    paidBy: null,
     ...overrides,
   }
 }
@@ -98,6 +100,7 @@ describe('enrichCandidate', () => {
             displayMerchant: 'Netflix',
             category: 'entertainment', // deliberately NOT the rule table's 'subs'
             owners: [owner],
+            paidBy: null,
           }),
         ],
       })

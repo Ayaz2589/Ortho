@@ -604,6 +604,19 @@ const catalog: Record<string, string> = {
   "Location enrichment isn't available yet.": "El enriquecimiento de ubicación aún no está disponible.",
   "A place you visit often": "Un lugar que visitas a menudo",
   "Noticed {0} times — might be worth logging as a routine.": "Detectado {0} veces — podría valer la pena registrarlo como rutina.",
+  // spec 050 — shared ownership by default
+  "Who is this for?": "¿Para quién es esto?",
+  "Just me": "Solo yo",
+  "Shared by default": "Compartido por defecto",
+  "New transactions start owned by everyone in your household.": "Las transacciones nuevas empiezan siendo de todas las personas de tu hogar.",
+  // spec 053 — household balances
+  "{0} owes {1}": "{0} le debe a {1}",
+  "All settled up.": "Todo saldado.",
+  "Add someone to your household to track who owes whom.": "Añade a alguien a tu hogar para ver quién le debe a quién.",
+  "Who owes whom": "Quién le debe a quién",
+  "Outstanding balances between the people in your household.": "Saldos pendientes entre las personas de tu hogar.",
+  // spec 051 — money scope
+  "Whose money": "De quién es el dinero",
 }
 
 export default catalog

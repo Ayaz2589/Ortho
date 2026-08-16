@@ -56,6 +56,9 @@ export function enrichCandidate(
         c.ownersGuess = match.owners
         c.guesses.add('owners')
       }
+      // spec 053 — carry the payer forward with the owners, so a scanned receipt for a
+      // known merchant records who usually fronts it rather than nobody.
+      if (match.paidBy) c.paidByGuess = match.paidBy
     } else {
       const rule = ruleCategory(c.merchantRaw)
       if (rule) {
@@ -205,6 +208,9 @@ export function buildScanContext(
       count: totalCount,
       lastDay: dayOf(group.latestDate),
       owners: orderedOwnerIds(group.latest.owner_ids),
+      // spec 053 — carry the payer forward with the owners. A scanned receipt for a merchant
+      // the household already knows should record who usually fronts it, not nobody.
+      paidBy: group.latest.paid_by ?? null,
     }
   })
 
