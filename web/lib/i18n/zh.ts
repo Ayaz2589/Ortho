@@ -638,6 +638,11 @@ const catalog: Record<string, string> = {
   // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  "Properties": "房产",
+  "{0} of {1} units occupied": "{1}个单元中有{0}个已入住",
+  "Share of income": "占收入的比例",
+  "Housing is {0}% of {1} income.": "住房支出占{1}收入的{0}%。",
+  "See all properties": "查看所有房产",
 }
 
 export default catalog
