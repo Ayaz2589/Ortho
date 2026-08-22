@@ -635,7 +635,12 @@ const catalog: Record<string, string> = {
   // spec 057 — widget panels: US5 savings-trends (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
-  // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US6 top-merchants
+  "Monthly charge": "매월 청구",
+  "typical amount": "일반적인 금액",
+  "First seen": "처음 확인",
+  "Last seen": "마지막 확인",
+  "{0} this period, compared with {1} the period before.": "이번 기간 {0}, 이전 기간 {1}.",
   // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
 }

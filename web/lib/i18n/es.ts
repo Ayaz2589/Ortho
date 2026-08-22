@@ -635,7 +635,12 @@ const catalog: Record<string, string> = {
   // spec 057 — widget panels: US5 savings-trends (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
-  // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US6 top-merchants
+  "Monthly charge": "Cargo mensual",
+  "typical amount": "monto típico",
+  "First seen": "Primera vez",
+  "Last seen": "Última vez",
+  "{0} this period, compared with {1} the period before.": "{0} este período, frente a {1} el período anterior.",
   // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
 }

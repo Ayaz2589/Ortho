@@ -635,7 +635,12 @@ const catalog: Record<string, string> = {
   // spec 057 — widget panels: US5 savings-trends (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
-  // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US6 top-merchants
+  "Monthly charge": "毎月の請求",
+  "typical amount": "通常の金額",
+  "First seen": "初回",
+  "Last seen": "最終",
+  "{0} this period, compared with {1} the period before.": "今期は{0}、前期は{1}でした。",
   // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
 }

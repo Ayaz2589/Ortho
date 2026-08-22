@@ -4,6 +4,7 @@ import { BudgetsBody } from '@/components/widgets/bodies/BudgetsBody'
 import { BudgetsPanel } from '@/components/widgets/panels/BudgetsPanel'
 import { GoalsBody } from '@/components/widgets/bodies/GoalsBody'
 import { TopMerchantsBody } from '@/components/widgets/bodies/TopMerchantsBody'
+import { TopMerchantsPanel } from '@/components/widgets/panels/TopMerchantsPanel'
 import { HouseholdBalancesBody } from '@/components/widgets/bodies/HouseholdBalancesBody'
 import { ActivityBody } from '@/components/widgets/bodies/ActivityBody'
 import { ActivityPanel } from '@/components/widgets/panels/ActivityPanel'
@@ -112,6 +113,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'Where you spend the most, most often.',
     defaultEnabled: true,
     Body: TopMerchantsBody,
+    Panel: TopMerchantsPanel,
   },
   // spec 053 — who owes whom, for three or more people. Default-off like every other
   // additive widget since spec 034; a solo household sees a calm prompt instead.
