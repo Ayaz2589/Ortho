@@ -632,7 +632,10 @@ const catalog: Record<string, string> = {
   "No personal limit set for this category.": "No hay un límite personal establecido para esta categoría.",
   // spec 057 — widget panels: US10 activity
   "See all transactions": "Ver todas las transacciones",
-  // spec 057 — widget panels: US5 savings-trends (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US5 savings-trends
+  "Amount saved": "Cantidad ahorrada",
+  "Best month": "Mejor mes",
+  "Lowest month": "Mes más bajo",
   // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)

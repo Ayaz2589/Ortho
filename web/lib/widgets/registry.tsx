@@ -8,6 +8,7 @@ import { HouseholdBalancesBody } from '@/components/widgets/bodies/HouseholdBala
 import { ActivityBody } from '@/components/widgets/bodies/ActivityBody'
 import { ActivityPanel } from '@/components/widgets/panels/ActivityPanel'
 import { SavingsTrendsBody } from '@/components/widgets/bodies/SavingsTrendsBody'
+import { SavingsTrendsPanel } from '@/components/widgets/panels/SavingsTrendsPanel'
 import { HousingCostsBody } from '@/components/widgets/bodies/HousingCostsBody'
 import { HomeEquityBody } from '@/components/widgets/bodies/HomeEquityBody'
 import { HomeEquityPanel } from '@/components/widgets/panels/HomeEquityPanel'
@@ -83,6 +84,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'Your savings rate over recent months.',
     defaultEnabled: true,
     Body: SavingsTrendsBody,
+    Panel: SavingsTrendsPanel,
   },
   {
     id: 'spending-pace',

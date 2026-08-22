@@ -632,7 +632,10 @@ const catalog: Record<string, string> = {
   "No personal limit set for this category.": "此类别尚未设置个人限额。",
   // spec 057 — widget panels: US10 activity
   "See all transactions": "查看所有交易",
-  // spec 057 — widget panels: US5 savings-trends (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US5 savings-trends
+  "Amount saved": "结余金额",
+  "Best month": "最佳月份",
+  "Lowest month": "最差月份",
   // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
