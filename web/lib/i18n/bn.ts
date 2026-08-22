@@ -636,7 +636,11 @@ const catalog: Record<string, string> = {
   "Amount saved": "সঞ্চিত পরিমাণ",
   "Best month": "সেরা মাস",
   "Lowest month": "সর্বনিম্ন মাস",
-  // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US4 spending-pace
+  "60-day trend": "৬০ দিনের প্রবণতা",
+  "Prior 30 days": "পূর্ববর্তী ৩০ দিন",
+  "Biggest movers": "সবচেয়ে বড় পরিবর্তন",
+  "Where it went": "কোথায় খরচ হয়েছে",
   // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US6 top-merchants
   "Monthly charge": "মাসিক চার্জ",
@@ -645,7 +649,6 @@ const catalog: Record<string, string> = {
   "Last seen": "সর্বশেষ দেখা",
   "{0} this period, compared with {1} the period before.": "এই সময়কালে {0}, আগের সময়কালে {1}।",
   // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
-  // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   "Properties": "সম্পত্তি",
   "{0} of {1} units occupied": "{1}টি ইউনিটের মধ্যে {0}টি দখলকৃত",
   "Share of income": "আয়ের অংশ",

@@ -1,5 +1,6 @@
 import { type ComponentType } from 'react'
 import { SpendingPaceBody } from '@/components/widgets/bodies/SpendingPaceBody'
+import { SpendingPacePanel } from '@/components/widgets/panels/SpendingPacePanel'
 import { BudgetsBody } from '@/components/widgets/bodies/BudgetsBody'
 import { BudgetsPanel } from '@/components/widgets/panels/BudgetsPanel'
 import { GoalsBody } from '@/components/widgets/bodies/GoalsBody'
@@ -94,6 +95,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'How your spending is tracking against the month.',
     defaultEnabled: true,
     Body: SpendingPaceBody,
+    Panel: SpendingPacePanel,
   },
   {
     id: 'budgets',
