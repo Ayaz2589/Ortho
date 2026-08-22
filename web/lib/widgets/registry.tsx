@@ -39,8 +39,19 @@ export interface WidgetDefinition {
   defaultEnabled: boolean
   /** Propless body — reads data via `useApp()` + `useDashboardScopeContext()`. */
   Body: ComponentType
+  /**
+   * Optional propless detail panel (spec 057, D1). A bare `ComponentType`
+   * mirroring `Body` for the same reason `Body` takes no props: a `PanelConfig`
+   * union expressive enough for all nine panels' shapes would put every widget's
+   * requirements into one type. Absent ⇒ the existing "Details coming soon."
+   * placeholder (FR-003) — this is what lets panels ship a few at a time.
+   * Renders inside the shared `WidgetPanel` frame; reads scope directly via
+   * `useDashboardScopeContext()` / `useScopedTransactions()`, never via props.
+   */
+  Panel?: ComponentType
   /** Optional route (spec 039). When set, the widget's card is a link to this path
-   *  and clicking it navigates instead of opening the details drawer. */
+   *  and clicking it navigates instead of opening the details drawer. A widget
+   *  with `href` set never renders a `Panel`, even if one is declared (FR-006). */
   href?: string
 }
 
