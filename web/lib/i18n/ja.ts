@@ -641,13 +641,15 @@ const catalog: Record<string, string> = {
   "Prior 30 days": "前の30日間",
   "Biggest movers": "変動が大きいカテゴリ",
   "Where it went": "支出の内訳",
-  // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US6 top-merchants
   "Monthly charge": "毎月の請求",
   "typical amount": "通常の金額",
   "First seen": "初回",
   "Last seen": "最終",
   "{0} this period, compared with {1} the period before.": "今期は{0}、前期は{1}でした。",
+  // spec 057 — widget panels: US9 goals
+  "a month, in total, to keep every goal on time": "すべての目標を予定どおりに進めるための月々の合計",
+  "Projected to reach {0} around {1} at the current pace.": "現在のペースでは{1}ごろに{0}に達する見込みです。",
   // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   "Properties": "物件",
   "{0} of {1} units occupied": "{1}戸中{0}戸が入居中",

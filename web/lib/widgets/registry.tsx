@@ -4,6 +4,7 @@ import { SpendingPacePanel } from '@/components/widgets/panels/SpendingPacePanel
 import { BudgetsBody } from '@/components/widgets/bodies/BudgetsBody'
 import { BudgetsPanel } from '@/components/widgets/panels/BudgetsPanel'
 import { GoalsBody } from '@/components/widgets/bodies/GoalsBody'
+import { GoalsPanel } from '@/components/widgets/panels/GoalsPanel'
 import { TopMerchantsBody } from '@/components/widgets/bodies/TopMerchantsBody'
 import { TopMerchantsPanel } from '@/components/widgets/panels/TopMerchantsPanel'
 import { HouseholdBalancesBody } from '@/components/widgets/bodies/HouseholdBalancesBody'
@@ -111,6 +112,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'Progress toward your savings goals.',
     defaultEnabled: true,
     Body: GoalsBody,
+    Panel: GoalsPanel,
   },
   {
     id: 'top-merchants',

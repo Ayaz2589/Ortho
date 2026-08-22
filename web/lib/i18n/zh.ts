@@ -641,13 +641,15 @@ const catalog: Record<string, string> = {
   "Prior 30 days": "前30天",
   "Biggest movers": "变动最大的类别",
   "Where it went": "支出去向",
-  // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US6 top-merchants
   "Monthly charge": "每月扣款",
   "typical amount": "通常金额",
   "First seen": "首次出现",
   "Last seen": "最近一次",
   "{0} this period, compared with {1} the period before.": "本期{0}，上期{1}。",
+  // spec 057 — widget panels: US9 goals
+  "a month, in total, to keep every goal on time": "每月合计，用以让所有目标按时达成",
+  "Projected to reach {0} around {1} at the current pace.": "按目前的速度，预计在{1}左右达到{0}。",
   // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   "Properties": "房产",
   "{0} of {1} units occupied": "{1}个单元中有{0}个已入住",
