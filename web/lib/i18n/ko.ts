@@ -641,13 +641,15 @@ const catalog: Record<string, string> = {
   "Prior 30 days": "이전 30일",
   "Biggest movers": "변동이 가장 큰 항목",
   "Where it went": "지출 내역",
-  // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US6 top-merchants
   "Monthly charge": "매월 청구",
   "typical amount": "일반적인 금액",
   "First seen": "처음 확인",
   "Last seen": "마지막 확인",
   "{0} this period, compared with {1} the period before.": "이번 기간 {0}, 이전 기간 {1}.",
+  // spec 057 — widget panels: US9 goals
+  "a month, in total, to keep every goal on time": "모든 목표를 제때 유지하기 위한 월 합계",
+  "Projected to reach {0} around {1} at the current pace.": "현재 속도라면 {1}쯤 {0}에 도달할 것으로 예상됩니다.",
   // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   "Properties": "부동산",
   "{0} of {1} units occupied": "{1}세대 중 {0}세대 입주",
