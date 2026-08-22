@@ -630,6 +630,8 @@ const catalog: Record<string, string> = {
   "Recent months": "최근 몇 달",
   "Projected to reach {0} by month end at the current pace.": "현재 속도라면 월말까지 {0}에 도달할 것으로 예상됩니다.",
   "No personal limit set for this category.": "이 카테고리에는 개인 한도가 설정되어 있지 않습니다.",
+  // spec 057 — widget panels: US10 activity
+  "See all transactions": "모든 거래 보기",
 }
 
 export default catalog

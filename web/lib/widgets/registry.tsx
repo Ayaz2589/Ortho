@@ -6,6 +6,7 @@ import { GoalsBody } from '@/components/widgets/bodies/GoalsBody'
 import { TopMerchantsBody } from '@/components/widgets/bodies/TopMerchantsBody'
 import { HouseholdBalancesBody } from '@/components/widgets/bodies/HouseholdBalancesBody'
 import { ActivityBody } from '@/components/widgets/bodies/ActivityBody'
+import { ActivityPanel } from '@/components/widgets/panels/ActivityPanel'
 import { SavingsTrendsBody } from '@/components/widgets/bodies/SavingsTrendsBody'
 import { HousingCostsBody } from '@/components/widgets/bodies/HousingCostsBody'
 import { HomeEquityBody } from '@/components/widgets/bodies/HomeEquityBody'
@@ -127,6 +128,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'Your latest transactions across the household.',
     defaultEnabled: false,
     Body: ActivityBody,
+    Panel: ActivityPanel,
   },
   {
     id: 'housing-costs',

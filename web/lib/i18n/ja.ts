@@ -630,6 +630,8 @@ const catalog: Record<string, string> = {
   "Recent months": "直近の月",
   "Projected to reach {0} by month end at the current pace.": "現在のペースでは月末までに{0}に達する見込みです。",
   "No personal limit set for this category.": "このカテゴリには個人の上限が設定されていません。",
+  // spec 057 — widget panels: US10 activity
+  "See all transactions": "すべての取引を見る",
 }
 
 export default catalog

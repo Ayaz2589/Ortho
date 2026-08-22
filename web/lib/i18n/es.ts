@@ -630,6 +630,8 @@ const catalog: Record<string, string> = {
   "Recent months": "Meses recientes",
   "Projected to reach {0} by month end at the current pace.": "Proyectado a alcanzar {0} para fin de mes al ritmo actual.",
   "No personal limit set for this category.": "No hay un límite personal establecido para esta categoría.",
+  // spec 057 — widget panels: US10 activity
+  "See all transactions": "Ver todas las transacciones",
 }
 
 export default catalog
