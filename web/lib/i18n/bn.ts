@@ -638,7 +638,12 @@ const catalog: Record<string, string> = {
   "Lowest month": "সর্বনিম্ন মাস",
   // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
-  // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US6 top-merchants
+  "Monthly charge": "মাসিক চার্জ",
+  "typical amount": "সাধারণ পরিমাণ",
+  "First seen": "প্রথম দেখা",
+  "Last seen": "সর্বশেষ দেখা",
+  "{0} this period, compared with {1} the period before.": "এই সময়কালে {0}, আগের সময়কালে {1}।",
   // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
 }
