@@ -280,6 +280,29 @@ describe('SavingsTrendsBody', () => {
     expect(screen.getByTestId('savings-comparison').textContent).toContain('75%')
   })
 
+  it('says "no comparison" when the PERSON has no prior month, though the household does', () => {
+    // `availableMonths` is the TIME axis's, and the time axis reads the whole
+    // household ledger — so under person scope a month can be listed while this
+    // person has nothing in it. Without a guard, savingsRate(0, 0) is null and the
+    // row reads "Last month —", which looks like a measurement that failed rather
+    // than an absent one.
+    scopeCtx.value = { ...scopeCtx.value, isSpecificMonth: true, selectedMonth: '2026-08' }
+    h.txns = [
+      ...AUGUST,
+      // July belongs to Alice alone, so July is listed but Bob has nothing in it.
+      tx({ id: 'jul-solo-pay', date: JUL_DAY, merchant: 'Employer', category: 'salary', kind: 'income', amount_cents: 100000, owner_ids: [ALICE], shares: { [ALICE]: 100000 } }),
+    ]
+
+    at(personScope(BOB), <SavingsTrendsBody />)
+    expect(screen.getByTestId('savings-comparison').textContent).toBe('No comparison yet')
+    expect(screen.getByTestId('savings-comparison').textContent).not.toContain('—')
+    cleanup()
+
+    // The household DOES have a July, and still reports it.
+    at(HOUSEHOLD_SCOPE, <SavingsTrendsBody />)
+    expect(screen.getByTestId('savings-comparison').textContent).toContain('100%')
+  })
+
   it('shows the calm empty state for a person with no activity in the window', () => {
     h.txns = [AUGUST[2]] // Cafe — Bob's alone
     at(personScope(ALICE), <SavingsTrendsBody />)

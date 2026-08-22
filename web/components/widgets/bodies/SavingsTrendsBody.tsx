@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { useApp } from '@/lib/store'
 import { useDashboardScopeContext } from '@/lib/widgets/DashboardScopeContext'
-import { useScopedTransactions } from '@/lib/widgets/MoneyScopeContext'
+import { useMoneyScope, useScopedTransactions } from '@/lib/widgets/MoneyScopeContext'
 import { savingsRate } from '@/lib/reports/savings'
 import { monthBoundsInterval } from '@/lib/useDashboardRange'
 
@@ -72,6 +72,7 @@ export function SavingsTrendsBody() {
   // the previous-month comparison. They must share a subject; a personal headline
   // beside a household comparison is the mixed-subject defect this feature removes.
   const { transactions: allTransactions, t, locale } = useApp()
+  const scope = useMoneyScope()
   const transactions = useScopedTransactions(allTransactions)
   const { interval, isSpecificMonth, selectedMonth, availableMonths } = useDashboardScopeContext()
 
@@ -125,6 +126,20 @@ export function SavingsTrendsBody() {
     const prev = previousMonth(selectedMonth)
     if (!availableMonths?.includes(prev)) return { available: false as const }
     const pt = monthTotals(transactions, prev)
+    // spec 056 — `availableMonths` comes from the TIME axis, which derives it from
+    // the whole HOUSEHOLD ledger. Under person scope the two ledgers differ, so a
+    // month can be listed while this person has nothing in it; `savingsRate` then
+    // returns null and the row reads "Last month —", which looks like a measurement
+    // that failed rather than an absent one. "No comparison yet" is the copy for it.
+    //
+    // Gated on person scope on purpose. Household scope has a similar-LOOKING case —
+    // a prior month holding only transfers is listed but nets 0/0 and also renders
+    // "—" — but that is a pre-existing imprecision in a different question ("has any
+    // transaction" vs. "has income or expense"), and fixing it here would move
+    // household output, which this feature guarantees it does not.
+    if (scope.kind === 'person' && pt.income === 0 && pt.expense === 0) {
+      return { available: false as const }
+    }
     return { available: true as const, rate: savingsRate(pt.income, pt.expense) }
   })()
 

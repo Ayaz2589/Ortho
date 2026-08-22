@@ -30,8 +30,9 @@ both applies both; a widget that ignores one (as `activity` and `household-balan
 still honours the other.
 
 **C-5 — Empty is empty, not zero.** When a person has no qualifying activity, a widget shows its own
-existing empty state. No widget renders a zeroed chart, a 0% rate, or a $0 row that could be read as
-a measurement.
+existing empty state. No widget renders a zeroed chart, a 0% rate, a $0 row, or an undefined-rate
+dash that could be read as a measurement that was taken and failed. This applies to secondary figures
+too, not just headlines — a comparison line has the same duty as the number it sits under.
 
 **C-6 — Narrowing never restates.** Where the axis filters rows rather than projecting amounts
 (balances), the surviving rows show exactly the amounts they show under household scope.
@@ -46,7 +47,7 @@ a measurement.
 |---|---|---|
 | `spending-pace` | 60-day expense buckets over the whole household; avg/day and the vs-prior-30 delta from those buckets. | The same computation over that person's expense **shares**. A shared $100 expense contributes $50 to a 50/50 owner, not $100. |
 | `top-merchants` | Top 5 merchants by household spend in the window, with visit counts. | Top 5 by **that person's** spend. Visit count counts only transactions they are party to — a merchant the household visits often but they never do falls off the list entirely. |
-| `savings-trends` | Per-month and headline savings rate from household income and expenses; single-month view also shows the previous month. | The same from that person's income and expense shares — **including the previous-month comparison**. Both figures on screen must have the same subject; a personal headline beside a household comparison is the defect this feature exists to fix. |
+| `savings-trends` | Per-month and headline savings rate from household income and expenses; single-month view also shows the previous month. | The same from that person's income and expense shares — **including the previous-month comparison**. Both figures on screen must have the same subject; a personal headline beside a household comparison is the defect this feature exists to fix. The month list backing the comparison comes from the time axis and is therefore the *household's*, so a prior month can be listed while this person has nothing in it — that reads "No comparison yet", not an undefined rate. |
 | `activity` | The 5 most recent household transactions, at full amount, with the owner line. | The 5 most recent transactions **that person is party to**, at their share amount. The owner line reads as that person (a consequence of projection setting `owner_ids: [personId]`). Continues to ignore the time window in both scopes. |
 
 ### Scoped — both halves projected
