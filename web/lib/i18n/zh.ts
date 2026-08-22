@@ -620,6 +620,11 @@ const catalog: Record<string, string> = {
   // spec 054 — per-person budgets
   "{0}'s budget": "{0}的预算",
   "Only {0}'s limits are shown here, measured against their share of what the household spends. The household's own budgets stay under Everyone.": "这里只显示{0}的限额，并与其在家庭支出中所占的份额进行比较。家庭本身的预算在“所有人”中。",
+  // spec 057 — widget panels: US2 home equity
+  "principal paid down, across all mortgages": "已偿还的本金（所有房贷合计）",
+  "Upcoming payments": "即将到期的还款",
+  "{0} principal": "本金 {0}",
+  "{0} interest": "利息 {0}",
 }
 
 export default catalog

@@ -8,6 +8,7 @@ import { ActivityBody } from '@/components/widgets/bodies/ActivityBody'
 import { SavingsTrendsBody } from '@/components/widgets/bodies/SavingsTrendsBody'
 import { HousingCostsBody } from '@/components/widgets/bodies/HousingCostsBody'
 import { HomeEquityBody } from '@/components/widgets/bodies/HomeEquityBody'
+import { HomeEquityPanel } from '@/components/widgets/panels/HomeEquityPanel'
 import { FinancialHealthBody } from '@/components/widgets/bodies/FinancialHealthBody'
 import {
   DownloadDataBody,
@@ -138,6 +139,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: "Principal you've paid down across all mortgages.",
     defaultEnabled: false,
     Body: HomeEquityBody,
+    Panel: HomeEquityPanel,
   },
   // Navigation shortcuts (spec 039) — jump straight to a Settings page. Default-off.
   {

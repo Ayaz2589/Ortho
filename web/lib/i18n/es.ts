@@ -620,6 +620,11 @@ const catalog: Record<string, string> = {
   // spec 054 — per-person budgets
   "{0}'s budget": "Presupuesto de {0}",
   "Only {0}'s limits are shown here, measured against their share of what the household spends. The household's own budgets stay under Everyone.": "Aquí solo se muestran los límites de {0}, comparados con su parte de lo que gasta el hogar. Los presupuestos del hogar están en Todos.",
+  // spec 057 — widget panels: US2 home equity
+  "principal paid down, across all mortgages": "principal pagado, en todas las hipotecas",
+  "Upcoming payments": "Próximos pagos",
+  "{0} principal": "{0} de principal",
+  "{0} interest": "{0} de interés",
 }
 
 export default catalog

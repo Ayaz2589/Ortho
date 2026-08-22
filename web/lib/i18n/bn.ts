@@ -620,6 +620,11 @@ const catalog: Record<string, string> = {
   // spec 054 — per-person budgets
   "{0}'s budget": "{0}-এর বাজেট",
   "Only {0}'s limits are shown here, measured against their share of what the household spends. The household's own budgets stay under Everyone.": "এখানে শুধু {0}-এর সীমা দেখানো হচ্ছে, পরিবারের খরচে তাঁর অংশের সঙ্গে মিলিয়ে। পরিবারের নিজস্ব বাজেট সবাই-এর মধ্যে থাকে।",
+  // spec 057 — widget panels: US2 home equity
+  "principal paid down, across all mortgages": "সমস্ত বন্ধকির মধ্যে পরিশোধিত মূল অর্থ",
+  "Upcoming payments": "আসন্ন পরিশোধ",
+  "{0} principal": "{0} মূলধন",
+  "{0} interest": "{0} সুদ",
 }
 
 export default catalog

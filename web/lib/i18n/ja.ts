@@ -620,6 +620,11 @@ const catalog: Record<string, string> = {
   // spec 054 — per-person budgets
   "{0}'s budget": "{0}さんの予算",
   "Only {0}'s limits are shown here, measured against their share of what the household spends. The household's own budgets stay under Everyone.": "ここには{0}さんの上限のみが表示され、世帯の支出のうちご本人の負担分と比較されます。世帯全体の予算は「全員」にあります。",
+  // spec 057 — widget panels: US2 home equity
+  "principal paid down, across all mortgages": "すべての住宅ローンの元金返済額",
+  "Upcoming payments": "今後の支払い",
+  "{0} principal": "元金 {0}",
+  "{0} interest": "利息 {0}",
 }
 
 export default catalog
