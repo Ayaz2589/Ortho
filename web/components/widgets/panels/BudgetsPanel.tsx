@@ -9,6 +9,7 @@ import { categoryMeta } from '@/lib/categories'
 import { budgetLedgerForMonth, type RolloverMonth } from '@/lib/finance/budgets'
 import { currentMonthKey, monthElapsedFraction } from '@/lib/planning/planSummary'
 import { usePanelCaption } from '@/components/widgets/WidgetPanel'
+import { PanelEmpty, PanelSectionLabel, PanelRow } from '@/components/widgets/panels/kit'
 import type { Budget, Transaction, TransactionCategory } from '@/lib/types'
 
 /**
@@ -87,11 +88,7 @@ export function BudgetsPanel() {
   }, [scope, sections, transactions, monthKey])
 
   if (budgets.length === 0 || (sections.length === 0 && unlimitedCategories.length === 0)) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center p-6 text-center text-[13px] text-text-3">
-        {t('No budgets yet.')}
-      </div>
-    )
+    return <PanelEmpty>{t('No budgets yet.')}</PanelEmpty>
   }
 
   return (
@@ -101,10 +98,12 @@ export function BudgetsPanel() {
       ))}
       {unlimitedCategories.map((c) => (
         <div key={c.category} className="flex flex-col gap-1">
-          <div className="flex items-baseline justify-between">
-            <span className="text-sm text-text">{t(categoryMeta(c.category).label)}</span>
-            <span className="text-sm tabular-nums text-text-2">{formatMoney(c.spentCents)}</span>
-          </div>
+          <PanelRow
+            label={t(categoryMeta(c.category).label)}
+            value={formatMoney(c.spentCents)}
+            labelClassName="text-text"
+            valueClassName="tabular-nums text-text-2"
+          />
           <span className="text-xs text-text-3">{t('No personal limit set for this category.')}</span>
         </div>
       ))}
@@ -138,7 +137,7 @@ function BudgetSectionView({ section, referenceDate }: { section: BudgetSection;
 
       {ledger.length > 1 ? (
         <div className="flex flex-col gap-1">
-          <span className="text-xs uppercase tracking-[0.4px] text-text-2">{t('Recent months')}</span>
+          <PanelSectionLabel>{t('Recent months')}</PanelSectionLabel>
           {ledger.slice(0, -1).map((month, idx) => {
             const label = new Intl.DateTimeFormat(locale, { month: 'short', year: 'numeric' }).format(
               monthLabelAt(referenceDate, ledger.length, idx)
@@ -161,12 +160,9 @@ function BudgetSectionView({ section, referenceDate }: { section: BudgetSection;
 
       {composing.length > 0 ? (
         <div className="flex flex-col gap-1">
-          <span className="text-xs uppercase tracking-[0.4px] text-text-2">{t('Transactions this month')}</span>
+          <PanelSectionLabel>{t('Transactions this month')}</PanelSectionLabel>
           {composing.map((tx) => (
-            <div key={tx.id} className="flex items-baseline justify-between text-sm">
-              <span className="text-text-2">{tx.merchant}</span>
-              <span className="tabular-nums text-text">{formatMoney(tx.amount_cents)}</span>
-            </div>
+            <PanelRow key={tx.id} label={tx.merchant} value={formatMoney(tx.amount_cents)} />
           ))}
         </div>
       ) : null}

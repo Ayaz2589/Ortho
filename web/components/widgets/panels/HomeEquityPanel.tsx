@@ -13,6 +13,7 @@ import {
 } from '@/lib/finance/mortgage'
 import { monthYearLong } from '@/lib/format'
 import { usePanelDetail } from '@/components/widgets/WidgetPanel'
+import { PanelEmpty, PanelSectionLabel, PanelRow } from '@/components/widgets/panels/kit'
 
 /**
  * Home-equity detail panel (spec 057, US2 — the first reference panel).
@@ -67,11 +68,7 @@ export function HomeEquityPanel() {
   }, [properties])
 
   if (rows.length === 0) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center p-6 text-center text-[13px] text-text-3">
-        {t('No mortgages yet.')}
-      </div>
-    )
+    return <PanelEmpty>{t('No mortgages yet.')}</PanelEmpty>
   }
 
   if (rows.length === 1) {
@@ -94,11 +91,15 @@ export function HomeEquityPanel() {
             <button
               type="button"
               onClick={() => push(row.label, <MortgageDetail row={row} />)}
-              className="flex w-full items-center justify-between rounded-xl p-3 text-left"
+              className="w-full rounded-xl p-3 text-left"
               style={{ background: 'var(--surface)' }}
             >
-              <span className="text-sm text-text">{row.label}</span>
-              <span className="text-sm tabular-nums text-text-2">{formatMoney(row.equityCents)}</span>
+              <PanelRow
+                label={row.label}
+                value={formatMoney(row.equityCents)}
+                labelClassName="text-text"
+                valueClassName="tabular-nums text-text-2"
+              />
             </button>
           </li>
         ))}
@@ -133,7 +134,7 @@ function MortgageDetail({ row }: { row: MortgageRow }) {
         <span className="tabular-nums text-text-2">{t('{0} years remaining', years)}</span>
       </div>
       <div className="flex flex-col gap-2.5">
-        <span className="text-xs uppercase tracking-[0.4px] text-text-2">{t('Upcoming payments')}</span>
+        <PanelSectionLabel>{t('Upcoming payments')}</PanelSectionLabel>
         {schedule.map((entry, idx) => (
           <div key={idx} className="flex items-baseline justify-between text-sm">
             <span className="text-text-2">{monthYearLong(entry.month, locale)}</span>
