@@ -426,9 +426,10 @@ verify ordering, grouping and the route out.
   figure is derived from data already in hand.
 - **SC-005**: Each panel answers at least one question its card cannot — verified per panel
   against the specific question named in its user story.
-- **SC-006**: Adding a panel for one widget touches only that widget's own files plus a single
-  line of the shared registry. This is what allows the remaining panels to be built
-  independently and in parallel without colliding.
+- **SC-006**: Adding a panel for one widget touches only that widget's own files, a single line
+  of the shared registry, and the catalog sub-block reserved for it. This is what allows the
+  remaining panels to be built independently and in parallel without colliding, and it is
+  measurable: a follow-up panel's diff shows no edit to a line another panel also edits.
 - **SC-007**: Every pre-existing widget test suite passes without modification, evidencing that
   no card's behaviour moved.
 - **SC-008**: Three engines that currently ship with no user-facing consumer — the amortization
@@ -447,8 +448,19 @@ verify ordering, grouping and the route out.
   chosen for being structurally dissimilar. The shared primitives kit is **extracted from
   those two once built**, not designed ahead of them — a kit designed for nine imagined panels
   would have the wrong seams. Decided with the user.
-- **The remaining seven panels are independent follow-ups**, each intended for its own isolated
-  sandbox, built in parallel on this base. FR-002 and SC-006 exist to make that safe.
+- **Recent activity (US10) is folded into the base branch** rather than given a sandbox of its
+  own. It is the smallest panel in the set — a longer list and a hand-off — and the ceremony of
+  an isolated environment, a pull request and a review cycle costs more than the panel does.
+- **The remaining six panels are independent follow-ups** (US4–US9), each intended for its own
+  isolated sandbox, built in parallel on this base. FR-002 and SC-006 exist to make that safe.
+- **Two collision-proofing measures belong to the base branch**, because SC-006 is not true for
+  free: the translated copy required by FR-023 lives in five flat shared catalogs with no
+  per-feature regions, so six sandboxes appending to them would collide on adjacent lines in
+  every one. The base therefore (a) pre-carves a per-panel sub-block in each catalog so each
+  sandbox edits only non-adjacent lines it owns, and (b) establishes the shared kit as
+  **append-only** — a follow-up may add a primitive in a new file but never modify an existing
+  one, since the kit extracted from two panels is a hypothesis the remaining six will test.
+  Duplicated primitives are consolidated afterwards, not negotiated across live branches.
 - **Scope arrives by inheritance, not by re-derivation.** The panel renders inside the same
   providers the board does, so both axes arrive without plumbing. This is spec 056's payoff and
   the reason FR-012 can be stated as a constraint rather than as a mechanism.

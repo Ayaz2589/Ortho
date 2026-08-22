@@ -1,4 +1,32 @@
-Active feature: **spec 056 — person-scoped dashboard widgets**. Plan:
+Active feature: **spec 057 — widget detail panels**. Plan:
+`specs/057-widget-detail-panels/plan.md` (spec/research/data-model/quickstart/contracts alongside it).
+Since spec 037 every widget card has been clickable and every click has opened a panel reading
+**"Details coming soon."** — a real affordance over an unkept promise. The card is a GLANCE (one
+number on a uniform grid cell); the panel is the WHY. Almost nothing here is new financial meaning:
+three of the strongest panels are pure recovery of engines that ship today with **no UI consumer at
+all** — `upcomingAmortization`, `computeRolloverLedger` (which `budgetStatusForMonth` computes in
+full and then discards all but the last month of), and `simplifyDebts`. Desktop keeps the shared
+right-side `Drawer`; mobile becomes full-screen via the drawer's EXISTING `fullBleedOnMobile`
+(already proven by `AnnouncementHost` + `CsvImportFlow`) — chosen over a route-per-widget, whose
+accepted cost is that panels have no URL and no back-gesture dismissal. A shared `WidgetPanel`
+frame owns header/scope-caption/scroll/route-out/second-level; each panel is a BESPOKE propless
+component behind a new optional `Panel?: ComponentType` on `WidgetDefinition`, mirroring `Body`
+(a `PanelConfig` union would put all nine widgets' needs in one type — the spec-056 argument).
+Panels inherit BOTH scope axes free, since the drawer renders inside both providers. Scope is 9 of
+the 10 data widgets — **financial-health excluded** (the user's explicit scoping); the four
+navigation shortcuts are excluded structurally (they route, never open a panel). Two decisions are
+load-bearing for the BUILD rather than the product: the base branch pre-carves per-panel i18n
+sub-blocks in all five catalogs (they are flat 625-line objects with no reserved regions, so six
+sandboxes appending would collide thirty times), and the primitives kit is **extracted from two
+built panels, then append-only** — a follow-up may ADD a primitive, never modify one. Base branch =
+US1 frame + US2 home-equity + US3 budgets + US10 activity (folded in; too small for a sandbox);
+US4–US9 are six independent sandboxes on top, after it merges — see
+`specs/057-widget-detail-panels/contracts/follow-up-brief.md`. ⚠️ `Drawer`'s full-screen mode does
+NOT apply safe-area insets and the shell's padding can't reach a portaled fixed-inset element, so
+the FRAME applies them (not `Drawer` — that would move two shipped surfaces). No DB change, no
+migration, no new dependency. Fully TDD.
+
+Prior shipped: **spec 056 — person-scoped dashboard widgets**. Plan:
 `specs/056-person-scoped-widgets/plan.md` (spec/research/data-model/quickstart/contracts alongside it).
 The dashboard already asked "whose money is this?" — the member picker sits above the net hero — but
 the answer reached the hero ONLY. The widget board below kept reporting the household, so picking
