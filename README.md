@@ -19,7 +19,8 @@ month/range scope, toggled per-browser in Settings → Widgets (specs 034/035);
 housing (mortgage, rentals, multifamily occupancy); member settle-up;
 receipt/statement scan; connect-only Plaid plus SimpleFin bank sync (spec 028);
 dual-layer PDF data export/import under Settings → Data (spec 032); Stripe
-subscriptions with a paywall; 6 languages; 7 display currencies over a USD-cents ledger.
+subscriptions with a paywall (**currently disabled** — see `web/lib/subscriptionGate.ts`);
+6 languages; 7 display currencies over a USD-cents ledger.
 
 ## What's inside
 

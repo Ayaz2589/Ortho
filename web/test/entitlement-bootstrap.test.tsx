@@ -15,6 +15,13 @@ import {
 const h = vi.hoisted(() => ({ mock: null as SupabaseMock | null }))
 vi.mock('@/lib/supabase/client', () => ({ createClient: () => h.mock!.client }))
 
+// Spec 018's subscription system is currently DISABLED via lib/subscriptionGate. These suites
+// are its contract tests — they assert the machinery still behaves correctly, which is what
+// makes flipping the flag back on a safe, one-line change. So they pin the flag ON rather
+// than being deleted or skipped. The disabled-path behaviour is asserted separately in
+// test/subscriptions-disabled.test.tsx.
+vi.mock('@/lib/subscriptionGate', () => ({ SUBSCRIPTION_ENABLED: true }))
+
 import { AppStateProvider, useApp } from '@/lib/store'
 
 function dataset(overrides: Partial<SupabaseMockDataset> = {}): SupabaseMockDataset {

@@ -47,6 +47,7 @@ web/app/
   sign-in/page.tsx      8-digit email OTP (signInWithOtp → verifyOtp(type:'email')); bounces
                         signed-in users to /dashboard on mount; builds its own t()
   (app)/layout.tsx      AppStateProvider + Shell + biometric lock overlay + paywall gate
+                        (the paywall is inert while SUBSCRIPTION_ENABLED is false)
   (app)/dashboard, transactions{,/new,/edit}, planning, housing{,/new,/edit}, budgets, goals,
         settings{,/household,/cards,/deposit-accounts,/subscription,/currency,
                  /language,/appearance,/text-size,/widgets,/data,/account,/linked-banks}, plaid-oauth
