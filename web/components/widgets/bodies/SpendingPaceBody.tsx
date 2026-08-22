@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { useApp } from '@/lib/store'
 import { useDashboardScopeContext } from '@/lib/widgets/DashboardScopeContext'
+import { useScopedTransactions } from '@/lib/widgets/MoneyScopeContext'
 import { startOfDay } from '@/lib/format'
 
 // recharts stays behind next/dynamic (ssr:false) so it loads on demand and never
@@ -23,9 +24,14 @@ const DAY_MS = 24 * 60 * 60 * 1000
  * active scope window (clamped to `now`) so a selected past month shows that
  * month's pace, while the live view tracks today. Avg/day + delta vs the prior 30;
  * a spending DROP is sage `--positive` — never red.
+ *
+ * spec 056 — the buckets are built from the PEOPLE axis too: under person scope
+ * each expense contributes that person's stored share, so a household pace and a
+ * personal pace can never be mistaken for one another.
  */
 export function SpendingPaceBody() {
-  const { transactions, formatMoney, t } = useApp()
+  const { transactions: allTransactions, formatMoney, t } = useApp()
+  const transactions = useScopedTransactions(allTransactions)
   const { interval, now } = useDashboardScopeContext()
 
   // Anchor the trailing 30 at the last day of the window, but never in the future.

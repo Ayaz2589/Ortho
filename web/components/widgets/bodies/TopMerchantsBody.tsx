@@ -3,15 +3,23 @@
 import { useMemo } from 'react'
 import { useApp } from '@/lib/store'
 import { useDashboardScopeContext } from '@/lib/widgets/DashboardScopeContext'
+import { useScopedTransactions } from '@/lib/widgets/MoneyScopeContext'
 
 /**
  * Top-merchants widget body (spec 040 — Section 5). Ports the deleted
  * `TopMerchantsCard`: expenses within the scope window grouped by merchant, the
  * top 5 by total spend, each with a visit count. Reads PROPLESS from `useApp()` +
  * `useDashboardScopeContext()`. Text rows only.
+ *
+ * spec 056 — "where you spend the most" is answered for whoever the dashboard is
+ * scoped to. Under person scope both the totals and the visit counts come from
+ * that person's transactions, so a merchant the household frequents but they
+ * never visit drops off the list entirely rather than ranking on someone else's
+ * behalf.
  */
 export function TopMerchantsBody() {
-  const { transactions, formatMoney, t } = useApp()
+  const { transactions: allTransactions, formatMoney, t } = useApp()
+  const transactions = useScopedTransactions(allTransactions)
   const { interval } = useDashboardScopeContext()
 
   const entries = useMemo(() => {

@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { useApp } from '@/lib/store'
 import { useDashboardScopeContext } from '@/lib/widgets/DashboardScopeContext'
+import { useScopedTransactions } from '@/lib/widgets/MoneyScopeContext'
 import { savingsRate } from '@/lib/reports/savings'
 import { monthBoundsInterval } from '@/lib/useDashboardRange'
 
@@ -67,7 +68,11 @@ function monthTotals(transactions: Array<{ kind: string; amount_cents: number; d
 }
 
 export function SavingsTrendsBody() {
-  const { transactions, t, locale } = useApp()
+  // spec 056 — ONE scoped ledger feeds BOTH reads below: the per-month buckets and
+  // the previous-month comparison. They must share a subject; a personal headline
+  // beside a household comparison is the mixed-subject defect this feature removes.
+  const { transactions: allTransactions, t, locale } = useApp()
+  const transactions = useScopedTransactions(allTransactions)
   const { interval, isSpecificMonth, selectedMonth, availableMonths } = useDashboardScopeContext()
 
   const buckets = useMemo<MonthBucket[]>(() => {

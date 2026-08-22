@@ -1,4 +1,36 @@
-Active feature: **spec 054 — per-person budgets**. Plan: `specs/054-per-person-budgets/plan.md`
+Active feature: **spec 056 — person-scoped dashboard widgets**. Plan:
+`specs/056-person-scoped-widgets/plan.md` (spec/research/data-model/quickstart/contracts alongside it).
+The dashboard already asked "whose money is this?" — the member picker sits above the net hero — but
+the answer reached the hero ONLY. The widget board below kept reporting the household, so picking
+yourself put a personal net figure on top of a board showing everyone's spending pace and budgets:
+two subjects, one screen, nothing distinguishing them. Same error class as 051/052/054, and the last
+surface carrying it. No new attribution logic — this routes the picker into the existing spec-051
+people axis. **`lib/widgets/MoneyScopeContext.tsx`** is a deliberate SIBLING of
+`DashboardScopeContext`, so a body reads "whose money" exactly as it reads "which window" and stays
+**propless** (a `personId` prop would have changed `WidgetDefinition.Body`'s type for all fifteen
+widgets to serve six). `dashboard/page.tsx` holds a `MoneyScope` in STATE — mirroring
+`planning/page.tsx`'s `rawScope` + `resolveScope` — and the hero's `personId` is now derived from it;
+holding the scope rather than a string is load-bearing, since `personScope()` allocates and
+`resolveScope` returns the same reference. **Reading the context with no provider returns
+`HOUSEHOLD_SCOPE` instead of throwing** — the one divergence from the time axis, and the key decision:
+household scope is the IDENTITY projection (`scopeTransactions` returns the same array reference), so
+the default is not a guess, and every pre-existing `test/widgets/*` suite passes **unmodified**, which
+is the proof household output did not move (the spec-050 technique). A body joins by calling
+`useScopedTransactions(transactions)`; the memo lives once. Scoped: `spending-pace`, `top-merchants`,
+`savings-trends` (BOTH its bucket loop and its previous-month comparison — a personal headline beside
+a household comparison is the very bug), `activity`, `budgets` (limits AND spend, no fallback to a
+household limit). `household-balances` takes the axis by **filtering rows, never by consuming
+projected transactions** — projection rewrites `owner_ids` to one owner and deletes the payer↔co-owner
+relationship a debt derives from, so projected rows would report "All settled up." for a household
+that owes money (there is a guard case for exactly this). Picker default renamed "Everyone" →
+**"Household"**; the SHARED `Everyone` key is untouched because `PlanScopeBar` and `TxForm` still use
+it, and `Household` already existed in all five catalogs, so no catalog was edited. Deliberately
+unchanged: **`financial-health` and `goals`** (their own PR — pinned as identical under person scope;
+note health already scopes internally to the SIGNED-IN person, never the viewer's selection),
+`housing-costs`/`home-equity` (a property is a household asset) and the settings shortcuts. No DB
+change, no migration, no new dependency; golden vectors regenerate byte-identically. Fully TDD.
+
+Prior shipped: **spec 054 — per-person budgets**. Plan: `specs/054-per-person-budgets/plan.md`
 (spec/tasks alongside it). Budget LIMITS were the last household number with no PEOPLE axis: spec
 051 gave *spend* a scope but deliberately left limits household-level, so choosing a person on the
 Planning hub measured their share against an allowance sized for everyone — a milder form of the
@@ -12,8 +44,9 @@ upsert working unchanged. `scopeBudgets(budgets, scope)` joins `scopeTransaction
 `generateInsights`, so both halves of "spent X of Y" have one owner. **Person scope never falls
 back to the household limit** (FR-003) — that fallback is the spec-052 error class, so a person
 who has set no budget sees "Not set", not a borrowed number. `/planning/budget` gets the Planning
-hub's `PlanScopeBar`; the drawer takes `personId`/`personName`. The dashboard Budgets widget stays
-household-only (the board shows no whose-money control). Golden vectors regenerate byte-identically.
+hub's `PlanScopeBar`; the drawer takes `personId`/`personName`. The dashboard Budgets widget stayed
+household-only because the board carried no whose-money control — **spec 056 gave it one**, so that
+widget now honours both halves. Golden vectors regenerate byte-identically.
 Deliberately unchanged: financial health's `plan_engagement` (household-scoped by design) and any
 automatic pooling of one allowance into per-person shares (spec 050's deferred question).
 
