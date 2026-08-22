@@ -632,6 +632,12 @@ const catalog: Record<string, string> = {
   "No personal limit set for this category.": "이 카테고리에는 개인 한도가 설정되어 있지 않습니다.",
   // spec 057 — widget panels: US10 activity
   "See all transactions": "모든 거래 보기",
+  // spec 057 — widget panels: US5 savings-trends (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
 }
 
 export default catalog

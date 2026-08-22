@@ -103,6 +103,13 @@ panel inherits both. (FR-015, data-model P-4.)
 ```tsx
 'use client'
 
+import { useMemo } from 'react'
+import { useApp } from '@/lib/store'
+import { useDashboardScopeContext } from '@/lib/widgets/DashboardScopeContext'
+import { useMoneyScope, useScopedTransactions } from '@/lib/widgets/MoneyScopeContext'
+import { usePanelCaption, usePanelRouteOut, usePanelDetail } from '@/components/widgets/WidgetPanel'
+import { PanelEmpty, PanelSectionLabel, PanelRow } from '@/components/widgets/panels/kit'
+
 /**
  * <Widget> detail panel (spec 057, US<n>).
  *
@@ -110,9 +117,22 @@ panel inherits both. (FR-015, data-model P-4.)
  * Scope: honours <time | people | both | neither> — see D5.
  */
 export function ExamplePanel() {
-  const { transactions: all, formatMoney, t } = useApp()
+  const { transactions: all, formatMoney, t, resolveUser } = useApp()
+  const scope = useMoneyScope()
   const transactions = useScopedTransactions(all)     // people axis, if honoured
   const { interval, periodLabel } = useDashboardScopeContext()  // time axis, if honoured
+
+  // C-1: declare which axes you honour. Omit a field for an axis you ignore —
+  // never state one you don't (FR-013/FR-014). See WidgetPanel.tsx's PanelCaption.
+  usePanelCaption({
+    subject: scope.kind === 'person' ? resolveUser(scope.personId).name : t('Household'),
+    period: periodLabel,
+  })
+  // C-4, optional: a route-out footer to a fuller destination.
+  usePanelRouteOut({ label: t('…'), href: '/…' })
+  // FR-005/D6, optional: an explicit second level. `push` swaps the header's
+  // close for back and shows `content` until the member taps back or Escapes.
+  const { push } = usePanelDetail()
 
   const rows = useMemo(() => /* derive */, [transactions, interval])
 
@@ -120,14 +140,21 @@ export function ExamplePanel() {
 
   return (
     <>
-      {/* your content */}
+      <PanelSectionLabel>{t('…')}</PanelSectionLabel>
+      {rows.map((row) => (
+        <PanelRow key={row.id} label={row.label} value={formatMoney(row.cents)} />
+      ))}
     </>
   )
 }
 ```
 
 You render **content only**. The header, caption, scroll region, footer and back affordance are
-the frame's — do not render your own.
+the frame's — do not render your own. `usePanelCaption` / `usePanelRouteOut` / `usePanelDetail`
+are exported from `@/components/widgets/WidgetPanel` and only work when your `Panel` is rendered
+inside it (which `WidgetBoard` already does for every registered panel) — they throw if called
+outside that context, which is deliberate: a panel accidentally rendered standalone in a test
+should fail loudly rather than silently no-op.
 
 ---
 

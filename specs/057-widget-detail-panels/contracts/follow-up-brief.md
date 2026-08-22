@@ -17,6 +17,43 @@ strictly worse than waiting. What the base delivers, and what you would be build
 before then, is: the `Panel?` registry field, `WidgetPanel`, the mobile full-screen presentation,
 the extracted kit, and your reserved catalog sub-blocks.
 
+**What actually shipped** (this section is written after the base merged, against the real code —
+trust this over the rest of the document if the two ever disagree):
+
+- `WidgetPanel` (`web/components/widgets/WidgetPanel.tsx`) owns the `Drawer` itself and exports
+  three hooks your `Panel` calls directly — no props, since `Panel` stays a bare `ComponentType`:
+  - `usePanelCaption({ subject?, period? })` — C-1. Call once; omit whichever field an axis you
+    don't honour.
+  - `usePanelRouteOut({ label, href })` — C-4, optional.
+  - `usePanelDetail()` → `{ push(title, content), pop() }` — FR-005/D6, optional. `push` swaps the
+    header's close control for back and shows `content` until back/Escape; the previous content
+    unmounts while a detail is shown (it is not hidden with CSS), so keep detail views to derived
+    data, not local state you need preserved underneath.
+  All three throw if called outside a `WidgetPanel` — a panel rendered standalone in a test needs
+  a `<WidgetPanel open title="…" onClose={…}>` wrapper (see `test/widgets/panels/*.test.tsx` for
+  the pattern all three shipped panels use).
+- The kit (`web/components/widgets/panels/kit/`, imported from
+  `@/components/widgets/panels/kit`) has exactly three primitives so far:
+  - `PanelEmpty` — the empty-state wrapper (contract C-2).
+  - `PanelSectionLabel` — a small uppercase group heading.
+  - `PanelRow` — a `label`/`value` line; `labelClassName`/`valueClassName` override which side
+    reads as prominent (a mortgage's name is the headline in home equity; a transaction's amount
+    is in budgets — the kit does not guess).
+  Deliberately **not** extracted: a headline-stat primitive (only home equity's shape needed one)
+  and any multi-column dense row (home equity's amortization row is 3-column and bespoke). Don't
+  assume either exists — check the kit's actual files before reaching for something that isn't
+  there.
+- Your reserved catalog sub-block is already carved into all five `web/lib/i18n/{bn,es,ja,ko,zh}.ts`
+  files, in registry order, as a comment-only marker with no keys under it yet, e.g.:
+  ```ts
+  // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  ```
+  Find yours with `grep -n "US<n>" web/lib/i18n/es.ts` (substitute your story number), then add
+  your keys directly below that comment line, in that file, in all five catalogs. Do not add a
+  new header comment of your own or touch any other sub-block — including the three that already
+  have real content (US2 home equity, US3 budgets, US10 activity), which sit earlier in the same
+  region and are NOT reserved-only.
+
 ---
 
 ## The six
