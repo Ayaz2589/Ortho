@@ -646,6 +646,11 @@ const catalog: Record<string, string> = {
   "{0} this period, compared with {1} the period before.": "今期は{0}、前期は{1}でした。",
   // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  "Properties": "物件",
+  "{0} of {1} units occupied": "{1}戸中{0}戸が入居中",
+  "Share of income": "収入に占める割合",
+  "Housing is {0}% of {1} income.": "住居費は{1}の収入の{0}%です。",
+  "See all properties": "すべての物件を見る",
 }
 
 export default catalog

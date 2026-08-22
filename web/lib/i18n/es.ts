@@ -646,6 +646,11 @@ const catalog: Record<string, string> = {
   "{0} this period, compared with {1} the period before.": "{0} este período, frente a {1} el período anterior.",
   // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  "Properties": "Propiedades",
+  "{0} of {1} units occupied": "{0} de {1} unidades ocupadas",
+  "Share of income": "Parte de los ingresos",
+  "Housing is {0}% of {1} income.": "La vivienda es el {0}% de los ingresos de {1}.",
+  "See all properties": "Ver todas las propiedades",
 }
 
 export default catalog

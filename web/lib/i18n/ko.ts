@@ -646,6 +646,11 @@ const catalog: Record<string, string> = {
   "{0} this period, compared with {1} the period before.": "이번 기간 {0}, 이전 기간 {1}.",
   // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  "Properties": "부동산",
+  "{0} of {1} units occupied": "{1}세대 중 {0}세대 입주",
+  "Share of income": "소득 대비 비율",
+  "Housing is {0}% of {1} income.": "주거비는 {1} 소득의 {0}%입니다.",
+  "See all properties": "모든 부동산 보기",
 }
 
 export default catalog

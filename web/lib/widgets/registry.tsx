@@ -11,6 +11,7 @@ import { ActivityPanel } from '@/components/widgets/panels/ActivityPanel'
 import { SavingsTrendsBody } from '@/components/widgets/bodies/SavingsTrendsBody'
 import { SavingsTrendsPanel } from '@/components/widgets/panels/SavingsTrendsPanel'
 import { HousingCostsBody } from '@/components/widgets/bodies/HousingCostsBody'
+import { HousingCostsPanel } from '@/components/widgets/panels/HousingCostsPanel'
 import { HomeEquityBody } from '@/components/widgets/bodies/HomeEquityBody'
 import { HomeEquityPanel } from '@/components/widgets/panels/HomeEquityPanel'
 import { FinancialHealthBody } from '@/components/widgets/bodies/FinancialHealthBody'
@@ -140,6 +141,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'Your total monthly housing cost across all properties.',
     defaultEnabled: false,
     Body: HousingCostsBody,
+    Panel: HousingCostsPanel,
   },
   {
     id: 'home-equity',

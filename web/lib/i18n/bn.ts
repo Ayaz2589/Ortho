@@ -646,6 +646,11 @@ const catalog: Record<string, string> = {
   "{0} this period, compared with {1} the period before.": "এই সময়কালে {0}, আগের সময়কালে {1}।",
   // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  "Properties": "সম্পত্তি",
+  "{0} of {1} units occupied": "{1}টি ইউনিটের মধ্যে {0}টি দখলকৃত",
+  "Share of income": "আয়ের অংশ",
+  "Housing is {0}% of {1} income.": "আবাসন {1} আয়ের {0}%।",
+  "See all properties": "সব সম্পত্তি দেখুন",
 }
 
 export default catalog
