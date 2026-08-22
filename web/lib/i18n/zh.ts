@@ -636,7 +636,11 @@ const catalog: Record<string, string> = {
   "Amount saved": "结余金额",
   "Best month": "最佳月份",
   "Lowest month": "最差月份",
-  // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US4 spending-pace
+  "60-day trend": "60天趋势",
+  "Prior 30 days": "前30天",
+  "Biggest movers": "变动最大的类别",
+  "Where it went": "支出去向",
   // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US6 top-merchants
   "Monthly charge": "每月扣款",
@@ -645,7 +649,6 @@ const catalog: Record<string, string> = {
   "Last seen": "最近一次",
   "{0} this period, compared with {1} the period before.": "本期{0}，上期{1}。",
   // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
-  // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   "Properties": "房产",
   "{0} of {1} units occupied": "{1}个单元中有{0}个已入住",
   "Share of income": "占收入的比例",

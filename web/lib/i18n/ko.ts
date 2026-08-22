@@ -636,7 +636,11 @@ const catalog: Record<string, string> = {
   "Amount saved": "저축액",
   "Best month": "가장 좋은 달",
   "Lowest month": "가장 낮은 달",
-  // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US4 spending-pace
+  "60-day trend": "60일 추이",
+  "Prior 30 days": "이전 30일",
+  "Biggest movers": "변동이 가장 큰 항목",
+  "Where it went": "지출 내역",
   // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US6 top-merchants
   "Monthly charge": "매월 청구",
@@ -645,7 +649,6 @@ const catalog: Record<string, string> = {
   "Last seen": "마지막 확인",
   "{0} this period, compared with {1} the period before.": "이번 기간 {0}, 이전 기간 {1}.",
   // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
-  // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   "Properties": "부동산",
   "{0} of {1} units occupied": "{1}세대 중 {0}세대 입주",
   "Share of income": "소득 대비 비율",
