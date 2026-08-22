@@ -1,30 +1,46 @@
-Active feature: **spec 057 — widget detail panels**. Plan:
-`specs/057-widget-detail-panels/plan.md` (spec/research/data-model/quickstart/contracts alongside it).
-Since spec 037 every widget card has been clickable and every click has opened a panel reading
-**"Details coming soon."** — a real affordance over an unkept promise. The card is a GLANCE (one
-number on a uniform grid cell); the panel is the WHY. Almost nothing here is new financial meaning:
-three of the strongest panels are pure recovery of engines that ship today with **no UI consumer at
-all** — `upcomingAmortization`, `computeRolloverLedger` (which `budgetStatusForMonth` computes in
-full and then discards all but the last month of), and `simplifyDebts`. Desktop keeps the shared
-right-side `Drawer`; mobile becomes full-screen via the drawer's EXISTING `fullBleedOnMobile`
-(already proven by `AnnouncementHost` + `CsvImportFlow`) — chosen over a route-per-widget, whose
-accepted cost is that panels have no URL and no back-gesture dismissal. A shared `WidgetPanel`
-frame owns header/scope-caption/scroll/route-out/second-level; each panel is a BESPOKE propless
-component behind a new optional `Panel?: ComponentType` on `WidgetDefinition`, mirroring `Body`
-(a `PanelConfig` union would put all nine widgets' needs in one type — the spec-056 argument).
-Panels inherit BOTH scope axes free, since the drawer renders inside both providers. Scope is 9 of
-the 10 data widgets — **financial-health excluded** (the user's explicit scoping); the four
-navigation shortcuts are excluded structurally (they route, never open a panel). Two decisions are
-load-bearing for the BUILD rather than the product: the base branch pre-carves per-panel i18n
-sub-blocks in all five catalogs (they are flat 625-line objects with no reserved regions, so six
-sandboxes appending would collide thirty times), and the primitives kit is **extracted from two
-built panels, then append-only** — a follow-up may ADD a primitive, never modify one. Base branch =
-US1 frame + US2 home-equity + US3 budgets + US10 activity (folded in; too small for a sandbox);
-US4–US9 are six independent sandboxes on top, after it merges — see
-`specs/057-widget-detail-panels/contracts/follow-up-brief.md`. ⚠️ `Drawer`'s full-screen mode does
-NOT apply safe-area insets and the shell's padding can't reach a portaled fixed-inset element, so
-the FRAME applies them (not `Drawer` — that would move two shipped surfaces). No DB change, no
-migration, no new dependency. Fully TDD.
+Active feature: **spec 057 — widget detail panels**, base branch BUILT (US1 + US2 + US3 + US10 +
+collision-proofing; US4–US9 not started). Plan: `specs/057-widget-detail-panels/plan.md`
+(spec/research/data-model/quickstart/contracts alongside it). Since spec 037 every widget card has
+been clickable and every click has opened a panel reading **"Details coming soon."** — a real
+affordance over an unkept promise. The card is a GLANCE (one number on a uniform grid cell); the
+panel is the WHY. Almost nothing here is new financial meaning: this base branch alone recovers two
+engines that shipped with **no UI consumer at all** — `upcomingAmortization`/`maturityDate`/
+`yearsRemaining` (home equity) and the rollover ledger `budgetStatusForMonth` always computed and
+discarded all but the last month of, now exported whole as `budgetLedgerForMonth` (budgets); a third,
+`simplifyDebts`, is a follow-up's to recover. Desktop keeps the shared right-side `Drawer`; mobile is
+full-screen via the drawer's EXISTING `fullBleedOnMobile` (already proven by `AnnouncementHost` +
+`CsvImportFlow`) — chosen over a route-per-widget, whose accepted cost is that panels have no URL and
+no back-gesture dismissal. `WidgetDefinition` gained one field, `Panel?: ComponentType`, mirroring
+`Body` (a `PanelConfig` union would put all nine widgets' needs in one type — the spec-056 argument);
+absent ⇒ the unmodified placeholder. **`WidgetPanel.tsx` owns the `Drawer` itself** (`WidgetBoard`
+no longer renders `Drawer` directly, mirroring `CsvImportFlow`'s `CsvDrawer`) and exports three hooks
+a propless `Panel` calls in place of props — `usePanelCaption({subject?, period?})` (states only the
+axes the panel actually honours, per D5; home equity honours neither, budgets both, activity subject
+only), `usePanelRouteOut({label, href})`, and `usePanelDetail()` → `{push, pop}` for an optional
+second level (a pushed mortgage's schedule; back swaps in for close and Escape steps back once before
+closing). All three throw outside a `WidgetPanel`, so a standalone-rendered panel test fails loudly.
+Scope is 9 of the 10 data widgets — **financial-health excluded** (the user's explicit scoping); the
+four navigation shortcuts are excluded structurally (they route, never open a panel). Two decisions
+are load-bearing for the FAN-OUT rather than the product, both done on this branch: all five i18n
+catalogs now carry a `spec 057` region with one commented sub-block per panel **in registry order,
+including the six US4–US9 don't-yet-exist panels** (`grep -n "spec 057"` finds nine per catalog; the
+catalogs are flat 625-line objects with no reserved regions otherwise, so six sandboxes appending
+would have collided thirty times); and a primitives kit at `components/widgets/panels/kit/`
+(`PanelEmpty`, `PanelSectionLabel`, `PanelRow`) was extracted only AFTER home-equity and budgets both
+existed — deliberately dissimilar shapes, so what they shared was evidence, not a guess — then proven
+a third time by `activity`, built ON the kit, before six sandboxes could depend on it; it is
+**append-only** from here — a follow-up may ADD a primitive in a new file, never modify one. US10
+(activity) is folded into the base rather than given its own sandbox — too small to be worth the
+ceremony. US4–US9 are six independent sandboxes on top, after this branch merges — see
+`specs/057-widget-detail-panels/contracts/follow-up-brief.md` (finalized against what actually
+shipped, including the real hook/kit names above) and `contracts/panel-contract.md`. ⚠️ `Drawer`'s
+full-screen mode does NOT apply safe-area insets and the shell's padding can't reach a portaled
+fixed-inset element, so `WidgetPanel` applies `var(--safe-top)`/`var(--safe-bottom)` itself — `Drawer`
+itself is untouched, which would have moved two unrelated shipped surfaces. No DB change, no
+migration, no new dependency. Fully TDD — every pre-existing suite (`test/widgets/widget-board.test.tsx`
+included, D11's regression lock) passed unmodified throughout. Unverified in this sandbox: the manual
+phone/desktop visual walk (quickstart §2) and the real-iOS safe-area check (quickstart §3, no device
+available) — reported as unrun, not assumed.
 
 Prior shipped: **spec 056 — person-scoped dashboard widgets**. Plan:
 `specs/056-person-scoped-widgets/plan.md` (spec/research/data-model/quickstart/contracts alongside it).

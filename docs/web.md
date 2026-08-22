@@ -301,8 +301,38 @@ for extensionless paths, which infinite-loops signed-out native launches.
   `top-merchants`, and `activity` (a most-recent-6 live feed that ignores the scope window). Bodies
   reuse named money helpers (`budgetStatusForMonth`, `goalProgress`/`goalPacing`, `savingsRate`)
   rather than re-implementing math; loss is never red. Every widget card is a **click target** (spec
-  037): a full-bleed overlay `<button>` opens the shared right-side `Drawer` with the widget's title
-  and the standard close button — the panel body is a placeholder for the future drill-down.
+  037): a full-bleed overlay `<button>` opens a detail panel — the drill-down spec 037 left as a
+  placeholder, made real by spec 057 (below).
+- **Every data widget can declare a detail panel (spec 057)**: `WidgetDefinition` gains an optional,
+  propless `Panel?: ComponentType` alongside `Body` — the same "no props, ever" argument spec 056
+  already made for `Body`, so adding a panel never touches the board, Settings, or any other widget.
+  Absent ⇒ the original `"Details coming soon."` placeholder; present ⇒ it renders inside the shared
+  `WidgetPanel` frame (`components/widgets/WidgetPanel.tsx`), which now owns the `Drawer` `WidgetBoard`
+  used to render inline — a right-side drawer over a dimmed board at ≥1024px, `Drawer`'s existing
+  `fullBleedOnMobile` full-screen mode below it (unmodified; already proven by `AnnouncementHost` +
+  `CsvImportFlow`). `Drawer`'s full-screen mode does **not** apply safe-area insets, so `WidgetPanel`
+  itself carries `var(--safe-top)`/`var(--safe-bottom)` padding there — deliberately not added to
+  `Drawer`, which would move two unrelated shipped surfaces. A panel is propless like `Body`, so it
+  talks to the frame through three hooks `WidgetPanel.tsx` exports rather than props: `usePanelCaption`
+  (states which period/subject the figures describe — omitting whichever axis the panel doesn't
+  honour, never claiming one it doesn't), `usePanelRouteOut` (an optional footer link to a fuller
+  destination), and `usePanelDetail` (an optional second level — `push(title, content)` swaps the
+  header's close control for back and steps back on Escape before closing, `Drawer`'s existing
+  `onEscape` mechanism from `CsvImportFlow`'s `CsvDrawer`). `components/widgets/panels/` is a
+  follow-up panel's own territory — one file there, one test under `test/widgets/panels/`, one
+  registry line, and its reserved sub-block in each of the five i18n catalogs (a flat object with no
+  reserved regions otherwise, so this branch pre-carved a labelled, non-adjacent block per panel — see
+  `specs/057-widget-detail-panels/contracts/`) are the only four touch points, which is what let
+  US4–US9 build in six parallel sandboxes without colliding. A small kit
+  (`components/widgets/panels/kit/`: `PanelEmpty`, `PanelSectionLabel`, `PanelRow`) was extracted only
+  after two structurally dissimilar panels (home equity, budgets) existed, and is **append-only** from
+  there — a follow-up may add a primitive in a new file, never modify an existing one. Shipped on the
+  base: `home-equity` (the amortization schedule + payoff date, previously computed and discarded on
+  every card render) and `budgets` (the rollover ledger `budgetStatusForMonth` already built and kept
+  only the last month of — recovered as `budgetLedgerForMonth` — plus the composing transactions and an
+  honestly-worded month-end projection) and `activity` (a longer date-grouped feed; ignores the time
+  window by design, matching its card). Out of scope: `financial-health` (explicit exclusion) and the
+  four navigation-shortcut widgets (they route, never open a panel).
 - **The board has TWO scope axes (spec 056)**: time, above, and **people**. The people axis is
   `lib/widgets/MoneyScopeContext.tsx` — a deliberate sibling of `DashboardScopeContext`, so a body
   reads "whose money" exactly as it already reads "which window" and stays **propless** (threading a
