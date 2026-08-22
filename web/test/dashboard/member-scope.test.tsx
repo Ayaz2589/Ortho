@@ -5,7 +5,7 @@
 // hero, so the same four numbers appeared twice in two different shapes.
 //
 // Now the selector sits ABOVE the hero and re-scopes the hero itself: with
-// "Everyone" the hero is the household's, with a member picked the same hero —
+// "Household" the hero is the household's, with a member picked the same hero —
 // net figure, spend bar, income/expenses, and the heatmap on the right — shows
 // that person's share. Picking a member adds a Transfers figure, because a
 // person's net includes money moved between members while a household's does not.
@@ -63,14 +63,14 @@ afterEach(() => {
 })
 
 describe('MemberScopePicker', () => {
-  it('defaults to Everyone and offers each household member', () => {
+  it('defaults to Household and offers each household member', () => {
     render(<MemberScopePicker personId={null} onChange={vi.fn()} />)
     const trigger = screen.getByRole('button', { expanded: false })
-    expect(trigger).toHaveTextContent('Everyone')
+    expect(trigger).toHaveTextContent('Household')
 
     fireEvent.click(trigger)
     const list = screen.getByRole('listbox')
-    expect(within(list).getByRole('option', { name: 'Everyone' })).toHaveAttribute('aria-selected', 'true')
+    expect(within(list).getByRole('option', { name: 'Household' })).toHaveAttribute('aria-selected', 'true')
     expect(within(list).getByRole('option', { name: 'Alice' })).toBeTruthy()
     expect(within(list).getByRole('option', { name: 'Bob' })).toBeTruthy()
   })
@@ -85,12 +85,12 @@ describe('MemberScopePicker', () => {
     expect(screen.queryByRole('listbox')).toBeNull()
   })
 
-  it('returns to Everyone', () => {
+  it('returns to Household', () => {
     const onChange = vi.fn()
     render(<MemberScopePicker personId="p2" onChange={onChange} />)
     expect(screen.getByRole('button', { expanded: false })).toHaveTextContent('Bob')
     fireEvent.click(screen.getByRole('button', { expanded: false }))
-    fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: 'Everyone' }))
+    fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: 'Household' }))
     expect(onChange).toHaveBeenCalledWith(null)
   })
 
@@ -101,7 +101,7 @@ describe('MemberScopePicker', () => {
   })
 })
 
-describe('NetSummaryHero scoped to Everyone', () => {
+describe('NetSummaryHero scoped to Household', () => {
   it('shows household income, expenses and net, with no transfers figure', () => {
     state.txns = MONTH
     render(<NetSummaryHero personId={null} />)

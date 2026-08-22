@@ -7,15 +7,22 @@ import { useApp } from '@/lib/store'
 import type { User } from '@/lib/types'
 
 /**
- * Who the dashboard is about. Sits ABOVE the net hero and re-scopes it: with
- * "Everyone" the hero is the household's, with a member picked the same hero and
- * heatmap show that person's share (spec 043 US2, reworked).
+ * Who the dashboard is about. Sits ABOVE the net hero and re-scopes the WHOLE page
+ * — the hero, its heatmap, and (since spec 056) every money-reporting widget on the
+ * board below. With "Household" those are the household's figures; with a member
+ * picked they are that person's share.
  *
  * The earlier version was a native `<select>` below the hero that revealed a
  * SECOND row of personal figures, so the same four numbers appeared twice in two
  * shapes. One selector, one set of figures, and it reads as the question the page
  * answers rather than as a form field. Visually it matches `MonthPicker` — the
  * dashboard's other scope control — so the two header-level choices look alike.
+ *
+ * The default option says "Household", not "Everyone" (spec 056 US2): the control
+ * offers a choice between two SUBJECTS, and "Everyone vs. Alice" pairs a quantity
+ * with a person where "Household vs. Alice" pairs like with like. The shared
+ * `Everyone` i18n key is deliberately left alone — `PlanScopeBar` and `TxForm`'s
+ * "Who is this for?" still use it for their own controls.
  *
  * A single-person household gets nothing: the hero is already that person's.
  */
@@ -72,7 +79,7 @@ export function MemberScopePicker({
         )}
         style={{ background: 'var(--chip-bg)' }}
       >
-        {active ? active.name : t('Everyone')}
+        {active ? active.name : t('Household')}
         <ChevronDown size={14} className="text-text-3" />
       </button>
 
@@ -83,7 +90,7 @@ export function MemberScopePicker({
           className="absolute left-0 top-full z-50 mt-1 max-h-72 w-48 overflow-auto rounded-xl border border-hairline bg-surface py-1"
           style={{ boxShadow: 'var(--shadow-sheet)' }}
         >
-          <Option label={t('Everyone')} selected={personId === null} onClick={() => pick(null)} />
+          <Option label={t('Household')} selected={personId === null} onClick={() => pick(null)} />
           {people.map((m) => (
             <Option
               key={m.id}

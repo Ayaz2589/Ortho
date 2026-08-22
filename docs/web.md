@@ -303,6 +303,34 @@ for extensionless paths, which infinite-loops signed-out native launches.
   rather than re-implementing math; loss is never red. Every widget card is a **click target** (spec
   037): a full-bleed overlay `<button>` opens the shared right-side `Drawer` with the widget's title
   and the standard close button — the panel body is a placeholder for the future drill-down.
+- **The board has TWO scope axes (spec 056)**: time, above, and **people**. The people axis is
+  `lib/widgets/MoneyScopeContext.tsx` — a deliberate sibling of `DashboardScopeContext`, so a body
+  reads "whose money" exactly as it already reads "which window" and stays **propless** (threading a
+  `personId` would have changed `WidgetDefinition.Body`'s type for all fifteen widgets to serve six).
+  `app/(app)/dashboard/page.tsx` holds a `MoneyScope` in state — mirroring `planning/page.tsx`'s
+  `rawScope` + `resolveScope` pattern — and supplies it via `MoneyScopeProvider`;
+  `MemberScopePicker` writes it, and the hero's `personId` is now *derived* from it. Holding the
+  scope (rather than a `personId` string) is load-bearing: `personScope()` allocates, so deriving it
+  during render would hand a fresh object to every memo on every pass, while `resolveScope` returns
+  the same reference. **Reading the context outside a provider returns `HOUSEHOLD_SCOPE` rather than
+  throwing** (the one divergence from the time axis): household scope is the *identity* projection —
+  `scopeTransactions` returns the same array reference — so the default is not a guess, and it lets
+  every pre-existing `test/widgets/*` suite keep passing **unmodified**, which is what proves
+  household output did not move. A body joins the axis by calling `useScopedTransactions(transactions)`
+  in place of reading `transactions`; the projection memo lives once, in the context module. Scoped:
+  `spending-pace`, `top-merchants`, `savings-trends` (**both** its bucket loop and its previous-month
+  comparison), `activity`, and `budgets` (limits via `scopeBudgets` AND spend via `scopeTransactions`,
+  with **no** fallback to a household limit for a person who set none). `household-balances` takes the
+  axis by **filtering rows**, never by consuming projected transactions — projection rewrites
+  `owner_ids` to a single owner and so deletes the payer↔co-owner relationship a debt is derived from;
+  fed projected rows it would calmly report "All settled up." for a household that owes money (guard
+  case in `test/widgets/household-balances.test.tsx`). Not scoped: `housing-costs`/`home-equity` (a
+  property is a household asset) and the settings shortcuts (no money). **`financial-health` and
+  `goals` are excluded pending their own change** and are pinned as unchanged under person scope; note
+  `financial-health` already scopes internally (spec 052) but to the *signed-in* person, never the
+  viewer's selection. The dashboard picker's default option reads **"Household"**; the shared
+  `Everyone` key is untouched because `PlanScopeBar` and `TxForm` still use it
+  (`test/dashboard/scope-copy-isolation.test.tsx`).
 - **Net summary is baked into the overview, not a widget** (`components/dashboard/NetSummaryHero.tsx`):
   the most prominent element — income − expenses over the shared window, rendered card-less above the
   board, always shown (not toggleable). To its right sits the **daily-spending heatmap**

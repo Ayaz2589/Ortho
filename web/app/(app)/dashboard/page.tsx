@@ -11,6 +11,13 @@ import {
   DashboardScopeProvider,
   useDashboardScopeContext,
 } from '@/lib/widgets/DashboardScopeContext'
+import { MoneyScopeProvider } from '@/lib/widgets/MoneyScopeContext'
+import {
+  HOUSEHOLD_SCOPE,
+  personScope,
+  resolveScope,
+  type MoneyScope,
+} from '@/lib/scope/moneyScope'
 
 /**
  * The overview header (spec 035; dashboard polish). The "Dashboard" title and the
@@ -55,23 +62,44 @@ function DashboardHeader() {
  * `DashboardScopeProvider` so the whole dashboard reflects the same window; which
  * widgets appear is a per-browser preference toggled in Settings → Widgets.
  *
- * Member scope is deliberately page-level state, not context: it re-scopes the
- * hero (and the heatmap inside it) only. The widget board stays household-wide,
- * so a widget never silently changes meaning under a control it doesn't show.
+ * Member scope (spec 056) is the PEOPLE axis, and it now reaches the whole page.
+ * It used to re-scope the hero alone while the board below stayed household-wide,
+ * so picking a person left two different subjects on one screen — a personal net
+ * figure sitting on top of everyone's spending pace, with nothing saying so. The
+ * page holds the `MoneyScope` (mirroring `planning/page.tsx`) and supplies it to
+ * the board through `MoneyScopeProvider`; the hero keeps taking a `personId`,
+ * which is now DERIVED from that scope rather than being the source of truth.
+ *
+ * Two details are load-bearing:
+ *  - the scope lives in STATE rather than being rebuilt from a `personId` during
+ *    render, because `personScope()` allocates and every widget memo downstream
+ *    keys on the scope's identity; `resolveScope` returns the same object, so
+ *    re-resolving on each render is free.
+ *  - re-resolving against the live roster is what makes a person removed
+ *    mid-session degrade to the household instead of blanking the board.
  *
  * The former Reports MODE (spec 027) is gone — its savings-rate view now lives on
  * the board as the `savings-trends` widget (spec 036 follow-up), so the Dashboard
  * is a single view with no Overview/Reports toggle.
  */
 export default function DashboardPage() {
-  const [personId, setPersonId] = useState<string | null>(null)
+  const { householdMembers } = useApp()
+  const [rawScope, setScope] = useState<MoneyScope>(HOUSEHOLD_SCOPE)
+  const scope = resolveScope(rawScope, (householdMembers ?? []).map((m) => m.id))
+  const personId = scope.kind === 'person' ? scope.personId : null
+
   return (
     <div className="mx-auto w-full max-w-[1080px]">
       <DashboardScopeProvider>
         <DashboardHeader />
-        <MemberScopePicker personId={personId} onChange={setPersonId} />
+        <MemberScopePicker
+          personId={personId}
+          onChange={(id) => setScope(id ? personScope(id) : HOUSEHOLD_SCOPE)}
+        />
         <NetSummaryHero personId={personId} />
-        <WidgetBoard />
+        <MoneyScopeProvider scope={scope}>
+          <WidgetBoard />
+        </MoneyScopeProvider>
       </DashboardScopeProvider>
     </div>
   )

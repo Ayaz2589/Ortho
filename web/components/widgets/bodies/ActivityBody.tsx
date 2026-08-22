@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { useApp } from '@/lib/store'
+import { useScopedTransactions } from '@/lib/widgets/MoneyScopeContext'
 import { categoryMeta } from '@/lib/categories'
 import { shortDate } from '@/lib/format'
 
@@ -11,12 +12,18 @@ const RECENT_LIMIT = 5
 
 /**
  * Activity widget body (spec 041 — Section 6). A live feed of the most-recent
- * transactions household-wide — it deliberately IGNORES the scope window (O-2), so
- * it reads only `useApp()` and never the scope context. Each row: category icon +
- * merchant + owner + amount + date, newest first.
+ * transactions — it deliberately IGNORES the TIME window (O-2), so it never reads
+ * the dashboard's time scope. Each row: category icon + merchant + owner + amount
+ * + date, newest first.
+ *
+ * spec 056 — the two axes are independent, so ignoring time does not mean ignoring
+ * PEOPLE. Under person scope the feed narrows to rows that person is party to and
+ * shows their share; the owner line then reads as them, because projection rewrites
+ * `owner_ids` to the single owner.
  */
 export function ActivityBody() {
-  const { transactions, ownersDisplay, formatMoney, t, locale } = useApp()
+  const { transactions: allTransactions, ownersDisplay, formatMoney, t, locale } = useApp()
+  const transactions = useScopedTransactions(allTransactions)
 
   const recent = useMemo(
     () =>
