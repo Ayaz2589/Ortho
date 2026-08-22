@@ -632,7 +632,10 @@ const catalog: Record<string, string> = {
   "No personal limit set for this category.": "このカテゴリには個人の上限が設定されていません。",
   // spec 057 — widget panels: US10 activity
   "See all transactions": "すべての取引を見る",
-  // spec 057 — widget panels: US5 savings-trends (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US5 savings-trends
+  "Amount saved": "貯蓄額",
+  "Best month": "最も良い月",
+  "Lowest month": "最も低い月",
   // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)

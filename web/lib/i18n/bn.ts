@@ -632,7 +632,10 @@ const catalog: Record<string, string> = {
   "No personal limit set for this category.": "এই বিভাগের জন্য কোনো ব্যক্তিগত সীমা নির্ধারণ করা হয়নি।",
   // spec 057 — widget panels: US10 activity
   "See all transactions": "সব লেনদেন দেখুন",
-  // spec 057 — widget panels: US5 savings-trends (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US5 savings-trends
+  "Amount saved": "সঞ্চিত পরিমাণ",
+  "Best month": "সেরা মাস",
+  "Lowest month": "সর্বনিম্ন মাস",
   // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
