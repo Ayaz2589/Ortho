@@ -1,6 +1,7 @@
 import { type ComponentType } from 'react'
 import { SpendingPaceBody } from '@/components/widgets/bodies/SpendingPaceBody'
 import { BudgetsBody } from '@/components/widgets/bodies/BudgetsBody'
+import { BudgetsPanel } from '@/components/widgets/panels/BudgetsPanel'
 import { GoalsBody } from '@/components/widgets/bodies/GoalsBody'
 import { TopMerchantsBody } from '@/components/widgets/bodies/TopMerchantsBody'
 import { HouseholdBalancesBody } from '@/components/widgets/bodies/HouseholdBalancesBody'
@@ -95,6 +96,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'Category budgets and what is left in each.',
     defaultEnabled: true,
     Body: BudgetsBody,
+    Panel: BudgetsPanel,
   },
   {
     id: 'goals',

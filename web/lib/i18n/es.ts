@@ -625,6 +625,11 @@ const catalog: Record<string, string> = {
   "Upcoming payments": "Próximos pagos",
   "{0} principal": "{0} de principal",
   "{0} interest": "{0} de interés",
+  // spec 057 — widget panels: US3 budgets
+  "Transactions this month": "Transacciones este mes",
+  "Recent months": "Meses recientes",
+  "Projected to reach {0} by month end at the current pace.": "Proyectado a alcanzar {0} para fin de mes al ritmo actual.",
+  "No personal limit set for this category.": "No hay un límite personal establecido para esta categoría.",
 }
 
 export default catalog

@@ -625,6 +625,11 @@ const catalog: Record<string, string> = {
   "Upcoming payments": "今後の支払い",
   "{0} principal": "元金 {0}",
   "{0} interest": "利息 {0}",
+  // spec 057 — widget panels: US3 budgets
+  "Transactions this month": "今月の取引",
+  "Recent months": "直近の月",
+  "Projected to reach {0} by month end at the current pace.": "現在のペースでは月末までに{0}に達する見込みです。",
+  "No personal limit set for this category.": "このカテゴリには個人の上限が設定されていません。",
 }
 
 export default catalog

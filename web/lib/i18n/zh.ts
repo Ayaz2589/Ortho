@@ -625,6 +625,11 @@ const catalog: Record<string, string> = {
   "Upcoming payments": "即将到期的还款",
   "{0} principal": "本金 {0}",
   "{0} interest": "利息 {0}",
+  // spec 057 — widget panels: US3 budgets
+  "Transactions this month": "本月交易",
+  "Recent months": "近几个月",
+  "Projected to reach {0} by month end at the current pace.": "按目前的速度，预计到月底将达到{0}。",
+  "No personal limit set for this category.": "此类别尚未设置个人限额。",
 }
 
 export default catalog

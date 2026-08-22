@@ -625,6 +625,11 @@ const catalog: Record<string, string> = {
   "Upcoming payments": "আসন্ন পরিশোধ",
   "{0} principal": "{0} মূলধন",
   "{0} interest": "{0} সুদ",
+  // spec 057 — widget panels: US3 budgets
+  "Transactions this month": "এই মাসের লেনদেন",
+  "Recent months": "সাম্প্রতিক মাসগুলো",
+  "Projected to reach {0} by month end at the current pace.": "বর্তমান গতিতে মাস শেষে {0}-এ পৌঁছানোর সম্ভাবনা।",
+  "No personal limit set for this category.": "এই বিভাগের জন্য কোনো ব্যক্তিগত সীমা নির্ধারণ করা হয়নি।",
 }
 
 export default catalog
