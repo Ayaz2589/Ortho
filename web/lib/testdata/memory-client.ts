@@ -24,6 +24,7 @@ interface QueryBuilder extends PromiseLike<ReadResult> {
   order: (col: string, opts?: unknown) => QueryBuilder
   limit: (n: number) => QueryBuilder
   single: () => Promise<{ data: unknown; error: null }>
+  maybeSingle: () => Promise<{ data: unknown; error: null }>
   insert: (payload?: unknown) => Promise<WriteResult>
   update: (payload?: unknown) => QueryBuilder & Promise<WriteResult>
   delete: () => QueryBuilder & Promise<WriteResult>
@@ -66,6 +67,7 @@ export function createMemoryClient(): MemoryClient {
       order: () => b,
       limit: () => b,
       single: () => Promise.resolve({ data: rows[0] ?? null, error: null }),
+      maybeSingle: () => Promise.resolve({ data: rows[0] ?? null, error: null }),
       insert: () => ok(),
       update: () => mutationChain(ok()),
       delete: () => mutationChain(ok()),

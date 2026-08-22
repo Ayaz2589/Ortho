@@ -131,12 +131,19 @@ describe('toUpsertPayload — ledger mapping + default split (research D6/D7)', 
       amount_cents: 3345,
       source: dedupeKey('acct-1', 't1'),
       created_by: 'user-1',
-      paid_by: null,
+      // spec 053 — the connected account's owning person, so synced rows reach the balance
+      // engine instead of being invisible to it.
+      paid_by: 'person-1',
       notes: 'oat latte',
     })
     expect(p.shares).toEqual([{ person_id: 'person-1', amount_cents: 3345 }])
     // shares sum equals total (upsert_transaction invariant)
     expect(p.shares.reduce((s, r) => s + r.amount_cents, 0)).toBe(p.tx.amount_cents)
+  })
+
+  it('leaves income with no payer — income has no payer (spec 053 FR-006)', () => {
+    const income = toUpsertPayload({ ...txn, kind: 'income' as const }, ctx)
+    expect(income.tx.paid_by).toBeNull()
   })
 
   it('maps postedAt to an ISO date', () => {

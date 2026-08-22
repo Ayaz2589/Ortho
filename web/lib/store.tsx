@@ -14,11 +14,14 @@ import { App } from '@capacitor/app'
 import { createClient } from './supabase/client'
 import { isTestBuild } from './test-build'
 import { readFlags } from './flags'
+import { writeSkeletonCount } from './skeletonCounts'
 import { autoLoginEnabled, autoLoginCreds } from './auth/autoLogin'
 import { signInHref } from './nav'
 import { hapticConfirm, hapticDestructive } from './haptics'
 import { formatMoney as fmtMoney, type CurrencyKey } from './finance/money'
 import { FALLBACK_RATE_FROM_USD } from './finance/currency'
+import { applyRoutineStates, detectRoutines, type RoutineWithState } from './finance/routines'
+import { consentTransition, shouldDeleteVisitsOnTransition } from './location/consent'
 import { effectiveShares } from './format'
 import { CATEGORIES, paletteFor } from './categories'
 import {
@@ -38,6 +41,7 @@ import type {
   Transaction,
   Tag,
   Card,
+  DepositAccount,
   Property,
   MortgageInfo,
   LeaseInfo,
@@ -49,6 +53,16 @@ import type {
   LinkedAccount,
   Goal,
   GoalContribution,
+  FinancialProfile,
+  FixedCost,
+  DimensionWeight,
+  HealthSnapshot,
+  HealthBand,
+  RecognizedRoutineState,
+  LocationConsent,
+  LocationConsentLevel,
+  MerchantGeocode,
+  RoutineVisit,
 } from './types'
 import type {
   UserRow,
@@ -58,6 +72,7 @@ import type {
   TagRow,
   TransactionTagRow,
   CardRow,
+  DepositAccountRow,
   PropertyRow,
   MortgageInfoRow,
   LeaseInfoRow,
@@ -68,6 +83,14 @@ import type {
   LinkedAccountRow,
   GoalRow,
   GoalContributionRow,
+  UserFinancialProfileRow,
+  UserFixedCostRow,
+  UserDimensionWeightRow,
+  FinancialHealthSnapshotRow,
+  RecognizedRoutineStateRow,
+  UserLocationConsentRow,
+  MerchantGeocodeRow,
+  UserRoutineVisitRow,
 } from './supabase/rows'
 
 const PLACEHOLDER_ID = '00000000-0000-0000-0000-000000000000'
@@ -98,6 +121,8 @@ interface AppStateValue {
   /** Household free-form tag roster (spec 027). */
   tags: Tag[]
   cards: Card[]
+  /** Household deposit account names for income transactions (spec 033). */
+  depositAccounts: DepositAccount[]
   properties: Property[]
   rentalPayments: RentalPayment[]
   budgets: Budget[]
@@ -106,6 +131,25 @@ interface AppStateValue {
   /** All contributions across the household's goals; a goal's progress is the
    *  sum of the ones whose `goal_id` matches. */
   goalContributions: GoalContribution[]
+  /** Financial Health (spec 041) — USER-scoped, private to the signed-in account.
+   *  The score is derived live; only these raw answers + snapshots persist. */
+  userFinancialProfile: FinancialProfile | null
+  userFixedCosts: FixedCost[]
+  userDimensionWeights: DimensionWeight[]
+  healthSnapshots: HealthSnapshot[]
+  /** Financial Routines (spec 044) — household-scoped confirm/dismiss/rename state, keyed by the
+   *  detection engine's routine_key. Routines themselves are derived live (see lib/finance/routines.ts). */
+  recognizedRoutineStates: RecognizedRoutineState[]
+  /** Household-level merchant-name → place cache (FR-012). */
+  merchantGeocodes: MerchantGeocode[]
+  /** The signed-in user's location-assistance opt-in level (private; null until loaded/created). */
+  locationConsent: LocationConsent | null
+  setLocationConsent: (level: LocationConsentLevel) => Promise<void>
+  /** Lazily-loaded (spec 044 US4) — only fetched on demand, only meaningful once opted into
+   *  'foreground_capture'. Empty until `loadRoutineVisits` is called. */
+  routineVisits: RoutineVisit[]
+  loadRoutineVisits: () => Promise<void>
+  recordRoutineVisit: (latitude: number, longitude: number, accuracyMeters: number | null) => Promise<void>
   currency: CurrencyKey
   rates: Partial<Record<CurrencyKey, number>>
   /** Epoch ms of the last successful live-rate fetch (or cached fetch), null if never. */
@@ -159,6 +203,8 @@ interface AppStateValue {
   addTag: (name: string) => Tag
   addCard: (name: string) => void
   deleteCard: (id: string) => void
+  addDepositAccount: (name: string) => void
+  deleteDepositAccount: (id: string) => void
   addProperty: (p: Property) => void
   updateProperty: (p: Property) => void
   deleteProperty: (id: string) => void
@@ -171,7 +217,30 @@ interface AppStateValue {
   updateGoal: (g: Goal) => void
   deleteGoal: (id: string) => void
   addContribution: (c: GoalContribution) => void
+  updateContribution: (c: GoalContribution) => void
   deleteContribution: (id: string) => void
+  // Financial Health (spec 041) — deliberate form submissions (awaitable, no
+  // optimistic flicker); errors surface via the shared banner.
+  saveFinancialProfile: (input: Omit<FinancialProfile, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>
+  saveFixedCosts: (costs: Array<Pick<FixedCost, 'label' | 'amount_cents' | 'kind'>>) => Promise<void>
+  saveDimensionWeights: (weights: Array<Pick<DimensionWeight, 'dimension' | 'weight'>>) => Promise<void>
+  writeHealthSnapshot: (score: number, band: HealthBand) => Promise<void>
+  /** Persist a full questionnaire submit (profile + costs + weights) then a fresh
+   *  baseline snapshot, in sequence. */
+  saveFinancialHealth: (args: {
+    profile: Omit<FinancialProfile, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+    costs: Array<Pick<FixedCost, 'label' | 'amount_cents' | 'kind'>>
+    weights: Array<Pick<DimensionWeight, 'dimension' | 'weight'>>
+    score: number
+    band: HealthBand
+  }) => Promise<void>
+  // Financial Routines (spec 044) — `routines` is a memoized selector combining live detection
+  // (routines.ts) with persisted household state; confirm/dismiss/rename are the only durable
+  // actions (FR-005).
+  routines: RoutineWithState[]
+  confirmRoutine: (routineKey: string, personId?: string | null) => Promise<void>
+  dismissRoutine: (routineKey: string) => Promise<void>
+  renameRoutine: (routineKey: string, label: string) => Promise<void>
   updateHouseholdName: (name: string) => void
   addPerson: (name: string, colorKey?: string) => void
   renamePerson: (id: string, name: string) => void
@@ -294,11 +363,23 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [tags, setTags] = useState<Tag[]>([])
   const [cards, setCards] = useState<Card[]>([])
+  const [depositAccounts, setDepositAccounts] = useState<DepositAccount[]>([])
   const [properties, setProperties] = useState<Property[]>([])
   const [rentalPayments, setRentalPayments] = useState<RentalPayment[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
   const [goalContributions, setGoalContributions] = useState<GoalContribution[]>([])
+  // Financial Health (spec 041) — user-scoped.
+  const [userFinancialProfile, setUserFinancialProfile] = useState<FinancialProfile | null>(null)
+  const [userFixedCosts, setUserFixedCosts] = useState<FixedCost[]>([])
+  const [userDimensionWeights, setUserDimensionWeights] = useState<DimensionWeight[]>([])
+  const [healthSnapshots, setHealthSnapshots] = useState<HealthSnapshot[]>([])
+  // Financial Routines (spec 044) — recognizedRoutineStates/merchantGeocodes are
+  // household-scoped; locationConsent is user-scoped (private).
+  const [recognizedRoutineStates, setRecognizedRoutineStates] = useState<RecognizedRoutineState[]>([])
+  const [merchantGeocodes, setMerchantGeocodes] = useState<MerchantGeocode[]>([])
+  const [locationConsent, setLocationConsentState] = useState<LocationConsent | null>(null)
+  const [routineVisits, setRoutineVisits] = useState<RoutineVisit[]>([])
   const [linkedInstitutions, setLinkedInstitutions] = useState<LinkedInstitution[]>([])
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([])
   const [currency, setCurrencyState] = useState<CurrencyKey>('usd')
@@ -657,6 +738,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       linkedAcctRes,
       tagsRes,
       txTagsRes,
+      depositAccountsRes,
+      userProfileRes,
+      userFixedCostsRes,
+      userWeightsRes,
+      healthSnapshotsRes,
+      routineStatesRes,
+      merchantGeocodesRes,
+      locationConsentRes,
     ] = await Promise.all([
       // Column projection (US6/P5): the three highest-volume reads fetch only the
       // fields the app uses — never select('*'). Keep these lists in lockstep with
@@ -691,6 +780,21 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       // feature must never take the whole bootstrap down.
       supabase.from('tags').select('*').eq('household_id', householdId).order('created_at', { ascending: true }),
       supabase.from('transaction_tags').select('transaction_id, tag_id'),
+      // Deposit accounts (spec 033): fail-open like tags/linked banks.
+      supabase.from('deposit_accounts').select('*').order('created_at', { ascending: true }),
+      // Financial Health (spec 041): USER-scoped (RLS user_id = auth.uid()), so
+      // filtered by ownerId — NOT householdId. Fail-open like the others. The
+      // profile is at most one row (maybeSingle → row | null).
+      supabase.from('user_financial_profile').select('*').eq('user_id', ownerId).maybeSingle(),
+      supabase.from('user_fixed_costs').select('*').eq('user_id', ownerId).order('created_at', { ascending: true }),
+      supabase.from('user_dimension_weights').select('*').eq('user_id', ownerId),
+      supabase.from('financial_health_snapshots').select('*').eq('user_id', ownerId).order('created_at', { ascending: true }),
+      // Financial Routines (spec 044): household-scoped, fail-open like tags/goals — RLS scopes
+      // them, so no explicit household filter is needed (mirrors linked_institutions above).
+      supabase.from('recognized_routine_states').select('*'),
+      supabase.from('merchant_geocodes').select('*'),
+      // User-scoped (RLS user_id = auth.uid()), fail-open null like user_financial_profile.
+      supabase.from('user_location_consent').select('*').eq('user_id', ownerId).maybeSingle(),
     ])
 
     // A failed read must surface as an error, not render as a real-looking
@@ -705,13 +809,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     // window. Any OTHER error stays fail-loud like every bootstrap read.
     const missingTable = (e: { code?: string } | null | undefined) =>
       e?.code === 'PGRST205' || e?.code === '42P01'
-    for (const res of [goalsRes, goalContribRes, linkedInstRes, linkedAcctRes, tagsRes, txTagsRes]) {
+    for (const res of [goalsRes, goalContribRes, linkedInstRes, linkedAcctRes, tagsRes, txTagsRes, depositAccountsRes, userFixedCostsRes, userWeightsRes, healthSnapshotsRes, routineStatesRes, merchantGeocodesRes]) {
       if (res.error && missingTable(res.error as { code?: string })) {
         res.data = []
         res.error = null
       }
       orThrow(res)
     }
+    // The profile/consent reads are maybeSingle (row | null), so their fail-open default is
+    // null, not [] — handled separately from the array reads above.
+    if (userProfileRes.error && missingTable(userProfileRes.error as { code?: string })) {
+      userProfileRes.data = null
+      userProfileRes.error = null
+    }
+    orThrow(userProfileRes)
+    if (locationConsentRes.error && missingTable(locationConsentRes.error as { code?: string })) {
+      locationConsentRes.data = null
+      locationConsentRes.error = null
+    }
+    orThrow(locationConsentRes)
 
     // Typed row → domain boundary (FR-018): each read is asserted to its DB row
     // type (`lib/supabase/rows.ts`) and assigned to domain-typed state, so a
@@ -736,9 +852,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     const txRows = (txRes.data ?? []) as TransactionRow[]
     const shareRows = (sharesRes.data ?? []) as TransactionShareRow[]
     const tagJoin = tagsByTransaction((txTagsRes.data ?? []) as TransactionTagRow[])
-    setTransactions(rehydrateTransactions(txRows, shareRows, personForUser, tagJoin))
+    const txns = rehydrateTransactions(txRows, shareRows, personForUser, tagJoin)
+    setTransactions(txns)
     setTags((tagsRes.data ?? []) as TagRow[])
     setCards((cardsRes.data ?? []) as CardRow[])
+    setDepositAccounts((depositAccountsRes.data ?? []) as DepositAccountRow[])
 
     // stitch properties
     const mort = new Map<string, MortgageInfo>(
@@ -771,13 +889,30 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         monthly_limit_cents: r.monthly_limit_cents,
         budget_type: r.budget_type ?? 'fixed',
         rollover_cap_cents: r.rollover_cap_cents ?? null,
+        // spec 054: absent column (pre-migration read) ⇒ a household budget.
+        person_id: r.person_id ?? null,
         created_at: r.created_at ?? undefined,
       })),
     )
     setGoals((goalsRes.data ?? []) as GoalRow[])
     setGoalContributions((goalContribRes.data ?? []) as GoalContributionRow[])
+    setUserFinancialProfile((userProfileRes.data ?? null) as UserFinancialProfileRow | null)
+    setUserFixedCosts((userFixedCostsRes.data ?? []) as UserFixedCostRow[])
+    setUserDimensionWeights((userWeightsRes.data ?? []) as UserDimensionWeightRow[])
+    setHealthSnapshots((healthSnapshotsRes.data ?? []) as FinancialHealthSnapshotRow[])
+    setRecognizedRoutineStates((routineStatesRes.data ?? []) as RecognizedRoutineStateRow[])
+    setMerchantGeocodes((merchantGeocodesRes.data ?? []) as MerchantGeocodeRow[])
+    setLocationConsentState((locationConsentRes.data ?? null) as UserLocationConsentRow | null)
     setLinkedInstitutions((linkedInstRes.data ?? []) as LinkedInstitutionRow[])
     setLinkedAccounts((linkedAcctRes.data ?? []) as LinkedAccountRow[])
+
+    // spec 032: remember each dynamic collection's size so the NEXT load renders
+    // a correctly-sized loading skeleton. Best-effort — writeSkeletonCount
+    // swallows any storage error, so this never affects bootstrap.
+    writeSkeletonCount('transactions', txns.length)
+    writeSkeletonCount('goals', ((goalsRes.data ?? []) as GoalRow[]).length)
+    writeSkeletonCount('housing', props.length)
+    writeSkeletonCount('tags', ((tagsRes.data ?? []) as TagRow[]).length)
   }
 
   // ---- FX ----
@@ -1079,6 +1214,42 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     })()
   }
 
+  // Deposit accounts (spec 033) — mirrors addCard/deleteCard exactly.
+  const addDepositAccount = (name: string) => {
+    if (!household) return
+    const account: DepositAccount = {
+      id: uuid(),
+      household_id: household.id,
+      name,
+      created_at: new Date().toISOString(),
+    }
+    setDepositAccounts((prev) => [...prev, account])
+    ;(async () => {
+      const { error: e } = await supabase
+        .from('deposit_accounts')
+        .insert({ id: account.id, household_id: account.household_id, name: account.name })
+      if (e) {
+        setDepositAccounts((prev) => prev.filter((a) => a.id !== account.id))
+        setError(e.message)
+      }
+    })()
+  }
+
+  const deleteDepositAccount = (id: string) => {
+    let removed: DepositAccount | undefined
+    setDepositAccounts((prev) => {
+      removed = prev.find((a) => a.id === id)
+      return prev.filter((a) => a.id !== id)
+    })
+    ;(async () => {
+      const { error: e } = await supabase.from('deposit_accounts').delete().eq('id', id)
+      if (e && removed) {
+        setDepositAccounts((prev) => [...prev, removed!])
+        setError(e.message)
+      }
+    })()
+  }
+
   // Throws on the first failed write so callers can roll back their optimistic
   // state and surface the error — a swallowed failure after the deletes would
   // silently destroy the property's mortgage/lease/units server-side while the
@@ -1194,12 +1365,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }
 
   const addOrUpdateBudget = (b: Budget) => {
+    // spec 054: a budget's identity is (household, category, PERSON) — a household
+    // budget and one person's budget can both cover Dining, and saving one must never
+    // overwrite the other. Mirrors the DB's `unique nulls not distinct` constraint.
+    const sameBudget = (x: Budget) =>
+      x.category === b.category &&
+      x.household_id === b.household_id &&
+      (x.person_id ?? null) === (b.person_id ?? null)
     let prevBudget: Budget | undefined
     setBudgets((prev) => {
-      prevBudget = prev.find((x) => x.category === b.category && x.household_id === b.household_id)
-      return prevBudget
-        ? prev.map((x) => (x.category === b.category && x.household_id === b.household_id ? b : x))
-        : [...prev, b]
+      prevBudget = prev.find(sameBudget)
+      return prevBudget ? prev.map((x) => (sameBudget(x) ? b : x)) : [...prev, b]
     })
     ;(async () => {
       const { error: e } = await supabase.from('budgets').upsert(
@@ -1211,16 +1387,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           budget_type: b.budget_type,
           // flex-only; store null for the other types so a stale cap never lingers.
           rollover_cap_cents: b.budget_type === 'flex' ? b.rollover_cap_cents : null,
+          person_id: b.person_id,
         },
-        { onConflict: 'household_id,category' }
+        { onConflict: 'household_id,category,person_id' }
       )
       if (e) {
         // Roll back the optimistic value (matches iOS) — keeping it would
         // show a limit the server never accepted.
         setBudgets((prev) =>
           prevBudget
-            ? prev.map((x) => (x.category === b.category && x.household_id === b.household_id ? prevBudget! : x))
-            : prev.filter((x) => !(x.category === b.category && x.household_id === b.household_id))
+            ? prev.map((x) => (sameBudget(x) ? prevBudget! : x))
+            : prev.filter((x) => !sameBudget(x))
         )
         setError(e.message)
       }
@@ -1333,6 +1510,34 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     })()
   }
 
+  /** Correct a recorded contribution (spec 045 US3) — a goal's saved total is the
+   *  sum of its contributions, so a mistyped one made the whole total untrustworthy
+   *  with no remedy short of deleting the goal. Optimistic with rollback, mirroring
+   *  `updateGoal`. Only the three user-editable columns are written: an edit never
+   *  re-parents a contribution to another goal (that would silently move money
+   *  between two goals from a form showing one) and never rewrites who recorded it. */
+  const updateContribution = (c: GoalContribution) => {
+    let prev: GoalContribution | undefined
+    setGoalContributions((cur) => {
+      prev = cur.find((x) => x.id === c.id)
+      return cur.map((x) => (x.id === c.id ? c : x))
+    })
+    ;(async () => {
+      const { error: e } = await supabase
+        .from('goal_contributions')
+        .update({
+          amount_cents: c.amount_cents,
+          date: c.date,
+          note: c.note,
+        })
+        .eq('id', c.id)
+      if (e) {
+        setGoalContributions((cur) => (prev ? cur.map((x) => (x.id === c.id ? prev! : x)) : cur))
+        setError(e.message)
+      }
+    })()
+  }
+
   const deleteContribution = (id: string) => {
     let removed: GoalContribution | undefined
     setGoalContributions((prev) => {
@@ -1346,6 +1551,213 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         setError(e.message)
       }
     })()
+  }
+
+  // ---- Financial Health (spec 041) — user-scoped, deliberate form submits ----
+  // Optimistic state + await write + setError on failure, mirroring the
+  // deposit-accounts pattern (no .insert().select() chaining, which the test mock
+  // doesn't model); the next loadAll reconciles any server-side defaults.
+  const saveFinancialProfile = async (
+    input: Omit<FinancialProfile, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+  ) => {
+    if (!currentUserId) return
+    const now = new Date().toISOString()
+    // Reuse the existing row id (so re-saves update in place); generate one on first save.
+    const row: FinancialProfile = {
+      id: userFinancialProfile?.id ?? uuid(),
+      user_id: currentUserId,
+      created_at: userFinancialProfile?.created_at ?? now,
+      updated_at: now,
+      ...input,
+    }
+    setUserFinancialProfile(row)
+    // Do NOT send `id` in the upsert: on conflict (user_id) Postgres would set the
+    // primary key to this fresh uuid, churning the PK on any device that saves
+    // before it has loaded the existing row. Omitting it keeps the existing row's
+    // id on update and lets the default generate it on first insert.
+    const { id: _id, ...payload } = row
+    const { error: e } = await supabase
+      .from('user_financial_profile')
+      .upsert(payload, { onConflict: 'user_id' })
+    if (e) setError(e.message)
+  }
+
+  const saveFixedCosts = async (costs: Array<Pick<FixedCost, 'label' | 'amount_cents' | 'kind'>>) => {
+    if (!currentUserId) return
+    const now = new Date().toISOString()
+    const rows: FixedCost[] = costs.map((c) => ({
+      id: uuid(),
+      user_id: currentUserId,
+      label: c.label,
+      amount_cents: c.amount_cents,
+      kind: c.kind,
+      created_at: now,
+    }))
+    setUserFixedCosts(rows)
+    // Replace-all: clear then re-insert the batch.
+    const { error: delErr } = await supabase.from('user_fixed_costs').delete().eq('user_id', currentUserId)
+    if (delErr) {
+      setError(delErr.message)
+      return
+    }
+    if (rows.length === 0) return
+    const { error: insErr } = await supabase.from('user_fixed_costs').insert(rows)
+    if (insErr) setError(insErr.message)
+  }
+
+  const saveDimensionWeights = async (weights: Array<Pick<DimensionWeight, 'dimension' | 'weight'>>) => {
+    if (!currentUserId) return
+    const now = new Date().toISOString()
+    const rows: DimensionWeight[] = weights.map((w) => ({
+      id: uuid(),
+      user_id: currentUserId,
+      dimension: w.dimension,
+      weight: w.weight,
+      created_at: now,
+    }))
+    setUserDimensionWeights(rows)
+    // Replace-all keeps it simple (there are only ~5 rows) and avoids upsert PK churn.
+    const { error: delErr } = await supabase.from('user_dimension_weights').delete().eq('user_id', currentUserId)
+    if (delErr) {
+      setError(delErr.message)
+      return
+    }
+    if (rows.length === 0) return
+    const { error: insErr } = await supabase.from('user_dimension_weights').insert(rows)
+    if (insErr) setError(insErr.message)
+  }
+
+  const writeHealthSnapshot = async (score: number, band: HealthBand) => {
+    if (!currentUserId) return
+    const row: HealthSnapshot = {
+      id: uuid(),
+      user_id: currentUserId,
+      score,
+      band,
+      created_at: new Date().toISOString(),
+    }
+    setHealthSnapshots((prev) => [...prev, row])
+    const { error: e } = await supabase.from('financial_health_snapshots').insert(row)
+    if (e) setError(e.message)
+  }
+
+  const saveFinancialHealth = async (args: {
+    profile: Omit<FinancialProfile, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+    costs: Array<Pick<FixedCost, 'label' | 'amount_cents' | 'kind'>>
+    weights: Array<Pick<DimensionWeight, 'dimension' | 'weight'>>
+    score: number
+    band: HealthBand
+  }) => {
+    await saveFinancialProfile(args.profile)
+    await saveFixedCosts(args.costs)
+    await saveDimensionWeights(args.weights)
+    await writeHealthSnapshot(args.score, args.band)
+  }
+
+  // ---- Financial Routines (spec 044) — household-scoped ----
+  // Detection is always recomputed live from `transactions` (README's "derived, never stored");
+  // only the confirm/dismiss/rename overlay persists. Recomputed on every transactions/state change
+  // — cheap relative to a household's realistic transaction volume, same precedent as insights.ts.
+  const routines = useMemo(
+    () => applyRoutineStates(detectRoutines(transactions, new Date()), recognizedRoutineStates),
+    [transactions, recognizedRoutineStates]
+  )
+
+  const upsertRoutineState = async (
+    routineKey: string,
+    patch: Partial<Pick<RecognizedRoutineState, 'status' | 'label' | 'person_id'>>
+  ) => {
+    if (!household || !currentUserId) return
+    const now = new Date().toISOString()
+    const existing = recognizedRoutineStates.find((s) => s.routine_key === routineKey)
+    const row: RecognizedRoutineState = {
+      id: existing?.id ?? uuid(),
+      household_id: household.id,
+      routine_key: routineKey,
+      status: existing?.status ?? 'confirmed',
+      label: existing?.label ?? null,
+      person_id: existing?.person_id ?? null,
+      created_by: existing?.created_by ?? currentUserId,
+      created_at: existing?.created_at ?? now,
+      updated_at: now,
+      ...patch,
+    }
+    setRecognizedRoutineStates((prev) => [...prev.filter((s) => s.routine_key !== routineKey), row])
+    const { id: _id, ...payload } = row
+    const { error: e } = await supabase
+      .from('recognized_routine_states')
+      .upsert(payload, { onConflict: 'household_id,routine_key' })
+    if (e) setError(e.message)
+  }
+
+  const confirmRoutine = async (routineKey: string, personId?: string | null) =>
+    upsertRoutineState(routineKey, { status: 'confirmed', ...(personId !== undefined ? { person_id: personId } : {}) })
+  const dismissRoutine = async (routineKey: string) => upsertRoutineState(routineKey, { status: 'dismissed' })
+  // recognized_routine_states.status only has room for 'confirmed'/'dismissed' (there is no
+  // persisted 'recognized' — that's simply the absence of a row). Renaming a not-yet-reviewed
+  // routine is a real engagement signal, so it defaults to 'confirmed' on first write via
+  // upsertRoutineState's fallback; renaming an already-dismissed routine leaves it dismissed
+  // (no explicit status patch here).
+  const renameRoutine = async (routineKey: string, label: string) => upsertRoutineState(routineKey, { label })
+
+  // ---- Location consent + opportunistic visit capture (spec 044 US4) — user-scoped ----
+  const setLocationConsent = async (level: LocationConsentLevel) => {
+    if (!currentUserId) return
+    const now = new Date().toISOString()
+    const previousLevel = locationConsent?.level ?? 'off'
+    const { grantedAt, revokedAt } = consentTransition(previousLevel, level, now)
+    const row: LocationConsent = {
+      id: locationConsent?.id ?? uuid(),
+      user_id: currentUserId,
+      level,
+      granted_at: grantedAt ?? locationConsent?.granted_at ?? null,
+      revoked_at: revokedAt ?? locationConsent?.revoked_at ?? null,
+      created_at: locationConsent?.created_at ?? now,
+      updated_at: now,
+    }
+    setLocationConsentState(row)
+    const { id: _id, ...payload } = row
+    const { error: e } = await supabase.from('user_location_consent').upsert(payload, { onConflict: 'user_id' })
+    if (e) {
+      setError(e.message)
+      return
+    }
+    // FR-015: revoking cascades to delete every captured visit, within this session.
+    if (shouldDeleteVisitsOnTransition(previousLevel, level)) {
+      setRoutineVisits([])
+      const { error: delErr } = await supabase.from('user_routine_visits').delete().eq('user_id', currentUserId)
+      if (delErr) setError(delErr.message)
+    }
+  }
+
+  // Lazy-loaded (not part of loadAll's boot Promise.all — data-model.md): only fetched when a
+  // surface actually needs visit-cluster suggestions, and only meaningful once opted into
+  // 'foreground_capture'.
+  const loadRoutineVisits = async () => {
+    if (!currentUserId) return
+    const { data, error: e } = await supabase.from('user_routine_visits').select('*').eq('user_id', currentUserId)
+    if (e) {
+      setError(e.message)
+      return
+    }
+    setRoutineVisits((data ?? []) as UserRoutineVisitRow[])
+  }
+
+  const recordRoutineVisit = async (latitude: number, longitude: number, accuracyMeters: number | null) => {
+    if (!currentUserId || !household || locationConsent?.level !== 'foreground_capture') return
+    const row: RoutineVisit = {
+      id: uuid(),
+      user_id: currentUserId,
+      household_id: household.id,
+      captured_at: new Date().toISOString(),
+      latitude,
+      longitude,
+      accuracy_meters: accuracyMeters,
+      created_at: new Date().toISOString(),
+    }
+    setRoutineVisits((prev) => [...prev, row])
+    const { error: e } = await supabase.from('user_routine_visits').insert(row)
+    if (e) setError(e.message)
   }
 
   const updateHouseholdName = (name: string) => {
@@ -1476,11 +1888,23 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     transactions,
     tags,
     cards,
+    depositAccounts,
     properties,
     rentalPayments,
     budgets,
     goals,
     goalContributions,
+    userFinancialProfile,
+    userFixedCosts,
+    userDimensionWeights,
+    healthSnapshots,
+    recognizedRoutineStates,
+    merchantGeocodes,
+    locationConsent,
+    setLocationConsent,
+    routineVisits,
+    loadRoutineVisits,
+    recordRoutineVisit,
     currency,
     rates,
     ratesLastFetched,
@@ -1505,6 +1929,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     addTag,
     addCard,
     deleteCard,
+    addDepositAccount,
+    deleteDepositAccount,
     addProperty,
     updateProperty,
     deleteProperty,
@@ -1516,7 +1942,17 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     updateGoal,
     deleteGoal,
     addContribution,
+    updateContribution,
     deleteContribution,
+    saveFinancialProfile,
+    saveFixedCosts,
+    saveDimensionWeights,
+    writeHealthSnapshot,
+    saveFinancialHealth,
+    routines,
+    confirmRoutine,
+    dismissRoutine,
+    renameRoutine,
     updateHouseholdName,
     addPerson,
     renamePerson,

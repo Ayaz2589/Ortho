@@ -1,3 +1,8 @@
+> **STATUS 2026-08-16.** Income balance effects, the N-person pairwise matrix and the dashboard
+> balance widget shipped in **spec 053**; the engine now lives at `web/lib/finance/balances.ts`
+> (not `web/lib/balances.ts` — spec 043 deleted the original and 053 rebuilt it). Shared-by-default
+> ownership shipped in **spec 050**. Debt simplification and the settle-up prefill remain open.
+
 # Household Feature Redesign — Implementation Plan
 
 **Written:** 2026-07-24

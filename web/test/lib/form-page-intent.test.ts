@@ -3,42 +3,18 @@ import { parseTxNewParams, parseIdParam, parseKindParam } from '@/lib/formPageIn
 
 describe('parseTxNewParams', () => {
   it('reads a copyFrom id', () => {
-    expect(parseTxNewParams('?copyFrom=tx-1')).toEqual({ copyFrom: 'tx-1', transfer: null })
+    expect(parseTxNewParams('?copyFrom=tx-1')).toEqual({ copyFrom: 'tx-1' })
   })
 
-  it('reads a settle-up transfer (from/to/amount)', () => {
-    expect(parseTxNewParams('?from=p1&to=p2&amount=1200')).toEqual({
-      copyFrom: null,
-      transfer: { from: 'p1', to: 'p2', amountCents: 1200 },
-    })
+  it('ignores the retired settle-up transfer params (spec 043)', () => {
+    // The from/to/amount settle-up prefill was removed with the balances feature.
+    expect(parseTxNewParams('?from=p1&to=p2&amount=1200')).toEqual({ copyFrom: null })
+    expect(parseTxNewParams('?copyFrom=tx-1&from=p1&to=p2&amount=500')).toEqual({ copyFrom: 'tx-1' })
   })
 
-  it('transfer takes precedence when both are present', () => {
-    expect(parseTxNewParams('?copyFrom=tx-1&from=p1&to=p2&amount=500')).toEqual({
-      copyFrom: null,
-      transfer: { from: 'p1', to: 'p2', amountCents: 500 },
-    })
-  })
-
-  it('falls back to blank on missing/invalid transfer params', () => {
-    expect(parseTxNewParams('?from=p1&to=p2')).toEqual({ copyFrom: null, transfer: null })
-    expect(parseTxNewParams('?from=p1&to=p2&amount=')).toEqual({ copyFrom: null, transfer: null })
-    expect(parseTxNewParams('?from=p1&to=p2&amount=abc')).toEqual({ copyFrom: null, transfer: null })
-    expect(parseTxNewParams('?from=p1&to=p2&amount=12.5')).toEqual({ copyFrom: null, transfer: null })
-    expect(parseTxNewParams('?from=p1&to=p2&amount=-5')).toEqual({ copyFrom: null, transfer: null })
-  })
-
-  it('returns all-null for a blank search', () => {
-    expect(parseTxNewParams('')).toEqual({ copyFrom: null, transfer: null })
-    expect(parseTxNewParams('?copyFrom=')).toEqual({ copyFrom: null, transfer: null })
-  })
-
-  it('accepts a zero amount as blank-ish but never crashes', () => {
-    // amount=0 is a valid non-negative integer; the form itself blocks saving a 0.
-    expect(parseTxNewParams('?from=p1&to=p2&amount=0')).toEqual({
-      copyFrom: null,
-      transfer: { from: 'p1', to: 'p2', amountCents: 0 },
-    })
+  it('returns null copyFrom for a blank search', () => {
+    expect(parseTxNewParams('')).toEqual({ copyFrom: null })
+    expect(parseTxNewParams('?copyFrom=')).toEqual({ copyFrom: null })
   })
 })
 

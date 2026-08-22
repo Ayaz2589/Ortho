@@ -5,13 +5,13 @@
 > [kill-sandbox](../../.claude/skills/kill-sandbox/SKILL.md) skills; reconciled
 > against `sbx ls` on every run. Host-local (sandboxes are per-machine), so this
 > reflects the fleet on the machine that last reconciled it. Do not hand-edit the
-> tables or edit this file from inside a sandbox. Last reconciled: 2026-07-19.
+> tables or edit this file from inside a sandbox. Last reconciled: 2026-08-11.
 
 ## Active (not killed)
 
 | Sandbox | Branch | Feature | Mode | Created | Last seen |
 |---|---|---|---|---|---|
-| claude-Ortho | main | pre-existing dev sandbox — **direct-mode (host-mounted)**, not skill-managed | direct | _(unknown)_ | stopped |
+| _(none — no Ortho sandboxes live)_ | | | | | |
 
 ## Killed (history)
 
@@ -26,3 +26,5 @@
 | budget-rollover | feat/budget-rollover | §4.1 flexible budgeting (rollover slice) | 2026-07-18 | 2026-07-19 | no | clean (up to date with origin/feat/budget-rollover); killed via `/kill-sandbox all` |
 | reports-mvp | feat/reports-mvp | §5.1 advanced reports (minimal) | 2026-07-18 | 2026-07-19 | no | clean (up to date with origin/feat/reports-mvp); killed via `/kill-sandbox all` |
 | feat-026-review | 026-seed-data-harness | pre-existing — spec-026 seed-harness review | _(unknown)_ | 2026-07-19 | no | clean (merged; up to date with origin/026-seed-data-harness); killed via `/kill-sandbox all` |
+| claude-Ortho | main | pre-existing dev sandbox — direct-mode (host-mounted) | _(unknown)_ | 2026-08-11 | _(unknown)_ | vanished from `sbx ls` — removed outside skill; fleet fully turned over |
+| mobile-scroll-nav-fix | feat/income-deposit-accounts | spec 033 — income deposit accounts (committed row was mismatched — name/branch didn't align) | 2026-07-30 | 2026-08-11 | _(unknown)_ | vanished from `sbx ls` — removed outside skill |

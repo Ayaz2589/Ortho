@@ -204,12 +204,45 @@ button,
   touch-action: manipulation;
 }
 
+/* iOS Safari (and the Capacitor WKWebView) zooms the viewport IN whenever a
+   focused text-entry control has a font-size below 16px — and the zoomed layout
+   then overflows the screen, forcing an unwanted horizontal scroll the user has
+   to swipe back after every tap. The form fields here are 14–15px for the calm
+   desktop design, so on touch devices we hold every text-entry control at 16px;
+   at 16px iOS no longer zooms. Desktop (fine pointer) keeps its tighter sizing.
+   `!important` is needed to beat inline-styled controls (e.g. the "Paid by"
+   select). The oversized amount hero is already well above 16px and is excluded
+   so the floor never shrinks it. This is deliberately a font-size fix, NOT a
+   locked viewport (maximum-scale/user-scalable) — pinch-to-zoom must stay
+   available for accessibility. */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not(.ow-amount-input):not([class*='text-[40px]']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 /* ---- Desktop interaction states (tokens only) ---- */
 
-/* Visible keyboard focus ring — sand accent, per the design system. */
-:where(a, button, [role='button'], input, select, textarea, [tabindex]):focus-visible {
+/* Visible keyboard focus ring — sand accent, per the design system. Discrete
+   controls (links, buttons, chips, tab targets) get a framed ring with a little
+   breathing room around them. */
+:where(a, button, [role='button'], [tabindex]):focus-visible {
   outline: 1.5px solid var(--accent);
   outline-offset: 2px;
+  border-radius: 8px;
+}
+/* Card-row form fields are transparent and full-width, so the offset ring above
+   floats away from the text as a stray oval. Text inputs & textareas already
+   signal focus with the caret, so they take no ring; selects have no caret, so
+   they keep an accent ring but hugging the control (no offset) instead. */
+:where(input:not([type='checkbox']):not([type='radio']), textarea):focus-visible {
+  outline: none;
+}
+:where(select):focus-visible {
+  outline: 1.5px solid var(--accent);
+  outline-offset: -1.5px;
   border-radius: 8px;
 }
 
@@ -261,10 +294,45 @@ button,
 .ow-s7 { grid-column: span 7; }
 .ow-s12 { grid-column: span 12; }
 
+/* -------------------------------------------------------------------------
+   Widget board (spec 034; spec 037 — uniform grid) — one composition for phone →
+   desktop. Every widget is the SAME height (`grid-auto-rows`) and one track wide,
+   so the enabled subset always tiles cleanly with no interior hole for ANY toggled
+   combination — the uniform-cell grid has none of the stranded-hole failure modes
+   a width-varying-span grid has. The column count steps 1 → 2 → 3 by breakpoint;
+   width caps + centers per the responsive contract. Tokens only; 16px gap matches
+   `.ow-grid`. -------- */
+.ow-board {
+  max-width: 1080px;
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-auto-rows: 300px;
+  gap: 16px;
+}
+@media (min-width: 640px) {
+  .ow-board { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .ow-board { grid-template-columns: repeat(3, 1fr); }
+}
+
 .ow-card {
   background: var(--surface);
   border-radius: var(--radius-card, 14px);
   overflow: hidden;
+  /* Soft, calm drop shadow to lift the cards off the page (spec 037). Dark mode
+     keeps the hairline border below and drops the shadow (invisible on dark). */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 3px 8px rgba(0, 0, 0, 0.06);
+}
+:root[data-appearance='dark'] .ow-card,
+.ow-card.is-dark {
+  box-shadow: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-appearance='light']) .ow-card {
+    box-shadow: none;
+  }
 }
 :root[data-appearance='dark'] .ow-card,
 .ow-card.is-dark {
@@ -274,6 +342,71 @@ button,
   :root:not([data-appearance='light']) .ow-card {
     border: 0.5px solid var(--hairline);
   }
+}
+
+/* Interactive widget card — the whole card opens its detail panel, so it carries a
+   pointer cursor and a calm hover response (a small lift + a touch more shadow in
+   light mode; a surface tint in dark, where the shadow is dropped). Kept OFF the
+   shared `.ow-card` so static card surfaces (forms, housing, tx) never animate.
+   Honors reduced-motion. */
+.ow-widget {
+  cursor: pointer;
+  transition:
+    transform var(--duration-mid) var(--ease-out),
+    box-shadow var(--duration-mid) var(--ease-out),
+    background var(--duration-mid) var(--ease-out);
+}
+.ow-widget:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05), 0 10px 24px rgba(0, 0, 0, 0.09);
+}
+:root[data-appearance='dark'] .ow-widget:hover,
+.ow-widget.is-dark:hover {
+  box-shadow: none;
+  background: var(--surface-2);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-appearance='light']) .ow-widget:hover {
+    box-shadow: none;
+    background: var(--surface-2);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ow-widget { transition: none; }
+  .ow-widget:hover { transform: none; }
+}
+
+/* Hide the native scrollbar while keeping the element scrollable (widget bodies +
+   the heatmap strip). The content still scrolls by wheel/touch/keys. */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/* Edge fades for a scrollbar-hidden widget body — a cut-off row dissolves into the
+   card surface instead of hard-clipping. Toggled via opacity by `WidgetScroll`
+   from live scroll state, so a fade shows only where content is actually hidden. */
+.ow-fade-top,
+.ow-fade-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  pointer-events: none;
+  transition: opacity var(--duration-mid) var(--ease-out);
+}
+.ow-fade-top {
+  top: 0;
+  background: linear-gradient(to bottom, var(--surface), transparent);
+}
+.ow-fade-bottom {
+  bottom: 0;
+  background: linear-gradient(to top, var(--surface), transparent);
 }
 
 .ow-btn {

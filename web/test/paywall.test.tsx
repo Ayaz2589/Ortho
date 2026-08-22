@@ -117,10 +117,12 @@ describe('blocking behavior (FR-006)', () => {
         <div data-testid="app-content" />
       </AppLayout>
     )
-    // During the pending bootstrap: loading copy, no paywall.
-    expect(screen.getByText('Loading…')).toBeInTheDocument()
+    // During the pending bootstrap: a loading skeleton (spec 032), no paywall —
+    // never the bare "Loading…" string. (No router provider in this test, so the
+    // dispatcher falls back to the generic skeleton shape.)
+    expect(screen.getByTestId('skeleton-generic')).toBeInTheDocument()
     expect(screen.queryByText('Your free month has ended')).not.toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByText('Loading…')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByTestId('skeleton-generic')).not.toBeInTheDocument())
   })
 
   it('an entitlement LOAD failure shows recovery, never the paywall (FR-008)', async () => {

@@ -5,40 +5,36 @@ import { useApp } from '@/lib/store'
 import type { Transaction } from '@/lib/types'
 import { FormPage } from './FormPage'
 import { FormPageHeader } from './FormPageHeader'
-import { useTxForm, TxFormBody, TxCopyList, type TransferPrefill } from './TxForm'
+import { useTxForm, TxFormBody, TxCopyList } from './TxForm'
 
 /**
  * New / Edit transaction as a full mobile PAGE (spec 025). Same form engine as
  * the desktop drawer (TxFormContent) — `useTxForm` + `TxFormBody` — only the
  * chrome differs: a sticky FormPageHeader (Cancel · title · Save) in normal page
  * flow instead of a portalled modal. This page REPLACES the old mobile centered
- * modal. "Copy from recent" stays an in-page sub-view; "Save and add another"
+ * modal. "Copy from most common" stays an in-page sub-view; "Save and add another"
  * resets in place (inside TxFormBody). `onDone` is the page's navigation back to
  * the list (called on Save and Cancel).
  */
 export function TxFormPageClient({
   editing,
   copying,
-  initialTransfer,
   onDone,
 }: {
   editing?: Transaction | null
   copying?: Transaction | null
-  initialTransfer?: TransferPrefill | null
   onDone: () => void
 }) {
   const { t } = useApp()
-  const form = useTxForm({ editing, copying, initialTransfer })
+  const form = useTxForm({ editing, copying })
   const [picking, setPicking] = useState(false)
-  const allowCopy = !editing && !initialTransfer
+  const allowCopy = !editing
   const title = editing
     ? editing.kind === 'transfer'
       ? t('Edit reimbursement')
       : t('Edit transaction')
-    : initialTransfer
-      ? t('Settle up')
-      : t('New transaction')
-  const saveLabel = editing ? t('Save') : initialTransfer ? t('Record') : t('Add')
+    : t('New transaction')
+  const saveLabel = editing ? t('Save') : t('Add')
 
   return (
     <FormPage>
@@ -54,7 +50,12 @@ export function TxFormPageClient({
           }}
         />
       )}
-      <div className="flex-1 px-6 pb-10 pt-2">
+      {/* No horizontal padding here: every child of TxFormBody already carries
+          its own ~20px inset (each `ow-card` has `margin: '0 20px'`, the amount
+          hero/footers use their own padding) — exactly how the desktop drawer
+          renders the same body. Adding px-6 stacked on top of that, doubling the
+          side inset to ~44px on mobile. */}
+      <div className="flex-1 pb-10 pt-2">
         {picking ? (
           <TxCopyList
             onPick={(tx) => {

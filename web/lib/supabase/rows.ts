@@ -75,6 +75,107 @@ export interface CardRow {
   created_at: string
 }
 
+export interface DepositAccountRow {
+  id: string
+  household_id: string
+  name: string
+  created_at: string
+}
+
+// Financial Health (spec 041) — user-scoped rows (RLS user_id = auth.uid()).
+export interface UserFinancialProfileRow {
+  id: string
+  user_id: string
+  monthly_income_cents: number
+  income_is_variable: boolean
+  income_low_estimate_cents: number | null
+  housing_type: 'rent' | 'own' | 'family' | 'none'
+  housing_cost_cents: number | null
+  housing_share_fraction: number
+  savings_target_fraction: number
+  emergency_fund_level: 'none' | 'under_1m' | '1_3m' | '3_6m' | '6m_plus'
+  created_at: string
+  updated_at: string
+}
+
+export interface UserFixedCostRow {
+  id: string
+  user_id: string
+  label: string
+  amount_cents: number
+  kind: 'remittance' | 'loan' | 'phone' | 'transit' | 'childcare' | 'subscription' | 'other'
+  created_at: string
+}
+
+export interface UserDimensionWeightRow {
+  id: string
+  user_id: string
+  dimension:
+    | 'cash_flow'
+    | 'safety_net'
+    | 'commitment_load'
+    | 'savings_momentum'
+    | 'plan_engagement'
+    | 'routine_awareness'
+  weight: number
+  created_at: string
+}
+
+export interface FinancialHealthSnapshotRow {
+  id: string
+  user_id: string
+  score: number
+  band: 'strong' | 'steady' | 'building' | 'getting_started'
+  created_at: string
+}
+
+// Financial Routines (spec 044). recognized_routine_states/merchant_geocodes are
+// household-scoped (RLS via is_household_member); user_location_consent/user_routine_visits are
+// user-scoped (RLS user_id = auth.uid()), mirroring the financial-health rows above.
+export interface RecognizedRoutineStateRow {
+  id: string
+  household_id: string
+  routine_key: string
+  status: 'confirmed' | 'dismissed'
+  label: string | null
+  person_id: string | null
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
+export interface UserLocationConsentRow {
+  id: string
+  user_id: string
+  level: 'off' | 'geocoding' | 'foreground_capture'
+  granted_at: string | null
+  revoked_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface UserRoutineVisitRow {
+  id: string
+  user_id: string
+  household_id: string
+  captured_at: string
+  latitude: number
+  longitude: number
+  accuracy_meters: number | null
+  created_at: string
+}
+
+export interface MerchantGeocodeRow {
+  id: string
+  household_id: string
+  merchant_key: string
+  latitude: number | null
+  longitude: number | null
+  label: string | null
+  resolved_at: string | null
+  created_at: string
+}
+
 export interface PropertyRow {
   id: string
   household_id: string
@@ -133,6 +234,9 @@ export interface BudgetRow {
   // columns' absence — the store defaults them at the row→domain boundary.
   budget_type?: 'fixed' | 'flex' | 'non_monthly' | null
   rollover_cap_cents?: number | null
+  // spec 054: nullable/optional for the same deploy-before-migrate reason — a client
+  // reading before the migration lands sees no column at all, which means "household".
+  person_id?: string | null
   created_at?: string | null
 }
 

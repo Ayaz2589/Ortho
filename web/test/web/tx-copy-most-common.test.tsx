@@ -1,0 +1,140 @@
+// @vitest-environment jsdom
+//
+// Spec 032 US1 (Contract B): the New-form copy shortcut ranks the household's
+// MOST COMMON merchants (one representative most-recent entry each), is relabeled
+// "Copy from most common", prefills via onPick, and shows the empty state safely.
+import { describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import type { Transaction } from '@/lib/types'
+import { makeTx } from '../helpers/fixtures'
+
+const store = { transactions: [] as Transaction[] }
+
+vi.mock('@/lib/store', () => ({
+  useApp: () => ({
+    transactions: store.transactions,
+    formatMoney: (c: number) => `$${(c / 100).toFixed(2)}`,
+    ownersDisplay: () => ({ label: 'Alice' }),
+    locale: 'en-US',
+    t: (k: string, ...a: Array<string | number>) =>
+      a.length ? k.replace(/\{(\d+)\}/g, (m, i) => String(a[Number(i)] ?? m)) : k,
+  }),
+}))
+
+import { TxCopyList, CopyFromCommonButton } from '@/components/web/TxForm'
+
+function rowButtons(): HTMLElement[] {
+  return screen.getAllByRole('button').filter((b) => b.classList.contains('ow-row'))
+}
+
+describe('Copy from most common — TxCopyList', () => {
+  it('orders rows by category, then alphabetically by merchant within a category', () => {
+    store.transactions = [
+      makeTx({ merchant: 'Whole Foods', category: 'groceries' }),
+      makeTx({ merchant: 'Aldi', category: 'groceries' }),
+      makeTx({ merchant: 'Chipotle', category: 'dining' }),
+    ]
+    render(<TxCopyList onPick={vi.fn()} onBack={vi.fn()} />)
+    const rows = rowButtons()
+    expect(rows).toHaveLength(3) // one representative per merchant
+    // category slug asc (dining < groceries), then merchant name asc within groceries
+    expect(rows[0]).toHaveTextContent('Chipotle') // dining
+    expect(rows[1]).toHaveTextContent('Aldi') // groceries — A before W
+    expect(rows[2]).toHaveTextContent('Whole Foods') // groceries
+  })
+
+  it('is titled "Copy from most common"', () => {
+    store.transactions = [makeTx({ merchant: 'Whole Foods' })]
+    render(<TxCopyList onPick={vi.fn()} onBack={vi.fn()} />)
+    expect(screen.getByText('Copy from most common')).toBeInTheDocument()
+  })
+
+  it('prefills via onPick with the merchant’s most-recent entry', async () => {
+    store.transactions = [
+      makeTx({ merchant: 'Whole Foods', amount_cents: 1000, date: '2026-06-01T12:00:00.000Z' }),
+      makeTx({ merchant: 'Whole Foods', amount_cents: 3000, date: '2026-06-20T12:00:00.000Z' }),
+    ]
+    const onPick = vi.fn()
+    render(<TxCopyList onPick={onPick} onBack={vi.fn()} />)
+    await userEvent.setup().click(rowButtons()[0])
+    expect(onPick).toHaveBeenCalledTimes(1)
+    expect(onPick.mock.calls[0][0]).toMatchObject({ merchant: 'Whole Foods', amount_cents: 3000 })
+  })
+
+  it('excludes transfers / blank-merchant entries from the list', () => {
+    store.transactions = [
+      makeTx({ merchant: '', kind: 'transfer', category: 'transfer' }),
+      makeTx({ merchant: 'Subway' }),
+    ]
+    render(<TxCopyList onPick={vi.fn()} onBack={vi.fn()} />)
+    const rows = rowButtons()
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toHaveTextContent('Subway')
+  })
+
+  it('shows the empty state on an empty ledger without erroring', () => {
+    store.transactions = []
+    render(<TxCopyList onPick={vi.fn()} onBack={vi.fn()} />)
+    expect(screen.getByText('Nothing to copy yet')).toBeInTheDocument()
+    expect(rowButtons()).toHaveLength(0)
+  })
+})
+
+describe('Copy from most common — button', () => {
+  it('reads "Copy from most common"', () => {
+    store.transactions = []
+    render(<CopyFromCommonButton onClick={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Copy from most common' })).toBeInTheDocument()
+  })
+})
+
+describe('Copy from most common — category section headers', () => {
+  it('renders one section header per distinct category', () => {
+    store.transactions = [
+      makeTx({ merchant: 'Blue Bottle', category: 'coffee' }),
+      makeTx({ merchant: 'Chipotle', category: 'dining' }),
+      makeTx({ merchant: 'Aldi', category: 'groceries' }),
+      makeTx({ merchant: 'Whole Foods', category: 'groceries' }),
+    ]
+    render(<TxCopyList onPick={vi.fn()} onBack={vi.fn()} />)
+    // Three distinct categories → three headers
+    expect(screen.getByText('Coffee')).toBeInTheDocument()
+    expect(screen.getByText('Dining')).toBeInTheDocument()
+    expect(screen.getByText('Groceries')).toBeInTheDocument()
+  })
+
+  it('places merchant rows under their category header', () => {
+    store.transactions = [
+      makeTx({ merchant: 'Blue Bottle', category: 'coffee' }),
+      makeTx({ merchant: 'Aldi', category: 'groceries' }),
+      makeTx({ merchant: 'Whole Foods', category: 'groceries' }),
+    ]
+    render(<TxCopyList onPick={vi.fn()} onBack={vi.fn()} />)
+    const rows = rowButtons()
+    // Two groceries rows, one coffee row
+    expect(rows.filter((r) => r.textContent?.includes('Blue Bottle'))).toHaveLength(1)
+    expect(rows.filter((r) => r.textContent?.includes('Aldi'))).toHaveLength(1)
+    expect(rows.filter((r) => r.textContent?.includes('Whole Foods'))).toHaveLength(1)
+    // Groceries header appears once even with two rows
+    expect(screen.getAllByText('Groceries')).toHaveLength(1)
+  })
+
+  it('renders no section headers on an empty list (empty state only)', () => {
+    store.transactions = []
+    render(<TxCopyList onPick={vi.fn()} onBack={vi.fn()} />)
+    expect(screen.getByText('Nothing to copy yet')).toBeInTheDocument()
+    expect(screen.queryByText('Coffee')).not.toBeInTheDocument()
+  })
+
+  it('renders exactly one header when all rows share the same category', () => {
+    store.transactions = [
+      makeTx({ merchant: 'Aldi', category: 'groceries' }),
+      makeTx({ merchant: 'Whole Foods', category: 'groceries' }),
+    ]
+    render(<TxCopyList onPick={vi.fn()} onBack={vi.fn()} />)
+    expect(screen.getAllByText('Groceries')).toHaveLength(1)
+    // No other category headers
+    expect(screen.queryByText('Coffee')).not.toBeInTheDocument()
+  })
+})

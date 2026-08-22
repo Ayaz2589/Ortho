@@ -8,7 +8,8 @@ import { csvImportReducer, initialCsvImportState } from './csvImportSession'
 import { checkedDrafts, totalSpendCents } from './csvImportModels'
 import type { CsvDraftRow } from './csvImportModels'
 import type { DuplicateCandidate } from './duplicateMatch'
-import { resolveDefaultOwnerId } from '../defaultOwner'
+import { resolveDefaultOwnerId, resolveDefaultOwnerIds } from '../defaultOwner'
+import { readSharedByDefault } from '../../components/settings/sharedByDefault'
 import { matchSourceForBank } from './matchSource'
 import { loadCsvSession, saveCsvSession } from './csvImportPersistence'
 import type { CsvImportState } from './csvImportSession'
@@ -47,6 +48,8 @@ function buildTransaction(
     created_by: currentUserId,
     created_at: now,
     updated_at: now,
+    // spec 053 — an imported row records who fronted it, so it reaches the balance engine.
+    paid_by: draft.source.kind === 'income' ? null : (draft.paidById ?? currentPersonId),
     owner_ids: owners,
     shares,
     tags: draft.tags,
@@ -72,7 +75,15 @@ export function useCsvImport() {
 
   // The importing user, shared with the transaction form so imported and
   // hand-entered rows resolve their owner identically.
-  const defaultOwnerId = resolveDefaultOwnerId(currentPersonId, householdMembers, currentUserId) || null
+  // spec 050 — imports inherit the same shared-by-default owner set as the New form, so
+  // importing a statement does not quietly produce a solo ledger for a shared household.
+  const defaultOwnerIds = resolveDefaultOwnerIds(
+    currentPersonId,
+    householdMembers,
+    currentUserId,
+    readSharedByDefault()
+  ).filter(Boolean)
+  const defaultPayerId = resolveDefaultOwnerId(currentPersonId, householdMembers, currentUserId) || null
 
   const cardNames = useMemo(() => cards.map((c) => c.name), [cards])
 
@@ -98,12 +109,13 @@ export function useCsvImport() {
         type: 'file/parsed',
         statement,
         bankLabel: result.profile.label,
-        defaultOwnerId,
+        defaultOwnerIds,
+        defaultPayerId,
         defaultSource,
         existing,
       })
     },
-    [dispatch, defaultOwnerId, existing, cardNames]
+    [dispatch, defaultOwnerIds, defaultPayerId, existing, cardNames]
   )
 
   const toggleChecked = useCallback(

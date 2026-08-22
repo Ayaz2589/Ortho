@@ -27,6 +27,7 @@ vi.mock('@/lib/store', () => {
       currency: 'usd',
       rate: () => 1,
       cards: [{ id: 'c1', household_id: 'h1', name: 'Visa', created_at: '2026-01-01' }],
+      depositAccounts: [],
       currentHousehold: { id: 'h1', owner_id: 'u1', name: 'Home', created_at: '2026-01-01' },
       currentUserId: 'u1',
       currentPersonId: 'u1',
@@ -43,6 +44,15 @@ vi.mock('@/lib/store', () => {
 })
 
 import NewTransactionPage from '@/app/(app)/transactions/new/page'
+
+// spec 050 made the shared owner set the DEFAULT for new transactions. These tests
+// exercise mechanics that start from a single owner, so they pin the preference OFF —
+// their subject is not the default. The shared default has its own coverage in
+// test/transactions/shared-ownership-default.test.ts and shared-default-form.test.tsx.
+beforeEach(() => {
+  localStorage.setItem('ortho.sharedByDefault', 'false')
+})
+
 
 function setUrl(search: string) {
   window.history.replaceState({}, '', `/transactions/new${search}`)
@@ -106,12 +116,6 @@ describe('NewTransactionPage (mobile)', () => {
     // Copy prefills the merchant into a fresh add form.
     await screen.findByText('New transaction')
     expect(merchantInput().value).toBe('Blue Bottle')
-  })
-
-  it('opens in Settle-up transfer mode from ?from&to&amount', async () => {
-    setUrl('?from=u1&to=u2&amount=1200')
-    render(<NewTransactionPage />)
-    expect(await screen.findByText('Settle up')).toBeInTheDocument()
   })
 
   it('redirects to the list at desktop width and renders no form', async () => {

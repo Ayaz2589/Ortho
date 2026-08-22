@@ -160,6 +160,12 @@ export function monthInsightReference(yyyymm: string, now: Date = new Date()): D
 /**
  * Step to the chronologically adjacent month within `months` (which is
  * newest-first), or `null` at the data edge. `'prev'` = older, `'next'` = newer.
+ *
+ * No UI calls this today — `MonthPicker` dropped its prev/next stepper for a
+ * single dropdown. It is kept because it is part of the month-scope contract
+ * pinned by `shared/test-vectors/` (`test/dashboard-month-scope.parity.test.ts`);
+ * deleting it would mean regenerating vectors, which this repo reads as a
+ * behavior change. Remove it only alongside that regeneration.
  */
 export function stepMonth(
   months: string[],

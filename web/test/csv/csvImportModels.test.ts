@@ -70,19 +70,26 @@ describe('parsedTransactionToDraft', () => {
     expect(draft.checked).toBe(false)
   })
 
-  it('seeds ownerIds with the default owner when the parsed row has none', () => {
-    const draft = parsedTransactionToDraft(makeParsedTx(), null, 'person-1')
+  it('seeds ownerIds with the default owners when the parsed row has none', () => {
+    const draft = parsedTransactionToDraft(makeParsedTx(), null, ['person-1'])
     expect(draft.ownerIds).toEqual(['person-1'])
+  })
+
+  // spec 050 — a shared household's default is every active person, so an imported
+  // statement produces the same shared ownership a hand-entered transaction would.
+  it('seeds ownerIds with EVERY default owner for a shared household', () => {
+    const draft = parsedTransactionToDraft(makeParsedTx(), null, ['person-1', 'person-2'])
+    expect(draft.ownerIds).toEqual(['person-1', 'person-2'])
   })
 
   it('keeps the parsed row owners over the default owner when present', () => {
     const tx = makeParsedTx({ ownerIds: ['person-2'] })
-    const draft = parsedTransactionToDraft(tx, null, 'person-1')
+    const draft = parsedTransactionToDraft(tx, null, ['person-1'])
     expect(draft.ownerIds).toEqual(['person-2'])
   })
 
   it('leaves ownerIds empty when there is no default owner', () => {
-    const draft = parsedTransactionToDraft(makeParsedTx(), null, null)
+    const draft = parsedTransactionToDraft(makeParsedTx(), null, [])
     expect(draft.ownerIds).toEqual([])
   })
 

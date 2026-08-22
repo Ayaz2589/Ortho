@@ -49,6 +49,7 @@ const makeDraft = (id: string, overrides: Partial<CsvDraftRow> = {}): CsvDraftRo
   amountCents: 575,
   dateISO: '2026-06-28T12:00:00.000Z',
   ownerIds: [],
+  paidById: null,
   split: null,
   paymentSource: 'Chase',
   tags: [],
@@ -68,14 +69,14 @@ describe('CsvImportList', () => {
 
   it('renders merchant name and amount for normal rows', () => {
     const drafts = [makeDraft('d1')]
-    render(<CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} />)
+    render(<CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} onSetPayer={vi.fn()} />)
     expect(screen.getByText('Starbucks')).toBeTruthy()
     expect(screen.getByText('$5.75')).toBeTruthy()
   })
 
   it('renders a date group header', () => {
     const drafts = [makeDraft('d1')]
-    render(<CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} />)
+    render(<CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} onSetPayer={vi.fn()} />)
     // Jun 28 date group should appear
     expect(screen.getByText(/Jun 28/i)).toBeTruthy()
   })
@@ -83,7 +84,7 @@ describe('CsvImportList', () => {
   it('calls onEdit when a normal row is clicked', async () => {
     const onEdit = vi.fn()
     const drafts = [makeDraft('d1')]
-    render(<CsvImportList drafts={drafts} onEdit={onEdit} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} />)
+    render(<CsvImportList drafts={drafts} onEdit={onEdit} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} onSetPayer={vi.fn()} />)
     await userEvent.click(screen.getByText('Starbucks'))
     expect(onEdit).toHaveBeenCalledWith('d1')
   })
@@ -96,7 +97,7 @@ describe('CsvImportList', () => {
       checked: false,
       source: makeTx({ excluded: true, excludeReason: 'card-payment' }),
     })]
-    render(<CsvImportList drafts={drafts} onEdit={onEdit} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} />)
+    render(<CsvImportList drafts={drafts} onEdit={onEdit} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} onSetPayer={vi.fn()} />)
     expect(screen.getByText('Payment Thank You')).toBeTruthy()
     // Payment rows should not trigger onEdit
     const paymentEl = screen.getByText('Payment Thank You').closest('[data-testid]')
@@ -109,7 +110,7 @@ describe('CsvImportList', () => {
       duplicateOf: 'existing-id',
       checked: false,
     })]
-    render(<CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} />)
+    render(<CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} onSetPayer={vi.fn()} />)
     expect(screen.getByText('Netflix')).toBeTruthy()
     // Duplicate marker should be visible
     const row = screen.getByTestId('csv-row-dup1')
@@ -118,7 +119,7 @@ describe('CsvImportList', () => {
 
   it('shows the confirm button with checked count', () => {
     const drafts = [makeDraft('d1'), makeDraft('d2')]
-    render(<CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} />)
+    render(<CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} onSetPayer={vi.fn()} />)
     // Should show "Add 2 transactions" or similar
     expect(screen.getByRole('button', { name: /add 2/i })).toBeTruthy()
   })
@@ -128,7 +129,7 @@ describe('CsvImportList', () => {
       makeDraft('d1', { dateISO: '2026-06-28T12:00:00.000Z', merchant: 'Starbucks' }),
       makeDraft('d2', { dateISO: '2026-06-27T12:00:00.000Z', merchant: 'Amazon' }),
     ]
-    render(<CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} />)
+    render(<CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} onSetPayer={vi.fn()} />)
     expect(screen.getByText('Starbucks')).toBeTruthy()
     expect(screen.getByText('Amazon')).toBeTruthy()
   })
@@ -139,7 +140,7 @@ describe('CsvImportList', () => {
         makeDraft('d1', { merchant: 'Sourced Row', paymentSource: 'Chase' }),
         makeDraft('d2', { merchant: 'Unsourced Row', paymentSource: '' }),
       ]
-      render(<CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} />)
+      render(<CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} onSetPayer={vi.fn()} />)
       // Exactly one "No source" tag, on the unset row.
       expect(screen.getAllByText('No source')).toHaveLength(1)
     })
@@ -151,7 +152,7 @@ describe('CsvImportList', () => {
         makeDraft('d1', { merchant: 'Untouched' }),
         makeDraft('d2', { merchant: 'Tweaked', edited: true }),
       ]
-      render(<CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} />)
+      render(<CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} onSetPayer={vi.fn()} />)
       expect(screen.queryByTestId('csv-edited-d1')).toBeNull()
       expect(screen.getByTestId('csv-edited-d2')).toBeTruthy()
       expect(screen.getByText('Edited')).toBeTruthy()
@@ -162,7 +163,7 @@ describe('CsvImportList', () => {
     it('hides the owner control for a solo household', () => {
       mockMembers = []
       const drafts = [makeDraft('d1', { ownerIds: ['u1'] })]
-      render(<CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} />)
+      render(<CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} onSetPayer={vi.fn()} />)
       expect(screen.queryByLabelText(/^Owner:/)).toBeNull()
     })
 
@@ -172,7 +173,7 @@ describe('CsvImportList', () => {
       const onSetOwners = vi.fn()
       const drafts = [makeDraft('d1', { ownerIds: ['u1'] })]
       render(
-        <CsvImportList drafts={drafts} onEdit={onEdit} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={onSetOwners} />
+        <CsvImportList drafts={drafts} onEdit={onEdit} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={onSetOwners} onSetPayer={vi.fn()} />
       )
       // Open the picker from the row's owner avatar — this must NOT open the editor.
       await userEvent.click(screen.getByLabelText(/^Owner:/))
@@ -182,12 +183,36 @@ describe('CsvImportList', () => {
       expect(onSetOwners).toHaveBeenCalledWith('d1', ['u1', 'u2'])
     })
 
+    // spec 053 — the same popover carries who FRONTED the money, so an imported statement
+    // reaches the balance engine instead of being invisible to it.
+    it('sets the payer from the row popover', async () => {
+      mockMembers = MEMBERS
+      const onSetPayer = vi.fn()
+      const drafts = [makeDraft('d1', { ownerIds: ['u1'], paidById: 'u1' })]
+      render(
+        <CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} onSetPayer={onSetPayer} />
+      )
+      await userEvent.click(screen.getByLabelText(/^Owner:/))
+      await userEvent.click(screen.getByRole('menuitemradio', { name: /Paid by Sam/ }))
+      expect(onSetPayer).toHaveBeenCalledWith('d1', 'u2')
+    })
+
+    it('offers no payer choice for income — income has no payer', async () => {
+      mockMembers = MEMBERS
+      const drafts = [makeDraft('d1', { ownerIds: ['u1'], source: makeTx({ kind: 'income' }) })]
+      render(
+        <CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={vi.fn()} onSetPayer={vi.fn()} />
+      )
+      await userEvent.click(screen.getByLabelText(/^Owner:/))
+      expect(screen.queryByRole('menuitemradio')).toBeNull()
+    })
+
     it('keeps at least one owner: the last owner cannot be removed', async () => {
       mockMembers = MEMBERS
       const onSetOwners = vi.fn()
       const drafts = [makeDraft('d1', { ownerIds: ['u1'] })]
       render(
-        <CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={onSetOwners} />
+        <CsvImportList drafts={drafts} onEdit={vi.fn()} onToggle={vi.fn()} onConfirm={vi.fn()} onSetOwners={onSetOwners} onSetPayer={vi.fn()} />
       )
       await userEvent.click(screen.getByLabelText(/^Owner:/))
       await userEvent.click(screen.getByRole('menuitemcheckbox', { name: /Alex/ }))

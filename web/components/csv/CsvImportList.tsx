@@ -21,6 +21,7 @@ interface Props {
   onConfirm: () => void
   /** Assign owners to a row inline (from the list), without opening the editor. */
   onSetOwners: (id: string, ownerIds: string[]) => void
+  onSetPayer: (id: string, personId: string) => void
 }
 
 interface DraftDayGroup {
@@ -47,7 +48,7 @@ function groupDraftsByDay(drafts: CsvDraftRow[]): DraftDayGroup[] {
     }))
 }
 
-export function CsvImportList({ drafts, onEdit, onConfirm, onSetOwners }: Props) {
+export function CsvImportList({ drafts, onEdit, onConfirm, onSetOwners, onSetPayer }: Props) {
   const app = useApp()
   const { formatMoney } = app
   // Owners only matter when the household has more than one person; a solo
@@ -89,6 +90,7 @@ export function CsvImportList({ drafts, onEdit, onConfirm, onSetOwners }: Props)
                 householdMembers={householdMembers}
                 resolveUser={resolveUser}
                 onSetOwners={onSetOwners}
+          onSetPayer={onSetPayer}
               />
             ))}
           </section>
@@ -127,6 +129,7 @@ function DraftRow({
   householdMembers,
   resolveUser,
   onSetOwners,
+  onSetPayer,
 }: {
   draft: CsvDraftRow
   onEdit: (id: string) => void
@@ -135,6 +138,7 @@ function DraftRow({
   householdMembers: User[]
   resolveUser: (id: string) => User
   onSetOwners: (id: string, ownerIds: string[]) => void
+  onSetPayer: (id: string, personId: string) => void
 }) {
   const isPayment = draft.isPaymentRow
   const isDuplicate = draft.duplicateOf !== null && !draft.checked
@@ -190,6 +194,10 @@ function DraftRow({
               members={householdMembers}
               resolveUser={resolveUser}
               onChange={(ids) => onSetOwners(draft.id, ids)}
+              paidById={draft.paidById}
+              onChangePayer={
+                draft.source.kind === 'income' ? undefined : (id) => onSetPayer(draft.id, id)
+              }
             />
           </div>
         </div>

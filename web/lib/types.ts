@@ -5,19 +5,27 @@ export type PropertyKind = 'primary_home' | 'multifamily' | 'rental'
  *  absent — Reimbursement is never a pickable category/budget/filter (locked
  *  product decision, 2026-07-02 audit). The union derives from this list so a
  *  new category can never reach the type without reaching every picker
- *  (spec 013 US5). */
+ *  (spec 013 US5). Spec 031 expanded this list to a two-level taxonomy. */
 export const PICKABLE_CATEGORIES = [
-  'coffee',
-  'groceries',
-  'dining',
+  // Food & Drink
+  'coffee', 'groceries', 'dining', 'fast_food', 'alcohol', 'takeout',
+  // Transport
+  'transit', 'fuel', 'parking', 'rideshare',
+  // Home
+  'rent', 'utilities', 'home_improvement', 'insurance',
+  // Health & Wellness
+  'health', 'gym', 'pharmacy', 'mental_health',
+  // Entertainment
+  'entertainment', 'streaming', 'gaming', 'events',
+  // Shopping
+  'clothing', 'electronics', 'personal_care', 'gifts',
+  // Subscriptions
   'subs',
-  'fuel',
-  'rent',
-  'health',
-  'income',
-  'transit',
-  'utilities',
-  'entertainment',
+  // Education
+  'education', 'books',
+  // Income (legacy + subcategories)
+  'income', 'salary', 'bonus', 'freelance', 'business_income',
+  'dividends', 'rental_income', 'gift_received', 'refund', 'other_income',
 ] as const
 export type TransactionCategory = (typeof PICKABLE_CATEGORIES)[number] | 'transfer'
 export type InsightSeverity = 'critical' | 'warning' | 'info' | 'positive'
@@ -57,6 +65,80 @@ export interface Card {
   id: string
   household_id: string
   name: string
+  created_at: string
+}
+
+export interface DepositAccount {
+  id: string
+  household_id: string
+  name: string
+  created_at: string
+}
+
+// Financial Health (spec 041) — user-scoped profile + derived-metric domain types.
+// Money is integer USD cents. The score itself is derived live (never stored); only
+// the raw questionnaire answers and append-only band snapshots persist.
+export type HousingType = 'rent' | 'own' | 'family' | 'none'
+export type EmergencyFundLevel = 'none' | 'under_1m' | '1_3m' | '3_6m' | '6m_plus'
+export type FixedCostKind =
+  | 'remittance'
+  | 'loan'
+  | 'phone'
+  | 'transit'
+  | 'childcare'
+  | 'subscription'
+  | 'other'
+export type HealthDimension =
+  | 'cash_flow'
+  | 'safety_net'
+  | 'commitment_load'
+  | 'savings_momentum'
+  | 'plan_engagement'
+  | 'routine_awareness' // spec 044 — appended; existing five keep their order/positions
+export type HealthBand = 'strong' | 'steady' | 'building' | 'getting_started'
+
+/** One user's stated financial situation (one row per user; private to that user). */
+export interface FinancialProfile {
+  id: string
+  user_id: string
+  monthly_income_cents: number
+  income_is_variable: boolean
+  income_low_estimate_cents: number | null
+  housing_type: HousingType
+  housing_cost_cents: number | null
+  housing_share_fraction: number
+  savings_target_fraction: number
+  emergency_fund_level: EmergencyFundLevel
+  created_at: string
+  updated_at: string
+}
+
+/** A recurring monthly obligation beyond housing (remittances are first-class). */
+export interface FixedCost {
+  id: string
+  user_id: string
+  label: string
+  amount_cents: number
+  kind: FixedCostKind
+  created_at: string
+}
+
+/** The user's 1–5 importance weight for a single health dimension (default 3). */
+export interface DimensionWeight {
+  id: string
+  user_id: string
+  dimension: HealthDimension
+  weight: number
+  created_at: string
+}
+
+/** A point-in-time record of the computed score + band (append-only; drives the
+ *  "you moved from Building → Steady" progress story). */
+export interface HealthSnapshot {
+  id: string
+  user_id: string
+  score: number
+  band: HealthBand
   created_at: string
 }
 
@@ -104,6 +186,63 @@ export interface Tag {
   id: string
   household_id: string
   name: string
+  created_at: string
+}
+
+// Financial Routines (spec 044) — persisted state layer only; the routines themselves are derived
+// live from transactions by web/lib/finance/routines.ts (DetectedRoutine/RoutineWithState live
+// there, not here — they're pure-engine output, never stored as-is).
+export type RoutinePersistedStatus = 'confirmed' | 'dismissed'
+export type RoutineStatus = 'recognized' | 'lapsed' | RoutinePersistedStatus
+export type LocationConsentLevel = 'off' | 'geocoding' | 'foreground_capture'
+
+/** A household member's confirm/dismiss/rename decision on a detected routine, keyed by the
+ *  engine's deterministic `routine_key` (there is no separate "routine" row — see routines.ts). */
+export interface RecognizedRoutineState {
+  id: string
+  household_id: string
+  routine_key: string
+  status: RoutinePersistedStatus
+  label: string | null
+  person_id: string | null
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
+/** One user's location-assistance opt-in level (private; off by default). */
+export interface LocationConsent {
+  id: string
+  user_id: string
+  level: LocationConsentLevel
+  granted_at: string | null
+  revoked_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** One opportunistic foreground location capture (only written while consent level is
+ *  'foreground_capture'; private to the capturing user). */
+export interface RoutineVisit {
+  id: string
+  user_id: string
+  household_id: string
+  captured_at: string
+  latitude: number
+  longitude: number
+  accuracy_meters: number | null
+  created_at: string
+}
+
+/** A household-level cache of a merchant name resolved to a place (FR-012 baseline enrichment). */
+export interface MerchantGeocode {
+  id: string
+  household_id: string
+  merchant_key: string
+  latitude: number | null
+  longitude: number | null
+  label: string | null
+  resolved_at: string | null
   created_at: string
 }
 
@@ -177,6 +316,11 @@ export interface Budget {
   budget_type: BudgetType
   /** Flex-only cap on accumulated carry (cents); null = uncapped. */
   rollover_cap_cents: number | null
+  /** Whose budget this is (spec 054). `null` = the household's — the pre-054 meaning
+   *  of every row. A person id makes it that person's personal limit, measured against
+   *  their scoped spend. Required (not optional) so every construction site says which
+   *  it is: a silently-defaulted owner is the failure spec 050 was written about. */
+  person_id: string | null
   /** Carry anchor — the month carry begins accruing. Present from the DB row. */
   created_at?: string
 }

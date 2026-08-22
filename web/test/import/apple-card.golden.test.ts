@@ -36,7 +36,7 @@ describe('Apple Card golden parse', () => {
   it('cleans glued merchant/address and categorizes subscriptions', () => {
     const txn = appleCard.parse(pages).sections[1].rows
     expect(txn.find((r) => r.rawDescription.startsWith('OPENAI'))).toMatchObject({ merchant: 'OpenAI', category: 'subs' })
-    expect(txn.find((r) => r.rawDescription.includes('RETRO FITNESS'))).toMatchObject({ merchant: 'Retro Fitness', category: 'health' })
+    expect(txn.find((r) => r.rawDescription.includes('RETRO FITNESS'))).toMatchObject({ merchant: 'Retro Fitness', category: 'gym' })
     expect(txn.find((r) => r.rawDescription.includes('CLAUDE.AI'))?.merchant).toBe('Claude.ai')
   })
 

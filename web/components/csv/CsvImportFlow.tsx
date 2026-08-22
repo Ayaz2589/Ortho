@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { FileSpreadsheet, Upload } from 'lucide-react'
 import { useCsvImport } from '@/lib/csv/useCsvImport'
+import { clearCsvSession } from '@/lib/csv/csvImportPersistence'
 import { Drawer, DrawerHeader } from '@/components/web/Drawer'
 import { CsvImportList } from './CsvImportList'
 import { CsvImportSummary } from './CsvImportSummary'
@@ -47,6 +48,8 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
   const handleClose = () => {
     reset()
     setEditingId(null)
+    // clearCsvSession() must be called here — the useEffect in useCsvImport races with unmount and loses.
+    clearCsvSession()
     onClose()
   }
 
@@ -156,6 +159,7 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
                 onToggle={toggleChecked}
                 onConfirm={startImport}
                 onSetOwners={(id, ownerIds) => updateDraft(id, { ownerIds, split: null })}
+                onSetPayer={(id, personId) => updateDraft(id, { paidById: personId })}
               />
             </TrayBody>
           </>

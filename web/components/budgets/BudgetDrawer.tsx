@@ -26,17 +26,29 @@ const TYPE_OPTIONS: { value: BudgetType; label: string; blurb: string }[] = [
 /**
  * Budget detail/edit in the shared slide-out drawer. `category` drives open
  * state; null = closed. Spec 027 adds a bucket-type selector and, for Flex, an
- * optional rollover cap.
+ * optional rollover cap. Spec 054 adds `personId`: null edits the HOUSEHOLD
+ * budget (the pre-054 behavior), a person id edits that person's own limit for
+ * the same category — a separate row, never a re-attribution of the shared one.
  */
 export function BudgetDrawer({
   category,
+  personId = null,
+  personName = null,
   onClose,
 }: {
   category: TransactionCategory | null
+  /** Whose budget to edit. `null` = the household's. */
+  personId?: string | null
+  /** Display name for the person, used in the drawer copy. */
+  personName?: string | null
   onClose: () => void
 }) {
   const { currency, rate, currentHousehold, budgets, addOrUpdateBudget, deleteBudget, t } = useApp()
-  const existing = category ? budgets.find((b) => b.category === category) ?? null : null
+  // Match on the owner as well as the category: a household and a personal budget can
+  // both exist for Dining, and each must edit its own row.
+  const existing = category
+    ? budgets.find((b) => b.category === category && (b.person_id ?? null) === personId) ?? null
+    : null
   const [amount, setAmount] = useState('')
   const [type, setType] = useState<BudgetType>('fixed')
   const [cap, setCap] = useState('')
@@ -53,7 +65,7 @@ export function BudgetDrawer({
         : '',
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, currency])
+  }, [category, currency, personId])
 
   const parsed = parseMoney(amount, currency, rate(currency))
   const canSave = parsed != null && parsed >= 0
@@ -67,6 +79,7 @@ export function BudgetDrawer({
       household_id: currentHousehold.id,
       category,
       monthly_limit_cents: parsed,
+      person_id: personId,
       budget_type: type,
       // Cap is flex-only; the other types always store null.
       rollover_cap_cents: type === 'flex' ? (parsedCap != null && parsedCap >= 0 ? parsedCap : null) : null,
@@ -110,6 +123,9 @@ export function BudgetDrawer({
               <Icon size={24} />
             </span>
             <div className="text-[17px] text-text">{t(meta.label)}</div>
+            {personName && (
+              <div className="text-[13px] text-text-3">{t("{0}'s budget", personName)}</div>
+            )}
           </div>
         )}
 

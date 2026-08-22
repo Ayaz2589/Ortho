@@ -31,9 +31,28 @@ not `users`. A person added without an Ortho account can fully own and split
 transactions — no sign-up required. The account holder has BOTH a `users` row
 (their auth identity) AND a `household_people` row linked via `linked_user_id`.
 
+### Ownership defaults (spec 050)
+
+A **new** expense/income transaction defaults to **every active person**, split evenly, whenever the
+household has more than one and the per-device `ortho.sharedByDefault` preference is on (it is by
+default). Before spec 050 every ingest path defaulted to the single logged-in person, so a
+multi-adult household produced a ledger indistinguishable from a solo one. Editing or copying an
+existing transaction never applies the default — a default must not re-attribute recorded money.
+`resolveDefaultOwnerIds()` in `lib/defaultOwner.ts` is the single rule, shared by the form and CSV
+import.
+
 ### Unique constraint
 `household_people` has `unique (household_id, linked_user_id)` — prevents
 duplicate person rows for the same auth user in the same household.
+
+### Deposit accounts (spec 033)
+`deposit_accounts` is a household-scoped roster (name-only rows) that mirrors
+`cards`. It replaces the old hardcoded `INCOME_SOURCES` constant (now removed):
+the income "Deposit to" dropdown is populated from these user-configured
+accounts, managed in Settings → Deposit Accounts. It loads **fail-open** in
+`loadAll` as `store.depositAccounts`. The chosen account is stored as the income
+transaction's `source` (a plain string name — no transactions schema change) and
+has **no effect on balance math** (income has no balance effect — see §7).
 
 ---
 
@@ -51,13 +70,14 @@ On every sign-in, `runBootstrap()` in `lib/store.tsx`:
    - One-time migration: folds legacy `localStorage['localUsers']` name-only
      people into `household_people` (wrapped in `try/catch` — never takes down
      bootstrap)
-5. `loadAll()` — 17 parallel reads: household_people, transactions, shares,
-   budgets, goals, banks, tags, and more
+5. `loadAll()` — 18 parallel reads: household_people, transactions, shares,
+   budgets, goals, banks, tags, deposit accounts, and more
 
-**Fail-loud vs fail-open split:** the 11 core reads use `orThrow`; the 6 newer
-additive reads (goals, linked banks, tags) treat missing-table errors
-(`PGRST205`/`42P01`) as empty — the deploy-before-migrate window where Vercel
-ships `main` before migrations apply.
+**Fail-loud vs fail-open split:** the 11 core reads use `orThrow`; the 7 newer
+additive reads (goals, goal_contributions, linked banks, tags, transaction_tags
+join, deposit_accounts) treat missing-table errors (`PGRST205`/`42P01`) as empty
+— the deploy-before-migrate window where Vercel ships `main` before migrations
+apply.
 
 ---
 
@@ -115,43 +135,77 @@ rows commit together or not at all. The pre-027 two-step client write is gone.
 rows are absent (defensive only — persisted transactions always carry materialized
 shares since migration `20260616120000`).
 
+### Split math surface
+
+The split calculators live in `lib/splits.ts`:
+
+- Three methods — **even**, **percent**, **value** — via `computeShares`,
+  validated by `validateSplit` (percent totals must land within
+  `PERCENT_TOLERANCE = 0.5` of 100). `seedSplit` derives editable UI seed values
+  from stored cents.
+- **Deterministic leftover-cent policy** (spec 027 / B4): shares are allocated in
+  a canonical owner order via `orderedOwnerIds`, so the lexically-first owner
+  bears any leftover cent regardless of entry/storage order. Mirrored by iOS and
+  locked by shared test vectors.
+
+UI-seeding helpers in `lib/splitFields.ts` (`evenPercentStrings`,
+`evenValueStrings`, `rebalancePercents`) format those values for the form inputs.
+
+`resolveDefaultOwnerId` (`lib/defaultOwner.ts`) picks the default owner/payer for
+a new or imported transaction — current person → first household member → auth
+user — shared by `TxForm` and CSV import so hand-entered and imported rows resolve
+the same way.
+
 ---
 
 ## 7. Balance and settle-up system
 
-### The formula — `lib/balances.ts`
+### The formula — `lib/finance/balances.ts` (rebuilt in spec 053)
+
+> **History.** Spec 043 deleted this feature because the original `balanceBetween` was
+> **viewer-anchored**: in a three-adult household what one roommate owed another was invisible to
+> the third. Spec 053 rebuilt it for N people. The nine golden-vector cases are unchanged and the
+> regenerated JSON is byte-identical, so the pairwise rules below are exactly as they always were.
 
 ```ts
-balanceBetween(viewer, other, transactions): number
-// positive → other owes viewer
-// negative → viewer owes other
-// 0        → settled
+balanceBetween(a, b, transactions): number   // positive ⇒ b owes a
+allPairBalances(personIds, transactions)     // every ordered pair; antisymmetric
+outstandingBalances(personIds, transactions) // non-zero pairs, creditor-first
+peopleInLedger(transactions)                 // roster from the LEDGER, not the active list
 ```
 
 - **Expense, viewer paid:** `net += other.share` (other owes their portion)
 - **Expense, other paid:** `net -= viewer.share` (viewer owes their portion)
 - **Transfer `other→viewer`:** `net -= amount_cents` (other reimbursed viewer)
 - **Transfer `viewer→other`:** `net += amount_cents` (viewer paid other back)
-- **Income:** no effect on balances
+- **Income (spec 053):** the mirror of the expense case — a recipient of co-owned income owes
+  each co-owner their share
+- **No payer:** contributes nothing. Historical rows predate payer capture, and inventing a payer
+  for them would fabricate debts
 - **Third-party transactions:** no effect on the viewer↔other pair
 
 Balances are computed over **all transactions ever** (no month scope). Integer
 cents only — no rounding.
 
-### `BalanceSummary` component
+### `HouseholdBalancesBody` widget (spec 053)
 
-Rendered on the Transactions page. Finds all counterparties who appear anywhere
-in the ledger — including removed members — so an outstanding balance with
-someone who has left is still visible and settle-able. Filters to non-zero rows,
-sorts alphabetically. Never shows red (Constitution rule: loss/cost is never red).
+A default-off widget in the dashboard registry. Shows **every** non-zero pair to **every**
+member — including pairs the viewer is not part of, which is the whole point of the N-person
+rebuild. The roster comes from `peopleInLedger`, so a removed member's outstanding balance stays
+visible and settle-able. Balances span the entire ledger and deliberately ignore the dashboard's
+time scope — a debt does not expire at month end. Never red.
 
-### Settle-up (B9 fix)
+### Settle-up
 
-The "Settle up" button prefills a `transfer` transaction with `{ from, to, amountCents }`
-where `amountCents` is the **exact integer balance**, not a display-currency
-round-trip. This is critical: if the amount were run through `centsToDisplay` →
-`displayToCents` at a non-USD rate, a cent could be lost (e.g. 11¢ × GBP 0.78 →
-"£0.09" → 12¢ on re-parse — leaving the pair perpetually unsettled).
+⚠️ **Not currently wired.** The one-tap prefill (`TransferPrefill`/`initialTransfer`/`openSettle`/
+the `transfer` URL param) was removed in spec 043 and has not been rebuilt — spec 053 FR-014 is
+deferred. Settling today means recording a Transfer on the New form manually; the balance list
+recomputes correctly once you do.
+
+When it returns, the **B9 rule still applies**: prefill the **exact integer balance**, never a
+display-currency round trip. If the amount were run through `centsToDisplay` → `displayToCents` at
+a non-USD rate a cent could be lost (11¢ × GBP 0.78 → "£0.09" → 12¢ on re-parse), leaving the pair
+perpetually unsettled.
 
 ---
 
@@ -219,12 +273,21 @@ ownership.
 | `test/balance-summary.test.tsx` | 3 component cases: "X owes you", "you owe X", hides when settled |
 | `test/web/settle-up-currency.test.tsx` | B9 regression: exact cents preserved through non-USD display currency |
 
-All 191 test files pass as of 2026-07-24 (`npm test`). TypeScript clean
+All 233 test files pass (`npm test`). TypeScript clean
 (`npx tsc --noEmit` exits 0).
 
 ---
 
 ## 11. Next Steps — Household Feature Redesign
+
+> **STATUS 2026-08-16.** This section was written 2026-07-24 and its code references describe the
+> tree as it was then — in particular `lib/balances.ts`, which spec 043 deleted and spec 053 rebuilt
+> at `lib/finance/balances.ts`. Shipped since: **§11.3.B** income balance effects, **§11.3.C** the
+> N-person matrix and **§11.3.E** the balance widget (all spec 053); **§11.6 Phase 1** shared-by-
+> default ownership and split presets (spec 050); the person-scoped engines that §11.7's
+> budget question anticipated (spec 051), and **per-person budget LIMITS** answering it outright
+> (spec 054 — §11.7). Still open: solo-mode UX polish, debt simplification,
+> the settle-up prefill, settlement history, recurring split memory, and the invite flow.
 
 Written 2026-07-24 after auditing the existing system against the product vision and market
 research in `docs/research/`. Read alongside `docs/research/finance-habits-budgeting-apps.md`
@@ -268,10 +331,10 @@ missing pieces are:
 | Transaction ownership type UI | ❌ Needs new UI | Maps onto existing `paid_by` + `owner_ids` — UX wrapper only, no schema change |
 | Flexible splits (equal / pct / amount) | ✅ Exists | `shares Record<personId, cents>` — needs preset buttons in transaction form |
 | One-paid-for-everyone → balance | ✅ Exists | `paid_by ≠ owner_ids` logic in `balanceBetween` is already correct |
-| Income balance effects | ❌ Missing | `balanceBetween` (`lib/balances.ts`) skips income with an explicit `continue` |
-| N-person pairwise balance matrix (3+) | ❌ Missing | Current function is viewer-anchored; `what Amir owes Fatima is invisible to Carol` |
+| Income balance effects | ✅ Shipped (spec 053) | `balanceBetween` (`lib/balances.ts`) only branches on `expense`/transfer, so income matches neither and has no balance effect |
+| N-person pairwise balance matrix (3+) | ✅ Shipped (spec 053) | Current function is viewer-anchored; `what Amir owes Fatima is invisible to Carol` |
 | Balance debt simplification | ❌ Missing (optional) | For 3+ people: collapse A→B + B→C into A→C |
-| Dashboard balance widget | 🟡 Partial | `BalanceSummary` lives on Transactions page only; needs to become a dashboard widget |
+| Dashboard balance widget | ✅ Shipped (spec 053) | `BalanceSummary` lives on Transactions page only; needs to become a dashboard widget |
 | Settle-up for income balances | ❌ Missing | Automatic once income balance effects land (same prefill flow) |
 
 ---
@@ -286,13 +349,21 @@ No schema changes. Guard on `activePeople.length > 1` (already available in stor
 - `BalanceSummary` and balance widget: render nothing when solo
 - Settings → Household: surface "Add a person" as the entry point, not a prerequisite
 
-#### B. Income balance effects
+#### B. Income balance effects — ✅ shipped in spec 053
 
-Current exclusion in `lib/balances.ts`:
+Current behavior in `lib/balances.ts`: the loop branches only on
+`t.kind === 'expense'` and `else if (isTransfer(t))`. There is **no explicit
+income guard** — income (`t.kind === 'income'`) simply matches neither branch, so
+it contributes nothing to the net:
 
 ```ts
-// current — income excluded entirely
-if (tx.type === 'income') continue;
+// current — only expense and transfer are handled; income matches neither
+if (t.kind === 'expense') {
+  // payer-owes logic on t.shares
+} else if (isTransfer(t)) {
+  // reimbursement logic on t.amount_cents
+}
+// income falls through → no balance effect
 ```
 
 New logic: income follows the same `paid_by` / `owner_ids` / `shares` formula as expenses, but
@@ -303,10 +374,10 @@ with inverted sign semantics. When someone **receives** income that is designate
 - Mechanically identical to the existing expense path — the sign inversion is already handled by
   the `paid_by === viewer` vs `paid_by === other` branches in `balanceBetween`
 
-The fix is removing the `if (tx.type === 'income') continue` guard and testing the income vectors
-(add new golden vectors to `test/member-balance.parity.test.ts`).
+The fix is **adding** a new `t.kind === 'income'` branch (not deleting a guard — there is none)
+and testing the income vectors (add new golden vectors to `test/member-balance.parity.test.ts`).
 
-#### C. N-person pairwise balance matrix
+#### C. N-person pairwise balance matrix — ✅ shipped in spec 053
 
 Current `balanceBetween(viewer, other, transactions)` is asymmetric and viewer-scoped. For 3+
 people, add:
@@ -335,7 +406,12 @@ settle-up transfers the household needs to complete.
 This is non-trivial to explain in the UI but materially reduces friction in shared households.
 Gate it behind `activePeople.length >= 3` and show a "Simplified" toggle.
 
-#### E. Dashboard balance widget (`HouseholdBalancesWidget`)
+#### E. Dashboard balance widget — ✅ shipped in spec 053 as `HouseholdBalancesBody`
+
+> **Note (spec 034):** the dashboard is now a toggleable widget system — the old
+> "Overview | Reports" modes are gone. A future `HouseholdBalancesWidget` would be
+> a `WidgetDefinition` registered in `lib/widgets/registry.tsx` (toggled per-browser
+> in Settings → Widgets), not a bespoke insert into an Overview view.
 
 - Replaces / mirrors `BalanceSummary` on the dashboard Overview
 - Shows each non-zero pairwise balance as a row: `{name} owes you $X` / `You owe {name} $X`
@@ -381,7 +457,7 @@ From `docs/research/finance-habits-budgeting-apps.md` §4 and `docs/research/pro
    number. Already exists in the transaction ledger; just needs a filtered view.
 
 4. **Balance debt simplification** — See §11.3.D. NYC's target households are 2–4 adults
-   (`docs/research/nyc-market-language-analysis.md` §8: ~10% of immigrant families in overcrowded
+   (`docs/research/market-analysis/nyc-market-language-analysis.md` §8: ~10% of immigrant families in overcrowded
    shared households). For 3-person households this is a tangible quality-of-life win.
 
 5. **Recurring split memory** — For recurring merchants (Netflix, rent, Con Ed), remember and
@@ -422,8 +498,8 @@ From `docs/research/finance-habits-budgeting-apps.md` §4 and `docs/research/pro
 
 **Phase 2 — New logic, no schema changes**
 
-5. Income balance effects: remove income exclusion in `lib/balances.ts`; add income vectors to
-   `test/member-balance.parity.test.ts`
+5. Income balance effects: add a `t.kind === 'income'` branch in `lib/balances.ts`; add income
+   vectors to `test/member-balance.parity.test.ts`
 6. N-person pairwise balance matrix: `allPairBalances` in `lib/balances.ts`
 7. Dashboard balance widget: `HouseholdBalancesWidget` using the matrix
 8. Settle-up for income balances: automatic once Phase 2.5 lands (same prefill flow)
@@ -447,35 +523,61 @@ From `docs/research/finance-habits-budgeting-apps.md` §4 and `docs/research/pro
   mixed-income households, not every expense should be visible to all members. This is a non-goal
   for now but will come up once households have 3+ members.
 
-- **Household-level vs per-person budgets**: The budget engine currently models a merged wallet
-  (`lib/finance/budgets.ts` has zero references to `owner_ids`). As households grow to 3+ people,
-  "who is over budget" becomes ambiguous. This is deferred but the architecture has a seam here.
+- **Household-level vs per-person budgets**: ANSWERED by specs 051 + 054. Spec 051 narrowed the
+  **spend measured against** a budget; spec 054 gave the LIMIT the same owner — `budgets.person_id`
+  (null = the household's), selected by `scopeBudgets` and enforced by
+  `unique nulls not distinct (household_id, category, person_id)`. Person scope never falls back to
+  the household limit, so "who is over budget" is now answerable per person. What remains deferred
+  is the **pooling model** — automatically dividing one household allowance into per-person shares
+  is the same unvalidated question spec 050 left open, and 054 deliberately does not answer it.
 
 - **Income split UI language**: "Received by" vs "Who earned it" vs "Who gets credit" — the right
   framing for income splits needs a user test, not a design assumption.
 
 ---
 
-## 12. Spec 031 — Household Redesign (shipped 2026-07-24)
+## 12. Spec 055 — Household redesign: what survived, and what shipped elsewhere
 
-All gaps identified in §11.2 were addressed in **spec 031** (`specs/031-household-redesign/`).
+This section was originally written for a **spec 031** branch opened 2026-07-24 that was never
+merged. While it sat open, specs 043, 050 and 053 shipped and independently solved most of what
+it set out to do — 043 deleted the balances feature as broken, and 053 rebuilt it properly. The
+branch was reconciled against `main` rather than merged as written, so the table below records
+where each gap from §11.2 was ACTUALLY closed. Nothing here credits the unmerged branch for work
+that landed another way.
 
-### What shipped
+### Closed elsewhere, before this branch merged
+
+| Gap | Where it actually shipped |
+|---|---|
+| Income balance effects | **Spec 053** — `balanceBetween` handles income as the mirror of an expense (the recipient owes each co-owner their share), in `lib/finance/balances.ts` |
+| N-person pairwise balance matrix | **Spec 053** — `allPairBalances` / `outstandingBalances`, antisymmetric by construction, roster taken from the ledger |
+| Dashboard balance widget | **Spec 053** — `HouseholdBalancesBody`, registered as the `household-balances` widget (ships disabled, like every widget added since the board became configurable) |
+| Transaction ownership type UI | **Spec 050** — the "Who is this for?" Seg (Everyone / Just me) in `TxForm`, with the preset DERIVED from the owner set so a custom subset activates neither |
+
+The spec-031 branch's own versions of all four were discarded in the reconciliation: they were
+built on the pre-spec-034 dashboard (`DashboardDesktop`, `ModeSwitch`, `ReportsView`) and on the
+`lib/balances.ts` that spec 043 deleted, so keeping them would have reverted four later specs.
+
+### What this branch contributed that was NOT already on main
 
 | Gap | Resolution |
 |---|---|
-| Income balance effects | `balanceBetween` now handles income via same `paid_by`/`owner_ids` path — income golden vectors added to balance parity tests |
-| N-person pairwise balance matrix | `allPairBalances(people, transactions)` in `lib/balances.ts` — `O(n²)` double loop over all pairs |
-| Balance debt simplification | `simplifyDebts(pairs, people)` in `lib/balances.ts` — collapses A→B+B→C into A→C for 3+ people |
-| Dashboard balance widget | `HouseholdBalancesWidget` component — shows per-pair balances with settle-up deep-link, threshold nudge, settlement history, and simplified toggle |
-| Transaction ownership type UI | `OwnershipModePicker` Seg in `TxFormFields` — "Just me" / "We each paid" / "[Name] paid" modes, income-aware labels |
-| Recurring split memory | `getLastSplitForMerchant` in `lib/splitMemory.ts` — suggests prior multi-person split for repeat merchants with a dismissable chip |
-| Settle-up threshold settings | `useSettleThreshold` hook + settings input at `settings/household/page.tsx` |
-| Settlement history panel | Per-pair history of past transfers in `HouseholdBalancesWidget` |
+| Balance debt simplification | `simplifyDebts(pairs)` in `lib/finance/balances.ts` — nets each person to one figure and matches creditors to debtors greedily, collapsing A→B→C into a single transfer. Ported onto spec 053's `PairBalance` shape. **Pure logic only — no UI consumer yet.** |
+| Recurring split memory | `getLastSplitForMerchant` in `lib/splitMemory.ts` — returns the most recent multi-person split for an exact merchant name. **Pure logic only — the form chip that consumed it was built against the pre-spec-050 `TxForm` and was not ported.** |
 
-### What remains open (deferred to future specs)
+### Explicitly NOT carried over
 
-- Balance visibility transparency (Carol seeing Alice↔Bob balance): deferred pending UX decision
-- Private/scoped transactions: non-goal until 3+ member households are common
-- Per-person budget attribution: architecture seam exists, deferred
-- Income split UI copy: needs user testing
+- **Settle-up threshold** (`useSettleThreshold` + a Settings → Household input) and the
+  **per-pair settlement history panel** were UI on the deleted `HouseholdBalancesWidget`. They
+  have no consumer on the current widget board and were dropped rather than half-ported. Spec
+  053 already records settle-up prefill as deferred (its FR-014); these belong with it.
+
+### What remains open
+
+- Balance visibility transparency is **resolved** — spec 053 shows every non-zero pair to every
+  member, which is precisely why the viewer-anchored predecessor was deleted rather than fixed.
+- Private/scoped transactions: still a non-goal until 3+ member households are common.
+- Per-person budget attribution: **shipped** in spec 054 (`budgets.person_id`).
+- Income split UI copy: still needs user testing.
+- A UI consumer for `simplifyDebts` (a "Simplified" toggle on the balances widget) and for
+  `getLastSplitForMerchant` (a suggestion chip on the current `TxForm`).

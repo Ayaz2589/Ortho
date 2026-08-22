@@ -1,7 +1,7 @@
 # finance.md — the pure finance engines
 
 > **Read this when** touching any pure money/date logic: `web/lib/finance/*`, `web/lib/splits.ts`,
-> `web/lib/balances.ts`, `web/lib/transactionFilters.ts`, `web/lib/reports/*`,
+> `web/lib/finance/balances.ts`, `web/lib/scope/moneyScope.ts`, `web/lib/transactionFilters.ts`, `web/lib/reports/*`,
 > `web/components/dashboard/range.ts`, or `web/components/housing/lease.ts`.
 >
 > Companions: [`shared.md`](./shared.md) (vector harness mechanics), [`web.md`](./web.md) (UI
@@ -22,7 +22,8 @@ vectors are a single-implementation regression lock, not a cross-language parity
 | Cents brand | `web/lib/finance/cents.ts` | — (type-level) |
 | Budget rollover | `web/lib/finance/budgets.ts` | `budget-rollover.json` |
 | Splits | `web/lib/splits.ts` | `transaction-splits.json` |
-| Member balances | `web/lib/balances.ts` | `member-balance.json` |
+| Member balances (spec 053) | `web/lib/finance/balances.ts` | `member-balance.json` |
+| Money scope (spec 051) | `web/lib/scope/moneyScope.ts` | — (unit/property tests) |
 | Transaction filters | `web/lib/transactionFilters.ts` | `transaction-filters.json` |
 | Dashboard month scope | `web/components/dashboard/range.ts` | `dashboard-month-scope.json` |
 | Mortgage | `web/lib/finance/mortgage.ts` | `mortgage.json` |
@@ -30,10 +31,23 @@ vectors are a single-implementation regression lock, not a cross-language parity
 | Lease timing | `web/components/housing/lease.ts` | `lease.json` |
 | Insights (8 rules) | `web/lib/finance/insights.ts` + `insights-thresholds.ts` | `insights.json` |
 | Goals (rule 9) | `web/lib/finance/goals.ts` + `goals-thresholds.ts` | `goals.json` |
+| Financial health (spec 041) | `web/lib/finance/financialHealth.ts` + `financial-health-thresholds.ts` | — (unit/property tests) |
 | Reports helpers | `web/lib/reports/{savings,categories,months}.ts` | — (unit tests only) |
 
 Supporting model layer (not engines): `web/lib/categories.ts` (taxonomy), `web/lib/transaction.ts`
 (transfer helpers), `web/lib/format.ts` (`parseLocalDate`).
+
+Unvectored pure roll-ups added for the widget dashboard (spec 034), pinned by unit/integrity tests
+rather than golden vectors: `web/lib/finance/housing-summary.ts` (§10) and
+`web/lib/dashboard/spendHeatmap.ts` (§9).
+
+**Financial health (spec 041)** — `web/lib/finance/financialHealth.ts` (+ `financial-health-thresholds.ts`)
+is a pure, `now`-injected engine like insights/goals, but pinned by **unit + property tests**
+(`web/test/financial-health.test.ts`), not a golden vector — same precedent as the roll-ups above.
+`scoreFinancialHealth()` blends a derived profile (from the user-scoped questionnaire answers) with
+transactions/budgets/goals into a 0–100 score over five dimensions (reusing `budgetStatusForMonth`,
+`goalPacing`, `savingsRate`), weighted by the user's per-dimension 1–5 sliders; bands are calm and
+**never red**. Contract: `specs/041-financial-health/contracts/health-scoring.md`.
 
 ## 2. The bedrock invariant: integer USD cents
 
@@ -71,7 +85,7 @@ conversion round-trip) assert truth that a laundered vector regeneration cannot 
 ## 3. Data shapes (`web/lib/types.ts`, mirrors Postgres column-for-column)
 
 - **Transaction**: `kind: 'expense' | 'income' | 'transfer'` (**3 kinds**);
-  `category: TransactionCategory` (**12 values** = 11 pickable + non-pickable `transfer`);
+  `category: TransactionCategory` (**40 values** = 39 pickable + non-pickable `transfer`);
   `amount_cents`; `paid_by?` (who paid out); `owner_ids: string[]`;
   `shares: Record<string, number>` (must sum to `amount_cents`); `notes`; `tags?: string[]`
   (tag ids, spec 027).
@@ -88,7 +102,7 @@ conversion round-trip) assert truth that a laundered vector regeneration cannot 
 - **Property/MortgageInfo/LeaseInfo/Unit** — housing sub-shapes; `Unit.occupied?` is the explicit
   occupancy flag (spec 020), with tenant-name fallback (§10).
 
-## 4. Money & currency (`money.ts` 109 lines, `currency.ts` 42 lines)
+## 4. Money & currency (`money.ts` 118 lines, `currency.ts` 42 lines)
 
 **7 currencies**, fixed order matching the historical iOS enum (`CURRENCIES`):
 `usd $` · `cad CA$` · `gbp £` · `eur €` · `jpy ¥` (**0 fraction digits**) · `cny CN¥` · `bdt ৳`
@@ -134,6 +148,13 @@ Carry is **derived from history on every render — never stored**; no month-clo
   (`{effectiveLimitCents, spentCents, remainingCents, carriedInCents}`). Deliberately unvectored
   (pure reduction over the vectored core).
 
+**Whose budget (spec 054)**: a `Budget` carries `person_id` — `null` = the household's, a person
+id = that person's own limit for the category. Neither function above knows about it: a personal
+budget's carry is derived from the *scoped* ledger the caller passes in, exactly as a household
+one is derived from the household ledger, so `budget-rollover.json` is unaffected. Selection is
+`scopeBudgets` (§ "Money scope"); the DB enforces one budget per (household, category, person)
+with `unique nulls not distinct`.
+
 Vector: `budget-rollover.json` — array of **11 cases** (fixed, flex uncapped/capped, opening carry
 incl. negative, non_monthly, empty series). Insights **rule 3 is rollover-aware** (§12).
 
@@ -162,18 +183,24 @@ incl. negative, non_monthly, empty series). Insights **rule 3 is rollover-aware*
 
 Vector: `transaction-splits.json` — sections `{cases: 13, validations: 4, seeds: 6, ownerOrdering: 5}`.
 
-## 7. Member balances (`web/lib/balances.ts`, 39 lines) + `transaction.ts`
+## 7. Member balances (`web/lib/finance/balances.ts` — spec 053) + `transaction.ts`
 
-`balanceBetween(viewer, other, transactions)` → net cents from the viewer's perspective
-(positive ⇒ other owes viewer). Integer cents, no rounding:
+`balanceBetween(a, b, transactions)` → net cents (positive ⇒ `b` owes `a`). Integer cents, no
+rounding. Spec 043 deleted the original viewer-anchored version — it could not express what one
+roommate owed another from a third person's view; spec 053 rebuilt it for N people
+(`allPairBalances` is antisymmetric by construction, `outstandingBalances` returns creditor-first
+rows, `peopleInLedger` takes the roster from the ledger so a removed member's debt survives).
+The nine vector cases are unchanged and regenerate byte-identically.
 
 - Expense with `paid_by`: payer===viewer ⇒ `+ shares[other]`; payer===other ⇒ `− shares[viewer]`;
   else ignored (payer's own share is owed by nobody).
 - Transfer via `transferParties(tx)` (`web/lib/transaction.ts`): `from = paid_by`,
   `to = owner_ids[0]`; other→viewer ⇒ `− amount_cents`; viewer→other ⇒ `+ amount_cents`.
 
-Expenses accrue debt, transfers settle it. `isTransfer(tx)` = `kind === 'transfer'`. Vector:
-`member-balance.json` (9 cases).
+Expenses accrue debt, transfers settle it, and since spec 053 **co-owned income** accrues it in
+the mirror direction (a recipient owes co-owners their share). A row with **no payer** contributes
+nothing — historical rows predate payer capture and must not invent debts.
+`isTransfer(tx)` = `kind === 'transfer'`. Vector: `member-balance.json` (9 cases).
 
 ## 8. Transaction filters (`web/lib/transactionFilters.ts`, 107 lines — incl. spec-027 tags, PR #32)
 
@@ -189,6 +216,12 @@ original order preserved. `FilterCriteria` dimensions:
 | `owners[]` | tx has ≥1 owner in set |
 | `tags[]` | tag **ids**; `tx.tags ?? []` must intersect |
 | `dateFrom`/`dateTo` | half-open `[from, to)` |
+
+The `source` string / `sources[]` filter now reflects the user's configured **deposit accounts**
+(spec 033) — the hardcoded `INCOME_SOURCES` list is gone; the income "Deposit to" dropdown is
+driven by the household-scoped `deposit_accounts` table (model layer in `store.tsx`, see
+[`web.md`](./web.md)/[`supabase.md`](./supabase.md)). `transactions.source` still stores the chosen
+name, so no finance engine changed.
 
 `FilterContext.tagNames` is **optional** — the Makefile ingest CLI has no tag roster, so tag-name
 search is a no-op there (tag-id filtering still works). Helpers: `emptyCriteria()` (carries
@@ -214,6 +247,15 @@ Vector: `transaction-filters.json` (22 cases incl. tag OR/AND/absent and notes/t
   month, else the month's **last day at local noon** (fully elapsed, so `monthProgress` ≈ 1 and
   the under-budget rule — needs ≥ 0.7 — can fire for past months). Local, not UTC, so UTC+12/+13
   viewers don't scope the next month (spec 023 B2). Unvectored.
+
+### Spend heatmap — `web/lib/dashboard/spendHeatmap.ts` (spec 034)
+
+`buildSpendHeatmap(transactions, interval)` — pure/deterministic; enumerates every calendar day in
+the `[interval.start, interval.end)` scope window and sums **expense** cents per **local-calendar**
+day (`income` and `transfer` excluded — this is a spending heatmap). `level: 0..4` is **relative to
+the busiest day** in the window (0 for a no-spend day, else 1–4 by quartile of the max), so the ramp
+always uses its full range regardless of absolute spend; the render layer maps levels → token tints
+(never red). **Unvectored.**
 
 ## 10. Mortgage & housing
 
@@ -253,6 +295,17 @@ Single source of truth for net rental on Dashboard **and** property detail.
   `20260707120000_unit_occupied`).
 
 Vector: `housing-net-rental.json` (6 cases; occupancy pre-resolved to a boolean).
+
+### `web/lib/finance/housing-summary.ts` (56 lines — spec 034)
+
+`housingSummary(properties)` — household-wide pure roll-up across every property, returning
+`{cost, equity, netRental, multi, count}` in integer cents. Monthly `cost` = each mortgage's
+`monthlyPaymentCents` plus any `lease.monthly_rent_cents`; `equity` = principal paid down
+(`original_loan_cents − balance`, balance clamped to 0 below `PAID_OFF_THRESHOLD_CENTS`);
+`netRental` sums `netRentalCents(rentUnitsFrom(units), pay)` for **multifamily** properties —
+**not gated on having a mortgage** (a paid-off multifamily still earns its unit rents, `pay = 0`).
+Extracted from the desktop dashboard composition when it moved to the widget framework so the math
+outlives any one screen. **Unvectored** — pinned by `web/test/store.integrity.test.tsx`.
 
 ### Lease timing — `web/components/housing/lease.ts` (66 lines; NOT under `lib/finance/`)
 
@@ -344,15 +397,31 @@ Deliberately **unvectored** (unit tests only; documented policy in `PARITY.md`).
   `MonthWindow[]` (`{yyyymm, start, end}`), oldest→newest — needed because the
   `household_month_summary` RPC aggregates a whole window.
 
-## 14. Categories & severity (`web/lib/categories.ts`, 110 lines)
+## 14. Categories & severity (`web/lib/categories.ts`, 224 lines)
 
-- **3 kinds**, **12 categories** total: 11 `PICKABLE_CATEGORIES` (`coffee, groceries, dining,
-  subs, fuel, rent, health, income, transit, utilities, entertainment` — `entertainment` added by
-  migration `20260522170000_add_entertainment_category`) + non-pickable `transfer`.
-  `SPEND_CATEGORIES` = **10** (pickable minus `income`). Adding a category requires the Postgres
-  enum migration **and** `PICKABLE_CATEGORIES` (in `web/lib/types.ts`, not here) **and** a
-  `CATEGORIES` entry.
-- `CATEGORIES` — label / lucide icon / tint per category (tints ported from iOS).
+- **3 kinds**, **40 categories** total: 39 `PICKABLE_CATEGORIES` + non-pickable `transfer`.
+  Expense subcategories (29) organized in 8 groups via `CATEGORY_GROUPS.expense`; income
+  subcategories (10) in 3 groups via `CATEGORY_GROUPS.income`. `SPEND_CATEGORIES` = 29 (all
+  expense slugs derived from `CATEGORY_GROUPS.expense`). `INCOME_CATEGORIES` = 10 (all income
+  slugs). Adding a category requires the Postgres enum migration (`ALTER TYPE transaction_category
+  ADD VALUE IF NOT EXISTS`) **and** `PICKABLE_CATEGORIES` (in `web/lib/types.ts`) **and** a
+  `CATEGORIES` entry with `parent: CategoryGroupKey` **and** adding it to `CATEGORY_GROUPS`.
+
+  | Group | Children |
+  |-------|---------|
+  | Food & Drink | coffee, groceries, dining, fast_food, alcohol, takeout |
+  | Transport | transit, fuel, parking, rideshare |
+  | Home | rent, utilities, home_improvement, insurance |
+  | Health & Wellness | health, gym, pharmacy, mental_health |
+  | Entertainment | entertainment, streaming, gaming, events |
+  | Shopping | clothing, electronics, personal_care, gifts |
+  | Subscriptions | subs |
+  | Education | education, books |
+  | Employment & Business (income) | salary, bonus, freelance, business_income |
+  | Investment & Assets (income) | dividends, rental_income |
+  | Other Income | gift_received, refund, other_income, income |
+
+- `CATEGORIES` — label / lucide icon / tint / parent per category (tints ported from iOS).
 - `SEVERITY_ORDER` / `severityColor` — severity → sort rank / CSS token (`--destructive`,
   `--accent`, `--positive`, `--text-2`). `SEVERITY_ORDER` is defined twice with identical values
   (`categories.ts` for UI, `insights.ts` for sorting) — treat `insights.ts` as canonical for
@@ -360,6 +429,17 @@ Deliberately **unvectored** (unit tests only; documented policy in `PARITY.md`).
 - `PALETTE` (6 member colors), `paletteFor`, `deriveInitial` ("A & B" → "A+B").
 
 ## 15. Cross-cutting conventions
+
+- **Money scope (spec 051, 054)** — `scopeTransactions(txs, scope)` is the ONE place the
+  person-attribution rule lives. Household scope returns the *same array reference* (a strict
+  no-op), which is what keeps every vector byte-identical; a person scope replaces each amount
+  with that person's **stored** share and keeps transfers directional at full amount. Engines take
+  a scope and project once at their entry point — never per rule.
+  Spec 054 adds the LIMIT half: `scopeBudgets(budgets, scope)` in the same module. Household scope
+  keeps only unowned budgets (`person_id == null`, and returns the input reference when none are
+  owned); a person scope keeps only that person's, with **no fallback** to the household limit —
+  a household allowance is sized for everyone, so measuring one person's share against it is the
+  spec-052 error class. `buildPlanSummary`/`generateInsights` project both arrays together.
 
 - **Integer USD cents** everywhere (§2); floats only for rates/percents/fractions/display.
 - **Round half away from zero** on signed money — never bare `Math.round`.

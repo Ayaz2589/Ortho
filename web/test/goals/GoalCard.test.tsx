@@ -41,8 +41,8 @@ const goal = (over: Partial<Goal> = {}): Goal => ({
   target_cents: 200000, target_date: null, linked_account_id: null, linked_category: null,
   created_by: 'u', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z', ...over,
 })
-const contrib = (amount: number): GoalContribution => ({
-  id: `c${amount}`, goal_id: 'g1', amount_cents: amount, date: '2026-02-01', note: null, created_by: 'u', created_at: '2026-02-01T00:00:00Z',
+const contrib = (amount: number, over: Partial<GoalContribution> = {}): GoalContribution => ({
+  id: `c${amount}`, goal_id: 'g1', amount_cents: amount, date: '2026-02-01', note: null, created_by: 'u', created_at: '2026-02-01T00:00:00Z', ...over,
 })
 
 async function renderCard(ui: React.ReactElement) {
@@ -74,6 +74,35 @@ describe('GoalCard progress view', () => {
     )
     expect(getByRole('progressbar').getAttribute('aria-valuenow')).toBe('100')
     expect(container.textContent?.toLowerCase()).toContain('reached')
+  })
+
+  it('lists each contribution (amount + note), newest first (spec 040)', async () => {
+    const { getByTestId } = await renderCard(
+      <GoalCard
+        goal={goal()}
+        contributions={[
+          contrib(50000, { id: 'jan', date: '2026-01-15' }),
+          contrib(25000, { id: 'mar', date: '2026-03-10', note: 'bonus' }),
+          contrib(10000, { id: 'feb', date: '2026-02-01' }),
+        ]}
+      />
+    )
+    const list = getByTestId('contribution-list')
+    const rows = list.querySelectorAll('li')
+    expect(rows).toHaveLength(3)
+    // Newest-first: Mar 10, Feb 1, Jan 15.
+    expect(rows[0].textContent).toContain('$250.00')
+    expect(rows[0].textContent).toContain('bonus')
+    expect(rows[1].textContent).toContain('$100.00')
+    expect(rows[2].textContent).toContain('$500.00')
+  })
+
+  it('shows a calm empty line when a goal has no contributions (spec 040)', async () => {
+    const { container, queryByTestId } = await renderCard(
+      <GoalCard goal={goal()} contributions={[]} />
+    )
+    expect(queryByTestId('contribution-list')).toBeNull()
+    expect(container.textContent?.toLowerCase()).toContain('no contributions yet')
   })
 
   it('a dated, behind goal shows a calm pace line that is never red', async () => {

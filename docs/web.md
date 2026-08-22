@@ -24,25 +24,128 @@ Finance-engine math lives in [./finance.md](./finance.md); schema/RLS in
 - The package also hosts the deterministic bank-statement import + tx CRUD CLI
   (`web/scripts/import/`), driven by the root Makefile — internals in [./makefile.md](./makefile.md).
 
-## 2. Route tree (all `'use client'`)
+## 2. Route tree (all `'use client'` except the landing and tour routes — see below)
 
 ```
 web/app/
   layout.tsx            fonts (self-hosted Lato ×4 via next/font/local), viewport-fit=cover,
-                        inline pre-paint APPEARANCE_BOOT script (theme + html.native, no flash)
-  page.tsx              client redirect → /dashboard
+                        inline pre-paint APPEARANCE_BOOT (theme + html.native) + TEXT_SIZE_BOOT
+                        (whole-UI zoom scale, spec 040) scripts — both no-flash;
+                        metadataBase from lib/siteUrl.ts (spec 045)
+  page.tsx              SMART ROUTER (spec 045): native → /dashboard (FIRST, synchronous);
+                        signed-in web → /dashboard; signed-out web → /landing/{detected}
+  landing/page.tsx      bare /landing → forwards to the detected locale
+  landing/[locale]/     SERVER component — generateStaticParams from the registry,
+                        dynamicParams:false, per-locale metadata + hreflang;
+                        renders components/landing/LandingView.tsx (spec 046)
+  tour/[locale]/        SERVER component (spec 047) — the ≤5-screen learn-more tour;
+                        same static-params shape, metadata is noindex (funnel step, not
+                        a search destination); screens are CLIENT STATE, so six
+                        documents, not thirty
+  not-found.tsx         calm 404; redirects ONLY paths under /landing/ (spec 045)
+  robots.ts, sitemap.ts static Route Handlers — the app's first SEO surface
   sign-in/page.tsx      8-digit email OTP (signInWithOtp → verifyOtp(type:'email')); bounces
                         signed-in users to /dashboard on mount; builds its own t()
   (app)/layout.tsx      AppStateProvider + Shell + biometric lock overlay + paywall gate
-  (app)/dashboard, transactions{,/new,/edit}, housing{,/new,/edit}, budgets, goals,
-        settings{,/household,/linked-banks}, plaid-oauth
+  (app)/dashboard, transactions{,/new,/edit}, planning, housing{,/new,/edit}, budgets, goals,
+        settings{,/household,/cards,/deposit-accounts,/subscription,/currency,
+                 /language,/appearance,/text-size,/widgets,/data,/account,/linked-banks}, plaid-oauth
+        (settings/planning is a legacy client-redirect → /planning)
 ```
 
-- **Four destinations only** (Dashboard/Transactions/Housing/Settings) — identical TABS arrays
-  duplicated in `components/Sidebar.tsx` and `components/TabBar.tsx`. `/budgets` and `/goals` are
-  reached from Settings › Planning, not tabs. `/plaid-oauth` is the web bank-OAuth return route.
-- **Reports (spec 027) is a Dashboard MODE, not a route** — `ModeSwitch` overview↔reports inside
-  `dashboard/page.tsx`; state lives in the page so it survives toggles.
+- **Settings › Data (spec 032)** — download household data (transactions + housing) as a dual-layer
+  PDF and re-import it. Logic is the self-contained `web/lib/dataFile/` module: a versioned
+  section-registry envelope (`envelope.ts`/`registry.ts`), per-section serialize/read/dedupe/apply/
+  render (`sections/{transactions,housing}.ts`), PDF generation via `pdf-lib` + `@pdf-lib/fontkit`
+  with a per-language font seam (`pdf/*`), and read-back of the embedded `ortho-export.json`
+  attachment via `unpdf` `getAttachments()` (`readPdf.ts`). Export/import orchestration in
+  `export.ts`/`import.ts`; UI in `components/settings/Data{Export,Import}Panel.tsx`. Amounts in the
+  payload are always canonical USD cents (display currency is visible-layer only); import is additive
+  + idempotent with two-tier dedup (canonical id, then the CSV fuzzy matcher). Payload round-trip +
+  dedup are headlessly tested (`test/dataFile/*`); glyph rendering is on-device QA.
+
+- **Five destinations** (Dashboard/Transactions/Planning/Housing/Settings) — identical TABS arrays
+  duplicated in `components/Sidebar.tsx` and `components/TabBar.tsx`. **Planning (spec 038)** is a
+  top-level month-scoped hub (`app/(app)/planning/page.tsx`): a "Left to plan" health hero, a
+  pace-aware budget summary, a goals summary (behind-first), and a non-monthly sinking-funds panel,
+  all derived by the pure `lib/planning/planSummary.ts` engine (reuses `budgetStatusForMonth` +
+  `goalPacing`; no new data). `/budgets` and `/goals` are the detail pages the hub links to (the old
+  Settings › Planning route now client-redirects to `/planning`). `/plaid-oauth` is the web
+  bank-OAuth return route.
+- **Onboarding funnel foundation (spec 045)** — the app's first *pre-auth* surface, and the first
+  thing here that is not a signed-in screen. Four things are easy to get wrong:
+  1. **`/` is also the installed iOS app's entry point** (Capacitor wraps this same bundle). The
+     root router's native branch is therefore first and synchronous — a marketing page must never
+     paint inside the App Store build. The guard test asserts `getUser()` is never *called* on
+     native, because destination alone would still pass with the race present.
+  2. **`landing/[locale]/page.tsx` and `tour/[locale]/page.tsx` are the codebase's only server
+     components.** Next permits a `metadata` export from nothing else, and per-locale
+     titles/hreflang are the point. One dynamic route each, not six folders, so adding a language
+     is a single edit to `LANDING_LOCALES`.
+  3. **The funnel has its OWN catalogs** (`lib/i18n/landing/*.ts`). The app catalogs are 32–55 KB
+     and `useTranslate` resolves them *after* mount — fine for the app, but it would flash English
+     on a locale-fixed marketing page. Never add funnel copy to `lib/i18n/{bn,es,ja,zh,ko}.ts`.
+  4. **`not-found.tsx` redirects only under `/landing/`.** A blanket redirect-to-marketing would
+     eject a signed-in user who mistyped an in-app URL.
+  Pure modules live in `lib/onboarding/`: `locales.ts` (the registry — the single source of truth
+  for the six slugs), `adoptLanguage.ts` (writes the existing `language` key on an explicit
+  continue), `funnel.ts` (per-device marker, defined here but set by 047 and read by 048).
+- **Landing page content (spec 046)** — `components/landing/LandingView.tsx` replaced 045's inert
+  `LandingPlaceholder`: a hero (wordmark, `<h1>` proposition, subhead), a **variable-length** list of
+  supporting points, one prominent action to `/tour/{slug}` and one quieter link to `/sign-in`. Four
+  things here are load-bearing:
+  1. **Both actions are plain `<a href>` — deliberately not `next/link`.** A crawlable link from a
+     landing page to its tour is the whole SEO point of a per-language funnel, and `Link` would
+     prefetch `/tour/*`. Don't "upgrade" this.
+  2. **Both call `adoptLandingLanguage(slug)` in `onClick`**, so the language carries into sign-in
+     and the app. It is a synchronous `localStorage` write, so no `preventDefault` is needed.
+     **Viewing a page must never adopt** — that view/act split is what lets a Spanish speaker open a
+     shared Japanese link without losing their preference, and it is pinned in both directions.
+  3. **Copy lives in the `spec 046` marker region** of each `lib/i18n/landing/*.ts` as a nested
+     `landing: LandingCopy`. (The `spec 047` region beside it now holds the tour copy — the two
+     features were built in parallel sandboxes and merged with one conflict, in a shared *test*,
+     never in the catalog data. The markers did their job.)
+  4. **`points` is an array, not `point1`/`point2`/`point3`.** That is the entire mechanism by which
+     a market can carry a different number of supporting ideas with no per-locale branch in the
+     component; a test renders 1/2/4/5-point catalogs to keep it that way.
+- **Learn-more tour (spec 047)** — `/tour/{locale}`, five screens between the landing page and
+  sign-in, built on 045's contracts. Three things are easy to get wrong:
+  1. **Skip must ALSO call `markFunnelEntry()`.** The intuitive reading ("they opted out") is
+     wrong: a visitor who skips is still a funnel visitor, and dropping the marker silently costs
+     them the guided hand-off 048 provides. Both exits therefore route through one
+     `leaveForSignIn()` — adopt language → mark funnel → `push('/sign-in')` — so Skip has no path
+     of its own to forget.
+  2. **Screens are client state, and position is NOT in the URL.** `useSearchParams` fails a
+     production build without a Suspense boundary, and a pushed history entry per screen would
+     mean pressing Back five times to leave. Back leaves the tour in one press.
+  3. **No `components/ui`.** That module imports `lib/store`, so `PrimaryButton` would drag
+     Supabase and the household data layer onto a signed-out page. The tour reproduces its recipe
+     in tokens instead. Copy lives only inside the `spec 047` markers in `lib/i18n/landing/*.ts`,
+     as a sibling named export typed at `lib/i18n/landing/tour.ts` — `index.ts` is untouched.
+  Edge-case logic (`clampScreen`/`swipeIntent`/`formatPosition`) is pure, in `lib/onboarding/tour.ts`.
+- **New-user hand-off (spec 048)** — closes the funnel: `lib/onboarding/handoff.ts`
+  (`resolvePostSignInRoute()`) is `funnel.ts`'s reader. `app/sign-in/page.tsx` calls it in `verify()`
+  instead of hardcoding `/dashboard`; a marker means "clear it, mark the `financial-health`
+  announcement seen, go to `/welcome/financial-profile`", and no marker means `/dashboard` having
+  written *nothing*. Three things to keep straight:
+  1. **It is a SCOPED reversal of spec 042.** 041 hard-redirected every profile-less user, 042
+     deleted that on purpose. The hard hand-off is back for funnel-walkers *only* — which is why the
+     decision reads the marker and never profile absence. The spec 041/042 test files are the
+     regression lock: if a change needs one of them edited, the reversal has leaked.
+  2. **The profile check is at the destination, not at sign-in.** `app/sign-in/page.tsx` renders
+     outside `AppStateProvider` and cannot read `userFinancialProfile`, so
+     `app/(app)/welcome/financial-profile/page.tsx` carries the entry guard (renders `null` while
+     redirecting — no stepper flash). This split is the design, not an oversight.
+  3. **Only the successful-`verifyOtp` path is wired.** The already-signed-in mount bounce stays a
+     literal `/dashboard`; routing it through the hand-off would let a stale per-device marker greet
+     a returning user with a questionnaire.
+  Keeping the logic in `lib/onboarding/` also keeps 045's FR-019 guard test green — it asserts that
+  nothing outside `lib/onboarding/` imports `onboarding/funnel`, so inlining the read into the
+  sign-in page would have broken it.
+- **Reports mode was removed (spec 036)** — the Overview/Reports toggle (`ModeSwitch`) and the
+  fetched `ReportsView`/`useReportsData` UI are gone; the savings-rate view now lives on the board as
+  the local-compute `savings-trends` widget. The Dashboard is a single view. (The pure aggregate/
+  reports helpers under `lib/api/aggregates.ts` + `lib/reports/*` are retained + still tested.)
 
 ## 3. Data layer — `web/lib/store.tsx` (~1500 lines, the whole client data layer)
 
@@ -57,19 +160,21 @@ ensure `users` profile row (insert-if-absent, never upsert) → find-or-create h
 account-holder Person row + one-time fold of legacy localStorage `localUsers` → `ensure_entitlement`
 RPC kicked off eagerly in parallel → `loadAll`.
 
-**`loadAll`**: one `Promise.all` of **17 reads** (users, household_people, transactions,
+**`loadAll`**: one `Promise.all` of **18 reads** (users, household_people, transactions,
 transaction_shares, cards, properties, mortgage_info, lease_info, units, rental_payments, budgets,
-goals, goal_contributions, linked_institutions, linked_accounts, tags, transaction_tags).
+goals, goal_contributions, linked_institutions, linked_accounts, tags, transaction_tags,
+deposit_accounts).
 - Column projection on the 3 high-volume reads (users/transactions/shares) — never `select('*')`
   there. The test memory client ignores column lists, so a missing column only surfaces at runtime.
 - **Fail-loud vs fail-open**: the 11 core reads throw (error banner + `bootstrapFailed` ⇒ Retry);
-  the 6 newer reads (goals, goal_contributions, linked_*, tags, transaction_tags) treat
+  the 7 newer reads (goals, goal_contributions, linked_*, tags, transaction_tags, deposit_accounts)
+  treat
   missing-table errors (`PGRST205`/`42P01`) as empty — the deploy-before-migrate window (Vercel
   ships `main` before migrations apply). `ensure_entitlement` similarly fails OPEN on `PGRST202`
   (missing RPC) with a null entitlement. **New additive tables must join the fail-open list** or
   they take bootstrap down.
 - **Typed seam**: every read is asserted to a hand-written `*Row` type in `lib/supabase/rows.ts`
-  (17 row types; `supabase gen types` not runnable in sandboxes) then assigned to domain types
+  (18 row types; `supabase gen types` not runnable in sandboxes) then assigned to domain types
   (`lib/types.ts`). Keep `rows.ts`, the projection lists, and `types.ts` in lockstep.
 - **Rehydration**: shares → `owner_ids` + per-person `shares` map. A shareless transfer gets EMPTY
   owners (directional, never creator-owns-all); shareless non-transfer falls back to the creator at
@@ -89,6 +194,13 @@ goals, goal_contributions, linked_institutions, linked_accounts, tags, transacti
   then re-insert, each `orThrow`'d; caller rolls back optimistic state).
 - Budgets upsert on `(household_id, category)`; people soft-delete via `removed_at`;
   `hapticConfirm`/`hapticDestructive` fire on tap, before server ack (by design, spec 021 FR-012).
+- **Deposit accounts (spec 033)**: `depositAccounts` state + `addDepositAccount`/`deleteDepositAccount`
+  writes to the household-scoped `deposit_accounts` table (mirrors `cards`) in `store.tsx`. The income
+  **"Deposit to" dropdown** on the transaction form reads the configured account names
+  (`components/web/TxForm.tsx`, `incomeSources = depositAccounts.map(a => a.name)`); accounts are
+  managed in Settings › Deposit Accounts (`AddDepositAccountModal`). The old hardcoded
+  `INCOME_SOURCES` constant is gone; `transactions.source` still stores the chosen name (no tx schema
+  change).
 
 **Session lifecycle**: `onAuthStateChange` reacts only to `SIGNED_OUT` (clears all state incl.
 pending Plaid session, hard-navigates via `signInHref()`). On Capacitor, an `appStateChange`
@@ -145,14 +257,57 @@ for extensionless paths, which infinite-loops signed-out native launches.
 - Splash (`launchAutoHide:false`) hidden by three coordinated owners: Shell on first `loading`
   resolution, lock screen when 'locked', sign-in on mount.
 - One sticky error banner in Shell; `bootstrapFailed` adds Retry (`retryBootstrap`).
+- **Loading skeletons (spec 032):** while `loading` is true the Shell renders
+  `components/skeletons/RouteSkeleton.tsx` — a `usePathname()`-keyed dispatcher that shows a
+  route-shaped, **motionless** placeholder (dashboard cards / ledger rows / housing cards / budgets
+  / goals / settings; generic fallback otherwise) instead of the old centered "Loading…" string.
+  The primitive is `components/ui/Skeleton.tsx` (a static `var(--chip-bg)` block — **no shimmer/
+  pulse/gradient**, per constitution IV) wrapped in a `role="status"` busy region. Paywall/lock/
+  error precedence is unchanged — a skeleton never masks a lapsed/locked/failed state. List/table
+  surfaces are sized from the previous successful load's item count via `lib/skeletonCounts.ts`
+  (`readSkeletonCount`/`writeSkeletonCount`, validated + capped at 24); the store records
+  `transactions`/`goals`/`housing`/`tags` after `loadAll`.
 
 ## 6. Responsive vs desktop composition
 
 - Tailwind `sm` flips TabBar→Sidebar; **≥1024px = "expanded"** via `useIsExpanded()`
   (`lib/useMediaQuery.ts`, resolved synchronously on first render — no wrong-layout flash).
-- Dashboard/Transactions/Housing pages branch: `if (isExpanded) return <XDesktop/>` where the
-  desktop compositions (`components/web/{Dashboard,Transactions,Housing}Desktop.tsx`) are
+- Transactions/Housing pages branch: `if (isExpanded) return <XDesktop/>` where the
+  desktop compositions (`components/web/{Transactions,Housing}Desktop.tsx`) are
   `next/dynamic` `{ssr:false, loading:()=>null}` so mobile/iOS never downloads the desktop chunk.
+- **Dashboard is the exception (spec 034)**: its Overview is a single responsive `WidgetBoard`
+  (`components/widgets/WidgetBoard.tsx`) — one composition for phone → desktop, so there is no
+  `DashboardDesktop` chunk and no `useIsExpanded` branch. Responsiveness is pure CSS: `.ow-board` is a
+  **uniform grid** (spec 037) — equal columns (1→2→3 by breakpoint) and a single `grid-auto-rows`
+  height, so **every widget is the same height** and any toggled subset tiles with no interior hole.
+  There is no per-widget `size` (the old sm/md/lg/wide tiers are gone). A widget whose content
+  exceeds the fixed height **scrolls** its body (`overflow-y-auto`) rather than clipping. `.ow-card`
+  carries a soft drop shadow in light mode (dropped in dark, where the hairline border does the work).
+  Guard: `test/widgets/board-packing.test.ts`.
+- **Widgets are data-wired with a shared time scope (specs 035–036)**: the registry
+  (`lib/widgets/registry.tsx`) is the single source of truth; each widget has a **propless** body
+  under `components/widgets/bodies/<Name>Body.tsx` that reads household data from `useApp()` and the
+  active window from `useDashboardScopeContext()` (`lib/widgets/DashboardScopeContext.tsx` wraps the
+  overview and calls `useDashboardScope()` ONCE, so the `MonthPicker` + `RangePicker` and every widget
+  share one month/range — no desync). **`financial-health` (spec 041)** — the baseline financial-health
+  score/band + next step from the pure `financialHealth.ts` engine (calm sand ramp, never red; a
+  profile-null CTA and a baseline-vs-now progress line); its questionnaire is a first-run flow at
+  `welcome/financial-profile` (shell-gated in `(app)/layout.tsx` on a null profile + a localStorage
+  dismissal) and re-takeable at `settings/financial-profile`, both built from the shared
+  `components/financial-health/` sections. Shipped widgets: `savings-trends` (savings rate/month, reuses
+  `savingsRate` + the `SavingsRateChart` leaf), `spending-pace` (the one recharts area leaf,
+  `components/widgets/charts/SpendingPaceChart.tsx` via `next/dynamic`), `budgets`, `goals`,
+  `top-merchants`, and `activity` (a most-recent-6 live feed that ignores the scope window). Bodies
+  reuse named money helpers (`budgetStatusForMonth`, `goalProgress`/`goalPacing`, `savingsRate`)
+  rather than re-implementing math; loss is never red. Every widget card is a **click target** (spec
+  037): a full-bleed overlay `<button>` opens the shared right-side `Drawer` with the widget's title
+  and the standard close button — the panel body is a placeholder for the future drill-down.
+- **Net summary is baked into the overview, not a widget** (`components/dashboard/NetSummaryHero.tsx`):
+  the most prominent element — income − expenses over the shared window, rendered card-less above the
+  board, always shown (not toggleable). To its right sits the **daily-spending heatmap**
+  (`components/dashboard/SpendHeatmap.tsx` + the pure `lib/dashboard/spendHeatmap.ts`): a GitHub-style
+  calendar of per-day expense intensity (sand `--accent` ramp, never red). Bundle guard
+  (`test/bundle/no-eager-recharts.test.ts`) covers `components/widgets`.
 - Dialog vocabulary: desktop `components/web/Drawer.tsx` (right slide-out, portal, scrim + Escape +
   focus trap via `lib/useFocusTrap.ts`, scroll lock). Opt-in props: `fullBleedOnMobile` (full-screen
   panel with no scrim below 1024px, for surfaces that mirror the full-page mobile form — e.g. CSV
@@ -173,7 +328,6 @@ for extensionless paths, which infinite-loops signed-out native launches.
 | `lib/useDashboardRange.ts` | `useDashboardScope()` — single time-scope source, mobile + desktop; relative range persisted (`dashboardRange`), selected month transient; windows via vectored `monthBounds` |
 | `lib/useTransactionFilters.ts` | single filter-state source; pure engine `lib/transactionFilters.ts`; tag options exclude orphan tags |
 | `lib/useMonthAccordion.ts` | default-open = current month; any active filter force-expands all months |
-| `lib/useReportsData.ts` | spec 027 — first live consumer of `lib/api/aggregates.ts` (`fetchCategoryTotals` + per-month `fetchMonthSummary`); fetched only when Reports mode is open; errors never break Overview |
 | `lib/useMobileFormPage.ts` / `lib/useFocusTrap.ts` / `lib/useMediaQuery.ts` | see §6 |
 
 `lib/api/aggregates.ts`: dashboard widgets deliberately stay local-compute (spec 023 D15 — RPC
@@ -187,8 +341,11 @@ before wiring (also recorded in `PARITY.md`).
   catalogs (bn/es/ja/zh/ko) **dynamically imported per active language** (~30 KB gz never in the
   initial bundle); `useTranslate` returns English identity until the catalog resolves. `'System'`
   resolves via `navigator.language` prefix. `Language` values are native names (`'Español'`…).
-- localStorage keys: `currency`, `language`, `appearance`, `dashboardRange`, `fxRates`,
-  `fxRatesFetchedAt`, `ortho.flags`, `ortho.plaid.pendingLinkSession`, legacy `localUsers`
+- localStorage keys: `currency`, `language`, `appearance`, `textSize` (spec 040 — one of
+  `small|medium|large|xlarge`, default `medium`; a whole-UI `zoom` scale on `<html>` from
+  `components/settings/textSize.ts`, mirroring appearance), `dashboardRange`, `fxRates`,
+  `fxRatesFetchedAt`, `ortho.flags`, `ortho.plaid.pendingLinkSession`, `ortho.skeletonCounts`
+  (spec 032 — remembered per-collection sizes for loading skeletons), legacy `localUsers`
   (consumed once at bootstrap).
 
 ## 9. Design tokens — `web/app/globals.css`
@@ -261,7 +418,13 @@ statement). The Merchant field autocompletes from the household's own merchant n
 "you've used" chips (`lib/csv/merchantSuggest.ts`: `rankedMerchants` by frequency + `suggestMerchants`
 via the same normalize/similar logic as duplicate detection) so a messy descriptor like
 "UBER EATS 8005928996 CA" can be normalized to the "Uber Eats" the household already uses. (Adding
-`list=` makes the input a `combobox`, not a `textbox` — query it by label in tests.) "Skip this
+`list=` makes the input a `combobox`, not a `textbox` — query it by label in tests.) The same
+primitives — plus a most-common ranking — also power the regular add/edit transaction form via
+`lib/txSuggest.ts` (spec 032): `TxForm`'s "Copy from most common" shortcut selects merchants by
+frequency (`mostCommonTransactions`, one representative most-recent entry each) then presents them
+grouped by category (slug asc) and alphabetically by merchant within each; the form's Merchant/Source
+field gets the same kind-aware `<datalist>` suggestions
+(`knownNamesForKind` — expense merchants vs income payers). "Skip this
 transaction" sets `skipped:true` on the draft, which drops it out of the review list entirely (not
 just unchecked). On upload each draft is seeded with the importing user as its default owner
 (`parsedTransactionToDraft(tx, dup, defaultOwnerId)`; `defaultOwnerId` threaded through the
@@ -339,8 +502,10 @@ xcodebuild build -project ios/App/App.xcodeproj -scheme App \
 ## 13. Bundle discipline (spec 022)
 
 Deferred via `next/dynamic` so they leave the initial-load bundle: recharts charts (`CategoryPie`,
-`SavingsRateChart`, `DailyTrendChart`, `AmortizationChart` — guard
-`test/bundle/no-eager-recharts.test.ts`), the scan pipeline (loads on scan initiation — guard
+`SavingsRateChart`, `SpendingPaceChart` (`components/widgets/charts/`, spec 037), `AmortizationChart`
+— guard `test/bundle/no-eager-recharts.test.ts`; `DailyTrendChart` was removed in spec 034, and
+`CategoryPie` still exists but is no longer imported by any page), the scan pipeline (loads on scan
+initiation — guard
 `test/scan/scan-deferred.test.ts`), the 3 desktop compositions (guard
 `test/web/form-factor-split.test.ts`), i18n catalogs (guard `test/i18n/no-eager-catalog.test.ts`),
 and `EmbeddedPlaidLink`. Measure: `npm run build && npm run measure:bundle` (`--json`/`--baseline`
@@ -407,7 +572,7 @@ opaque). Contract: `specs/022-web-bundle-optimization/contracts/bundle-measureme
   td-bank, `toTransaction.test.ts` with the A4 sort-order lock).
 - CI: `.github/workflows/web-ci.yml` — job 1 typechecks + tests `services/billing`,
   `services/aggregation` (each incl. the `_shared/` byte-copy drift lock), then web `tsc --noEmit`
-  + `npm test` + the vector-drift gate; job 2 runs `deno check` + `deno test` on the 7 edge-function
+  + `npm test` + the vector-drift gate; job 2 runs `deno check` + `deno test` on the 10 edge-function
   entrypoints. Keep `npx tsc --noEmit` clean — a type error fails `next build` and there is no
   other build gate.
 
@@ -457,8 +622,8 @@ npx tsc --noEmit         # CI gate
   core, by contract).
 - No single-active-platform lock (feature 010): iOS + web sign-ins coexist; sessions age out at the
   30-day Supabase timebox.
-- `web/README.md` is untouched create-next-app boilerplate; the generated `web/coverage/`,
-  `web/out/`, `tsconfig.tsbuildinfo` are artifacts.
+- `web/README.md` is the Ortho web quick-start (scripts, architecture, route map — points here for
+  the deep dive); the generated `web/coverage/`, `web/out/`, `tsconfig.tsbuildinfo` are artifacts.
 
 ## 18. Cross-links
 

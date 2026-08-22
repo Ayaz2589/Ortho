@@ -23,9 +23,9 @@ import { computeShares, validateSplit, seedSplit, orderedOwnerIds, type SplitInp
 import { toDisplayAmount, toUSDCents } from '../lib/finance/money'
 import { CURRENCIES, CURRENCY_NAMES, currencySymbol, FALLBACK_RATE_FROM_USD } from '../lib/finance/currency'
 import { availableMonths, availableRanges, monthReferenceDate, stepMonth } from '../components/dashboard/range'
-import { balanceBetween } from '../lib/balances'
 import { occupiedRentCents, netRentalCents, type RentUnit } from '../lib/finance/housing'
 import { computeRolloverLedger, type RolloverConfig } from '../lib/finance/budgets'
+import { balanceBetween } from '../lib/finance/balances'
 import { rentDueDay, daysUntilNextRent, daysUntilEnd, isRenewalSoon } from '../components/housing/lease'
 import { goalProgress, goalPacing } from '../lib/finance/goals'
 import type { Transaction, Budget, Property, LeaseInfo } from '../lib/types'
@@ -784,10 +784,10 @@ writeFileSync(resolve(OUT, 'transaction-filters.json'), JSON.stringify(filters, 
 writeFileSync(resolve(OUT, 'transaction-splits.json'), JSON.stringify(splits, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'currency.json'), JSON.stringify(currency, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'dashboard-month-scope.json'), JSON.stringify(dashboardMonthScope, null, 2) + '\n')
-writeFileSync(resolve(OUT, 'member-balance.json'), JSON.stringify(memberBalance, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'currency-names.json'), JSON.stringify(currencyNames, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'currency-symbols.json'), JSON.stringify(currencySymbols, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'lease.json'), JSON.stringify(lease, null, 2) + '\n')
+writeFileSync(resolve(OUT, 'member-balance.json'), JSON.stringify(memberBalance, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'budget-rollover.json'), JSON.stringify(budgetRollover, null, 2) + '\n')
 writeFileSync(resolve(OUT, 'goals.json'), JSON.stringify(goals, null, 2) + '\n')
 console.log(`Wrote ${mortgage.length} mortgage + ${insights.length} insight + ${filters.cases.length} filter + ${splits.cases.length} split + ${splits.ownerOrdering.length} ownerOrdering + ${currency.toDisplay.length} currency + ${Object.keys(currencyNames).length} currency-names + ${Object.keys(currencySymbols).length} currency-symbols + ${lease.length} lease + ${goals.progress.length} goal-progress/${goals.pacing.length} goal-pacing + ${dashboardMonthScope.availableMonths.length} availableMonths/${dashboardMonthScope.stepMonth.length} stepMonth + ${memberBalance.cases.length} member-balance + ${budgetRollover.length} budget-rollover vectors to ${OUT}`)

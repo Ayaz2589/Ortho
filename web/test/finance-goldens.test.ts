@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { monthlyPaymentCents, currentPrincipalBalanceCents, currentEquityCents, upcomingAmortization } from '@/lib/finance/mortgage'
 import { computeShares, orderedOwnerIds } from '@/lib/splits'
-import { balanceBetween } from '@/lib/balances'
 import { occupiedRentCents, netRentalCents, type RentUnit } from '@/lib/finance/housing'
 import { toDisplayAmount, toUSDCents, roundHalfAwayFromZero } from '@/lib/finance/money'
 import { generateInsights } from '@/lib/finance/insights'
@@ -97,26 +96,6 @@ describe('finance goldens — splits (leftover cent placement)', () => {
 
   it('single owner takes the whole amount', () => {
     expect(computeShares(9999, ['solo'], { method: 'even' })).toEqual({ solo: 9999 })
-  })
-})
-
-describe('finance goldens — member balances (settle-up)', () => {
-  // alice fronts a $30 dinner split evenly; bob owes his $15 share.
-  const dinner = tx({ paid_by: 'alice', amount_cents: 3000, owner_ids: ['alice', 'bob'], shares: { alice: 1500, bob: 1500 } })
-  // bob reimburses alice $15 via a transfer (bob = sender, alice = recipient).
-  const payback = tx({ kind: 'transfer', category: 'transfer', paid_by: 'bob', amount_cents: 1500, owner_ids: ['alice'], shares: { alice: 1500 } })
-
-  it('an expense alice paid makes bob owe his share (+)', () => {
-    expect(balanceBetween('alice', 'bob', [dinner])).toBe(1500)
-  })
-
-  it('the reimbursement settles the debt to zero', () => {
-    // +$15 owed, then −$15 paid back ⇒ settled.
-    expect(balanceBetween('alice', 'bob', [dinner, payback])).toBe(0)
-  })
-
-  it('balance is antisymmetric between the two members', () => {
-    expect(balanceBetween('bob', 'alice', [dinner])).toBe(-1500)
   })
 })
 
@@ -245,7 +224,7 @@ describe('finance goldens — insights rule 3: budget-over (spec 027 A3)', () =>
 
   it('fires budget-over at critical severity when spend exceeds limit', () => {
     const tx = insightTx({ amount_cents: 12_000, category: 'dining' })
-    const budget: Budget = { id: 'b1', household_id: 'hh-1', category: 'dining', monthly_limit_cents: 10_000, budget_type: 'fixed', rollover_cap_cents: null }
+    const budget: Budget = { id: 'b1', household_id: 'hh-1', category: 'dining', monthly_limit_cents: 10_000, budget_type: 'fixed', rollover_cap_cents: null, person_id: null }
     const insights = generateInsights([tx], [budget], [], REF)
     const over = insights.find((i) => i.id === `budget-over-dining-2026-06`)
     expect(over).toBeDefined()
@@ -258,7 +237,7 @@ describe('finance goldens — insights rule 3: budget-over (spec 027 A3)', () =>
     // Independently verified: budgetOverFraction = 1.0 in insights-thresholds.ts.
     // At-limit (fraction = 1.0) satisfies >= 1.0 → budget-over fires with magnitude 0¢.
     const tx = insightTx({ amount_cents: 10_000, category: 'dining' })
-    const budget: Budget = { id: 'b1', household_id: 'hh-1', category: 'dining', monthly_limit_cents: 10_000, budget_type: 'fixed', rollover_cap_cents: null }
+    const budget: Budget = { id: 'b1', household_id: 'hh-1', category: 'dining', monthly_limit_cents: 10_000, budget_type: 'fixed', rollover_cap_cents: null, person_id: null }
     const insights = generateInsights([tx], [budget], [], REF)
     const over = insights.find((i) => i.id.startsWith('budget-over-'))
     expect(over).toBeDefined()

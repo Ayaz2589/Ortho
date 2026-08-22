@@ -1,109 +1,78 @@
 'use client'
 
 import { useState } from 'react'
-import dynamic from 'next/dynamic'
-import { useRouter } from 'next/navigation'
-import { PageHeader } from '@/components/ui'
 import { useApp } from '@/lib/store'
-import { HouseholdBalancesWidget } from '@/components/web/HouseholdBalancesWidget'
-import type { TransferPrefill } from '@/components/web/TxForm'
-import { useIsExpanded } from '@/lib/useMediaQuery'
-import { useDashboardScope } from '@/lib/useDashboardRange'
-import { useSettleThreshold } from '@/lib/useSettleThreshold'
-import { ModeSwitch, type DashboardMode } from '@/components/dashboard/ModeSwitch'
-import { ReportsView } from '@/components/dashboard/ReportsView'
-import { RangePicker } from '@/components/dashboard/RangePicker'
+import { WidgetBoard } from '@/components/widgets/WidgetBoard'
 import { MonthPicker } from '@/components/dashboard/MonthPicker'
-import { MonthSummaryCard } from '@/components/dashboard/MonthSummaryCard'
-import { InsightsCardStack } from '@/components/dashboard/InsightsCardStack'
-import { BudgetProgressCard } from '@/components/dashboard/BudgetProgressCard'
-import { SpendByCategoryCard } from '@/components/dashboard/SpendByCategoryCard'
-import { PerOwnerBreakdownCard } from '@/components/dashboard/PerOwnerBreakdownCard'
-import { TopMerchantsCard } from '@/components/dashboard/TopMerchantsCard'
-import { HousingSnapshotCard } from '@/components/dashboard/HousingSnapshotCard'
-import { DailySpendTrendCard } from '@/components/dashboard/DailySpendTrendCard'
+import { RangePicker } from '@/components/dashboard/RangePicker'
+import { NetSummaryHero } from '@/components/dashboard/NetSummaryHero'
+import { MemberScopePicker } from '@/components/dashboard/MemberScopePicker'
+import {
+  DashboardScopeProvider,
+  useDashboardScopeContext,
+} from '@/lib/widgets/DashboardScopeContext'
 
-// Deferred so a mobile/iOS session never downloads the desktop composition
-// (spec 022, US3). The synchronous useIsExpanded() gate below still selects the
-// branch before paint (no wrong-layout flash); the desktop chunk loads only when
-// isExpanded is true.
-const DashboardDesktop = dynamic(
-  () => import('@/components/web/DashboardDesktop').then((m) => m.DashboardDesktop),
-  { ssr: false, loading: () => null }
-)
-
-export default function DashboardPage() {
-  const router = useRouter()
-  const { t, currentHousehold } = useApp()
-  const isExpanded = useIsExpanded()
-
-  function openSettle(prefill: TransferPrefill) {
-    const q = new URLSearchParams({ from: prefill.from, to: prefill.to, amount: String(prefill.amountCents) })
-    router.push(`/transactions/new?${q.toString()}`)
-  }
-  // One scope source for the whole dashboard — lifted here so the mobile and
-  // desktop layouts share the same relative range AND the same (transient)
-  // selected month, and a resize across the breakpoint preserves the selection.
-  const scope = useDashboardScope()
-  const [settleThresholdCents] = useSettleThreshold(currentHousehold?.id ?? '')
-  // Reports is a MODE within Dashboard (spec 027), not a new route/destination —
-  // the four destinations are preserved. State lives here so it survives
-  // Overview↔Reports toggles while the page stays mounted.
-  const [mode, setMode] = useState<DashboardMode>('overview')
-  const modeSwitch = <ModeSwitch mode={mode} onChange={setMode} />
-
-  // Reports mode: the calm reports surface in place of the overview content
-  // (shared by mobile and desktop; ReportsView caps/centres its own width).
-  if (mode === 'reports') {
-    return (
-      <div className="mx-auto w-full max-w-[640px]">
-        <PageHeader title={t('Dashboard')} />
-        <div className="mb-4">{modeSwitch}</div>
-        <ReportsView />
-      </div>
-    )
-  }
-
-  // Desktop (≥1024px): the 12-column grid composition.
-  if (isExpanded) return <DashboardDesktop scope={scope} modeSwitch={modeSwitch} onSettle={openSettle} settleThresholdCents={settleThresholdCents} />
-
-  // Mobile / medium: single-column stack.
-  const monthLabel = scope.isSpecificMonth ? scope.periodLabel : undefined
+/**
+ * The overview header (spec 035; dashboard polish). The "Dashboard" title and the
+ * shared time-scope controls (relative-range segmented control + specific-month
+ * picker — mutually exclusive, "Latest" returns to the range) share ONE row on
+ * desktop, controls right-aligned. On phones the controls drop to their own line
+ * below the title but stay on a single line together (`shrink-0`, no wrap). The
+ * controls read the SINGLE shared scope from context, so the hero and every widget
+ * below reflect the same window; the active period caption lives on the hero, so
+ * the header carries no duplicate.
+ */
+function DashboardHeader() {
+  const { t } = useApp()
+  const scope = useDashboardScopeContext()
   return (
-    <div className="mx-auto w-full max-w-[640px]">
-      <PageHeader title={t('Dashboard')} />
-      <div className="mb-4">{modeSwitch}</div>
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          {scope.rangeOptions.length > 1 && (
-            <RangePicker options={scope.rangeOptions} value={scope.range} onChange={scope.setRange} />
-          )}
-          <MonthPicker
-            availableMonths={scope.availableMonths}
-            selectedMonth={scope.selectedMonth}
-            onSelectMonth={scope.setMonth}
-            onClear={scope.clearMonth}
-          />
-        </div>
-        <HouseholdBalancesWidget onSettle={openSettle} settleThresholdCents={settleThresholdCents} />
-        <MonthSummaryCard
-          range={scope.range}
-          interval={scope.interval}
-          now={scope.now}
-          label={monthLabel}
-          isSpecificMonth={scope.isSpecificMonth}
+    <div className="mb-4 flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+      <h1 className="text-[32px] font-light tracking-[-0.6px] text-text">{t('Dashboard')}</h1>
+      {/* On a narrow phone the range picker + month picker together exceed the
+          viewport, so they wrap onto separate lines (the month picker drops below
+          the range control) instead of forcing horizontal overflow. Desktop keeps
+          them on one right-aligned line (sm:flex-nowrap + sm:shrink-0). */}
+      <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:shrink-0">
+        <RangePicker options={scope.rangeOptions} value={scope.range} onChange={scope.setRange} />
+        <MonthPicker
+          availableMonths={scope.availableMonths}
+          selectedMonth={scope.selectedMonth}
+          onSelectMonth={scope.setMonth}
+          onClear={scope.clearMonth}
         />
-        <InsightsCardStack now={scope.referenceDate} />
-        <BudgetProgressCard
-          interval={scope.isSpecificMonth ? scope.interval : undefined}
-          label={monthLabel}
-        />
-        <SpendByCategoryCard range={scope.range} interval={scope.interval} label={monthLabel} />
-        <PerOwnerBreakdownCard range={scope.range} interval={scope.interval} label={monthLabel} />
-        <TopMerchantsCard range={scope.range} interval={scope.interval} label={monthLabel} />
-        <HousingSnapshotCard />
-        <DailySpendTrendCard now={scope.now} />
       </div>
+    </div>
+  )
+}
+
+/**
+ * Dashboard.
+ *
+ * The overview is a single responsive composition (spec 034): the shared
+ * time-scope bar, the **member scope** selector, the baked-in **net-summary
+ * hero** (`NetSummaryHero` — the most prominent element, always shown, not a
+ * toggleable widget), and the `WidgetBoard` below. All read one shared period via
+ * `DashboardScopeProvider` so the whole dashboard reflects the same window; which
+ * widgets appear is a per-browser preference toggled in Settings → Widgets.
+ *
+ * Member scope is deliberately page-level state, not context: it re-scopes the
+ * hero (and the heatmap inside it) only. The widget board stays household-wide,
+ * so a widget never silently changes meaning under a control it doesn't show.
+ *
+ * The former Reports MODE (spec 027) is gone — its savings-rate view now lives on
+ * the board as the `savings-trends` widget (spec 036 follow-up), so the Dashboard
+ * is a single view with no Overview/Reports toggle.
+ */
+export default function DashboardPage() {
+  const [personId, setPersonId] = useState<string | null>(null)
+  return (
+    <div className="mx-auto w-full max-w-[1080px]">
+      <DashboardScopeProvider>
+        <DashboardHeader />
+        <MemberScopePicker personId={personId} onChange={setPersonId} />
+        <NetSummaryHero personId={personId} />
+        <WidgetBoard />
+      </DashboardScopeProvider>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useApp } from '@/lib/store'
@@ -8,7 +8,9 @@ import { PageHeader } from '@/components/ui'
 import { ReadingColumn } from '@/components/layout'
 import { SectionCard, UserRow, AddRow, LinkRow } from '@/components/settings/rows'
 import { HouseholdDrawer, type HouseholdDrawerMode } from '@/components/settings/HouseholdDrawer'
-import { useSettleThreshold } from '@/lib/useSettleThreshold'
+import { WidgetToggleRow } from '@/components/widgets/WidgetToggleRow'
+import { readSharedByDefault, writeSharedByDefault } from '@/components/settings/sharedByDefault'
+import { Users } from 'lucide-react'
 
 export default function HouseholdPage() {
   const {
@@ -22,7 +24,11 @@ export default function HouseholdPage() {
   } = useApp()
 
   const [drawer, setDrawer] = useState<HouseholdDrawerMode>(null)
-  const [settleThresholdCents, setSettleThresholdCents] = useSettleThreshold(currentHousehold?.id ?? '')
+  // spec 050 — read AFTER mount: localStorage is unavailable during the static export's
+  // prerender, and reading it in the initial state would hydrate-mismatch.
+  const [shared, setShared] = useState(true)
+  useEffect(() => setShared(readSharedByDefault()), [])
+  const isShared = householdMembers.length > 1
 
   return (
     <ReadingColumn>
@@ -66,29 +72,20 @@ export default function HouseholdPage() {
         {t('Everyone in your household can be an owner of a transaction. People you add need no Ortho account; you can split any transaction between them.')}
       </p>
 
-      {/* Settle-up reminder threshold (spec 031) */}
-      {currentHousehold && (
+      {/* spec 050 — only meaningful once there is someone to share WITH. */}
+      {isShared && (
         <SectionCard>
-          <div className="flex min-h-[60px] items-center gap-3 px-4 py-3">
-            <span className="text-[17px] font-normal text-text">{t('Settle-up reminder')}</span>
-            <div className="ml-auto flex items-center gap-1.5">
-              <span className="text-[17px] font-normal text-text-3">$</span>
-              <input
-                type="number"
-                inputMode="decimal"
-                aria-label={t('Settle-up reminder amount')}
-                value={settleThresholdCents / 100}
-                onChange={(e) => {
-                  const dollars = Number(e.target.value)
-                  if (!isNaN(dollars) && dollars >= 0) setSettleThresholdCents(Math.round(dollars * 100))
-                }}
-                style={{ width: 70, textAlign: 'right', fontSize: 17, background: 'transparent', border: 0, outline: 'none', color: 'var(--text-2)' }}
-              />
-            </div>
-          </div>
-          <p className="px-4 pb-3 text-[13px] leading-relaxed text-text-3">
-            {t('Show a reminder when a balance exceeds this amount')}
-          </p>
+          <WidgetToggleRow
+            icon={<Users size={18} />}
+            label={t('Shared by default')}
+            description={t('New transactions start owned by everyone in your household.')}
+            checked={shared}
+            onToggle={() => {
+              const next = !shared
+              setShared(next)
+              writeSharedByDefault(next)
+            }}
+          />
         </SectionCard>
       )}
 

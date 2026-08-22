@@ -1,6 +1,7 @@
 'use client'
 
 import { type ReactNode } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { categoryMeta } from '@/lib/categories'
 import type { TransactionCategory } from '@/lib/types'
@@ -17,6 +18,60 @@ export function FormRow({ label, children, first = false }: { label: string; chi
       <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 400, color: 'var(--text)' }}>
         {children}
       </div>
+    </div>
+  )
+}
+
+/**
+ * A `FormRow`-shaped disclosure row: collapsed, it looks exactly like a
+ * `FormRow` (label on the left, `value` on the right) but with a chevron that
+ * rotates when open. Open, it reveals `children` below inside the SAME card, so
+ * the card simply grows taller in place — no popover, no native dropdown. Used
+ * by the tx form for the category and date pickers. Only the header is a button;
+ * the expanded panel is plain flow content, so nested buttons/inputs work.
+ */
+export function AccordionRow({
+  label,
+  value,
+  open,
+  onToggle,
+  children,
+  first = false,
+  ariaLabel,
+}: {
+  label: string
+  value: ReactNode
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+  first?: boolean
+  ariaLabel?: string
+}) {
+  return (
+    <div style={{ borderTop: first ? 'none' : '0.5px solid var(--hairline)' }}>
+      <button
+        type="button"
+        className="ow-btn"
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-label={ariaLabel}
+        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', minHeight: 50, width: '100%', textAlign: 'left' }}
+      >
+        <div style={{ flex: '0 0 100px', fontSize: 14, color: 'var(--text-2)', letterSpacing: '-0.1px' }}>{label}</div>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 400, color: 'var(--text)' }}>
+          {value}
+          <ChevronDown
+            size={14}
+            style={{
+              color: 'var(--text-3)',
+              flexShrink: 0,
+              transition: 'transform var(--duration-mid) var(--ease-out)',
+              transform: open ? 'rotate(180deg)' : undefined,
+            }}
+          />
+        </div>
+      </button>
+      {open && <div style={{ padding: '0 12px 12px' }}>{children}</div>}
     </div>
   )
 }

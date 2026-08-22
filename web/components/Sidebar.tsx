@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, ArrowUpDown, House, Settings } from 'lucide-react'
+import { BarChart3, ArrowUpDown, Compass, House, Settings } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { Avatar } from '@/components/ui'
 import { cn } from '@/lib/utils'
@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 const TABS = [
   { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
   { href: '/transactions', label: 'Transactions', icon: ArrowUpDown },
+  { href: '/planning', label: 'Planning', icon: Compass },
   { href: '/housing', label: 'Housing', icon: House },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
@@ -26,7 +27,13 @@ export function Sidebar() {
   return (
     <nav
       aria-label={t('Primary')}
-      className="sticky top-0 hidden h-screen shrink-0 flex-col border-r border-hairline bg-bg sm:flex sm:w-[72px] lg:w-[232px]"
+      // h-full binds the nav to the shell's container height (the shell is sized to
+      // exactly the viewport via `calc(100dvh / var(--ui-zoom))` — see
+      // app/(app)/layout.tsx) — NOT a static h-screen (100vh), which can exceed the
+      // dynamic viewport and give the nav its own scroll body inside the shell's
+      // overflow-hidden context. The nav fills the non-scrolling shell; only <main>
+      // scrolls.
+      className="hidden h-full shrink-0 flex-col border-r border-hairline bg-bg sm:flex sm:w-[72px] lg:w-[232px]"
       style={{ padding: '20px 12px 16px' }}
     >
       {/* Wordmark */}

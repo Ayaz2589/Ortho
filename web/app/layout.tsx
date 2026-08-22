@@ -2,8 +2,15 @@ import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
 import { THEME_VARS } from '@/components/settings/appearance'
+import { textSizeBootScript } from '@/components/settings/textSize'
+import { siteUrl } from '@/lib/siteUrl'
 
 export const metadata: Metadata = {
+  // spec 045: canonical and hreflang alternate links must be absolute. Next resolves
+  // URL-based metadata fields against `metadataBase`, and the docs place it in the
+  // root layout so it applies across all routes. `siteUrl()` is the single resolution
+  // point shared with the sitemap and robots, so the three can never disagree.
+  metadataBase: new URL(siteUrl()),
   title: 'Ortho',
   description: 'Household finance, in order.',
 }
@@ -45,6 +52,12 @@ const APPEARANCE_BOOT = `(function(){try{var T=${JSON.stringify(
   THEME_VARS,
 )};var m=localStorage.getItem('appearance');var r=document.documentElement;if(m==='light'||m==='dark'){r.setAttribute('data-appearance',m);r.style.colorScheme=m;var v=T[m];for(var k in v){r.style.setProperty(k,v[k]);}}else{r.style.colorScheme='light dark';}if(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()){r.classList.add('native');}}catch(e){}})();`
 
+// spec 040: apply the saved text size (a whole-UI `zoom` on <html>) before first
+// paint, the same no-flash pattern as APPEARANCE_BOOT. Generated from the text-size
+// scale map so it can never drift; defaults to Medium so the global bump reaches
+// first-time users with no stored preference.
+const TEXT_SIZE_BOOT = textSizeBootScript()
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -54,6 +67,7 @@ export default function RootLayout({
     <html lang="en" className={`${lato.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
         <script dangerouslySetInnerHTML={{ __html: APPEARANCE_BOOT }} />
+        <script dangerouslySetInnerHTML={{ __html: TEXT_SIZE_BOOT }} />
         {children}
       </body>
     </html>

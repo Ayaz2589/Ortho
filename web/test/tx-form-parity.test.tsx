@@ -26,6 +26,7 @@ vi.mock('@/lib/store', () => ({
     currency: store.currency,
     rate: () => store.rateVal,
     cards: [{ id: 'c1', household_id: 'h1', name: 'Visa', created_at: '' }],
+    depositAccounts: [],
     currentHousehold: { id: 'h1', owner_id: 'u1', name: 'Home', created_at: '' },
     currentUserId: 'u1',
     currentPersonId: 'u1',
@@ -40,6 +41,15 @@ vi.mock('@/lib/store', () => ({
 }))
 
 import { useTxForm, TxFormFields, type TxFormApi } from '@/components/web/TxForm'
+
+// spec 050 made the shared owner set the DEFAULT for new transactions. These tests
+// exercise mechanics that start from a single owner, so they pin the preference OFF —
+// their subject is not the default. The shared default has its own coverage in
+// test/transactions/shared-ownership-default.test.ts and shared-default-form.test.tsx.
+beforeEach(() => {
+  localStorage.setItem('ortho.sharedByDefault', 'false')
+})
+
 
 function Harness({
   editing = null,

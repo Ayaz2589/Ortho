@@ -43,6 +43,7 @@ function candidate(overrides: Partial<ParsedCandidate> = {}): ParsedCandidate {
     guesses: new Set(),
     categoryGuess: null,
     ownersGuess: null,
+    paidByGuess: null,
     duplicateOf: null,
     ...overrides,
   }

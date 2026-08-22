@@ -6,12 +6,16 @@ import { SplashScreen } from '@capacitor/splash-screen'
 import { AppStateProvider, useApp } from '@/lib/store'
 import { useBiometricGate } from '@/lib/biometricGate'
 import { applyAppearance, readAppearance } from '@/components/settings/appearance'
+import { applyTextSize, readTextSize } from '@/components/settings/textSize'
 import { useTranslate } from '@/lib/i18n'
 import { asLanguage, DEFAULT_LANGUAGE, type Language } from '@/lib/language'
 import { TabBar } from '@/components/TabBar'
+import { TabBarVisibilityProvider } from '@/lib/tabBarVisibility'
 import { Sidebar } from '@/components/Sidebar'
 import { Paywall } from '@/components/Paywall'
 import { PlaidHandBack } from '@/components/PlaidHandBack'
+import { RouteSkeleton } from '@/components/skeletons/RouteSkeleton'
+import { AnnouncementHost } from '@/components/announcements/AnnouncementHost'
 
 /** spec 021, FR-011 — shown while `useBiometricGate()` is 'checking' or
  *  'locked'. Never rendered on a device with no biometric enrollment (the
@@ -91,14 +95,31 @@ function Shell({ children, active }: { children: ReactNode; active: boolean }) {
     // the covered household data behind the opaque overlay (FR-011). The z-index
     // overlay only occludes visually; `inert` removes the content from the tab
     // order and the accessibility tree. React 19 emits the attribute only when true.
-    <div className="sm:flex sm:h-screen sm:overflow-hidden" inert={!active}>
+    // Height must fit the viewport UNDER the global text-size `zoom` (spec 040).
+    // `zoom: Z` on <html> scales the whole root, so a plain full-viewport-height
+    // shell renders at viewport×Z — TALLER than the viewport — and the shell (plus
+    // its h-full Sidebar) overflow the body, adding a second, root-level scrollbar
+    // beside <main>'s ("double scroll"; verified in Chromium). Dividing by the same
+    // zoom (`--ui-zoom`, set with the zoom in components/settings/textSize.ts) makes
+    // the shell render at exactly the viewport at every text size. `dvh` (a dynamic
+    // viewport unit) keeps the mobile URL-bar tracking; `var(…, 1)` falls back to a
+    // plain dynamic-viewport height pre-boot.
+    <div
+      className="flex overflow-hidden"
+      style={{ height: 'calc(100dvh / var(--ui-zoom, 1))' }}
+      inert={!active}
+    >
       {/* spec 024: completes a pending Hosted Plaid Link session on the
           Capacitor shell (ortho://plaid-done hand-back + foreground poll).
           Renders nothing; no-op on desktop/mobile web. */}
       <PlaidHandBack />
+      {/* spec 042: the reusable "what's new" popup. Replaces spec 041's forced
+          onboarding redirect — notifies signed-in users of new features (starting
+          with Financial Health) via a dismissible Drawer, never a hard redirect. */}
+      <AnnouncementHost />
       <Sidebar />
       <main
-        className="relative flex-1 sm:min-w-0 sm:overflow-y-auto sm:[scrollbar-gutter:stable]"
+        className="relative flex-1 overflow-y-auto sm:min-w-0 sm:[scrollbar-gutter:stable]"
         // spec 021: clears the status bar/notch/Dynamic Island on the
         // Capacitor iOS shell — resolves to 0 on any context without a safe
         // area (desktop browsers, older devices), so this is harmless there.
@@ -134,9 +155,11 @@ function Shell({ children, active }: { children: ReactNode; active: boolean }) {
             it regardless of breakpoint. */}
         <div className="px-4 pt-2 pb-[calc(6rem+var(--safe-bottom))] sm:px-8 sm:pb-12 sm:pt-4 lg:px-10">
           {loading ? (
-            <div className="flex flex-1 items-center justify-center py-32 text-sm text-text-3">
-              {t('Loading…')}
-            </div>
+            // spec 032: a route-shaped, motionless skeleton replaces the bare
+            // "Loading…" string. Paywall (lapsed), biometric lock (!active), and
+            // the error banner + Retry above still take precedence — a skeleton
+            // never masks a lapsed/locked/failed state.
+            <RouteSkeleton />
           ) : gateState === 'lapsed' ? (
             // Spec 018: a successfully loaded, lapsed entitlement blocks the whole
             // shell — every route, tab, and deep link lands here (FR-006). A null
@@ -162,6 +185,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   // page is opened. No-op on desktop/mobile web (syncStatusBar is native-only).
   useEffect(() => {
     applyAppearance(readAppearance())
+    // spec 040: re-assert the persisted text size on shell mount, same as
+    // appearance — the boot script sets it pre-paint; this keeps it applied.
+    applyTextSize(readTextSize())
   }, [])
 
   // spec 023 B4: the provider is ALWAYS mounted; the biometric lock renders as a
@@ -173,7 +199,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   // 'unlocked' and never shows it.
   return (
     <AppStateProvider>
-      <Shell active={unlocked}>{children}</Shell>
+      <TabBarVisibilityProvider>
+        <Shell active={unlocked}>{children}</Shell>
+      </TabBarVisibilityProvider>
       {!unlocked && (
         <BiometricLockScreen locked={gate.state === 'locked'} onRetry={() => void gate.retry()} />
       )}

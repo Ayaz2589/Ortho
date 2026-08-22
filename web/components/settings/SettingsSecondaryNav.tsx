@@ -7,12 +7,17 @@ import { useApp } from '@/lib/store'
 
 const SECTIONS = [
   { href: '/settings/household', label: 'Household' },
-  { href: '/settings/planning', label: 'Planning' },
   { href: '/settings/cards', label: 'Cards' },
+  { href: '/routines', label: 'Routines' },
+  { href: '/settings/location', label: 'Location' },
+  { href: '/settings/financial-profile', label: 'Financial profile' },
   { href: '/settings/subscription', label: 'Subscription' },
   { href: '/settings/currency', label: 'Currency' },
   { href: '/settings/language', label: 'Language' },
   { href: '/settings/appearance', label: 'Appearance' },
+  { href: '/settings/text-size', label: 'Text size' },
+  { href: '/settings/widgets', label: 'Widgets' },
+  { href: '/settings/data', label: 'Data' },
   { href: '/settings/account', label: 'Account' },
 ] as const
 

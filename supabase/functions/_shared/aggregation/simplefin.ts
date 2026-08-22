@@ -177,7 +177,10 @@ export interface UpsertPayload {
     source: string
     date: string
     created_by: string
-    paid_by: null
+    // spec 053 — was `null`, a type-level assertion that sync never records a payer. It now
+    // carries the connected account's owning person for expenses (null for income), so synced
+    // rows reach the balance engine instead of being invisible to it.
+    paid_by: string | null
     notes: string | null
   }
   shares: Array<{ person_id: string; amount_cents: number }>
@@ -199,7 +202,12 @@ export function toUpsertPayload(txn: SimpleFinTransaction, ctx: UpsertContext): 
       source: dedupeKey(txn.providerAccountId, txn.providerTxnId),
       date: new Date(txn.postedAt * 1000).toISOString(),
       created_by: ctx.createdBy,
-      paid_by: null,
+      // spec 053 — a bank feed cannot know who physically paid, but "nobody" is the one
+      // answer that is certainly wrong: it makes every synced row invisible to the balance
+      // engine. The connected account's owning person is the only defensible signal, and the
+      // user can correct it by editing the transaction. Income keeps a null payer — income
+      // has no payer (FR-006).
+      paid_by: txn.kind === 'income' ? null : ctx.defaultPersonId,
       notes: txn.memo,
     },
     shares: [{ person_id: ctx.defaultPersonId, amount_cents: txn.amountCents }],

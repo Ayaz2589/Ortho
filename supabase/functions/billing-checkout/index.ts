@@ -1,7 +1,7 @@
 // Spec 018 — create a Stripe Checkout session (contracts/billing-functions.md §2).
 // verify_jwt stays ON; the function additionally resolves the caller via getUser()
 // and acts ONLY for that user — the user id NEVER comes from the request body.
-import Stripe from 'npm:stripe@22'
+import Stripe from 'npm:stripe@22.4.0'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { errorResponse, json, preflight, requiredEnv } from '../_shared/http.ts'
 
@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
 
   const service = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
   // Pinned in lockstep with the webhook + translator fixtures (review 018).
-  const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-06-24.dahlia' })
+  const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2026-07-29.dahlia' })
 
   try {
     // Get-or-create the Stripe customer; store the mapping only if still unset

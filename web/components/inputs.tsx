@@ -27,12 +27,16 @@ export function MoneyInput({
   placeholder,
   autoFocus,
   big,
+  ariaLabel,
 }: {
   value: string
   onChange: (v: string) => void
   placeholder?: string
   autoFocus?: boolean
   big?: boolean
+  /** Accessible name. `FieldRow`'s label is a plain span with no `for`, so an
+   *  unlabelled money field reads as nothing to a screen reader. */
+  ariaLabel?: string
 }) {
   const { currency } = useApp()
   return (
@@ -43,6 +47,7 @@ export function MoneyInput({
       <input
         inputMode="decimal"
         autoFocus={autoFocus}
+        aria-label={ariaLabel}
         value={value}
         onChange={(e) => onChange(e.target.value.replace(/[^0-9.,]/g, ''))}
         placeholder={placeholder ?? '0.00'}
@@ -98,6 +103,130 @@ const navBtnStyle = {
 } as const
 
 /**
+ * The calm month-grid calendar body: month nav, weekday header, day cells, and a
+ * "Today" shortcut. It owns only the *displayed* month (`view`); the SELECTED day
+ * comes from `value` and picks flow out through `onChange` (local-date ISO). It
+ * carries no popover / open-state chrome, so it can live inside a portalled
+ * popover (DatePicker) or inline inside an expanding card (the tx-form date
+ * accordion) with identical look and behavior.
+ */
+export function CalendarPanel({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (iso: string) => void
+}) {
+  const { locale, t } = useApp()
+  const selected = useMemo(() => isoToDate(value), [value])
+  const today = useMemo(() => new Date(), [])
+  const [view, setView] = useState<Date>(() => {
+    const base = isoToDate(value) ?? new Date()
+    return new Date(base.getFullYear(), base.getMonth(), 1)
+  })
+
+  // Sun→Sat short labels for the current locale (Aug 1 2021 was a Sunday).
+  const weekdays = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat(locale, { weekday: 'short' })
+    return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2021, 7, 1 + i)).slice(0, 2))
+  }, [locale])
+
+  const cells = useMemo(() => {
+    const y = view.getFullYear()
+    const m = view.getMonth()
+    const offset = new Date(y, m, 1).getDay()
+    const count = new Date(y, m + 1, 0).getDate()
+    const out: (Date | null)[] = []
+    for (let i = 0; i < offset; i++) out.push(null)
+    for (let d = 1; d <= count; d++) out.push(new Date(y, m, d))
+    return out
+  }, [view])
+
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 2px 8px' }}>
+        <button
+          className="ow-btn ow-chip-btn"
+          aria-label={t('Previous month')}
+          onClick={() => setView(new Date(view.getFullYear(), view.getMonth() - 1, 1))}
+          style={navBtnStyle}
+        >
+          <ChevronLeft size={16} style={{ color: 'var(--text-2)' }} />
+        </button>
+        <span style={{ fontSize: 14, fontWeight: 400, letterSpacing: '-0.2px', color: 'var(--text)' }}>
+          {monthYearLong(view, locale)}
+        </span>
+        <button
+          className="ow-btn ow-chip-btn"
+          aria-label={t('Next month')}
+          onClick={() => setView(new Date(view.getFullYear(), view.getMonth() + 1, 1))}
+          style={navBtnStyle}
+        >
+          <ChevronRight size={16} style={{ color: 'var(--text-2)' }} />
+        </button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 2 }}>
+        {weekdays.map((w, i) => (
+          <div key={i} style={{ textAlign: 'center', fontSize: 11, fontWeight: 400, color: 'var(--text-3)', padding: '4px 0' }}>
+            {w}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+        {cells.map((d, i) => {
+          if (!d) return <div key={i} />
+          const isSel = selected ? sameDay(d, selected) : false
+          const isToday = sameDay(d, today)
+          return (
+            <div key={i} style={{ display: 'flex', justifyContent: 'center', padding: '2px 0' }}>
+              <button
+                className="ow-btn"
+                onClick={() => onChange(dateToISO(d))}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  fontSize: 13.5,
+                  fontVariantNumeric: 'tabular-nums',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: isSel ? 'var(--text)' : 'transparent',
+                  color: isSel ? 'var(--bg)' : 'var(--text)',
+                  fontWeight: 400,
+                  boxShadow: !isSel && isToday ? 'inset 0 0 0 1.5px var(--hairline)' : 'none',
+                  transition: 'background var(--duration-fast) var(--ease-out)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSel) e.currentTarget.style.background = 'var(--chip-bg)'
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSel) e.currentTarget.style.background = 'transparent'
+                }}
+              >
+                {d.getDate()}
+              </button>
+            </div>
+          )
+        })}
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'center', borderTop: '0.5px solid var(--hairline)', marginTop: 6, paddingTop: 8 }}>
+        <button
+          className="ow-btn"
+          onClick={() => onChange(dateToISO(new Date()))}
+          style={{ fontSize: 13, fontWeight: 400, color: 'var(--accent)', padding: '2px 8px' }}
+        >
+          {t('Today')}
+        </button>
+      </div>
+    </>
+  )
+}
+
+/**
  * Calm, brand-styled date field. Renders a text trigger ("Jun 12, 2026 ▾") that
  * opens a calendar popover anchored to the field. The popover is portalled to
  * `document.body` and positioned `fixed` so it escapes the `overflow:hidden`
@@ -121,11 +250,6 @@ export function DatePicker({
   const popRef = useRef<HTMLDivElement>(null)
 
   const selected = useMemo(() => isoToDate(value), [value])
-  const today = useMemo(() => new Date(), [])
-  const [view, setView] = useState<Date>(() => {
-    const base = isoToDate(value) ?? new Date()
-    return new Date(base.getFullYear(), base.getMonth(), 1)
-  })
 
   // Anchor the popover to the trigger; re-runs on open and on scroll/resize so
   // it tracks the field even inside a scrolling modal body.
@@ -176,34 +300,6 @@ export function DatePicker({
     }
   }, [open])
 
-  const openPicker = () => {
-    const base = selected ?? new Date()
-    setView(new Date(base.getFullYear(), base.getMonth(), 1))
-    setOpen(true)
-  }
-
-  // Sun→Sat short labels for the current locale (Aug 1 2021 was a Sunday).
-  const weekdays = useMemo(() => {
-    const fmt = new Intl.DateTimeFormat(locale, { weekday: 'short' })
-    return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2021, 7, 1 + i)).slice(0, 2))
-  }, [locale])
-
-  const cells = useMemo(() => {
-    const y = view.getFullYear()
-    const m = view.getMonth()
-    const offset = new Date(y, m, 1).getDay()
-    const count = new Date(y, m + 1, 0).getDate()
-    const out: (Date | null)[] = []
-    for (let i = 0; i < offset; i++) out.push(null)
-    for (let d = 1; d <= count; d++) out.push(new Date(y, m, d))
-    return out
-  }, [view])
-
-  const pick = (d: Date) => {
-    onChange(dateToISO(d))
-    setOpen(false)
-  }
-
   return (
     <>
       <button
@@ -212,7 +308,7 @@ export function DatePicker({
         aria-label={label}
         aria-haspopup="dialog"
         aria-expanded={open}
-        onClick={() => (open ? setOpen(false) : openPicker())}
+        onClick={() => setOpen((o) => !o)}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -253,84 +349,13 @@ export function DatePicker({
                 padding: 10,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 2px 8px' }}>
-                <button
-                  className="ow-btn ow-chip-btn"
-                  aria-label={t('Previous month')}
-                  onClick={() => setView(new Date(view.getFullYear(), view.getMonth() - 1, 1))}
-                  style={navBtnStyle}
-                >
-                  <ChevronLeft size={16} style={{ color: 'var(--text-2)' }} />
-                </button>
-                <span style={{ fontSize: 14, fontWeight: 400, letterSpacing: '-0.2px', color: 'var(--text)' }}>
-                  {monthYearLong(view, locale)}
-                </span>
-                <button
-                  className="ow-btn ow-chip-btn"
-                  aria-label={t('Next month')}
-                  onClick={() => setView(new Date(view.getFullYear(), view.getMonth() + 1, 1))}
-                  style={navBtnStyle}
-                >
-                  <ChevronRight size={16} style={{ color: 'var(--text-2)' }} />
-                </button>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 2 }}>
-                {weekdays.map((w, i) => (
-                  <div key={i} style={{ textAlign: 'center', fontSize: 11, fontWeight: 400, color: 'var(--text-3)', padding: '4px 0' }}>
-                    {w}
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
-                {cells.map((d, i) => {
-                  if (!d) return <div key={i} />
-                  const isSel = selected ? sameDay(d, selected) : false
-                  const isToday = sameDay(d, today)
-                  return (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'center', padding: '2px 0' }}>
-                      <button
-                        className="ow-btn"
-                        onClick={() => pick(d)}
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 8,
-                          fontSize: 13.5,
-                          fontVariantNumeric: 'tabular-nums',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: isSel ? 'var(--text)' : 'transparent',
-                          color: isSel ? 'var(--bg)' : 'var(--text)',
-                          fontWeight: 400,
-                          boxShadow: !isSel && isToday ? 'inset 0 0 0 1.5px var(--hairline)' : 'none',
-                          transition: 'background var(--duration-fast) var(--ease-out)',
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isSel) e.currentTarget.style.background = 'var(--chip-bg)'
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isSel) e.currentTarget.style.background = 'transparent'
-                        }}
-                      >
-                        {d.getDate()}
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'center', borderTop: '0.5px solid var(--hairline)', marginTop: 6, paddingTop: 8 }}>
-                <button
-                  className="ow-btn"
-                  onClick={() => pick(new Date())}
-                  style={{ fontSize: 13, fontWeight: 400, color: 'var(--accent)', padding: '2px 8px' }}
-                >
-                  {t('Today')}
-                </button>
-              </div>
+              <CalendarPanel
+                value={value}
+                onChange={(iso) => {
+                  onChange(iso)
+                  setOpen(false)
+                }}
+              />
             </div>,
             document.body
           )

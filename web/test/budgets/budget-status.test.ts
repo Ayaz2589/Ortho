@@ -37,6 +37,7 @@ function budget(over: Partial<Budget> & { budget_type: BudgetType }): Budget {
     category: 'groceries',
     monthly_limit_cents: 60000,
     rollover_cap_cents: null,
+    person_id: null,
     created_at: noon('2026-01'),
     ...over,
   }
