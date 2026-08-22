@@ -9,7 +9,8 @@ Ortho is a calm, money-first **household budgeting app** for two people sharing 
 transactions with per-person splits, tags, and notes; budgets with rollover bucket types
 (`fixed` / `flex` / `non_monthly`); savings and debt-payoff goals with pacing; member
 settle-up balances; insights (8 rules + a goal off-track rule); housing (mortgage / lease / multifamily rental);
-receipt/statement scan; connect-only Plaid bank linking; Stripe subscriptions behind a paywall;
+receipt/statement scan; connect-only Plaid bank linking; Stripe subscriptions behind a paywall
+(**currently disabled** — `web/lib/subscriptionGate.ts`);
 user-configurable deposit accounts (spec 033, replacing the old hardcoded `INCOME_SOURCES`) and
 PDF household data export/import under Settings → Data (`web/lib/dataFile/`);
 6 languages and 7 display currencies over an integer-**USD-cents** ledger. It ships as a Next.js
@@ -155,6 +156,13 @@ the `savings-trends` widget. Budgets/Goals live under Settings → Planning, not
   hand-mirror of `services/billing/src/derive.ts` locked by identical literal vectors —
   deliberately not a golden vector. Checkout/portal are hosted Stripe; the iOS shell opens them in
   the external browser. Operator runbook: `specs/018-subscription-system/quickstart.md`.
+  **Currently disabled**: `web/lib/subscriptionGate.ts` exports `SUBSCRIPTION_ENABLED = false`,
+  which forces the client gate to null (the FR-008 fail-open state), skips the
+  `ensure_entitlement` RPC entirely, and hides the Settings → Subscription surface. Nothing
+  server-side changed — the table, RPC, webhook and edge functions are untouched, so existing
+  Stripe subscriptions are neither cancelled nor corrupted. Flipping the constant back to `true`
+  is the whole re-enable procedure; the four spec-018 suites pin it ON so they keep proving the
+  machinery works, and `web/test/subscriptions-disabled.test.tsx` pins the shipped value OFF.
 - **Design tokens.** `web/app/globals.css` CSS vars are the single source of truth: self-hosted
   Lato, size-driven weights with **no bold**, **loss/cost never red**, hairlines over borders.
   Governed by the constitution and the `ortho-web` skill.

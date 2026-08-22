@@ -4,8 +4,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useApp } from '@/lib/store'
+import { SUBSCRIPTION_ENABLED } from '@/lib/subscriptionGate'
 
-const SECTIONS = [
+const ALL_SECTIONS = [
   { href: '/settings/household', label: 'Household' },
   { href: '/settings/cards', label: 'Cards' },
   { href: '/routines', label: 'Routines' },
@@ -20,6 +21,12 @@ const SECTIONS = [
   { href: '/settings/data', label: 'Data' },
   { href: '/settings/account', label: 'Account' },
 ] as const
+
+// Subscription is dropped while the system is disabled, so the desktop nav and the mobile
+// settings list agree on which sections exist.
+const SECTIONS = ALL_SECTIONS.filter(
+  (s) => SUBSCRIPTION_ENABLED || s.href !== '/settings/subscription'
+)
 
 export function SettingsSecondaryNav() {
   const { t } = useApp()

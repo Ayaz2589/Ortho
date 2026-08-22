@@ -33,6 +33,7 @@ import {
 } from './language'
 import { useTranslate, type Translate } from './i18n'
 import { deriveGateState, type DbEntitlement, type GateState } from './entitlements'
+import { SUBSCRIPTION_ENABLED } from './subscriptionGate'
 import { clearPendingLinkSession } from './plaidLinkSession'
 import type {
   User,
@@ -529,14 +530,22 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       // device-only local users into household_people (one-time).
       await ensureAccountPersonAndFoldLegacy(householdId, me)
 
-      // Spec 018: ensure the 31-day free-month row exists (server-side,
+      // Spec 018, WHEN ENABLED: ensure the 31-day free-month row exists (server-side,
       // insert-if-absent — reinstalls/re-sign-ins can never reset it) and read
       // it back. Started HERE — after the profile insert above, because the
       // RPC's row references public.users(id) — and kicked off eagerly (the
       // lazy supabase builder starts on assimilation) so it genuinely overlaps
       // the loadAll fan-out below. Clients cannot write entitlement state;
       // this SECURITY DEFINER RPC is the only trusted path.
-      const entitlementPromise = Promise.resolve(supabase.rpc('ensure_entitlement'))
+      //
+      // Subscriptions disabled: don't call the RPC at all. Skipping it (rather than calling
+      // and ignoring the result) is what makes the disable total — a backend that is down,
+      // un-migrated, or eventually torn down can no longer affect whether the app loads,
+      // since `orThrow` below routes a failed read to bootstrapFailed. Existing rows are
+      // left untouched; the RPC is insert-if-absent, so re-enabling resumes cleanly.
+      const entitlementPromise = SUBSCRIPTION_ENABLED
+        ? Promise.resolve(supabase.rpc('ensure_entitlement'))
+        : null
 
       await loadAll(householdId, householdName, authUser.id)
 
@@ -548,12 +557,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       // main to production on merge, ahead of the operator's live setup
       // (quickstart §2). That must fail OPEN (feature dark, gate null), never
       // take bootstrap down for every live user.
-      const entRes = await entitlementPromise
-      if (entRes.error && (entRes.error as { code?: string }).code === 'PGRST202') {
+      if (entitlementPromise === null) {
         setEntitlement(null)
       } else {
-        orThrow(entRes)
-        setEntitlement((entRes.data as DbEntitlement | null) ?? null)
+        const entRes = await entitlementPromise
+        if (entRes.error && (entRes.error as { code?: string }).code === 'PGRST202') {
+          setEntitlement(null)
+        } else {
+          orThrow(entRes)
+          setEntitlement((entRes.data as DbEntitlement | null) ?? null)
+        }
       }
     } catch (e) {
       setBootstrapFailed(true)
@@ -571,6 +584,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
    *  passive (lifecycle-driven) refreshes — only explicit user actions should
    *  surface a failure. */
   async function refreshEntitlement(opts?: { quiet?: boolean }): Promise<boolean> {
+    // Subscriptions disabled: no read, and report success. The only remaining caller is the
+    // Capacitor foreground hook (the paywall and Settings section never mount), and its job
+    // is to catch a lapse that happened while suspended — which cannot occur while the gate
+    // is forced open. `true` keeps the "checked: nothing changed" contract honest for
+    // callers that distinguish it from "couldn't check".
+    if (!SUBSCRIPTION_ENABLED) return true
     const { data, error: e } = await supabase
       .from('entitlements')
       .select('*')
@@ -1019,6 +1038,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // gate, which the Shell treats as open — the paywall only ever renders from
   // a successfully loaded, genuinely lapsed row (FR-008/009).
   const gateState = useMemo<GateState | null>(() => {
+    // Subscriptions disabled (spec 018 kill switch): force the gate open. Stated explicitly
+    // rather than relying on `entitlement` staying null above — this is the one line that
+    // guarantees no paywall regardless of how a row got into state.
+    if (!SUBSCRIPTION_ENABLED) return null
     if (!entitlement) return null
     // A present-but-unparseable expiry is a data anomaly, not a lapse: fail
     // OPEN (null gate) exactly like a load failure (FR-008 spirit) — a false

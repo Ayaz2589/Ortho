@@ -21,6 +21,7 @@ import {
   type PlanKey,
   type PlansInfo,
 } from '@/lib/billing'
+import { SUBSCRIPTION_ENABLED } from '@/lib/subscriptionGate'
 
 export function SubscriptionSection({ id }: { id?: string }) {
   const { entitlement, gateState, locale, t, refreshEntitlement } = useApp()
@@ -54,7 +55,10 @@ export function SubscriptionSection({ id }: { id?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  if (!entitlement || !gateState) return null
+  // `!gateState` already covers the disabled case (the store forces a null gate), but the
+  // flag is named explicitly so this doesn't silently start rendering again if the gate
+  // derivation ever changes.
+  if (!SUBSCRIPTION_ENABLED || !entitlement || !gateState) return null
 
   const fmtDate = (iso: string | null) =>
     iso ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(iso)) : ''

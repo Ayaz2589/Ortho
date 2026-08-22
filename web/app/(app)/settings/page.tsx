@@ -4,6 +4,7 @@ import { useApp } from '@/lib/store'
 import { PageHeader } from '@/components/ui'
 import { ReadingColumn } from '@/components/layout'
 import { SectionCard, LinkRow } from '@/components/settings/rows'
+import { SUBSCRIPTION_ENABLED } from '@/lib/subscriptionGate'
 
 // Mobile-only list view — on desktop the layout redirects to /settings/household.
 export default function SettingsPage() {
@@ -32,7 +33,11 @@ export default function SettingsPage() {
           <LinkRow href="/routines" label={t('Routines')} />
           <LinkRow href="/settings/location" label={t('Location')} />
           <LinkRow href="/settings/financial-profile" label={t('Financial profile')} />
-          <LinkRow href="/settings/subscription" label={t('Subscription')} />
+          {/* Hidden while subscriptions are disabled — the section it links to renders
+              nothing under a null gate, so the row would lead to a blank page. */}
+          {SUBSCRIPTION_ENABLED && (
+            <LinkRow href="/settings/subscription" label={t('Subscription')} />
+          )}
         </SectionCard>
         <SectionCard>
           <LinkRow href="/settings/currency" label={t('Currency')} />

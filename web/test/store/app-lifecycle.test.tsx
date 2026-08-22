@@ -18,6 +18,13 @@ const { addListener, getUser, signOut } = vi.hoisted(() => ({
 }))
 vi.mock('@capacitor/app', () => ({ App: { addListener } }))
 
+// Spec 018's subscription system is currently DISABLED via lib/subscriptionGate. These suites
+// are its contract tests — they assert the machinery still behaves correctly, which is what
+// makes flipping the flag back on a safe, one-line change. So they pin the flag ON rather
+// than being deleted or skipped. The disabled-path behaviour is asserted separately in
+// test/subscriptions-disabled.test.tsx.
+vi.mock('@/lib/subscriptionGate', () => ({ SUBSCRIPTION_ENABLED: true }))
+
 const { createClient } = vi.hoisted(() => ({ createClient: vi.fn() }))
 vi.mock('@/lib/supabase/client', () => ({ createClient }))
 
