@@ -533,3 +533,51 @@ From `docs/research/finance-habits-budgeting-apps.md` §4 and `docs/research/pro
 
 - **Income split UI language**: "Received by" vs "Who earned it" vs "Who gets credit" — the right
   framing for income splits needs a user test, not a design assumption.
+
+---
+
+## 12. Spec 055 — Household redesign: what survived, and what shipped elsewhere
+
+This section was originally written for a **spec 031** branch opened 2026-07-24 that was never
+merged. While it sat open, specs 043, 050 and 053 shipped and independently solved most of what
+it set out to do — 043 deleted the balances feature as broken, and 053 rebuilt it properly. The
+branch was reconciled against `main` rather than merged as written, so the table below records
+where each gap from §11.2 was ACTUALLY closed. Nothing here credits the unmerged branch for work
+that landed another way.
+
+### Closed elsewhere, before this branch merged
+
+| Gap | Where it actually shipped |
+|---|---|
+| Income balance effects | **Spec 053** — `balanceBetween` handles income as the mirror of an expense (the recipient owes each co-owner their share), in `lib/finance/balances.ts` |
+| N-person pairwise balance matrix | **Spec 053** — `allPairBalances` / `outstandingBalances`, antisymmetric by construction, roster taken from the ledger |
+| Dashboard balance widget | **Spec 053** — `HouseholdBalancesBody`, registered as the `household-balances` widget (ships disabled, like every widget added since the board became configurable) |
+| Transaction ownership type UI | **Spec 050** — the "Who is this for?" Seg (Everyone / Just me) in `TxForm`, with the preset DERIVED from the owner set so a custom subset activates neither |
+
+The spec-031 branch's own versions of all four were discarded in the reconciliation: they were
+built on the pre-spec-034 dashboard (`DashboardDesktop`, `ModeSwitch`, `ReportsView`) and on the
+`lib/balances.ts` that spec 043 deleted, so keeping them would have reverted four later specs.
+
+### What this branch contributed that was NOT already on main
+
+| Gap | Resolution |
+|---|---|
+| Balance debt simplification | `simplifyDebts(pairs)` in `lib/finance/balances.ts` — nets each person to one figure and matches creditors to debtors greedily, collapsing A→B→C into a single transfer. Ported onto spec 053's `PairBalance` shape. **Pure logic only — no UI consumer yet.** |
+| Recurring split memory | `getLastSplitForMerchant` in `lib/splitMemory.ts` — returns the most recent multi-person split for an exact merchant name. **Pure logic only — the form chip that consumed it was built against the pre-spec-050 `TxForm` and was not ported.** |
+
+### Explicitly NOT carried over
+
+- **Settle-up threshold** (`useSettleThreshold` + a Settings → Household input) and the
+  **per-pair settlement history panel** were UI on the deleted `HouseholdBalancesWidget`. They
+  have no consumer on the current widget board and were dropped rather than half-ported. Spec
+  053 already records settle-up prefill as deferred (its FR-014); these belong with it.
+
+### What remains open
+
+- Balance visibility transparency is **resolved** — spec 053 shows every non-zero pair to every
+  member, which is precisely why the viewer-anchored predecessor was deleted rather than fixed.
+- Private/scoped transactions: still a non-goal until 3+ member households are common.
+- Per-person budget attribution: **shipped** in spec 054 (`budgets.person_id`).
+- Income split UI copy: still needs user testing.
+- A UI consumer for `simplifyDebts` (a "Simplified" toggle on the balances widget) and for
+  `getLastSplitForMerchant` (a suggestion chip on the current `TxForm`).

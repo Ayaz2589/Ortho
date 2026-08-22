@@ -142,3 +142,54 @@ export function outstandingBalances(
       x.toId.localeCompare(y.toId)
   )
 }
+
+/**
+ * The same standing position expressed as the FEWEST transfers that clear it.
+ *
+ * `outstandingBalances` answers "what does each pair owe", which is the honest per-pair
+ * truth but not the shortest way out of it: in a three-adult household A→B→C means two
+ * payments where one would do. This nets every person to a single figure and matches
+ * creditors against debtors greedily, which is optimal in transfer COUNT for the netted
+ * position (a debtor is only ever split across creditors when their debt genuinely spans
+ * more than one).
+ *
+ * This is a PRESENTATION of the same money, never a replacement: it discards who owed whom,
+ * so the pairwise list stays the default and this is opt-in. Cents are integers throughout
+ * and every step subtracts a `Math.min`, so the output sums to the input exactly.
+ *
+ * Sorted like `outstandingBalances` — largest first, then by id — so the list is stable
+ * across renders.
+ */
+export function simplifyDebts(pairs: readonly PairBalance[]): PairBalance[] {
+  // Net each person to one figure: positive ⇒ owed money, negative ⇒ owes it.
+  const net = new Map<string, number>()
+  for (const p of pairs) {
+    net.set(p.fromId, (net.get(p.fromId) ?? 0) + p.amountCents)
+    net.set(p.toId, (net.get(p.toId) ?? 0) - p.amountCents)
+  }
+
+  // Sorted by id so the greedy pass is deterministic regardless of input order.
+  const creditors = [...net].filter(([, v]) => v > 0).sort((x, y) => x[0].localeCompare(y[0]))
+  const debtors = [...net].filter(([, v]) => v < 0).sort((x, y) => x[0].localeCompare(y[0]))
+
+  const out: PairBalance[] = []
+  let ci = 0
+  let di = 0
+  while (ci < creditors.length && di < debtors.length) {
+    const [credId, credAmt] = creditors[ci]
+    const [debtId, debtAmt] = debtors[di]
+    const amount = Math.min(credAmt, -debtAmt)
+    if (amount > 0) out.push({ fromId: credId, toId: debtId, amountCents: amount })
+    creditors[ci] = [credId, credAmt - amount]
+    debtors[di] = [debtId, debtAmt + amount]
+    if (creditors[ci][1] === 0) ci++
+    if (debtors[di][1] === 0) di++
+  }
+
+  return out.sort(
+    (x, y) =>
+      y.amountCents - x.amountCents ||
+      x.fromId.localeCompare(y.fromId) ||
+      x.toId.localeCompare(y.toId)
+  )
+}

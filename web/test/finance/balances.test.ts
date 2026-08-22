@@ -5,6 +5,7 @@ import {
   balanceBetween,
   outstandingBalances,
   peopleInLedger,
+  simplifyDebts,
 } from '@/lib/finance/balances'
 
 // spec 053 — what the old viewer-anchored function could not express: three or more people,
@@ -225,5 +226,63 @@ describe('peopleInLedger', () => {
 
   it('is empty for an empty ledger', () => {
     expect(peopleInLedger([])).toEqual([])
+  })
+})
+
+// US10 (ported from the spec-031 branch onto spec 053's PairBalance shape) — the pairwise
+// list is the honest per-pair truth; this is the fewest transfers that clear the same money.
+describe('simplifyDebts', () => {
+  it('collapses a debt chain into one transfer', () => {
+    // A owes B $30; B owes C $30. Netted: A owes C $30, and B drops out entirely.
+    const rows = simplifyDebts([
+      { fromId: B, toId: A, amountCents: 3000 },
+      { fromId: C, toId: B, amountCents: 3000 },
+    ])
+    expect(rows).toEqual([{ fromId: C, toId: A, amountCents: 3000 }])
+  })
+
+  it('never invents or loses cents', () => {
+    const pairs = [
+      { fromId: A, toId: B, amountCents: 2500 },
+      { fromId: A, toId: C, amountCents: 1000 },
+      { fromId: B, toId: C, amountCents: 750 },
+    ]
+    const total = (rows: readonly { amountCents: number }[]) =>
+      rows.reduce((s, r) => s + r.amountCents, 0)
+    // A is owed 3500, C owes 1750, B nets -1750 + 2500... the sum of what changes hands
+    // must equal the sum of every net creditor position.
+    const rows = simplifyDebts(pairs)
+    const creditorTotal = 2500 + 1000 + 750 - 750
+    expect(total(rows)).toBe(creditorTotal)
+    expect(rows.every((r) => r.amountCents > 0)).toBe(true)
+  })
+
+  it('splits one debtor across two creditors when the debt genuinely spans both', () => {
+    const rows = simplifyDebts([
+      { fromId: A, toId: C, amountCents: 3000 },
+      { fromId: B, toId: C, amountCents: 2000 },
+    ])
+    // C owes 5000 total, to two different creditors — two transfers is the minimum.
+    expect(rows).toEqual([
+      { fromId: A, toId: C, amountCents: 3000 },
+      { fromId: B, toId: C, amountCents: 2000 },
+    ])
+  })
+
+  it('is empty for a settled household', () => {
+    expect(simplifyDebts([])).toEqual([])
+  })
+
+  it('is deterministic regardless of input order', () => {
+    const pairs = [
+      { fromId: A, toId: B, amountCents: 2500 },
+      { fromId: A, toId: C, amountCents: 1000 },
+    ]
+    expect(simplifyDebts(pairs)).toEqual(simplifyDebts([...pairs].reverse()))
+  })
+
+  it('never produces a transfer larger than the total owed', () => {
+    const rows = simplifyDebts([{ fromId: A, toId: B, amountCents: 4200 }])
+    expect(rows).toEqual([{ fromId: A, toId: B, amountCents: 4200 }])
   })
 })
