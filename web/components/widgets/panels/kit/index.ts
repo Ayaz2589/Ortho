@@ -29,6 +29,7 @@ export { PanelSectionLabel } from './PanelSectionLabel'
 export { PanelRow } from './PanelRow'
 export { IncomeSplitBar } from './IncomeSplitBar'
 export { ReconciledMonthCard } from './ReconciledMonthCard'
+export { CycleStrip } from './CycleStrip'
 
 // RateByMonthChart is NOT re-exported here. It lives at
 // components/widgets/charts/RateByMonthChart.tsx (not panels/kit/) and is
