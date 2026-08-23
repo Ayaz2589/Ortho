@@ -620,6 +620,24 @@ const catalog: Record<string, string> = {
   // spec 054 — per-person budgets
   "{0}'s budget": "Presupuesto de {0}",
   "Only {0}'s limits are shown here, measured against their share of what the household spends. The household's own budgets stay under Everyone.": "Aquí solo se muestran los límites de {0}, comparados con su parte de lo que gasta el hogar. Los presupuestos del hogar están en Todos.",
+  // spec 057 — widget panels: US2 home equity
+  "principal paid down, across all mortgages": "principal pagado, en todas las hipotecas",
+  "Upcoming payments": "Próximos pagos",
+  "{0} principal": "{0} de principal",
+  "{0} interest": "{0} de interés",
+  // spec 057 — widget panels: US3 budgets
+  "Transactions this month": "Transacciones este mes",
+  "Recent months": "Meses recientes",
+  "Projected to reach {0} by month end at the current pace.": "Proyectado a alcanzar {0} para fin de mes al ritmo actual.",
+  "No personal limit set for this category.": "No hay un límite personal establecido para esta categoría.",
+  // spec 057 — widget panels: US10 activity
+  "See all transactions": "Ver todas las transacciones",
+  // spec 057 — widget panels: US5 savings-trends (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
 }
 
 export default catalog

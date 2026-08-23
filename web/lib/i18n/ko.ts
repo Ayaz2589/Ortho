@@ -620,6 +620,24 @@ const catalog: Record<string, string> = {
   // spec 054 — per-person budgets
   "{0}'s budget": "{0} 님의 예산",
   "Only {0}'s limits are shown here, measured against their share of what the household spends. The household's own budgets stay under Everyone.": "여기에는 {0} 님의 한도만 표시되며, 가구 지출 중 본인 몫과 비교됩니다. 가구 자체 예산은 '모두'에 있습니다.",
+  // spec 057 — widget panels: US2 home equity
+  "principal paid down, across all mortgages": "모든 주택담보대출의 원금 상환액",
+  "Upcoming payments": "예정된 납부",
+  "{0} principal": "원금 {0}",
+  "{0} interest": "이자 {0}",
+  // spec 057 — widget panels: US3 budgets
+  "Transactions this month": "이번 달 거래",
+  "Recent months": "최근 몇 달",
+  "Projected to reach {0} by month end at the current pace.": "현재 속도라면 월말까지 {0}에 도달할 것으로 예상됩니다.",
+  "No personal limit set for this category.": "이 카테고리에는 개인 한도가 설정되어 있지 않습니다.",
+  // spec 057 — widget panels: US10 activity
+  "See all transactions": "모든 거래 보기",
+  // spec 057 — widget panels: US5 savings-trends (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
 }
 
 export default catalog

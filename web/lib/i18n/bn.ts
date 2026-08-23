@@ -620,6 +620,24 @@ const catalog: Record<string, string> = {
   // spec 054 — per-person budgets
   "{0}'s budget": "{0}-এর বাজেট",
   "Only {0}'s limits are shown here, measured against their share of what the household spends. The household's own budgets stay under Everyone.": "এখানে শুধু {0}-এর সীমা দেখানো হচ্ছে, পরিবারের খরচে তাঁর অংশের সঙ্গে মিলিয়ে। পরিবারের নিজস্ব বাজেট সবাই-এর মধ্যে থাকে।",
+  // spec 057 — widget panels: US2 home equity
+  "principal paid down, across all mortgages": "সমস্ত বন্ধকির মধ্যে পরিশোধিত মূল অর্থ",
+  "Upcoming payments": "আসন্ন পরিশোধ",
+  "{0} principal": "{0} মূলধন",
+  "{0} interest": "{0} সুদ",
+  // spec 057 — widget panels: US3 budgets
+  "Transactions this month": "এই মাসের লেনদেন",
+  "Recent months": "সাম্প্রতিক মাসগুলো",
+  "Projected to reach {0} by month end at the current pace.": "বর্তমান গতিতে মাস শেষে {0}-এ পৌঁছানোর সম্ভাবনা।",
+  "No personal limit set for this category.": "এই বিভাগের জন্য কোনো ব্যক্তিগত সীমা নির্ধারণ করা হয়নি।",
+  // spec 057 — widget panels: US10 activity
+  "See all transactions": "সব লেনদেন দেখুন",
+  // spec 057 — widget panels: US5 savings-trends (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
 }
 
 export default catalog

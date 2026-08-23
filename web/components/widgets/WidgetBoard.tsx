@@ -6,19 +6,23 @@ import { useWidgetPrefs } from '@/lib/widgets/useWidgetPrefs'
 import type { WidgetDefinition } from '@/lib/widgets/registry'
 import { Widget } from './Widget'
 import { WidgetEmptyState } from './WidgetEmptyState'
-import { Drawer, DrawerHeader } from '@/components/web/Drawer'
+import { WidgetPanel } from './WidgetPanel'
 
 /**
- * The Dashboard's widget board (spec 034; spec 037 makes it a uniform grid + opens
- * a detail panel on click). ONE composition for every width — responsiveness is
- * pure CSS (`.ow-board` steps its column count by breakpoint). Every widget is the
- * same height (uniform `grid-auto-rows`), so the enabled subset always tiles
- * cleanly with no interior holes for any toggled combination. Renders only the
- * enabled widgets, in registry order; a calm empty state when none are enabled.
+ * The Dashboard's widget board (spec 034; spec 037 made it a uniform grid +
+ * opens a detail panel on click; spec 057 makes good on that panel). ONE
+ * composition for every width — responsiveness is pure CSS (`.ow-board` steps
+ * its column count by breakpoint). Every widget is the same height (uniform
+ * `grid-auto-rows`), so the enabled subset always tiles cleanly with no
+ * interior holes for any toggled combination. Renders only the enabled
+ * widgets, in registry order; a calm empty state when none are enabled.
  *
- * Clicking any widget opens the shared right-side `Drawer` with that widget's
- * title; the panel is intentionally empty for now (spec 037) — a placeholder for
- * the future drill-down — with the standard close button.
+ * Clicking a widget opens the shared `WidgetPanel` frame, labelled by that
+ * widget's title: its registered `Panel` when one exists, or the spec-037
+ * "Details coming soon." placeholder otherwise (FR-001..FR-003). `WidgetPanel`
+ * owns the drawer/caption/second-level machinery itself — this board only
+ * ever tracks which widget is open, which is what keeps a follow-up panel's
+ * diff to its own file plus this one registry line (SC-006).
  */
 export function WidgetBoard() {
   const { t } = useApp()
@@ -30,6 +34,7 @@ export function WidgetBoard() {
   }
 
   const close = () => setOpenWidget(null)
+  const Panel = openWidget?.Panel
 
   return (
     <>
@@ -39,16 +44,15 @@ export function WidgetBoard() {
         ))}
       </div>
 
-      <Drawer open={openWidget !== null} onClose={close} label={openWidget ? t(openWidget.title) : ''}>
-        {openWidget ? (
-          <div className="flex h-full flex-col">
-            <DrawerHeader title={t(openWidget.title)} onClose={close} />
-            <div className="flex flex-1 items-center justify-center p-6 text-[13px] text-text-3">
-              {t('Details coming soon.')}
-            </div>
+      <WidgetPanel open={openWidget !== null} title={openWidget ? t(openWidget.title) : ''} onClose={close}>
+        {Panel ? (
+          <Panel />
+        ) : (
+          <div className="flex h-full items-center justify-center p-6 text-[13px] text-text-3">
+            {t('Details coming soon.')}
           </div>
-        ) : null}
-      </Drawer>
+        )}
+      </WidgetPanel>
     </>
   )
 }

@@ -620,6 +620,24 @@ const catalog: Record<string, string> = {
   // spec 054 — per-person budgets
   "{0}'s budget": "{0}的预算",
   "Only {0}'s limits are shown here, measured against their share of what the household spends. The household's own budgets stay under Everyone.": "这里只显示{0}的限额，并与其在家庭支出中所占的份额进行比较。家庭本身的预算在“所有人”中。",
+  // spec 057 — widget panels: US2 home equity
+  "principal paid down, across all mortgages": "已偿还的本金（所有房贷合计）",
+  "Upcoming payments": "即将到期的还款",
+  "{0} principal": "本金 {0}",
+  "{0} interest": "利息 {0}",
+  // spec 057 — widget panels: US3 budgets
+  "Transactions this month": "本月交易",
+  "Recent months": "近几个月",
+  "Projected to reach {0} by month end at the current pace.": "按目前的速度，预计到月底将达到{0}。",
+  "No personal limit set for this category.": "此类别尚未设置个人限额。",
+  // spec 057 — widget panels: US10 activity
+  "See all transactions": "查看所有交易",
+  // spec 057 — widget panels: US5 savings-trends (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
 }
 
 export default catalog

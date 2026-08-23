@@ -101,18 +101,24 @@ function monthsBetween(a: Date, b: Date): number {
 }
 
 /**
- * Rollover-aware status of one budget for `referenceMonth`, derived from the
- * transaction ledger. The carry anchor is the budget's creation month (months
- * before it existed contribute nothing); spend is bucketed by local calendar
- * month exactly like the dashboard/insights. All arithmetic is delegated to
- * `computeRolloverLedger` — this adapter only reduces the ledger to the
- * monthly-spend series, so it needs no golden vector of its own.
+ * The full rollover ledger for one budget, one entry per month from its
+ * creation month through `referenceMonth` (spec 057, D8). The carry anchor is
+ * the budget's creation month (months before it existed contribute nothing);
+ * spend is bucketed by local calendar month exactly like the
+ * dashboard/insights. All arithmetic is delegated to `computeRolloverLedger`
+ * — this adapter only reduces the ledger to the monthly-spend series, so it
+ * needs no golden vector of its own.
+ *
+ * `budgetStatusForMonth` computed exactly this series already and kept only
+ * its last entry, discarding the carry history on every render. This is a
+ * pure extraction, not new behaviour: `budgetStatusForMonth`'s own tests are
+ * the pin, and this function's last entry must always equal its return.
  */
-export function budgetStatusForMonth(
+export function budgetLedgerForMonth(
   budget: Budget,
   transactions: Transaction[],
   referenceMonth: Date,
-): BudgetStatus {
+): RolloverMonth[] {
   // Anchor = creation month, but never later than the reference month (a budget
   // viewed in a month before it was created still yields a sane zero-carry status).
   const created = budget.created_at ? new Date(budget.created_at) : referenceMonth
@@ -139,7 +145,7 @@ export function budgetStatusForMonth(
     series.push(spendByMonth.get(monthKey(d)) ?? 0)
   }
 
-  const ledger = computeRolloverLedger(
+  return computeRolloverLedger(
     {
       type: budget.budget_type,
       baseLimitCents: budget.monthly_limit_cents,
@@ -147,6 +153,18 @@ export function budgetStatusForMonth(
     },
     series,
   )
+}
+
+/**
+ * Rollover-aware status of one budget for `referenceMonth` — the last entry
+ * of `budgetLedgerForMonth`'s full series (spec 057, D8).
+ */
+export function budgetStatusForMonth(
+  budget: Budget,
+  transactions: Transaction[],
+  referenceMonth: Date,
+): BudgetStatus {
+  const ledger = budgetLedgerForMonth(budget, transactions, referenceMonth)
   const last = ledger[ledger.length - 1]
   return {
     effectiveLimitCents: last.effectiveLimitCents,

@@ -1,13 +1,16 @@
 import { type ComponentType } from 'react'
 import { SpendingPaceBody } from '@/components/widgets/bodies/SpendingPaceBody'
 import { BudgetsBody } from '@/components/widgets/bodies/BudgetsBody'
+import { BudgetsPanel } from '@/components/widgets/panels/BudgetsPanel'
 import { GoalsBody } from '@/components/widgets/bodies/GoalsBody'
 import { TopMerchantsBody } from '@/components/widgets/bodies/TopMerchantsBody'
 import { HouseholdBalancesBody } from '@/components/widgets/bodies/HouseholdBalancesBody'
 import { ActivityBody } from '@/components/widgets/bodies/ActivityBody'
+import { ActivityPanel } from '@/components/widgets/panels/ActivityPanel'
 import { SavingsTrendsBody } from '@/components/widgets/bodies/SavingsTrendsBody'
 import { HousingCostsBody } from '@/components/widgets/bodies/HousingCostsBody'
 import { HomeEquityBody } from '@/components/widgets/bodies/HomeEquityBody'
+import { HomeEquityPanel } from '@/components/widgets/panels/HomeEquityPanel'
 import { FinancialHealthBody } from '@/components/widgets/bodies/FinancialHealthBody'
 import {
   DownloadDataBody,
@@ -39,8 +42,19 @@ export interface WidgetDefinition {
   defaultEnabled: boolean
   /** Propless body — reads data via `useApp()` + `useDashboardScopeContext()`. */
   Body: ComponentType
+  /**
+   * Optional propless detail panel (spec 057, D1). A bare `ComponentType`
+   * mirroring `Body` for the same reason `Body` takes no props: a `PanelConfig`
+   * union expressive enough for all nine panels' shapes would put every widget's
+   * requirements into one type. Absent ⇒ the existing "Details coming soon."
+   * placeholder (FR-003) — this is what lets panels ship a few at a time.
+   * Renders inside the shared `WidgetPanel` frame; reads scope directly via
+   * `useDashboardScopeContext()` / `useScopedTransactions()`, never via props.
+   */
+  Panel?: ComponentType
   /** Optional route (spec 039). When set, the widget's card is a link to this path
-   *  and clicking it navigates instead of opening the details drawer. */
+   *  and clicking it navigates instead of opening the details drawer. A widget
+   *  with `href` set never renders a `Panel`, even if one is declared (FR-006). */
   href?: string
 }
 
@@ -83,6 +97,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'Category budgets and what is left in each.',
     defaultEnabled: true,
     Body: BudgetsBody,
+    Panel: BudgetsPanel,
   },
   {
     id: 'goals',
@@ -113,6 +128,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'Your latest transactions across the household.',
     defaultEnabled: false,
     Body: ActivityBody,
+    Panel: ActivityPanel,
   },
   {
     id: 'housing-costs',
@@ -127,6 +143,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: "Principal you've paid down across all mortgages.",
     defaultEnabled: false,
     Body: HomeEquityBody,
+    Panel: HomeEquityPanel,
   },
   // Navigation shortcuts (spec 039) — jump straight to a Settings page. Default-off.
   {
