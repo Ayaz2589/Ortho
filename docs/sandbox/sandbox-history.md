@@ -5,13 +5,14 @@
 > [kill-sandbox](../../.claude/skills/kill-sandbox/SKILL.md) skills; reconciled
 > against `sbx ls` on every run. Host-local (sandboxes are per-machine), so this
 > reflects the fleet on the machine that last reconciled it. Do not hand-edit the
-> tables or edit this file from inside a sandbox. Last reconciled: 2026-08-11.
+> tables or edit this file from inside a sandbox. Last reconciled: 2026-08-23.
 
 ## Active (not killed)
 
 | Sandbox | Branch | Feature | Mode | Created | Last seen |
 |---|---|---|---|---|---|
-| _(none — no Ortho sandboxes live)_ | | | | | |
+| panels-base | feat/057-widget-detail-panels | spec 057 — widget detail panels (base — **PR #119 MERGED**; kept as scratch/merge-executor until US7 lands) | clone | 2026-08-22 | 2026-08-23 running |
+| panel-balances | feat/057-panel-household-balances | spec 057 — US7 Who-owes-whom detail panel (follow-up; branched off base; **in flight** — the trap panel) | clone (-m 4g) | 2026-08-22 | 2026-08-23 running |
 
 ## Killed (history)
 
@@ -28,3 +29,9 @@
 | feat-026-review | 026-seed-data-harness | pre-existing — spec-026 seed-harness review | _(unknown)_ | 2026-07-19 | no | clean (merged; up to date with origin/026-seed-data-harness); killed via `/kill-sandbox all` |
 | claude-Ortho | main | pre-existing dev sandbox — direct-mode (host-mounted) | _(unknown)_ | 2026-08-11 | _(unknown)_ | vanished from `sbx ls` — removed outside skill; fleet fully turned over |
 | mobile-scroll-nav-fix | feat/income-deposit-accounts | spec 033 — income deposit accounts (committed row was mismatched — name/branch didn't align) | 2026-07-30 | 2026-08-11 | _(unknown)_ | vanished from `sbx ls` — removed outside skill |
+| household | feat/057-widget-detail-panels | spec 057 — widget detail panels (**planning** sandbox; produced the plan/spec on PR #119) | 2026-08-22 (inferred) | 2026-08-22 | no | clean (up to date with origin/feat/057-widget-detail-panels, 0 unpushed); planning done + pushed as PR #119; removed via `/kill-sandbox` |
+| panel-pace | feat/057-panel-spending-pace | spec 057 — US4 Spending-pace detail panel (follow-up) | 2026-08-22 | 2026-08-22 | no | complete; pushed to origin/feat/057-panel-spending-pace (baee16c, 1 commit: panel+test+registry+i18n); PR later MERGED to main; removed after confirming on GitHub |
+| panel-savings | feat/057-panel-savings-trends | spec 057 — US5 Savings-trends detail panel (follow-up) | 2026-08-22 | 2026-08-22 | no | complete; pushed to origin/feat/057-panel-savings-trends (a986539); PR later MERGED to main; removed after confirming on GitHub |
+| panel-merchants | feat/057-panel-top-merchants | spec 057 — US6 Top-merchants detail panel (follow-up) | 2026-08-22 | 2026-08-22 | no | complete; pushed to origin/feat/057-panel-top-merchants (061c2a9); PR later MERGED to main; removed after confirming on GitHub |
+| panel-housing | feat/057-panel-housing-costs | spec 057 — US8 Housing-costs detail panel (follow-up) | 2026-08-22 | 2026-08-23 | no | complete; **PR #123 MERGED** to main (7020811, clean rebase); removed via `/kill-sandbox` after confirming merged |
+| panel-goals | feat/057-panel-goals | spec 057 — US9 Goals detail panel (follow-up) | 2026-08-22 | 2026-08-23 | no | complete; **PR #124 MERGED** to main (rebased + union-resolved i18n → 57ab210); removed via `/kill-sandbox` after confirming merged |
