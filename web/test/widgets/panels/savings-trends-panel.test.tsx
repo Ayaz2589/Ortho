@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { SavingsTrendsPanel } from '@/components/widgets/panels/SavingsTrendsPanel'
 import { WidgetPanel } from '@/components/widgets/WidgetPanel'
 import { MoneyScopeProvider } from '@/lib/widgets/MoneyScopeContext'
@@ -8,20 +8,29 @@ import { HOUSEHOLD_SCOPE, personScope } from '@/lib/scope/moneyScope'
 import type { MoneyScope } from '@/lib/scope/moneyScope'
 import type { Transaction } from '@/lib/types'
 
-// Spec 057 US5 (savings trends): a savings rate is a ratio, and the card keeps
-// only the ratio. The panel restores both terms — income and expense — per
-// month, plus the amount saved, and names which months in the window were
-// strongest/weakest by sign and position, never by colour.
+// Spec 057 US5 redesign: the old panel was a plain, unbounded stack of one
+// four-line block per month — a 12-month window was 12 blocks, and the
+// card's own bar chart was dropped entirely. This replaces it with
+// verdict → chart → three bounded reconciled cards → drill-in, so the panel's
+// height stays constant regardless of window length. A shortfall reads
+// through sign and position, never colour (FR-021); a negative rate uses
+// `--text`, never a warning colour — the one variation from the positive case.
 
 const h = vi.hoisted(() => ({
   txns: [] as unknown[],
-  scopeState: { interval: { start: new Date(2026, 0, 1), end: new Date(2026, 3, 1) }, periodLabel: 'Jan–Mar 2026' },
+  scopeState: {
+    interval: { start: new Date(2026, 0, 1), end: new Date(2026, 6, 1) },
+    periodLabel: 'Jan–Jun 2026',
+    isSpecificMonth: false as boolean,
+    selectedMonth: null as string | null,
+    availableMonths: [] as string[],
+  },
 }))
 
 vi.mock('@/lib/store', () => ({
   useApp: () => ({
     t: (k: string, ...a: unknown[]) => k.replace(/\{(\d+)\}/g, (_, i) => String(a[Number(i)] ?? '')),
-    formatMoney: (c: number) => `$${(c / 100).toFixed(2)}`,
+    formatMoney: (c: number) => (c < 0 ? `−$${(Math.abs(c) / 100).toFixed(2)}` : `$${(c / 100).toFixed(2)}`),
     locale: 'en-US',
     transactions: h.txns,
     resolveUser: (id: string) => ({ id, name: id === 'alice' ? 'Alice' : id, initial: 'A', color_key: 'sand', created_at: '' }),
@@ -66,10 +75,74 @@ afterEach(() => {
   cleanup()
   h.txns = []
   txSeq = 0
+  h.scopeState = {
+    interval: { start: new Date(2026, 0, 1), end: new Date(2026, 6, 1) },
+    periodLabel: 'Jan–Jun 2026',
+    isSpecificMonth: false,
+    selectedMonth: null,
+    availableMonths: [],
+  }
 })
 
-describe('SavingsTrendsPanel', () => {
-  it('reconciles each month to the income, expense and saved amount behind its rate', () => {
+describe('SavingsTrendsPanel — multi-month window', () => {
+  it('reconciles the whole window into a kept/spent verdict', () => {
+    h.txns = [
+      tx('income', '2026-01-05T12:00:00.000Z', 100000),
+      tx('expense', '2026-01-10T12:00:00.000Z', 40000),
+      tx('income', '2026-02-05T12:00:00.000Z', 100000),
+      tx('expense', '2026-02-10T12:00:00.000Z', 90000),
+    ]
+    h.scopeState = { ...h.scopeState, interval: { start: new Date(2026, 0, 1), end: new Date(2026, 2, 1) } }
+    renderPanel()
+
+    // Window income $2000, expense $1300, saved $700 → 35%.
+    expect(
+      screen.getByText('You kept $700.00 of the $2000.00 that came in — 35% across 2 months.')
+    ).toBeTruthy()
+    expect(screen.getByText(/Kept \$700\.00/)).toBeTruthy()
+    expect(screen.getByText(/Spent \$1300\.00/)).toBeTruthy()
+  })
+
+  it('names the best and leanest months and shows exactly three reconciled cards', () => {
+    h.txns = [
+      tx('income', '2026-01-05T12:00:00.000Z', 100000),
+      tx('expense', '2026-01-10T12:00:00.000Z', 50000), // 50%
+      tx('income', '2026-02-05T12:00:00.000Z', 100000),
+      tx('expense', '2026-02-10T12:00:00.000Z', 90000), // 10% — leanest
+      tx('income', '2026-03-05T12:00:00.000Z', 100000),
+      tx('expense', '2026-03-10T12:00:00.000Z', 20000), // 80% — best
+    ]
+    h.scopeState = { ...h.scopeState, interval: { start: new Date(2026, 0, 1), end: new Date(2026, 3, 1) } }
+    renderPanel()
+
+    expect(screen.getAllByText(/Best month/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Leanest month/).length).toBeGreaterThan(0)
+    // March is both best AND most recent — collapses to one tagged card, not two.
+    expect(screen.getAllByText(/Best month · Most recent/).length).toBe(1)
+    expect(screen.getAllByText('March').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('February').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('shows a most-recent card distinct from best/leanest when a fourth month exists', () => {
+    h.txns = [
+      tx('income', '2026-01-05T12:00:00.000Z', 100000),
+      tx('expense', '2026-01-10T12:00:00.000Z', 50000), // 50%
+      tx('income', '2026-02-05T12:00:00.000Z', 100000),
+      tx('expense', '2026-02-10T12:00:00.000Z', 90000), // 10% — leanest
+      tx('income', '2026-03-05T12:00:00.000Z', 100000),
+      tx('expense', '2026-03-10T12:00:00.000Z', 20000), // 80% — best
+      tx('income', '2026-04-05T12:00:00.000Z', 100000),
+      tx('expense', '2026-04-10T12:00:00.000Z', 60000), // 40% — most recent, neither best nor leanest
+    ]
+    h.scopeState = { ...h.scopeState, interval: { start: new Date(2026, 0, 1), end: new Date(2026, 4, 1) } }
+    renderPanel()
+
+    expect(screen.getByText('Best month')).toBeTruthy()
+    expect(screen.getByText('Leanest month')).toBeTruthy()
+    expect(screen.getByText('Most recent')).toBeTruthy()
+  })
+
+  it('opens every month, newest first, with a pinned window total, from "All N months"', () => {
     h.txns = [
       tx('income', '2026-01-05T12:00:00.000Z', 100000),
       tx('expense', '2026-01-10T12:00:00.000Z', 40000),
@@ -78,62 +151,35 @@ describe('SavingsTrendsPanel', () => {
       tx('income', '2026-03-05T12:00:00.000Z', 100000),
       tx('expense', '2026-03-10T12:00:00.000Z', 20000),
     ]
+    h.scopeState = { ...h.scopeState, interval: { start: new Date(2026, 0, 1), end: new Date(2026, 3, 1) } }
     renderPanel()
 
-    // January: income $1000, expense $400, saved $600.
-    expect(screen.getAllByText('$1000.00').length).toBe(3)
-    expect(screen.getByText('$400.00')).toBeTruthy()
-    expect(screen.getByText('$600.00')).toBeTruthy()
-    // February: expense $900, saved $100.
-    expect(screen.getByText('$900.00')).toBeTruthy()
-    expect(screen.getByText('$100.00')).toBeTruthy()
-    // March: expense $200, saved $800.
-    expect(screen.getByText('$200.00')).toBeTruthy()
-    expect(screen.getByText('$800.00')).toBeTruthy()
+    fireEvent.click(screen.getByText(/All 3 months/))
+
+    expect(screen.getByText('Every month')).toBeTruthy()
+    const months = screen.getAllByText(/^January$|^February$|^March$/)
+    // Newest first: March should be the first of the three in document order.
+    expect(months[0].textContent).toBe('March')
+    expect(screen.getByText('Window total')).toBeTruthy()
+    // Window total: income $3000, expense $1500, saved $1500.
+    expect(screen.getByText(/\$1500\.00/)).toBeTruthy()
   })
 
-  it('identifies the best and worst months in a multi-month window', () => {
-    h.txns = [
-      tx('income', '2026-01-05T12:00:00.000Z', 100000),
-      tx('expense', '2026-01-10T12:00:00.000Z', 50000), // 50% — middle
-      tx('income', '2026-02-05T12:00:00.000Z', 100000),
-      tx('expense', '2026-02-10T12:00:00.000Z', 90000), // 10% — worst
-      tx('income', '2026-03-05T12:00:00.000Z', 100000),
-      tx('expense', '2026-03-10T12:00:00.000Z', 20000), // 80% — best
-    ]
-    renderPanel()
-
-    expect(screen.getByText('Best month')).toBeTruthy()
-    expect(screen.getByText('Lowest month')).toBeTruthy()
-  })
-
-  it('reads a shortfall through sign and position, never colour', () => {
+  it('reads a shortfall month in the every-month list through sign, never colour', () => {
     h.txns = [
       tx('income', '2026-01-05T12:00:00.000Z', 100000),
       tx('expense', '2026-01-10T12:00:00.000Z', 50000),
       tx('income', '2026-02-05T12:00:00.000Z', 30000),
-      tx('expense', '2026-02-10T12:00:00.000Z', 50000), // shortfall: saved is negative
-      tx('income', '2026-03-05T12:00:00.000Z', 100000),
-      tx('expense', '2026-03-10T12:00:00.000Z', 20000),
+      tx('expense', '2026-02-10T12:00:00.000Z', 50000), // shortfall
     ]
+    h.scopeState = { ...h.scopeState, interval: { start: new Date(2026, 0, 1), end: new Date(2026, 2, 1) } }
     renderPanel()
 
-    const saved = screen.getByText('$-200.00')
-    expect(saved).toBeTruthy()
-    expect(saved.getAttribute('style')).toBeNull()
-  })
+    fireEvent.click(screen.getByText(/All 2 months/))
 
-  it('renders a single month plainly, without implying a trend', () => {
-    h.scopeState = { interval: { start: new Date(2026, 0, 1), end: new Date(2026, 1, 1) }, periodLabel: 'January 2026' }
-    h.txns = [
-      tx('income', '2026-01-05T12:00:00.000Z', 100000),
-      tx('expense', '2026-01-10T12:00:00.000Z', 30000),
-    ]
-    renderPanel()
-
-    expect(screen.getByText('$700.00')).toBeTruthy()
-    expect(screen.queryByText('Best month')).toBeNull()
-    expect(screen.queryByText('Lowest month')).toBeNull()
+    const savedCell = screen.getByText(/−\$200\.00/)
+    expect(savedCell).toBeTruthy()
+    expect(savedCell.getAttribute('style')).toBeNull()
   })
 
   it('shows a calm prompt, not an empty frame, when the window has no activity', () => {
@@ -142,16 +188,83 @@ describe('SavingsTrendsPanel', () => {
     expect(screen.getByText('Not enough data yet.')).toBeTruthy()
   })
 
+  it('reads plainly when the window has expenses but no income', () => {
+    h.txns = [tx('expense', '2026-01-10T12:00:00.000Z', 40000)]
+    h.scopeState = { ...h.scopeState, interval: { start: new Date(2026, 0, 1), end: new Date(2026, 1, 1) } }
+    renderPanel()
+
+    expect(screen.getByText('No income recorded — $400.00 went out this window.')).toBeTruthy()
+    expect(screen.queryByText(/-Infinity|NaN|∞/)).toBeNull()
+  })
+
   it("narrows to a person's own share under person scope, never the household total", () => {
     h.txns = [
       tx('income', '2026-01-05T12:00:00.000Z', 100000, { owner_ids: ['alice'], shares: { alice: 100000 } }),
       tx('expense', '2026-01-10T12:00:00.000Z', 60000, { owner_ids: ['alice', 'bob'], shares: { alice: 20000, bob: 40000 } }),
     ]
-    h.scopeState = { interval: { start: new Date(2026, 0, 1), end: new Date(2026, 1, 1) }, periodLabel: 'January 2026' }
+    h.scopeState = { ...h.scopeState, interval: { start: new Date(2026, 0, 1), end: new Date(2026, 1, 1) } }
     renderPanel(personScope('alice'))
 
-    expect(screen.getByText('$1000.00')).toBeTruthy() // Alice's income share
-    expect(screen.getByText('$200.00')).toBeTruthy() // Alice's expense share, not the household's $600
-    expect(screen.queryByText('$600.00')).toBeNull()
+    // Alice's income $1000, her expense share $200, saved $800 — not the household's $400.
+    expect(screen.getByText('You kept $800.00 of the $1000.00 that came in — 80% this month.')).toBeTruthy()
+    expect(screen.queryByText(/\$400\.00/)).toBeNull()
+  })
+})
+
+describe('SavingsTrendsPanel — single-month window', () => {
+  it('reads plainly, without a best/leanest tag, and offers no drill-in', () => {
+    h.txns = [
+      tx('income', '2026-01-05T12:00:00.000Z', 100000),
+      tx('expense', '2026-01-10T12:00:00.000Z', 30000),
+    ]
+    h.scopeState = {
+      interval: { start: new Date(2026, 0, 1), end: new Date(2026, 1, 1) },
+      periodLabel: 'January 2026',
+      isSpecificMonth: true,
+      selectedMonth: '2026-01',
+      availableMonths: ['2026-01'],
+    }
+    renderPanel()
+
+    expect(screen.getByText('You kept $700.00 of the $1000.00 that came in — 70% this month.')).toBeTruthy()
+    expect(screen.queryByText('Best month')).toBeNull()
+    expect(screen.queryByText('Leanest month')).toBeNull()
+    expect(screen.queryByText(/All \d+ months/)).toBeNull()
+  })
+
+  it('compares against the previous month when one is on record', () => {
+    h.txns = [
+      tx('income', '2025-12-05T12:00:00.000Z', 100000),
+      tx('expense', '2025-12-10T12:00:00.000Z', 76000), // Dec: 24%
+      tx('income', '2026-01-05T12:00:00.000Z', 100000),
+      tx('expense', '2026-01-10T12:00:00.000Z', 83000), // Jan: 17%
+    ]
+    h.scopeState = {
+      interval: { start: new Date(2026, 0, 1), end: new Date(2026, 1, 1) },
+      periodLabel: 'January 2026',
+      isSpecificMonth: true,
+      selectedMonth: '2026-01',
+      availableMonths: ['2026-01', '2025-12'],
+    }
+    renderPanel()
+
+    expect(screen.getByText('Down from 24% in December · 21% average over 2 months')).toBeTruthy()
+    expect(screen.getByText('Selected month')).toBeTruthy()
+    expect(screen.getByText('Previous month')).toBeTruthy()
+  })
+
+  it('omits the comparison line entirely when no previous month is on record', () => {
+    h.txns = [tx('income', '2026-01-05T12:00:00.000Z', 100000), tx('expense', '2026-01-10T12:00:00.000Z', 30000)]
+    h.scopeState = {
+      interval: { start: new Date(2026, 0, 1), end: new Date(2026, 1, 1) },
+      periodLabel: 'January 2026',
+      isSpecificMonth: true,
+      selectedMonth: '2026-01',
+      availableMonths: ['2026-01'],
+    }
+    renderPanel()
+
+    expect(screen.queryByText('Previous month')).toBeNull()
+    expect(screen.queryByText(/Down from|Up from/)).toBeNull()
   })
 })
