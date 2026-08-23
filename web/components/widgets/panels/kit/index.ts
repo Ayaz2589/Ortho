@@ -27,3 +27,12 @@
 export { PanelEmpty } from './PanelEmpty'
 export { PanelSectionLabel } from './PanelSectionLabel'
 export { PanelRow } from './PanelRow'
+export { IncomeSplitBar } from './IncomeSplitBar'
+export { ReconciledMonthCard } from './ReconciledMonthCard'
+
+// RateByMonthChart is NOT re-exported here. It lives at
+// components/widgets/charts/RateByMonthChart.tsx (not panels/kit/) and is
+// reached only via next/dynamic from SavingsTrendsPanel — recharts must only
+// ever be imported from a directory literally named `charts`
+// (test/bundle/no-eager-recharts.test.ts). Barrel-exporting it from this
+// eagerly-imported index would pull recharts back into the initial bundle.
