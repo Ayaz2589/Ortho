@@ -636,7 +636,17 @@ const catalog: Record<string, string> = {
   // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
-  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US7 household-balances
+  "Suggested settle-up": "建议结算方式",
+  "{0} pays {1}": "{0} 支付给 {1}",
+  "Every balance": "所有余额",
+  "Net position": "净余额",
+  "owed {0}": "应收 {0}",
+  "owes {0}": "应付 {0}",
+  "Settled": "已结清",
+  "Contributing transactions": "相关交易",
+  "Paid by {0}": "由 {0} 支付",
+  "Received by {0}": "由 {0} 收到",
   // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
 }
 

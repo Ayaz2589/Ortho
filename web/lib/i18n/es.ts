@@ -636,7 +636,17 @@ const catalog: Record<string, string> = {
   // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
-  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US7 household-balances
+  "Suggested settle-up": "Liquidación sugerida",
+  "{0} pays {1}": "{0} le paga a {1}",
+  "Every balance": "Todos los saldos",
+  "Net position": "Posición neta",
+  "owed {0}": "le deben {0}",
+  "owes {0}": "debe {0}",
+  "Settled": "Saldado",
+  "Contributing transactions": "Transacciones que lo componen",
+  "Paid by {0}": "Pagado por {0}",
+  "Received by {0}": "Recibido por {0}",
   // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
 }
 

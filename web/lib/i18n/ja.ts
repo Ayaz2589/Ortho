@@ -636,7 +636,17 @@ const catalog: Record<string, string> = {
   // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
-  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US7 household-balances
+  "Suggested settle-up": "精算案",
+  "{0} pays {1}": "{0} が {1} に支払う",
+  "Every balance": "すべての残高",
+  "Net position": "差引残高",
+  "owed {0}": "{0} を受け取る予定",
+  "owes {0}": "{0} を支払う予定",
+  "Settled": "精算済み",
+  "Contributing transactions": "内訳の取引",
+  "Paid by {0}": "{0} が支払い",
+  "Received by {0}": "{0} が受け取り",
   // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
 }
 

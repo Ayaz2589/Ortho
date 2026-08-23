@@ -636,7 +636,17 @@ const catalog: Record<string, string> = {
   // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
-  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US7 household-balances
+  "Suggested settle-up": "정산 제안",
+  "{0} pays {1}": "{0}님이 {1}님에게 지급",
+  "Every balance": "모든 잔액",
+  "Net position": "순 잔액",
+  "owed {0}": "{0} 받을 예정",
+  "owes {0}": "{0} 갚을 예정",
+  "Settled": "정산 완료",
+  "Contributing transactions": "관련 거래 내역",
+  "Paid by {0}": "{0}님이 지불",
+  "Received by {0}": "{0}님이 수령",
   // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
 }
 

@@ -636,7 +636,17 @@ const catalog: Record<string, string> = {
   // spec 057 — widget panels: US4 spending-pace (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US9 goals (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // spec 057 — widget panels: US6 top-merchants (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
-  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US7 household-balances
+  "Suggested settle-up": "নিষ্পত্তির পরামর্শ",
+  "{0} pays {1}": "{0} {1}-কে পরিশোধ করবে",
+  "Every balance": "সব ব্যালেন্স",
+  "Net position": "নিট অবস্থান",
+  "owed {0}": "{0} পাবেন",
+  "owes {0}": "{0} দিতে হবে",
+  "Settled": "মিটে গেছে",
+  "Contributing transactions": "সংশ্লিষ্ট লেনদেন",
+  "Paid by {0}": "{0} পরিশোধ করেছেন",
+  "Received by {0}": "{0} পেয়েছেন",
   // spec 057 — widget panels: US8 housing-costs (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
 }
 

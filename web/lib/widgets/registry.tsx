@@ -5,6 +5,7 @@ import { BudgetsPanel } from '@/components/widgets/panels/BudgetsPanel'
 import { GoalsBody } from '@/components/widgets/bodies/GoalsBody'
 import { TopMerchantsBody } from '@/components/widgets/bodies/TopMerchantsBody'
 import { HouseholdBalancesBody } from '@/components/widgets/bodies/HouseholdBalancesBody'
+import { HouseholdBalancesPanel } from '@/components/widgets/panels/HouseholdBalancesPanel'
 import { ActivityBody } from '@/components/widgets/bodies/ActivityBody'
 import { ActivityPanel } from '@/components/widgets/panels/ActivityPanel'
 import { SavingsTrendsBody } from '@/components/widgets/bodies/SavingsTrendsBody'
@@ -121,6 +122,7 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     description: 'Outstanding balances between the people in your household.',
     defaultEnabled: false,
     Body: HouseholdBalancesBody,
+    Panel: HouseholdBalancesPanel,
   },
   {
     id: 'activity',
