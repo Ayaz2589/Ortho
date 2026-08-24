@@ -858,6 +858,10 @@ const catalog: Record<string, string> = {
   "Owner: {0}. Tap to change.": "所有者: {0}。タップで変更できます。",
   "Paid by {0}": "{0}が支払い",
   "You’ve used": "使ったことのある名前",
+  // review 2026-08-24 — display corrections
+  "Paid off": "完済",
+  "Nothing landed this period — expected at its usual amount.": "この期間の請求はまだありません。通常の金額での請求が見込まれます。",
+  "{0} this period": "この期間 {0}",
 }
 
 export default catalog

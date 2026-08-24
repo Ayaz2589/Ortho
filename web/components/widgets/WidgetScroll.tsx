@@ -47,6 +47,11 @@ export function WidgetScroll({
     if (!el || typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver(update)
     ro.observe(el)
+    // The container's box is FIXED by the uniform grid cell — when only the
+    // CONTENT height changes (a scope switch adds/removes rows in place) the
+    // fades went stale; the content's box is what actually moves
+    // (review 2026-08-24).
+    if (el.firstElementChild) ro.observe(el.firstElementChild)
     return () => ro.disconnect()
   }, [update])
 

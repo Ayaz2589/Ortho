@@ -7,7 +7,11 @@ import type { Property, Unit } from '@/lib/types'
 import { HousingSection, HousingLabel } from './MortgageCards'
 
 function isVacant(u: Unit): boolean {
-  return !isUnitOccupied(u.tenant_name)
+  // The explicit spec-020 flag first — the same resolution the money math
+  // (rentUnitsFrom) uses, so label and Net balance can never contradict each
+  // other on one screen (review 2026-08-24, B7). iOS drives its chip from
+  // `occupied` too. Tenant-name inference remains only the legacy fallback.
+  return !(u.occupied ?? isUnitOccupied(u.tenant_name))
 }
 
 export function UnitsCard({ property }: { property: Property }) {
@@ -38,7 +42,7 @@ export function UnitsCard({ property }: { property: Property }) {
                       'text-[12px] ' + (vacant ? 'text-destructive' : 'text-text-3')
                     }
                   >
-                    {vacant ? t('Vacant') : unit.tenant_name}
+                    {vacant ? t('Vacant') : unit.tenant_name ?? '—'}
                   </span>
                 </div>
                 <span className="ml-auto text-[17px] font-normal tabular-nums text-text">

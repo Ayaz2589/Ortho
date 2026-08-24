@@ -8,6 +8,7 @@ import { scopeBudgets } from '@/lib/scope/moneyScope'
 import { categoryMeta } from '@/lib/categories'
 import { budgetLedgerForMonth, type RolloverMonth } from '@/lib/finance/budgets'
 import { currentMonthKey, monthElapsedFraction } from '@/lib/planning/planSummary'
+import { monthYearLong } from '@/lib/format'
 import { usePanelCaption } from '@/components/widgets/WidgetPanel'
 import { PanelEmpty, PanelSectionLabel, PanelRow } from '@/components/widgets/panels/kit'
 import type { Budget, Transaction, TransactionCategory } from '@/lib/types'
@@ -45,13 +46,17 @@ function monthLabelAt(referenceMonth: Date, ledgerLength: number, index: number)
 }
 
 export function BudgetsPanel() {
-  const { budgets, transactions: allTransactions, formatMoney, t, resolveUser } = useApp()
+  const { budgets, transactions: allTransactions, formatMoney, t, resolveUser, locale } = useApp()
   const scope = useMoneyScope()
   const transactions = useScopedTransactions(allTransactions)
-  const { referenceDate, periodLabel } = useDashboardScopeContext()
+  const { referenceDate } = useDashboardScopeContext()
 
   const subject = scope.kind === 'person' ? resolveUser(scope.personId).name : t('Household')
-  usePanelCaption({ subject, period: t(periodLabel) })
+  // Every figure below is a single month (currentMonthKey(referenceDate)) —
+  // the caption states that month, never a relative range label the panel
+  // does not honour (D5/FR-014; review 2026-08-24). For a selected month the
+  // two coincide.
+  usePanelCaption({ subject, period: monthYearLong(referenceDate, locale) })
 
   const monthKey = currentMonthKey(referenceDate)
   const elapsedFraction = monthElapsedFraction(monthKey, new Date())

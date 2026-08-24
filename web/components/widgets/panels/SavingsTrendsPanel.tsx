@@ -138,9 +138,11 @@ function MultiMonthBody({ summary, onOpenEveryMonth }: { summary: SavingsTrendsS
             savedCents={c.month.savedCents}
           />
         ))}
-        <button type="button" onClick={onOpenEveryMonth} className="self-end text-[13px] text-accent">
-          {t('All {0} months →', summary.months.length)}
-        </button>
+        {summary.months.length > 1 ? (
+          <button type="button" onClick={onOpenEveryMonth} className="self-end text-[13px] text-accent">
+            {t('All {0} months →', summary.months.length)}
+          </button>
+        ) : null}
       </div>
     </div>
   )
@@ -183,7 +185,12 @@ function SingleMonthBody({
   const { t, locale } = useApp()
   const monthLabel = (yyyymm: string) => monthName(yyyymm, locale)
   const selected = summary.months[0]
-  const prevMonth = context?.prevPresent ? context.summary.months.find((m) => m.yyyymm === context.prevKey) ?? null : null
+  // `prevPresent` comes from the HOUSEHOLD's availableMonths; under person
+  // scope (or a genuinely empty month) the scoped bucket can be all-zero — a
+  // zeroed 'Previous month' card is exactly the presentation the widget's own
+  // 'No comparison yet' guard exists to avoid (review 2026-08-24).
+  const prevBucket = context?.prevPresent ? context.summary.months.find((m) => m.yyyymm === context.prevKey) ?? null : null
+  const prevMonth = prevBucket && (prevBucket.incomeCents !== 0 || prevBucket.expenseCents !== 0) ? prevBucket : null
 
   const clauses: string[] = []
   if (prevMonth && prevMonth.rate !== null && selected.rate !== null) {

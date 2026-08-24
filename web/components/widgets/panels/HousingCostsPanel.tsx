@@ -6,6 +6,7 @@ import { useDashboardScopeContext } from '@/lib/widgets/DashboardScopeContext'
 import { usePanelCaption, usePanelRouteOut } from '@/components/widgets/WidgetPanel'
 import { PanelEmpty, PanelSectionLabel, PanelRow } from '@/components/widgets/panels/kit'
 import { monthlyPaymentCents } from '@/lib/finance/mortgage'
+import { monthYearLong } from '@/lib/format'
 import { netRentalCents, rentUnitsFrom } from '@/lib/finance/housing'
 import { housingSummary } from '@/lib/finance/housing-summary'
 import { currentMonthKey, incomeForMonth } from '@/lib/planning/planSummary'
@@ -57,10 +58,15 @@ function buildRow(p: Property): PropertyRow {
 }
 
 export function HousingCostsPanel() {
-  const { properties, transactions, formatMoney, t } = useApp()
-  const { referenceDate, periodLabel } = useDashboardScopeContext()
+  const { properties, transactions, formatMoney, t, locale } = useApp()
+  const { referenceDate } = useDashboardScopeContext()
 
-  usePanelCaption({ period: t(periodLabel) })
+  // The panel measures exactly ONE month (the month of referenceDate) — the
+  // caption and the income sentence must name that month, never a relative
+  // range label ("Housing is 24% of Last 6 months income." was a false money
+  // statement — review 2026-08-24, B6). For a selected month the two coincide.
+  const measuredMonthLabel = monthYearLong(referenceDate, locale)
+  usePanelCaption({ period: measuredMonthLabel })
   usePanelRouteOut({ label: t('See all properties'), href: '/housing' })
 
   const rows = useMemo(() => properties.map(buildRow), [properties])
@@ -104,7 +110,7 @@ export function HousingCostsPanel() {
         <div className="flex flex-col gap-1">
           <PanelSectionLabel>{t('Share of income')}</PanelSectionLabel>
           <p className="text-sm text-text-2">
-            {t('Housing is {0}% of {1} income.', incomeSharePercent, t(periodLabel))}
+            {t('Housing is {0}% of {1} income.', incomeSharePercent, measuredMonthLabel)}
           </p>
         </div>
       ) : null}

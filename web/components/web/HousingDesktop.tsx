@@ -5,7 +5,6 @@ import { useApp } from '@/lib/store'
 import {
   monthlyPaymentCents,
   currentPrincipalBalanceCents,
-  equityFraction,
   maturityDate,
   yearsRemaining,
   upcomingAmortization,
@@ -113,7 +112,7 @@ function MortgageColumns({ property }: { property: Property }) {
               {m.auto_pay_source && <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 8 }}>{m.auto_pay_source}</div>}
             </div>
             <div className="ow-card">
-              <HStatRow first label={t('Principal balance')} value={formatMoney(currentPrincipalBalanceCents(m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date))} sub={t('Original loan · {0}', formatMoney(m.original_loan_cents))} />
+              <HStatRow first label={t('Principal balance')} value={(() => { const b = currentPrincipalBalanceCents(m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date); return b <= PAID_OFF_THRESHOLD_CENTS ? t("Paid off") : formatMoney(b) })()} sub={t('Original loan · {0}', formatMoney(m.original_loan_cents))} />
               <HStatRow label={t('Interest rate')} value={`${m.annual_interest_rate_percent.toFixed(2)}%`} sub={t('Fixed · {0}-year', m.loan_term_years)} />
               <HStatRow label={t('Maturity')} value={mediumDate(maturityDate(m.closing_date, m.loan_term_years), locale)} sub={t('{0} years remaining', yearsRemaining(m.closing_date, m.loan_term_years))} />
             </div>
@@ -149,7 +148,9 @@ function MortgageColumns({ property }: { property: Property }) {
               const rawBal = currentPrincipalBalanceCents(m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date)
               const bal = rawBal <= PAID_OFF_THRESHOLD_CENTS ? 0 : rawBal
               const paid = m.original_loan_cents - bal
-              const pct = bal === 0 ? 100 : equityFraction(m.purchase_price_cents, m.original_loan_cents, m.annual_interest_rate_percent, m.loan_term_years, m.closing_date) * 100
+              // Fraction from the printed pair — never the purchase-price
+              // basis (review 2026-08-24, B5; mirrors EquityProgress).
+              const pct = m.original_loan_cents > 0 ? Math.min(100, Math.max(0, (paid / m.original_loan_cents) * 100)) : 0
               return (
                 <>
                   <CardLabel hint={t('of {0} · {1}', formatMoney(m.original_loan_cents), `${pct.toFixed(1)}%`)}>
@@ -183,13 +184,15 @@ function MortgageColumns({ property }: { property: Property }) {
                 </div>
               ) : (
                 units.map((u, i) => {
-                  const vacant = !isUnitOccupied(u.tenant_name)
+                  // Explicit spec-020 flag first — matches the money math and
+                  // the mobile UnitsCard (review 2026-08-24, B7).
+                  const vacant = !(u.occupied ?? isUnitOccupied(u.tenant_name))
                   return (
                     <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 20px', minHeight: 60, borderTop: i === 0 ? 'none' : '0.5px solid var(--hairline)' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14.5, fontWeight: 400, letterSpacing: '-0.15px' }}>{u.name}</div>
                         <div style={{ fontSize: 12, color: vacant ? 'var(--destructive)' : 'var(--text-3)', marginTop: 2 }}>
-                          {vacant ? t('Vacant') : u.tenant_name}
+                          {vacant ? t('Vacant') : u.tenant_name ?? '—'}
                         </div>
                       </div>
                       <div style={{ fontSize: 15, fontWeight: 400, letterSpacing: '-0.3px', fontVariantNumeric: 'tabular-nums', color: 'var(--text)' }}>

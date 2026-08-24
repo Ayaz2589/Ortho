@@ -7,8 +7,6 @@ import { mediumDate, monthYear, parseLocalDate } from '@/lib/format'
 import {
   monthlyPaymentCents,
   currentPrincipalBalanceCents,
-  currentEquityCents,
-  equityFraction,
   maturityDate,
   yearsRemaining,
   upcomingAmortization,
@@ -103,7 +101,9 @@ export function MortgageDetails({ mortgage }: { mortgage: MortgageInfo }) {
         <DetailRow
           label={t('Principal balance')}
           sublabel={t('Original loan · {0}', formatMoney(mortgage.original_loan_cents))}
-          value={formatMoney(balance)}
+          // Spec 027: a matured loan's floating-point residual displays as paid
+          // off — the clamp the sibling cards already use (review 2026-08-24).
+          value={balance <= PAID_OFF_THRESHOLD_CENTS ? t('Paid off') : formatMoney(balance)}
         />
         <DetailRow
           label={t('Interest rate')}
@@ -132,13 +132,14 @@ export function EquityProgress({ mortgage }: { mortgage: MortgageInfo }) {
   // payment doesn't show a spurious sub-$5 debt.
   const balance = rawBalance <= PAID_OFF_THRESHOLD_CENTS ? 0 : rawBalance
   const principalPaidDown = mortgage.original_loan_cents - balance
-  const fraction = balance === 0 ? 1 : equityFraction(
-    mortgage.purchase_price_cents,
-    mortgage.original_loan_cents,
-    mortgage.annual_interest_rate_percent,
-    mortgage.loan_term_years,
-    mortgage.closing_date
-  )
+  // The fraction must come from the PRINTED pair (paid-down / original loan).
+  // The old equity/purchase-price basis overstated progress whenever a down
+  // payment existed — "$14,691.62 of $496,000.00 · 22.4%" on the seed data,
+  // where the true ratio is 3.0% (review 2026-08-24, B5).
+  const fraction =
+    mortgage.original_loan_cents > 0
+      ? Math.min(1, Math.max(0, principalPaidDown / mortgage.original_loan_cents))
+      : 0
   return (
     <Section>
       <div className="flex flex-col gap-2.5 p-5">
@@ -190,7 +191,9 @@ export function Amortization({ mortgage }: { mortgage: MortgageInfo }) {
         </div>
         <div className="flex items-center gap-4">
           <LegendDot color="var(--positive)" label={t('Principal')} />
-          <LegendDot color="rgba(26,24,21,0.18)" label={t('Interest')} />
+          {/* Token, not a light-mode rgba literal — the old ink color vanished
+              against the dark theme's near-identical surface (review 2026-08-24). */}
+          <LegendDot color="color-mix(in srgb, var(--text) 22%, transparent)" label={t('Interest')} />
         </div>
       </div>
     </Section>

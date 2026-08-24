@@ -36,7 +36,7 @@ export function CycleStrip({ dots, todayDay }: { dots: CycleDot[]; todayDay: num
                 left: `${dayLeftPct(todayDay)}%`,
                 top: 2,
                 bottom: 10,
-                background: 'rgba(242,239,232,.42)',
+                background: 'color-mix(in srgb, var(--text) 35%, transparent)',
                 transform: 'translateX(-50%)',
               }}
             />
@@ -63,7 +63,7 @@ export function CycleStrip({ dots, todayDay }: { dots: CycleDot[]; todayDay: num
                 height: size,
                 transform: 'translateX(-50%)',
                 background: d.landed ? 'var(--positive)' : 'transparent',
-                border: d.landed ? undefined : '1.5px solid rgba(166,196,164,.75)',
+                border: d.landed ? undefined : '1.5px solid color-mix(in srgb, var(--positive) 75%, transparent)',
               }}
             />
           )

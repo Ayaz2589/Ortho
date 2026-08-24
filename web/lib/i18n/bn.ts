@@ -858,6 +858,10 @@ const catalog: Record<string, string> = {
   "Owner: {0}. Tap to change.": "মালিক: {0}। বদলাতে ট্যাপ করুন।",
   "Paid by {0}": "{0} পরিশোধ করেছেন",
   "You’ve used": "আগে ব্যবহার করেছেন",
+  // review 2026-08-24 — display corrections
+  "Paid off": "পরিশোধিত",
+  "Nothing landed this period — expected at its usual amount.": "এই সময়ে কিছু কাটা হয়নি — স্বাভাবিক পরিমাণে প্রত্যাশিত।",
+  "{0} this period": "এই সময়ে {0}",
 }
 
 export default catalog

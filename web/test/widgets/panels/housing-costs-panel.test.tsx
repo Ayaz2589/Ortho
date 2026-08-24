@@ -190,4 +190,21 @@ describe('HousingCostsPanel', () => {
     const link = screen.getByRole('link', { name: /See all properties/ })
     expect(link.getAttribute('href')).toBe('/housing')
   })
+
+  // Review 2026-08-24, B6: incomeSharePercent is always monthly cost ÷ ONE
+  // month's income (the month of referenceDate), but the sentence used to
+  // interpolate the range label — "Housing is 24% of Last 6 months income."
+  // is a false money statement a user with a persisted range read on every
+  // open. The sentence (and the caption) must name the month actually measured.
+  it('under a relative range, the income sentence names the measured month, never the range', () => {
+    h.scopeState = { referenceDate: REFERENCE, periodLabel: 'Last 6 months' }
+    h.properties = [property({ id: 'p1', nickname: 'Home base', mortgage: MORTGAGE_A })]
+    h.transactions = [income(1_000_000, '2026-06-05')]
+    renderPanel()
+
+    const summary = housingSummary(h.properties as Property[])
+    const expectedPct = Math.round((summary.cost / 1_000_000) * 100)
+    expect(screen.getByText(`Housing is ${expectedPct}% of June 2026 income.`)).toBeTruthy()
+    expect(screen.queryByText(/Last 6 months income/)).toBeNull()
+  })
 })

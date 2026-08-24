@@ -267,4 +267,41 @@ describe('SavingsTrendsPanel — single-month window', () => {
     expect(screen.queryByText('Previous month')).toBeNull()
     expect(screen.queryByText(/Down from|Up from/)).toBeNull()
   })
+
+  // Review 2026-08-24 (minor): the default 'This month' scope spans one month,
+  // and the drill-in used to render an ungrammatical 'All 1 months →' button
+  // opening a one-row list that duplicated the reconciled card.
+  it("a one-month window never renders an 'All 1 months' drill-in", () => {
+    h.txns = [
+      tx('income', '2026-01-05T12:00:00.000Z', 100000),
+      tx('expense', '2026-01-10T12:00:00.000Z', 40000),
+    ]
+    h.scopeState = { ...h.scopeState, interval: { start: new Date(2026, 0, 1), end: new Date(2026, 1, 1) }, periodLabel: 'This month' }
+    renderPanel()
+    expect(screen.queryByText(/All 1 months/)).toBeNull()
+  })
+
+  // Review 2026-08-24 (scope-engine minor): under person scope a month can be
+  // in the HOUSEHOLD's availableMonths while the selected person has nothing
+  // in it — the panel used to show a zeroed 'Previous month' card where the
+  // widget deliberately says no comparison exists.
+  it('person scope: an empty previous month yields no comparison card', () => {
+    h.txns = [
+      // January belongs to Bob only; February is Alice's.
+      tx('income', '2026-01-05T12:00:00.000Z', 100000, { owner_ids: ['bob'], shares: { bob: 100000 } }),
+      tx('income', '2026-02-05T12:00:00.000Z', 80000, { owner_ids: ['alice'], shares: { alice: 80000 } }),
+      tx('expense', '2026-02-10T12:00:00.000Z', 20000, { owner_ids: ['alice'], shares: { alice: 20000 } }),
+    ]
+    h.scopeState = {
+      ...h.scopeState,
+      interval: { start: new Date(2026, 1, 1), end: new Date(2026, 2, 1) },
+      periodLabel: 'February 2026',
+      isSpecificMonth: true,
+      selectedMonth: '2026-02',
+      availableMonths: ['2026-02', '2026-01'],
+    }
+    renderPanel(personScope('alice'))
+    expect(screen.queryByText('Previous month')).toBeNull()
+    expect(screen.queryByText(/Down from|Up from|Same as/)).toBeNull()
+  })
 })

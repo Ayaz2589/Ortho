@@ -184,4 +184,25 @@ describe('GoalsPanel', () => {
     renderPanel()
     expect(screen.queryByTestId('panel-caption')).toBeNull()
   })
+
+  // Review 2026-08-24 (minor): the 'at the current pace' rate averaged over
+  // the contributing span only (first→last contribution), ignoring every
+  // zero-contribution month since — a dormant goal projected an imminent
+  // arrival. The rate must average over first contribution → now.
+  it('a dormant goal does not project an imminent arrival from stale months', () => {
+    h.goals = [
+      { id: 'g1', name: 'New car', kind: 'savings', target_cents: 120000, target_date: null, created_at: '2026-01-01T00:00:00.000Z' },
+    ]
+    // $200/mo Jan–Mar, then nothing through June 15 (NOW).
+    h.contributions = [
+      { id: 'c1', goal_id: 'g1', amount_cents: 20000, date: '2026-01-10' },
+      { id: 'c2', goal_id: 'g1', amount_cents: 20000, date: '2026-02-10' },
+      { id: 'c3', goal_id: 'g1', amount_cents: 20000, date: '2026-03-10' },
+    ]
+    renderPanel()
+    // Jan..Jun span = 6 months → true pace $100/mo → 6 months to the $600
+    // remainder → December 2026. The stale 3-month pace said September.
+    expect(screen.getByText(/around December 2026 at the current pace/)).toBeTruthy()
+    expect(screen.queryByText(/around September 2026/)).toBeNull()
+  })
 })

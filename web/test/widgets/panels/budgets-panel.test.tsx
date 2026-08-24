@@ -155,4 +155,16 @@ describe('BudgetsPanel', () => {
     // Alice has no budget for — no "of $600.00" (household limit) anywhere.
     expect(screen.queryByText('$600.00')).toBeNull()
   })
+
+  // Review 2026-08-24 (D5/FR-014): every figure in this panel is a single
+  // month (currentMonthKey(referenceDate)) — under a relative range the
+  // caption used to claim "Last 3 months" while showing one month's numbers.
+  // The caption must state only what the panel actually honours.
+  it('under a relative range, the caption states the month actually computed', () => {
+    h.scopeState = { referenceDate: REFERENCE, periodLabel: 'Last 3 months' }
+    renderPanel()
+    const caption = screen.getByTestId('panel-caption')
+    expect(caption.textContent).toContain('March 2026')
+    expect(caption.textContent).not.toContain('Last 3 months')
+  })
 })

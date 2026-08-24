@@ -858,6 +858,10 @@ const catalog: Record<string, string> = {
   "Owner: {0}. Tap to change.": "归属人：{0}。点按可更改。",
   "Paid by {0}": "由 {0} 支付",
   "You’ve used": "你用过",
+  // review 2026-08-24 — display corrections
+  "Paid off": "已还清",
+  "Nothing landed this period — expected at its usual amount.": "本期尚未产生扣款——预计按通常金额收取。",
+  "{0} this period": "本期 {0}",
 }
 
 export default catalog
