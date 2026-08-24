@@ -8,6 +8,7 @@
 // `specs/027-budget-rollover/contracts/rollover-math.md`.
 
 import type { Budget, BudgetType, Transaction } from '../types'
+import { parseTxDate } from '../format'
 
 export interface RolloverConfig {
   type: BudgetType
@@ -133,7 +134,7 @@ export function budgetLedgerForMonth(
   const spendByMonth = new Map<string, number>()
   for (const tx of transactions) {
     if (tx.kind !== 'expense' || tx.category !== budget.category) continue
-    const d = new Date(tx.date)
+    const d = parseTxDate(tx.date)
     if (monthsBetween(anchor, d) < 0 || monthsBetween(d, referenceMonth) < 0) continue
     const k = monthKey(d)
     spendByMonth.set(k, (spendByMonth.get(k) ?? 0) + tx.amount_cents)

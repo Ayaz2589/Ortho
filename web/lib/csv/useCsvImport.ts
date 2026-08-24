@@ -44,7 +44,9 @@ function buildTransaction(
     // The per-row payment source (a card matching the bank, or one the user
     // picked). '' when unset — surfaced as "No source" in the ledger.
     source: draft.paymentSource,
-    date: draft.dateISO.slice(0, 10),
+    // The shared cross-client date convention (spec 004): profiles emit the
+    // noon-UTC instant; commit it unchanged, exactly like TxForm and the CLI.
+    date: draft.dateISO,
     created_by: currentUserId,
     created_at: now,
     updated_at: now,

@@ -1,4 +1,4 @@
-import { startOfDay } from '../format'
+import { parseTxDate, startOfDay } from '../format'
 import type { Transaction, TransactionCategory } from '../types'
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -59,12 +59,19 @@ function runningTotal(daily: number[]): number[] {
  * honoured by the caller, exactly as the panel does today).
  */
 export function computeSpendingPace(transactions: Transaction[], interval: { start: Date; end: Date }, now: Date): PaceSummary {
-  const periodStart = startOfDay(interval.start).getTime()
-  const periodEndExclusive = startOfDay(interval.end).getTime()
+  // The interval arrives in one of two frames: LOCAL month boundaries (range
+  // mode, components/dashboard/range.ts) or UTC instants (a selected month,
+  // via the vectored monthBounds). Flooring the bounds with local startOfDay
+  // shifted a UTC-frame month one day early in negative-UTC zones (review
+  // 2026-08-24, B1) — so the bounds are taken as-is and each transaction is
+  // placed by its millisecond offset from the period start. Noon-UTC rows
+  // land exactly in either frame within ±11 offsets; date-only legacy rows
+  // go through the spec-027 A2 guard (parseTxDate).
+  const periodStart = interval.start.getTime()
+  const periodEndExclusive = interval.end.getTime()
   const daysInPeriod = Math.max(1, Math.round((periodEndExclusive - periodStart) / DAY_MS))
 
-  const lastDayOfPeriod = periodEndExclusive - DAY_MS
-  const anchorDayMs = Math.min(lastDayOfPeriod, startOfDay(now).getTime())
+  const anchorDayMs = Math.min(periodEndExclusive - DAY_MS, startOfDay(now).getTime())
   const daysElapsed = Math.min(daysInPeriod, Math.max(1, Math.round((anchorDayMs - periodStart) / DAY_MS) + 1))
 
   const priorPeriodStart = periodStart - daysInPeriod * DAY_MS
@@ -77,14 +84,14 @@ export function computeSpendingPace(transactions: Transaction[], interval: { sta
 
   for (const tx of transactions) {
     if (tx.kind !== 'expense') continue
-    const d = startOfDay(new Date(tx.date)).getTime()
+    const d = parseTxDate(tx.date).getTime()
     if (d >= periodStart && d < periodEndExclusive) {
-      const idx = Math.round((d - periodStart) / DAY_MS)
+      const idx = Math.floor((d - periodStart) / DAY_MS)
       if (idx >= 0 && idx < daysInPeriod) currentDaily[idx] += tx.amount_cents
       currentByCategory.set(tx.category, (currentByCategory.get(tx.category) ?? 0) + tx.amount_cents)
     } else if (d >= priorPeriodStart && d < periodStart) {
       anyPriorHistory = true
-      const idx = Math.round((d - priorPeriodStart) / DAY_MS)
+      const idx = Math.floor((d - priorPeriodStart) / DAY_MS)
       if (idx >= 0 && idx < daysInPeriod) priorDaily[idx] += tx.amount_cents
       priorByCategory.set(tx.category, (priorByCategory.get(tx.category) ?? 0) + tx.amount_cents)
     } else if (d < periodStart) {

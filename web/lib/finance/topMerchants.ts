@@ -1,5 +1,6 @@
 import { detectRoutines, normalizeMerchantKey, type DetectedRoutine } from './routines'
 import type { Transaction } from '../types'
+import { parseTxDate } from '../format'
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 /** Beyond this, a window is treated as multi-cycle: cycles fold onto the same
@@ -117,7 +118,7 @@ export function computeTopMerchants(
   const groups = new Map<string, { merchantKey: string; names: string[]; cents: number; count: number; prevCents: number }>()
   for (const tx of transactions) {
     if (tx.kind !== 'expense') continue
-    const ms = new Date(tx.date).getTime()
+    const ms = parseTxDate(tx.date).getTime()
     const key = normalizeMerchantKey(tx.merchant)
     if (ms >= startMs && ms < endMs) {
       const g = groups.get(key) ?? { merchantKey: key, names: [], cents: 0, count: 0, prevCents: 0 }
@@ -134,7 +135,7 @@ export function computeTopMerchants(
 
   const hasPriorPeriod = transactions.some((tx) => {
     if (tx.kind !== 'expense') return false
-    const ms = new Date(tx.date).getTime()
+    const ms = parseTxDate(tx.date).getTime()
     return ms >= prevStartMs && ms < prevEndMs
   })
 
@@ -165,12 +166,12 @@ export function computeTopMerchants(
   const landedKeysThisCycle = new Set<string>()
   for (const tx of transactions) {
     if (tx.kind !== 'expense') continue
-    const ms = new Date(tx.date).getTime()
+    const ms = parseTxDate(tx.date).getTime()
     if (ms < startMs || ms >= endMs) continue
     const key = normalizeMerchantKey(tx.merchant)
     const routine = routineByKey.get(key)
     if (!routine) continue
-    const day = new Date(tx.date).getDate()
+    const day = parseTxDate(tx.date).getDate()
     rawDots.push({
       key: `${key}:${tx.id}`,
       merchantKey: key,
