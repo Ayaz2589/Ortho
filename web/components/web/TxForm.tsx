@@ -383,15 +383,32 @@ export function useTxForm({
     owners.every((id) => (splitText[id] ?? '') === (originalSplitText[id] ?? ''))
   const reuseStoredShares = amountUntouched && splitUntouched
 
+  // Non-USD display: by-value fields each round to USD cents independently, so
+  // under a lossy rate their sum can miss `effectiveCents` by a cent even for
+  // the editor's own even seeds — false-blocking Save with values the user
+  // never touched (review 2026-08-24, B8). Absorb drift within the per-owner
+  // rounding bound into the largest share; USD stays exact-match (a real 1¢
+  // user error must still block).
+  const effectiveSplitInput: SplitInput = (() => {
+    if (splitInput.method !== 'value' || currency === 'usd' || !effectiveCents) return splitInput
+    const values = { ...splitInput.values }
+    const sum = owners.reduce((s, id) => s + (values[id] ?? 0), 0)
+    const diff = effectiveCents - sum
+    if (diff === 0 || Math.abs(diff) > owners.length) return splitInput
+    const largest = owners.reduce((a, b) => ((values[b] ?? 0) > (values[a] ?? 0) ? b : a))
+    values[largest] = (values[largest] ?? 0) + diff
+    return { method: 'value', values }
+  })()
+
   const shares = reuseStoredShares
     ? editing!.shares
     : effectiveCents
-      ? computeShares(effectiveCents, orderedOwnerIds(owners), splitInput)
+      ? computeShares(effectiveCents, orderedOwnerIds(owners), effectiveSplitInput)
       : {}
   const splitValidation = reuseStoredShares
     ? ({ ok: true } as const)
     : effectiveCents
-      ? validateSplit(effectiveCents, owners, splitInput)
+      ? validateSplit(effectiveCents, owners, effectiveSplitInput)
       : ({ ok: true } as const)
   const splitOk = owners.length < 2 || splitValidation.ok
   const splitReason = splitValidation.ok ? null : splitValidation.reason
@@ -513,7 +530,14 @@ export function useTxForm({
     const usdCents =
       candidate.currency === 'usd'
         ? candidate.amountCents
-        : toUSDCents(candidate.amountCents / 100, candidate.currency, rate(candidate.currency))
+        : // Scan minor units are per-currency (¥1,234 arrives as 1234 with 0
+          // fraction digits) — divide by 10^fractionDigits, never a hardcoded
+          // 100 (review 2026-08-24: JPY prefilled at 1/100 of the real amount).
+          toUSDCents(
+            candidate.amountCents / Math.pow(10, fractionDigits(candidate.currency)),
+            candidate.currency,
+            rate(candidate.currency)
+          )
     setAmount(centsToDisplay(usdCents, r, fd))
     setMerchant(candidate.merchant)
     if (candidate.categoryGuess) setCategory(candidate.categoryGuess)

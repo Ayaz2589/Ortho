@@ -61,11 +61,30 @@ export function MoneyInput({
   )
 }
 
-/** Parse the display-currency string back to USD cents. Returns null if empty/invalid. */
+/** Parse the display-currency string back to USD cents. Returns null if empty/invalid.
+ *
+ *  Separator handling (review 2026-08-24, A1): formatMoney is locale-aware, so
+ *  under a decimal-comma locale the app itself DISPLAYS "12,34" — that shape
+ *  must parse as 12.34, not as comma-thousands 1234 (which stored 100× the
+ *  money). When both separators appear, the LAST one is the decimal
+ *  ("1.234,56" and "1,234.56" both work); a lone comma is the decimal only in
+ *  the 1-2 fraction-digit shape the app renders — ",ddd" groups still read as
+ *  thousands. */
 export function parseMoney(raw: string, currency: CurrencyKey, rate: number): number | null {
-  const cleaned = raw.replace(/[,\s]/g, '')
-  if (cleaned === '') return null
-  const value = parseFloat(cleaned)
+  const s = raw.replace(/\s/g, '')
+  if (s === '') return null
+  const lastComma = s.lastIndexOf(',')
+  const lastDot = s.lastIndexOf('.')
+  let normalized: string
+  if (lastComma > -1 && lastDot > -1) {
+    normalized =
+      lastComma > lastDot ? s.replace(/\./g, '').replace(/,/g, '.') : s.replace(/,/g, '')
+  } else if (lastComma > -1) {
+    normalized = /^\d+,\d{1,2}$/.test(s) ? s.replace(',', '.') : s.replace(/,/g, '')
+  } else {
+    normalized = s
+  }
+  const value = parseFloat(normalized)
   if (isNaN(value)) return null
   return toUSDCents(value, currency, rate)
 }
