@@ -23,6 +23,7 @@ export type CsvImportState =
   | {
       phase: 'summary'
       addedCount: number
+      failedCount: number
       skippedCount: number
       excludedCount: number
       duplicatesCount: number
@@ -54,6 +55,8 @@ export type CsvImportAction =
   | {
       type: 'import/done'
       addedCount: number
+      /** Rows whose write the server refused — reported, never silently counted as added. */
+      failedCount: number
       skippedCount: number
       excludedCount: number
       duplicatesCount: number
@@ -150,6 +153,7 @@ export function csvImportReducer(state: CsvImportState, action: CsvImportAction)
       return {
         phase: 'summary',
         addedCount: action.addedCount,
+        failedCount: action.failedCount,
         skippedCount: action.skippedCount,
         excludedCount: action.excludedCount,
         duplicatesCount: action.duplicatesCount,

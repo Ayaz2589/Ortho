@@ -111,6 +111,7 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
         <TrayBody>
           <CsvImportSummary
             addedCount={summary.addedCount}
+            failedCount={summary.failedCount}
             totalSpendCents={summary.totalSpendCents}
             skippedCount={summary.skippedCount}
             excludedCount={summary.excludedCount}

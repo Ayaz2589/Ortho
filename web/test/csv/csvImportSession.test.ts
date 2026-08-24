@@ -61,7 +61,7 @@ describe('csvImportReducer', () => {
       type: 'file/parsed',
       statement,
       bankLabel: 'Chase',
-      existing: [{ id: 'tx-existing', date: '2026-06-01', amountCents: 575, merchant: 'Starbucks' }],
+      existing: [{ id: 'tx-existing', date: '2026-06-01', amountCents: 575, merchant: 'Starbucks', kind: 'expense' }],
     })
     if (state.phase !== 'list-view') throw new Error('Expected list-view')
     const draft = Object.values(state.drafts)[0]
@@ -75,7 +75,7 @@ describe('csvImportReducer', () => {
       type: 'file/parsed',
       statement,
       bankLabel: 'Chase',
-      existing: [{ id: 'tx-other', date: '2026-06-01', amountCents: 575, merchant: 'Whole Foods' }],
+      existing: [{ id: 'tx-other', date: '2026-06-01', amountCents: 575, merchant: 'Whole Foods', kind: 'expense' }],
     })
     if (state.phase !== 'list-view') throw new Error('Expected list-view')
     const draft = Object.values(state.drafts)[0]
@@ -108,7 +108,7 @@ describe('csvImportReducer', () => {
   })
 
   it('draft/update with no real change does not flag the row edited', () => {
-    const statement = makeStatement([makeParsedTx({ merchant: 'Starbucks #1234' })])
+    const statement = makeStatement([makeParsedTx({ merchant: 'Starbucks #1234', kind: 'expense' })])
     const listState = csvImportReducer(initialCsvImportState, {
       type: 'file/parsed',
       statement,
@@ -186,6 +186,7 @@ describe('csvImportReducer', () => {
     const summary = csvImportReducer(importingState, {
       type: 'import/done',
       addedCount: 1,
+      failedCount: 0,
       skippedCount: 0,
       excludedCount: 1,
       duplicatesCount: 0,

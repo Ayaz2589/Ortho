@@ -71,55 +71,29 @@ export async function listTransactions(
   return { rows, truncated: rows.length >= limit }
 }
 
-/** Mirror store addTransaction — including its compensation: a failed shares
- *  write deletes the just-inserted parent so no share-less row can persist
- *  and rehydrate as "creator owns all" (spec 013 US5/A2). */
+/** Mirror store addTransaction: one atomic upsert_transaction RPC. The old
+ *  two-step insert + client compensation predates spec 027 and could leave an
+ *  amount≠shares row when the compensation itself failed mid-sequence
+ *  (review 2026-08-24, A7) — the RPC validates NO_SHARES/SHARES_MISMATCH in
+ *  SQL and writes parent + shares in one transaction. */
 export async function createOne(supabase: SupabaseClient, tx: Transaction): Promise<void> {
-  const { error } = await supabase.from('transactions').insert(txRecord(tx))
+  const { error } = await supabase.rpc('upsert_transaction', {
+    p_tx: txRecord(tx),
+    p_shares: shareRows(tx),
+  })
   if (error) throw new Error(`CREATE_TX: ${error.message}`)
-  const rows = shareRows(tx)
-  if (rows.length) {
-    const { error: se } = await supabase.from('transaction_shares').insert(rows)
-    if (se) {
-      const { error: de } = await supabase.from('transactions').delete().eq('id', tx.id)
-      if (de) {
-        throw new Error(
-          `CREATE_SHARES: ${se.message}; ROLLBACK_FAILED — orphaned parent ${tx.id}: ${de.message}`
-        )
-      }
-      throw new Error(`CREATE_SHARES: ${se.message} (parent row rolled back)`)
-    }
-  }
 }
 
-/** Mirror store updateTransaction + writeShares (delete-then-insert), with the
- *  store's compensation: if the re-insert fails, restore the previous shares
- *  so the row never rehydrates as "creator owns all" (spec 013 US5/A2). */
+/** Mirror store updateTransaction: the same atomic RPC (it upserts by id).
+ *  Replaces the pre-027 update + delete + insert whose "compensation"
+ *  re-inserted the PRIOR shares against the NEW amount — persisting a row
+ *  whose shares did not sum to its amount (review 2026-08-24, A7). */
 export async function updateOne(supabase: SupabaseClient, tx: Transaction): Promise<void> {
-  // Capture the prior shares before touching anything — they are the rollback.
-  const { data: prior, error: pe } = await supabase
-    .from('transaction_shares')
-    .select('transaction_id,person_id,amount_cents')
-    .eq('transaction_id', tx.id)
-  if (pe) throw new Error(`UPDATE_SHARES_READ: ${pe.message}`)
-
-  const { error } = await supabase.from('transactions').update(txRecord(tx)).eq('id', tx.id)
+  const { error } = await supabase.rpc('upsert_transaction', {
+    p_tx: txRecord(tx),
+    p_shares: shareRows(tx),
+  })
   if (error) throw new Error(`UPDATE_TX: ${error.message}`)
-  const { error: de } = await supabase.from('transaction_shares').delete().eq('transaction_id', tx.id)
-  if (de) throw new Error(`UPDATE_SHARES_DELETE: ${de.message}`)
-  const rows = shareRows(tx)
-  if (rows.length) {
-    const { error: ie } = await supabase.from('transaction_shares').insert(rows)
-    if (ie) {
-      const { error: re } = await supabase.from('transaction_shares').insert(prior ?? [])
-      if (re) {
-        throw new Error(
-          `UPDATE_SHARES_INSERT: ${ie.message}; ROLLBACK_FAILED — ${tx.id} left share-less: ${re.message}`
-        )
-      }
-      throw new Error(`UPDATE_SHARES_INSERT: ${ie.message} (previous shares restored)`)
-    }
-  }
 }
 
 /** Mirror store deleteTransaction (transaction_shares cascade via FK). */

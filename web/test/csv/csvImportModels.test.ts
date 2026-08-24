@@ -133,4 +133,12 @@ describe('totalSpendCents', () => {
     const unchecked = { ...parsedTransactionToDraft(makeParsedTx()), checked: false }
     expect(totalSpendCents([unchecked])).toBe(0)
   })
+
+  // Review 2026-08-24: deposits/refunds parse as kind 'income' (TD checking,
+  // credit-card refunds) and were summed together with expenses as one figure.
+  it('excludes income rows from the spend figure', () => {
+    const income = { ...parsedTransactionToDraft(makeParsedTx({ kind: 'income', amountCents: 100000 })), checked: true }
+    const exp = parsedTransactionToDraft(makeParsedTx({ amountCents: 500 }))
+    expect(totalSpendCents([income, exp])).toBe(500)
+  })
 })

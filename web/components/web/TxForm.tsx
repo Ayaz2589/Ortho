@@ -298,6 +298,12 @@ export function useTxForm({
       ? src.paid_by
       : defaultOwner
   )
+  // spec 053 FR-012: a legacy row's null payer must survive an unrelated edit —
+  // inventing a payer fabricates debts. These flags record whether the USER
+  // actually picked a payer/sender, so submit can preserve null otherwise
+  // (review 2026-08-24, A2).
+  const [paidByTouched, setPaidByTouched] = useState(false)
+  const [transferFromTouched, setTransferFromTouched] = useState(false)
   // Transfer parties: from = the ower/sender, to = the payer/recipient.
   const [transferFrom, setTransferFrom] = useState<string>(() => {
     if (src?.kind === 'transfer' && src.paid_by && (editing || isMember(src.paid_by))) return src.paid_by
@@ -590,7 +596,12 @@ export function useTxForm({
         category: 'transfer',
         kind: 'transfer',
         source: '',
-        paid_by: transferFrom,
+        // A legacy transfer with no recorded sender keeps null unless the user
+        // picked one (spec 053 FR-012 — see paidByTouched above).
+        paid_by:
+          editing && editing.kind === 'transfer' && editing.paid_by == null && !transferFromTouched
+            ? null
+            : transferFrom,
         owner_ids: [transferTo],
         shares: { [transferTo]: effectiveCents },
       }
@@ -601,7 +612,14 @@ export function useTxForm({
         category: isIncome ? incomeCategory : category,
         kind: direction,
         source,
-        paid_by: isIncome ? null : paidBy,
+        // Editing a legacy null-payer expense preserves null unless the user
+        // picked a payer — a default must not re-attribute recorded money
+        // (spec 053 FR-012; review 2026-08-24, A2).
+        paid_by: isIncome
+          ? null
+          : editing && editing.kind === 'expense' && editing.paid_by == null && !paidByTouched
+            ? null
+            : paidBy,
         owner_ids: owners,
         shares,
       }
@@ -631,9 +649,15 @@ export function useTxForm({
     ownJustMe,
     currentPersonId: resolveDefaultOwnerId(currentPersonId, householdMembers, currentUserId),
     paidBy,
-    setPaidBy,
+    setPaidBy: (id: string) => {
+      setPaidByTouched(true)
+      setPaidBy(id)
+    },
     transferFrom,
-    setTransferFrom,
+    setTransferFrom: (id: string) => {
+      setTransferFromTouched(true)
+      setTransferFrom(id)
+    },
     transferTo,
     setTransferTo,
     source,

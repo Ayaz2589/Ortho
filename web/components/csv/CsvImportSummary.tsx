@@ -4,6 +4,7 @@ import { useApp } from '@/lib/store'
 
 interface Props {
   addedCount: number
+  failedCount: number
   totalSpendCents: number
   skippedCount: number
   excludedCount: number
@@ -13,6 +14,7 @@ interface Props {
 
 export function CsvImportSummary({
   addedCount,
+  failedCount,
   totalSpendCents,
   skippedCount,
   excludedCount,
@@ -53,6 +55,11 @@ export function CsvImportSummary({
           gap: '8px',
         }}
       >
+        {failedCount > 0 && (
+          <div style={{ color: 'var(--text-2)', fontSize: '14px' }}>
+            {failedCount} could not be added — check your connection and try again
+          </div>
+        )}
         {skippedCount > 0 && (
           <div style={{ color: 'var(--text-2)', fontSize: '14px' }}>
             {skippedCount} skipped

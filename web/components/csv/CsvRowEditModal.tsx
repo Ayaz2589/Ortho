@@ -151,8 +151,10 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
       tags,
       notes: notes.trim() || null,
     }
-    if (draft.duplicateOf && includeAnyway) {
-      patch.checked = true
+    // Both directions: un-ticking a previously included duplicate must save
+    // checked:false — an omitted key kept the row included (review 2026-08-24, A6).
+    if (draft.duplicateOf) {
+      patch.checked = includeAnyway
     }
     onSave(draft.id, patch)
     onClose()

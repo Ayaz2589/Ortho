@@ -92,7 +92,14 @@ export function useCsvImport() {
   // Existing ledger rows to check imported rows against for duplicates (any
   // owner in the household). Recomputed only when the ledger changes.
   const existing: DuplicateCandidate[] = useMemo(
-    () => transactions.map((t) => ({ id: t.id, date: t.date, amountCents: t.amount_cents, merchant: t.merchant })),
+    () =>
+      transactions.map((t) => ({
+        id: t.id,
+        date: t.date,
+        amountCents: t.amount_cents,
+        merchant: t.merchant,
+        kind: t.kind,
+      })),
     [transactions]
   )
 
@@ -104,7 +111,15 @@ export function useCsvImport() {
         dispatch({ type: 'file/undetected' })
         return
       }
-      const statement = result.profile.parse([text])
+      // Profiles throw deliberately-loud errors on malformed cells; without a
+      // catch the tray went silently unresponsive (review 2026-08-24).
+      let statement
+      try {
+        statement = result.profile.parse([text])
+      } catch {
+        dispatch({ type: 'file/undetected' })
+        return
+      }
       // Seed every row's payment source from a card matching this bank ('' if none).
       const defaultSource = matchSourceForBank(result.profile.id, result.profile.label, cardNames)
       dispatch({
@@ -147,14 +162,20 @@ export function useCsvImport() {
     const skipped = allDrafts.filter((d) => d.skipped)
     const duplicates = allDrafts.filter((d) => d.duplicateOf && !d.checked && !d.skipped)
 
-    for (const draft of toAdd) {
-      const tx = buildTransaction(draft, currentUserId, currentPersonId, currentHousehold.id, now)
-      addTransaction(tx)
-    }
+    // Await every write and report REAL counts — the summary used to claim
+    // "N added" while the RPCs were still in flight, counting failures as
+    // successes (review 2026-08-24).
+    const results = await Promise.all(
+      toAdd.map((draft) =>
+        addTransaction(buildTransaction(draft, currentUserId, currentPersonId, currentHousehold.id, now))
+      )
+    )
+    const addedCount = results.filter((ok) => ok === true).length
 
     dispatch({
       type: 'import/done',
-      addedCount: toAdd.length,
+      addedCount,
+      failedCount: toAdd.length - addedCount,
       skippedCount: skipped.length,
       excludedCount: excluded.length,
       duplicatesCount: duplicates.length,

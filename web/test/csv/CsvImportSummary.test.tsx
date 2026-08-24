@@ -17,6 +17,7 @@ describe('CsvImportSummary', () => {
     render(
       <CsvImportSummary
         addedCount={35}
+        failedCount={0}
         totalSpendCents={261423}
         skippedCount={2}
         excludedCount={3}
@@ -31,6 +32,7 @@ describe('CsvImportSummary', () => {
     render(
       <CsvImportSummary
         addedCount={35}
+        failedCount={0}
         totalSpendCents={261423}
         skippedCount={2}
         excludedCount={3}
@@ -45,6 +47,7 @@ describe('CsvImportSummary', () => {
     render(
       <CsvImportSummary
         addedCount={35}
+        failedCount={0}
         totalSpendCents={261423}
         skippedCount={2}
         excludedCount={3}
@@ -61,6 +64,7 @@ describe('CsvImportSummary', () => {
     render(
       <CsvImportSummary
         addedCount={35}
+        failedCount={0}
         totalSpendCents={261423}
         skippedCount={2}
         excludedCount={3}

@@ -33,6 +33,9 @@ export interface SupabaseMockDataset {
   selectErrors?: Record<string, string | { message: string; code?: string }>
   /** Table name -> error message for `.delete()` / `.update()` / `.upsert()`. */
   deleteErrors?: Record<string, string>
+  /** Table name -> simulate an RLS-filtered delete: SUCCESS with zero rows
+   *  (PostgREST returns no error when every row is policy-filtered). */
+  deleteNoop?: Record<string, boolean>
   updateErrors?: Record<string, string>
   upsertErrors?: Record<string, string>
   /** Edge-function name -> canned result for `functions.invoke` (spec 018).
@@ -93,7 +96,7 @@ export interface SupabaseClientLike {
 }
 
 /** Writes may surface an error (used to exercise rollback paths). */
-type MutationResult = { data: null; error: { message: string } | null }
+type MutationResult = { data: unknown[] | null; error: { message: string } | null }
 
 interface QueryBuilder extends PromiseLike<{ data: unknown[] | null; error: { message: string } | null }> {
   select: (cols?: string) => QueryBuilder
@@ -152,12 +155,18 @@ export function makeSupabaseMock(dataset: SupabaseMockDataset = {}): SupabaseMoc
             error: { message: `permission denied for table ${table}` },
           })
         }
-        return Promise.resolve({ data: null, error: null as null }) // 0-row no-op
+        // 0-row no-op; empty array mirrors a `.select()`-returning write.
+        return Promise.resolve({ data: [] as unknown[], error: null as null })
       }
       const msg = writeErrors[op]?.[table]
-      return Promise.resolve(
-        msg ? { data: null, error: { message: msg } } : { data: null, error: null as null }
-      )
+      if (msg) return Promise.resolve({ data: null, error: { message: msg } })
+      if (op === 'delete') {
+        // PostgREST returns the affected rows to a `.select()`-chained delete;
+        // deleteNoop simulates RLS filtering every row (success, zero rows).
+        const noop = dataset.deleteNoop?.[table]
+        return Promise.resolve({ data: noop ? ([] as unknown[]) : [{}], error: null as null })
+      }
+      return Promise.resolve({ data: null, error: null as null })
     }
     const b: QueryBuilder = {
       select: () => b,
