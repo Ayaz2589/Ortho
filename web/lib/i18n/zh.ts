@@ -862,6 +862,13 @@ const catalog: Record<string, string> = {
   "Paid off": "已还清",
   "Nothing landed this period — expected at its usual amount.": "本期尚未产生扣款——预计按通常金额收取。",
   "{0} this period": "本期 {0}",
+  // review 2026-08-24 — member color swatch accessible names
+  "Peach": "桃色",
+  "Slate": "青灰",
+  "Sage": "鼠尾草绿",
+  "Terracotta": "陶土色",
+  "Mauve": "淡紫色",
+  "Sand": "沙色",
 }
 
 export default catalog

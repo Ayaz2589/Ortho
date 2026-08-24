@@ -241,7 +241,7 @@ describe('GoalsSummaryCard (US4)', () => {
 
   it('renders one card per goal, behind first, with a suggested monthly; undated goals neutral', () => {
     threeGoals()
-    render(<GoalsSummaryCard summary={summaryFor().goals} />)
+    { const s = summaryFor(); render(<GoalsSummaryCard summary={s.goals} referenceDate={s.referenceDate} />) }
 
     const cards = screen.getAllByTestId('goal-card')
     expect(cards).toHaveLength(3)
@@ -254,7 +254,7 @@ describe('GoalsSummaryCard (US4)', () => {
 
   it('opens each goal at its own detail address', () => {
     threeGoals()
-    render(<GoalsSummaryCard summary={summaryFor().goals} />)
+    { const s = summaryFor(); render(<GoalsSummaryCard summary={s.goals} referenceDate={s.referenceDate} />) }
     expect(screen.getByRole('link', { name: /Behind Fund/ })).toHaveAttribute(
       'href',
       '/planning/goals?id=g-behind'
@@ -263,7 +263,7 @@ describe('GoalsSummaryCard (US4)', () => {
 
   it('no longer links to an all-goals index', () => {
     threeGoals()
-    render(<GoalsSummaryCard summary={summaryFor().goals} />)
+    { const s = summaryFor(); render(<GoalsSummaryCard summary={s.goals} referenceDate={s.referenceDate} />) }
     // Every goals link must target a SPECIFIC goal — the index is retired.
     for (const link of screen.getAllByRole('link')) {
       const href = link.getAttribute('href') ?? ''
@@ -273,12 +273,12 @@ describe('GoalsSummaryCard (US4)', () => {
   })
 
   it('offers goal creation, which the retired index page used to own', () => {
-    render(<GoalsSummaryCard summary={summaryFor().goals} />)
+    { const s = summaryFor(); render(<GoalsSummaryCard summary={s.goals} referenceDate={s.referenceDate} />) }
     expect(screen.getByRole('button', { name: /new goal/i })).toBeInTheDocument()
   })
 
   it('shows a calm empty state when there are no goals', () => {
-    render(<GoalsSummaryCard summary={summaryFor().goals} />)
+    { const s = summaryFor(); render(<GoalsSummaryCard summary={s.goals} referenceDate={s.referenceDate} />) }
     expect(screen.getByTestId('goals-empty')).toBeInTheDocument()
     expect(screen.queryByTestId('goal-card')).toBeNull()
   })
@@ -408,5 +408,26 @@ describe('Planning hub — whose money (spec 051)', () => {
     expect(container.textContent).toContain('$150.00')
     expect(container.textContent).toContain('$200.00')
     expect(container.textContent).not.toContain('$400.00')
+  })
+})
+
+// Review 2026-08-24 (minor): buildPlanSummary is month-scoped end to end
+// (contribsAsOf), but the goal CARDS received the raw contribution list and
+// showed today's balance beside a month-scoped hero. Cards must reflect the
+// same point in time as the summary they sit under.
+describe('GoalsSummaryCard — month-scoped cards', () => {
+  it('a viewed month shows each card as of that month, not as of today', () => {
+    store.goals = [
+      makeGoal({ id: 'g1', name: 'Trip Fund', target_cents: 100000, created_at: '2026-01-01T00:00:00.000Z', target_date: null }),
+    ]
+    store.goalContributions = [
+      { ...contrib('g1', 30000), id: 'c-may', date: '2026-05-01' },
+      { ...contrib('g1', 50000), id: 'c-aug', date: '2026-08-01' }, // after the viewed month
+    ]
+    const s = summaryFor('2026-06')
+    render(<GoalsSummaryCard summary={s.goals} referenceDate={s.referenceDate} />)
+
+    expect(screen.getAllByText(/\$300\.00/).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/\$800\.00/)).toBeNull()
   })
 })

@@ -124,3 +124,21 @@ describe('detectLandingSlug', () => {
     }
   })
 })
+
+// Review 2026-08-24 (minor): hreflang/og:locale reused the FORMATTING locale,
+// whose Unicode extension subtag (bn-BD-u-nu-latn) is outside the documented
+// hreflang format search engines accept. SEO surfaces get a stripped tag; the
+// formatting locale keeps its extension for Intl.
+describe('SEO-facing hreflang tags', () => {
+  it('never carry a Unicode extension subtag', () => {
+    for (const entry of LANDING_LOCALES) {
+      expect(entry.hreflang, entry.slug).not.toContain('-u-')
+    }
+  })
+
+  it('Bengali strips to bn-BD while the formatting locale keeps its extension', () => {
+    const bn = LANDING_LOCALES.find((e) => e.slug === 'bn')
+    expect(bn?.hreflang).toBe('bn-BD')
+    expect(bn?.locale).toBe('bn-BD-u-nu-latn')
+  })
+})

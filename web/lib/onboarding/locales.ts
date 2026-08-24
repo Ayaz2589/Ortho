@@ -28,8 +28,12 @@ export interface LandingLocale {
   slug: LandingSlug
   /** The app's EXISTING language option — what language adoption writes to localStorage. */
   language: Exclude<Language, 'System'>
-  /** BCP-47 tag for the document `lang` and `hreflang`. Always LOCALE_BY_LANGUAGE[language]. */
+  /** BCP-47 tag for the document `lang` and Intl FORMATTING. Always LOCALE_BY_LANGUAGE[language]. */
   locale: string
+  /** SEO-facing tag for hreflang/og:locale: `locale` with Unicode extension
+   *  subtags stripped — `bn-BD-u-nu-latn` (Latin digits for Intl) is outside
+   *  the documented hreflang format (review 2026-08-24). */
+  hreflang: string
 }
 
 function entry(slug: LandingSlug, language: Exclude<Language, 'System'>): LandingLocale {
@@ -37,7 +41,8 @@ function entry(slug: LandingSlug, language: Exclude<Language, 'System'>): Landin
   // can never disagree — including বাংলা's deliberate `-u-nu-latn` extension (Latin
   // digits for money and dates, matching iOS). `localeForLanguage` only consults the
   // browser for 'System', which the registry never contains.
-  return { slug, language, locale: localeForLanguage(language) }
+  const locale = localeForLanguage(language)
+  return { slug, language, locale, hreflang: locale.split('-u-')[0] }
 }
 
 /**

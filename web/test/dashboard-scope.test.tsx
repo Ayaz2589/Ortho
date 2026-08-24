@@ -3,7 +3,7 @@
 // useDashboardScope — the single source of the dashboard's time scope. Covers
 // US1 (select a month → window/reference date) and US3 (mutual exclusivity with
 // the relative range, and the selected month being a TRANSIENT override).
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 const h = vi.hoisted(() => ({
@@ -84,5 +84,52 @@ describe('useDashboardScope', () => {
     act(() => result.current.setMonth('2020-01')) // not in the data
     expect(result.current.selectedMonth).toBeNull()
     expect(result.current.isSpecificMonth).toBe(false)
+  })
+})
+
+// Review 2026-08-24 (major): `now` was memoized once at mount, so a session
+// left open across midnight (very normal for an installed app) kept reporting
+// yesterday's "This month" window and a stale "Day X of Y" until a full
+// re-mount. The scope now refreshes `now` when the app comes back to the
+// foreground on a different local calendar day.
+describe('useDashboardScope day-rollover refresh', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 5, 15, 22, 0, 0)) // June 15 2026, 10pm local
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('refreshes `now` (and the interval) when visibility returns on a new day', () => {
+    const { result } = renderHook(() => useDashboardScope())
+    expect(result.current.now.getDate()).toBe(15)
+
+    vi.setSystemTime(new Date(2026, 5, 16, 1, 0, 0)) // past midnight
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    expect(result.current.now.getDate()).toBe(16)
+    expect(result.current.referenceDate.getDate()).toBe(16)
+  })
+
+  it('keeps `now` referentially stable when visibility returns on the same day', () => {
+    const { result } = renderHook(() => useDashboardScope())
+    const before = result.current.now
+    vi.setSystemTime(new Date(2026, 5, 15, 23, 30, 0)) // later, same day
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    expect(result.current.now).toBe(before)
+  })
+
+  it('a window focus after a day change also refreshes', () => {
+    const { result } = renderHook(() => useDashboardScope())
+    vi.setSystemTime(new Date(2026, 5, 17, 9, 0, 0))
+    act(() => {
+      window.dispatchEvent(new Event('focus'))
+    })
+    expect(result.current.now.getDate()).toBe(17)
   })
 })

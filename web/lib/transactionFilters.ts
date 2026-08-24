@@ -25,6 +25,10 @@ export interface FilterContext {
   /** tagId → name, for search-by-tag-name. Optional: the import CLI has no tag
    *  roster, so it simply omits this and tag-name search contributes nothing. */
   tagNames?: Record<string, string>
+  /** category key → the (localized) label the UI displays, so searching
+   *  'fast food' finds `fast_food` rows (review 2026-08-24). Optional — the
+   *  raw-key match below stays, keeping the golden vectors untouched. */
+  categoryLabels?: Record<string, string>
 }
 
 export function emptyCriteria(): FilterCriteria {
@@ -36,6 +40,8 @@ function matchesQuery(tx: Transaction, q: string, ctx: FilterContext): boolean {
   if (tx.merchant.toLowerCase().includes(q)) return true
   if (tx.source.toLowerCase().includes(q)) return true
   if (tx.category.toLowerCase().includes(q)) return true
+  const categoryLabel = ctx.categoryLabels?.[tx.category]
+  if (categoryLabel && categoryLabel.toLowerCase().includes(q)) return true
   if (tx.notes && tx.notes.toLowerCase().includes(q)) return true
   for (const id of tx.owner_ids) {
     const name = ctx.ownerNames[id]

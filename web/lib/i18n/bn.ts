@@ -862,6 +862,13 @@ const catalog: Record<string, string> = {
   "Paid off": "পরিশোধিত",
   "Nothing landed this period — expected at its usual amount.": "এই সময়ে কিছু কাটা হয়নি — স্বাভাবিক পরিমাণে প্রত্যাশিত।",
   "{0} this period": "এই সময়ে {0}",
+  // review 2026-08-24 — member color swatch accessible names
+  "Peach": "পীচ",
+  "Slate": "স্লেট",
+  "Sage": "সেজ",
+  "Terracotta": "টেরাকোটা",
+  "Mauve": "মভ",
+  "Sand": "বালি",
 }
 
 export default catalog

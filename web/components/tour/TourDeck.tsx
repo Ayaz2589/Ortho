@@ -130,7 +130,8 @@ export function TourDeck({ locale, copy }: { locale: LandingLocale; copy: TourCo
       aria-label={copy.regionLabel}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
-      className="flex min-h-screen flex-col bg-bg px-6 py-10"
+      className="flex flex-col bg-bg px-6 py-10"
+      style={{ minHeight: 'calc(100dvh / var(--ui-zoom, 1))' }}
     >
       {/* Reading column capped and centered: money copy is unreadable spanning an
           ultrawide monitor, and the responsive contract caps reading at 560px. */}

@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useApp } from './store'
+import { CATEGORIES } from './categories'
 import {
   emptyCriteria,
   filterTransactions,
@@ -28,11 +29,54 @@ export interface MonthOption {
   label: string
 }
 
+/** Per-tab persistence for the active criteria. On mobile, editing navigates to
+ *  a dedicated route and back, remounting the list page — without this every
+ *  active filter and the search query were silently discarded on the round
+ *  trip (review 2026-08-24). Session-scoped on purpose: a fresh visit starts
+ *  unfiltered. */
+const STORAGE_KEY = 'ortho.txFilters'
+
+const stringArray = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+
+/** Stored state merged over `emptyCriteria()`, field-by-field validated so a
+ *  corrupt or stale-shape payload degrades to the default, never throws. */
+function readStoredCriteria(): FilterCriteria {
+  const out = emptyCriteria()
+  if (typeof window === 'undefined') return out
+  try {
+    const raw = window.sessionStorage.getItem(STORAGE_KEY)
+    if (!raw) return out
+    const parsed: unknown = JSON.parse(raw)
+    if (parsed == null || typeof parsed !== 'object') return out
+    const p = parsed as Record<string, unknown>
+    if (typeof p.query === 'string') out.query = p.query
+    out.categories = stringArray(p.categories) as FilterCriteria['categories']
+    if (p.kind === 'expense' || p.kind === 'income' || p.kind === 'transfer') out.kind = p.kind
+    out.sources = stringArray(p.sources)
+    out.owners = stringArray(p.owners)
+    out.tags = stringArray(p.tags)
+    if (typeof p.dateFrom === 'string') out.dateFrom = p.dateFrom
+    if (typeof p.dateTo === 'string') out.dateTo = p.dateTo
+    return out
+  } catch {
+    return emptyCriteria()
+  }
+}
+
 /** Single source of filter state + the filtered/derived data, shared by the
  *  compact page and the desktop view. The pure `filterTransactions` does the work. */
 export function useTransactionFilters() {
-  const { transactions, tags = [], resolveUser, locale } = useApp()
-  const [criteria, setCriteria] = useState<FilterCriteria>(emptyCriteria)
+  const { transactions, tags = [], resolveUser, locale, t } = useApp()
+  const [criteria, setCriteria] = useState<FilterCriteria>(readStoredCriteria)
+
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(criteria))
+    } catch {
+      // Storage full or unavailable — filtering still works for this mount.
+    }
+  }, [criteria])
 
   const ownerNames = useMemo(() => {
     const m: Record<string, string> = {}
@@ -47,7 +91,19 @@ export function useTransactionFilters() {
     return m
   }, [tags])
 
-  const ctx: FilterContext = useMemo(() => ({ ownerNames, tagNames }), [ownerNames, tagNames])
+  // Displayed (localized) category labels, so search finds 'Fast Food' as the
+  // chips/pickers render it — not only the internal 'fast_food' key
+  // (review 2026-08-24).
+  const categoryLabels = useMemo(() => {
+    const m: Record<string, string> = {}
+    for (const key of Object.keys(CATEGORIES)) m[key] = t(CATEGORIES[key as TransactionCategory].label)
+    return m
+  }, [t])
+
+  const ctx: FilterContext = useMemo(
+    () => ({ ownerNames, tagNames, categoryLabels }),
+    [ownerNames, tagNames, categoryLabels]
+  )
 
   const ownerOptions: OwnerOption[] = useMemo(() => {
     const ids = new Set<string>()

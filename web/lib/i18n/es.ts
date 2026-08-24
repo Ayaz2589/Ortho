@@ -862,6 +862,13 @@ const catalog: Record<string, string> = {
   "Paid off": "Pagado",
   "Nothing landed this period — expected at its usual amount.": "Nada se cargó en este período; se espera por su importe habitual.",
   "{0} this period": "{0} en este período",
+  // review 2026-08-24 — member color swatch accessible names
+  "Peach": "Melocotón",
+  "Slate": "Pizarra",
+  "Sage": "Salvia",
+  "Terracotta": "Terracota",
+  "Mauve": "Malva",
+  "Sand": "Arena",
 }
 
 export default catalog

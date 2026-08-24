@@ -2,7 +2,7 @@
 // skipped or duplicated, even at month-end (spec 019). The principal/interest
 // values stay unchanged (they remain vector-locked by mortgage.json).
 import { describe, it, expect } from 'vitest'
-import { upcomingAmortization } from '@/lib/finance/mortgage'
+import { maturityDate, upcomingAmortization } from '@/lib/finance/mortgage'
 
 // Seed home: $496k loan @ 6.25% / 30yr, closed 2024-01-15.
 const LOAN = 49_600_000
@@ -34,5 +34,25 @@ describe('amortization month labels (contract C4)', () => {
       expect(e.principalCents).toBeGreaterThan(0)
       expect(e.interestCents).toBeGreaterThan(0)
     }
+  })
+})
+
+// Review 2026-08-24 (minor): maturityDate used Date.setMonth, which NORMALIZES
+// a nonexistent target day — a leap-day closing matured on Mar 1 of a non-leap
+// year, while iOS's Calendar.date(byAdding:) clamps to Feb 28. The two clients
+// must show the same maturity date.
+describe('maturityDate leap-day clamping', () => {
+  it('a Feb-29 closing clamps to Feb 28 in a non-leap maturity year', () => {
+    const m = maturityDate('2024-02-29', 15) // 2039 is not a leap year
+    expect(m.getFullYear()).toBe(2039)
+    expect(m.getMonth()).toBe(1) // February
+    expect(m.getDate()).toBe(28)
+  })
+
+  it('a Feb-29 closing keeps Feb 29 when the maturity year IS a leap year', () => {
+    const m = maturityDate('2024-02-29', 4) // 2028 is a leap year
+    expect(m.getFullYear()).toBe(2028)
+    expect(m.getMonth()).toBe(1)
+    expect(m.getDate()).toBe(29)
   })
 })

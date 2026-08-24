@@ -150,7 +150,7 @@ export function HouseholdDrawer({
                   <button
                     key={opt.key}
                     type="button"
-                    aria-label={opt.key}
+                    aria-label={t(opt.label)}
                     onClick={() => setAddColor(opt.key)}
                     className="flex aspect-square items-center justify-center rounded-full"
                     style={{ background: opt.bg, color: opt.fg, outline: active ? '2px solid var(--text)' : 'none', outlineOffset: 2 }}
@@ -223,7 +223,7 @@ export function HouseholdDrawer({
                     <button
                       key={opt.key}
                       type="button"
-                      aria-label={opt.key}
+                      aria-label={t(opt.label)}
                       onClick={() => setEditColor(opt.key)}
                       className="flex aspect-square items-center justify-center rounded-full"
                       style={{ background: opt.bg, color: opt.fg, outline: active ? '2px solid var(--text)' : 'none', outlineOffset: 2 }}

@@ -47,7 +47,7 @@ export async function generateMetadata({
   // unsupported browser language, so crawlers and visitors agree.
   const languages: Record<string, string> = { 'x-default': landingUrl('en') }
   for (const other of landingSlugs()) {
-    languages[localeForSlug(other)!.locale] = landingUrl(other)
+    languages[localeForSlug(other)!.hreflang] = landingUrl(other)
   }
 
   return {
@@ -58,7 +58,7 @@ export async function generateMetadata({
       title: copy.metaTitle,
       description: copy.metaDescription,
       url: landingUrl(entry.slug),
-      locale: entry.locale,
+      locale: entry.hreflang,
       type: 'website',
     },
   }

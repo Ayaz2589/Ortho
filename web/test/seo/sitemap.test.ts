@@ -34,7 +34,7 @@ describe('sitemap — hreflang alternates', () => {
       expect(Object.keys(languages)).toHaveLength(landingSlugs().length + 1)
       expect(languages['x-default']).toBe(landingUrl('en'))
       for (const slug of landingSlugs()) {
-        expect(languages[localeForSlug(slug)!.locale]).toBe(landingUrl(slug))
+        expect(languages[localeForSlug(slug)!.hreflang]).toBe(landingUrl(slug))
       }
     }
   })
@@ -80,5 +80,15 @@ describe('sitemap — determinism', () => {
 
   it('produces identical output across calls', () => {
     expect(JSON.stringify(sitemap())).toBe(JSON.stringify(sitemap()))
+  })
+})
+
+describe('sitemap — hreflang keys are SEO-format tags (review 2026-08-24)', () => {
+  it('no alternates key carries a Unicode extension subtag', () => {
+    for (const entry of entries) {
+      for (const key of Object.keys(entry.alternates?.languages ?? {})) {
+        expect(key).not.toContain('-u-')
+      }
+    }
   })
 })

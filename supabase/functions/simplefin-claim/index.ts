@@ -50,10 +50,15 @@ Deno.serve(async (req) => {
 
   const service = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
 
+  // Mirror plaid-link-token: a user in 2+ households returns multiple rows,
+  // which .maybeSingle() alone rejects as an error — deterministically take
+  // the earliest membership (review 2026-08-24).
   const { data: membership } = await service
     .from('household_members')
     .select('household_id')
     .eq('user_id', user.id)
+    .order('created_at', { ascending: true })
+    .limit(1)
     .maybeSingle()
   if (!membership) return errorResponse('not_household_member')
 

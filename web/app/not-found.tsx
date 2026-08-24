@@ -62,7 +62,8 @@ export default function NotFound() {
   return (
     <div
       lang={locale?.locale}
-      className="flex min-h-screen flex-col items-center justify-center bg-bg px-6"
+      className="flex flex-col items-center justify-center bg-bg px-6"
+      style={{ minHeight: 'calc(100dvh / var(--ui-zoom, 1))' }}
     >
       <div className="w-full max-w-sm text-center">
         <h1 className="text-2xl font-light tracking-tight text-text">Ortho</h1>

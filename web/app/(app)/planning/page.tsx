@@ -47,7 +47,7 @@ export default function PlanningPage() {
       <PlanScopeBar scope={scope} onChange={setScope} />
       <PlanHealthHero health={summary.health} />
       <BudgetSummaryCard summary={summary.budgets} />
-      <GoalsSummaryCard summary={summary.goals} />
+      <GoalsSummaryCard summary={summary.goals} referenceDate={summary.referenceDate} />
       <SinkingFundsPanel funds={summary.sinkingFunds} />
     </div>
   )

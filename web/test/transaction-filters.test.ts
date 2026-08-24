@@ -149,3 +149,20 @@ describe('helpers', () => {
     expect(() => monthBounds('nope')).toThrow()
   })
 })
+
+// Review 2026-08-24 (minor): search matched only the raw category KEY, so the
+// label the UI displays everywhere ('Fast Food') found nothing while the
+// internal 'fast_food' did. The context can now carry display labels; the
+// raw-key match stays for vector compatibility.
+describe('search by displayed category label', () => {
+  const ctx = { ownerNames: {}, categoryLabels: { fast_food: 'Fast Food' } }
+  const row = tx({ id: 'ff-1', category: 'fast_food' as never, merchant: 'Wendys' })
+
+  it("matches the label the UI displays, not only the internal key", () => {
+    expect(filterTransactions([row], { ...emptyCriteria(), query: 'fast food' }, ctx)).toHaveLength(1)
+  })
+
+  it('the raw key still matches (vector-locked behavior unchanged)', () => {
+    expect(filterTransactions([row], { ...emptyCriteria(), query: 'fast_food' }, ctx)).toHaveLength(1)
+  })
+})

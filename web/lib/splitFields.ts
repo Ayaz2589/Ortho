@@ -62,12 +62,24 @@ export function rebalancePercents(
       ? current.map((x) => (x / currentSum) * remaining)
       : others.map(() => remaining / others.length)
   // Round each to 2dp; the last absorbs the rounding error so the displayed
-  // total is exactly the remaining share.
+  // total is exactly the remaining share. The absorber is clamped at 0 —
+  // combined round-ups could push it negative, and a negative percentage
+  // saves a negative stored share (review 2026-08-24) — with the deficit
+  // reclaimed from the rounded-up owners.
   const rounded: number[] = []
   rawNew.forEach((x, i) => {
     if (i < rawNew.length - 1) rounded.push(Math.round(x * 100) / 100)
-    else rounded.push(remaining - rounded.reduce((s, y) => s + y, 0))
+    else rounded.push(Math.round((remaining - rounded.reduce((s, y) => s + y, 0)) * 100) / 100)
   })
+  let deficit = -Math.min(0, rounded[rounded.length - 1])
+  if (deficit > 0) {
+    rounded[rounded.length - 1] = 0
+    for (let i = 0; i < rounded.length - 1 && deficit > 0.0001; i++) {
+      const take = Math.min(rounded[i], deficit)
+      rounded[i] = Math.round((rounded[i] - take) * 100) / 100
+      deficit = Math.round((deficit - take) * 100) / 100
+    }
+  }
   others.forEach((o, i) => (next[o] = rounded[i].toFixed(2)))
   return next
 }

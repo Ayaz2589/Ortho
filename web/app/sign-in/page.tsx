@@ -106,7 +106,7 @@ function SignIn() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-bg px-6">
+    <div className="flex flex-col items-center justify-center bg-bg px-6" style={{ minHeight: 'calc(100dvh / var(--ui-zoom, 1))' }}>
       <div className="w-full max-w-sm">
         <div className="mb-10 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-text text-2xl font-light text-bg">

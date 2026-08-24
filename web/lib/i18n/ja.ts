@@ -862,6 +862,13 @@ const catalog: Record<string, string> = {
   "Paid off": "完済",
   "Nothing landed this period — expected at its usual amount.": "この期間の請求はまだありません。通常の金額での請求が見込まれます。",
   "{0} this period": "この期間 {0}",
+  // review 2026-08-24 — member color swatch accessible names
+  "Peach": "ピーチ",
+  "Slate": "スレート",
+  "Sage": "セージ",
+  "Terracotta": "テラコッタ",
+  "Mauve": "モーブ",
+  "Sand": "サンド",
 }
 
 export default catalog

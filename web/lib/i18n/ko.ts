@@ -862,6 +862,13 @@ const catalog: Record<string, string> = {
   "Paid off": "상환 완료",
   "Nothing landed this period — expected at its usual amount.": "이 기간에는 아직 청구가 없어요 — 평소 금액으로 청구될 예정이에요.",
   "{0} this period": "이 기간 {0}",
+  // review 2026-08-24 — member color swatch accessible names
+  "Peach": "피치",
+  "Slate": "슬레이트",
+  "Sage": "세이지",
+  "Terracotta": "테라코타",
+  "Mauve": "모브",
+  "Sand": "샌드",
 }
 
 export default catalog

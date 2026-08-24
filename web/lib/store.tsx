@@ -149,7 +149,9 @@ interface AppStateValue {
   /** Lazily-loaded (spec 044 US4) — only fetched on demand, only meaningful once opted into
    *  'foreground_capture'. Empty until `loadRoutineVisits` is called. */
   routineVisits: RoutineVisit[]
-  loadRoutineVisits: () => Promise<void>
+  /** Resolves the freshly loaded rows so callers can act on them immediately
+   *  (a state read right after the await would be a stale closure). */
+  loadRoutineVisits: () => Promise<RoutineVisit[]>
   recordRoutineVisit: (latitude: number, longitude: number, accuracyMeters: number | null) => Promise<void>
   currency: CurrencyKey
   rates: Partial<Record<CurrencyKey, number>>
@@ -1791,14 +1793,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // Lazy-loaded (not part of loadAll's boot Promise.all — data-model.md): only fetched when a
   // surface actually needs visit-cluster suggestions, and only meaningful once opted into
   // 'foreground_capture'.
-  const loadRoutineVisits = async () => {
-    if (!currentUserId) return
+  // Returns the loaded rows as well as setting state: the caller's throttle
+  // check needs the FRESH rows, not a stale closure over the previous render's
+  // state (review 2026-08-24).
+  const loadRoutineVisits = async (): Promise<UserRoutineVisitRow[]> => {
+    if (!currentUserId) return []
     const { data, error: e } = await supabase.from('user_routine_visits').select('*').eq('user_id', currentUserId)
     if (e) {
       setError(e.message)
-      return
+      return []
     }
-    setRoutineVisits((data ?? []) as UserRoutineVisitRow[])
+    const rows = (data ?? []) as UserRoutineVisitRow[]
+    setRoutineVisits(rows)
+    return rows
   }
 
   const recordRoutineVisit = async (latitude: number, longitude: number, accuracyMeters: number | null) => {

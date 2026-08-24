@@ -22,7 +22,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // language, so crawlers and visitors agree.
   const languages: Record<string, string> = { 'x-default': landingUrl('en') }
   for (const slug of landingSlugs()) {
-    languages[localeForSlug(slug)!.locale] = landingUrl(slug)
+    languages[localeForSlug(slug)!.hreflang] = landingUrl(slug)
   }
 
   // Mapped from the registry, never hand-listed — adding a seventh language must not
