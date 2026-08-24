@@ -21,8 +21,10 @@ export interface PaceSummary {
   projectedCents: number
   /** Σ expense cents over the immediately preceding period of equal length. */
   priorTotalCents: number
-  /** True when the household has any recorded spend before the period start — a
-   *  first-ever period must never invent a comparison (spec 057 US4 redesign). */
+  /** True when there is history before the period start AND the immediately
+   *  preceding equal-length window has non-zero spend — a first-ever period (or
+   *  one whose predecessor is empty) must never invent a comparison
+   *  (spec 057 US4 redesign). */
   hasPriorPeriod: boolean
   /** (avgPerDayCents ÷ priorAvgPerDayCents) − 1. Null when there's no prior period. */
   deltaPct: number | null

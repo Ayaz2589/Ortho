@@ -246,7 +246,7 @@ const catalog: Record<string, string> = {
   "Utilities": "ইউটিলিটি",
   "What kind of home is this? Choose one — we'll ask only the questions that fit.": "এটি কোন ধরনের বাড়ি? একটি বেছে নিন — আমরা শুধু প্রাসঙ্গিক প্রশ্ন জিজ্ঞেস করব।",
   "Yesterday": "গতকাল",
-  "You can change type later from the property's settings, but a few fields will reset (e.g. lease dates become closing date).": "পরে আপনি সম্পত্তির সেটিংস থেকে ধরন পরিবর্তন করতে পারেন, তবে কিছু ক্ষেত্র রিসেট হবে (যেমন লিজের তারিখ ক্লোজিং তারিখ হবে)।",
+  "A property's type can't be changed after it's added — to switch, remove it and add it again as the new type.": "সম্পত্তি যোগ করার পরে এর ধরন পরিবর্তন করা যায় না — পরিবর্তন করতে এটি সরিয়ে নতুন ধরন হিসেবে আবার যোগ করুন।",
   "You own where you live": "আপনি যেখানে থাকেন তার মালিক",
   "You rent your home": "আপনি বাসা ভাড়া করেন",
   "You're {0} over this month: {1} out vs {2} in.": "এই মাসে {0} বেশি: {2} আয়, {1} খরচ।",
@@ -722,12 +722,13 @@ const catalog: Record<string, string> = {
   // spec 057 — widget panels: US9 goals
   "a month, in total, to keep every goal on time": "প্রতি মাসে মোট, প্রতিটি লক্ষ্য সময়মতো রাখতে",
   "Projected to reach {0} around {1} at the current pace.": "বর্তমান গতিতে {1} নাগাদ {0}-এ পৌঁছানোর সম্ভাবনা।",
-  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US8 housing-costs
   "Properties": "সম্পত্তি",
   "{0} of {1} units occupied": "{1}টি ইউনিটের মধ্যে {0}টি দখলকৃত",
   "Share of income": "আয়ের অংশ",
   "Housing is {0}% of {1} income.": "আবাসন {1} আয়ের {0}%।",
   "See all properties": "সব সম্পত্তি দেখুন",
+  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // review 2026-08-24 — i18n completeness sweep (categories, data, banks, scan, chrome, sign-in)
   "Alcohol": "মদ্যপানীয়",
   "Books": "বই",

@@ -45,7 +45,7 @@ export function PropertyKindChoices({ onPick }: { onPick: (kind: PropertyKind) =
         })}
       </div>
       <p className="px-1 pb-2 pt-4 text-[13px] leading-relaxed text-text-3">
-        {t("You can change type later from the property's settings, but a few fields will reset (e.g. lease dates become closing date).")}
+        {t("A property's type can't be changed after it's added — to switch, remove it and add it again as the new type.")}
       </p>
     </>
   )

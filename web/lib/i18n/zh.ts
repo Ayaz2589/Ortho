@@ -246,7 +246,7 @@ const catalog: Record<string, string> = {
   "Utilities": "水电费",
   "What kind of home is this? Choose one — we'll ask only the questions that fit.": "这是哪种住宅？请选择一个 — 我们只会询问相关的问题。",
   "Yesterday": "昨天",
-  "You can change type later from the property's settings, but a few fields will reset (e.g. lease dates become closing date).": "您可以稍后在房产设置中更改类型，但部分字段将重置（例如租约日期变为成交日期）。",
+  "A property's type can't be changed after it's added — to switch, remove it and add it again as the new type.": "房产添加后类型无法更改——如需更换，请删除后以新类型重新添加。",
   "You own where you live": "您拥有居住的房屋",
   "You rent your home": "您租住房屋",
   "You're {0} over this month: {1} out vs {2} in.": "本月超支{0}：支出{1}对比收入{2}。",
@@ -722,12 +722,13 @@ const catalog: Record<string, string> = {
   // spec 057 — widget panels: US9 goals
   "a month, in total, to keep every goal on time": "每月合计，用以让所有目标按时达成",
   "Projected to reach {0} around {1} at the current pace.": "按目前的速度，预计在{1}左右达到{0}。",
-  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US8 housing-costs
   "Properties": "房产",
   "{0} of {1} units occupied": "{1}个单元中有{0}个已入住",
   "Share of income": "占收入的比例",
   "Housing is {0}% of {1} income.": "住房支出占{1}收入的{0}%。",
   "See all properties": "查看所有房产",
+  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // review 2026-08-24 — i18n completeness sweep (categories, data, banks, scan, chrome, sign-in)
   "Alcohol": "酒类",
   "Books": "书籍",

@@ -244,7 +244,7 @@ const catalog: Record<string, string> = {
   "Utilities": "Servicios",
   "What kind of home is this? Choose one — we'll ask only the questions that fit.": "¿Qué tipo de vivienda es esta? Elige una — solo te haremos las preguntas adecuadas.",
   "Yesterday": "Ayer",
-  "You can change type later from the property's settings, but a few fields will reset (e.g. lease dates become closing date).": "Puedes cambiar el tipo más tarde desde los ajustes de la propiedad, pero algunos campos se reiniciarán (p. ej. las fechas del contrato pasan a fecha de cierre).",
+  "A property's type can't be changed after it's added — to switch, remove it and add it again as the new type.": "El tipo de una propiedad no se puede cambiar después de añadirla; para cambiarlo, elimínala y añádela de nuevo con el nuevo tipo.",
   "You own where you live": "Eres dueño de donde vives",
   "You rent your home": "Alquilas tu vivienda",
   "You're {0} over this month: {1} out vs {2} in.": "Estás {0} por encima este mes: {1} de salida vs {2} de entrada.",
@@ -722,12 +722,13 @@ const catalog: Record<string, string> = {
   // spec 057 — widget panels: US9 goals
   "a month, in total, to keep every goal on time": "al mes, en total, para mantener todas las metas a tiempo",
   "Projected to reach {0} around {1} at the current pace.": "Proyectado a alcanzar {0} alrededor de {1} al ritmo actual.",
-  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US8 housing-costs
   "Properties": "Propiedades",
   "{0} of {1} units occupied": "{0} de {1} unidades ocupadas",
   "Share of income": "Parte de los ingresos",
   "Housing is {0}% of {1} income.": "La vivienda es el {0}% de los ingresos de {1}.",
   "See all properties": "Ver todas las propiedades",
+  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // review 2026-08-24 — i18n completeness sweep (categories, data, banks, scan, chrome, sign-in)
   "Alcohol": "Alcohol",
   "Books": "Libros",

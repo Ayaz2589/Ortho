@@ -188,3 +188,54 @@ describe('legacy localUsers fold', () => {
     await waitFor(() => expect(localStorage.getItem('localUsers')).toBeNull())
   })
 })
+
+// Review 2026-08-24: routine confirm/dismiss/rename was optimistic with NO
+// rollback — a failed upsert left the phantom state in the session, diverging
+// from the store's documented mutation contract (optimistic → error → restore
+// previous state + banner).
+describe('routine state rollback', () => {
+  const CONFIRMED = {
+    id: 'rs-1',
+    household_id: 'hh-1',
+    routine_key: 'rc:costco:m',
+    status: 'confirmed',
+    label: null,
+    person_id: null,
+    created_by: 'u-me',
+    created_at: '2026-06-01T00:00:00Z',
+    updated_at: '2026-06-01T00:00:00Z',
+  }
+
+  it('a failed confirm leaves no phantom state row', async () => {
+    const d = dataset()
+    h.mock = makeSupabaseMock({
+      ...d,
+      upsertErrors: { recognized_routine_states: 'RLS denied' },
+    })
+    await renderStore()
+    await act(async () => {
+      await api.confirmRoutine('rc:netflix:1')
+    })
+    expect(api.recognizedRoutineStates).toHaveLength(0)
+    expect(api.error).toContain('RLS denied')
+  })
+
+  it('a failed dismiss restores the existing confirmed row', async () => {
+    const d = dataset()
+    d.tables = { ...d.tables, recognized_routine_states: [CONFIRMED] } as typeof d.tables & {
+      recognized_routine_states: (typeof CONFIRMED)[]
+    }
+    h.mock = makeSupabaseMock({
+      ...d,
+      upsertErrors: { recognized_routine_states: 'network down' },
+    })
+    await renderStore()
+    await waitFor(() => expect(api.recognizedRoutineStates).toHaveLength(1))
+    await act(async () => {
+      await api.dismissRoutine('rc:costco:m')
+    })
+    expect(api.recognizedRoutineStates).toHaveLength(1)
+    expect(api.recognizedRoutineStates[0].status).toBe('confirmed')
+    expect(api.error).toContain('network down')
+  })
+})

@@ -178,8 +178,8 @@ routines** — a new pure engine `web/lib/finance/routines.ts` (`detectRoutines`
 cadence + amount tolerance), no permission needed; "derived, never stored" like `insights.ts`/
 `personSummary.ts` — only a user's confirm/dismiss/rename persists, in a new household-scoped
 `recognized_routine_states` table keyed by a deterministic `routineKey`. (2) **Behavioral habits** —
-looser weekday/hour-bucket pattern detection (manual/receipt-entry transactions only; imports lack a
-real time-of-day). (3) **Financial-health integration** — a new sixth `routine_awareness` dimension
+looser weekday-bucket pattern detection over ALL expense transactions (`hourBucket` is reserved in
+the type but always null today — no ingest path carries a real time-of-day). (3) **Financial-health integration** — a new sixth `routine_awareness` dimension
 appended to spec 041's engine (`financialHealth.ts`, `DIMENSION_ORDER`, `ACTION_TEMPLATES`), scored
 from confirmed/recognized routines' share of spend; the existing five dimensions are unchanged
 (byte-identical when `routines` is empty). (4) **Optional location booster** — merchant-name

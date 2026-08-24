@@ -427,3 +427,88 @@ No live signed-in E2E (no Supabase credentials in this sandbox), no real-device 
 check, no manual visual walk. The Chromium smoke covered rendering and redirects of the static
 export only. Everything else stated here was verified against code, tests, or empirical module
 runs, and every finding survived an independent adversarial verification pass.
+
+## 10. Fix status — appended 2026-08-24, same branch
+
+Everything below landed on this branch in seven TDD groups (each fix red-first; every
+pre-existing suite and all 13 golden vectors byte-identical throughout). Commits:
+G1 date regime `9826092`, G2 money input `3232ae7`, G3 write paths `2aa5833`,
+G4 i18n `a7f680c`, G5 display `d92d1dd`, G6 engines/pages `2be4431`, G7 docs + this appendix.
+
+### Majors
+
+| # | Status | Where |
+|---|---|---|
+| A1 decimal-comma 100× | **Fixed** (G2) | `parseMoney` last-separator-wins; `test/inputs-parse-money.test.ts` |
+| A2 edit invents payer | **Fixed** (G3) | `paidByTouched`/`transferFromTouched`; null preserved on untouched saves |
+| A3 CSV midnight-UTC dates | **Fixed** (G1) | commit `draft.dateISO` (noon-UTC); `test/csv/useCsvImport.commitDate.test.tsx` |
+| A4 ledger grouping guard | **Fixed** (G1) | `parseTxDate` in `format.ts` + budgets/health/personSummary/topMerchants; new `*.tz.test.ts` suites |
+| A5 refused delete looks deleted | **Fixed** (G3) | `.select('id')` + zero-row restore + banner |
+| A6 "Include anyway" un-tick ignored | **Fixed** (G3) | checkbox written both ways |
+| A7 CLI two-step write | **Fixed** (G3) | `createOne`/`updateOne` call the `upsert_transaction` RPC |
+| B1 pace month shifts a day | **Fixed** (G1) | raw interval bounds + ms-offset day indexing; tz suite |
+| B2 savings phantom month | **Fixed** (G1) | noon-anchored UTC month scaffold; tz suite |
+| B3 budget verdict prorated | **Fixed** (G5) | verdict gated to single-calendar-month scopes |
+| B4 equity bases mixed | **Fixed** (G5) | rows on loan basis + paid-off clamp |
+| B5 equity % wrong basis | **Fixed** (G5) | fraction from the printed pair at both render sites (`equityFraction` untouched) |
+| B6 income denominator sentence | **Fixed** (G5) | sentence/caption name the measured month |
+| B7 Vacant vs `occupied` flag | **Fixed** (G5) | label resolves from the money's own expression |
+| B8 by-value split false-block | **Fixed** (G2) | display-unit sum accepted; drift absorbed into largest share (`splits.ts` untouched) |
+| B9 non-Latin merchants collapse | **Fixed** (G6) | `/[^\p{L}\p{M}\p{N}\s]+/gu` + empty-key guards (\p{M} keeps Bengali intact) |
+| C1 Deposit Accounts unreachable | **Fixed** (G6) | nav entry + a source-scan nav-parity guard test |
+| C2 export-language PDF | **Fixed** (G4) | `makeT(await loadCatalog(language))` passed to `buildDataFile` |
+| C3 drill-in skips a level | **Fixed** (G5) | detail state is a stack; Escape/Back pop one level; focus recaptured; scroll reset |
+| C4 scan unreachable | **Deferred — decision** | Now documented honestly (docs/index.md, docs/web.md §10). Mounting it is a product call and needs its ~20 keys translated first |
+
+### Minors
+
+- **i18n (entire theme)** — fixed (G4, +G6/G7): 138 keys added across all five catalogs, and one
+  false-promise key replaced (35 category
+  labels, Data/PDF, bank linking, chrome, sign-in error mapping, CSV flow through `t()`, day
+  headers, `periodLabel`, CycleStrip, copy-section headers), plus the missing direction now
+  guarded by `test/i18n/catalog-completeness.test.ts` (TS-AST source→catalog scan).
+- **Date regime** — fixed (G1/G6): engine bucketing guards + tz suites; `maturityDate` day-clamp.
+- **FX round-trips** — fixed (G2): PropertyForm, BudgetDrawer, GoalForm prefill-snapshot guards;
+  JPY scan divisor via `fractionDigits`.
+- **Store/write-path** — fixed (G3/G7): CSV import awaits writes and reports real added/failed
+  counts; health saves roll back (and best-effort restore prior rows); budgets payload omits `id`;
+  `localUsers` fold clears only on success; parse exceptions land on the undetected screen;
+  duplicate match is kind-aware; import total sums expenses only; currency key validated on read;
+  routine confirm/dismiss/rename and location-consent writes now roll back on failure
+  (`test/store-writepath-integrity.test.tsx`). Concurrent-edit last-write-wins is now
+  ACKNOWLEDGED in docs/web.md rather than changed — a version column is deliberate future work.
+- **Panels & widgets** — fixed (G5): focus recapture + scroll reset on push/pop, theme-token
+  chart colors, upcoming-charge wording + no invented "$0.00 last", lapsed-merchant line, "All 1
+  months" gate, person-scope comparison honesty, positioned/hidden "today" label, schedule stops
+  at payoff, dormant-goal pace uses the full span, activity bounded (45), caption states the
+  month, content-aware scroll fades. Card figures pinned by `test/housing/housing-cards-display.test.tsx`.
+- **Transactions/planning/dashboard/settings/housing** — fixed (G5/G6/G7): label-aware search,
+  per-tab filter persistence across the edit round-trip, `copyFrom` loading gate, percent-rebalance
+  clamp (no negative shares), month-scoped goal cards, non-empty range picker fallback, day-change
+  `now` refresh, paid-off principal row clamp, honest property-type copy (was a false promise),
+  visit-throttle stale closure + FR-016 personal-routine filter implemented, scan CATEGORY_RULES
+  re-ported with a 28-merchant parity suite, zoom-safe full-height screens, clean hreflang,
+  household member management UI pinned + swatch accessible names localized.
+- **DB/edge** — simplefin-claim multi-household fixed (G6, oldest-household order). Composite
+  `(household_id, person_id)` FKs **deferred**: a schema migration with backfill validation, out
+  of scope for this branch (integrity gap is self-inflicted-only; no cross-household read).
+
+### Observations (info)
+
+All doc/comment drift fixed (G7): PARITY.md (RPC row, CLI-only list, payer divergence note),
+docs/makefile.md tx-add/tx-edit, CLAUDE.md behavioral habits, `neutralDraft()`, panel-contract
+`PanelHeader`, the nine spec-057 catalog regions restored (US8 relabeled, US7 re-reserved),
+`hasPriorPeriod` doc, `useScopedTransactions` memo comment, docs/supabase.md Stripe pin
+(`2026-07-29.dahlia`), docs/web.md last-write-wins + budgets-upsert key. Swatch a11y and routine
+rollback fixed (above). Deferred as design decisions: "Household"/"Everyone" naming unification,
+past-due-goal "Left to plan" behavior, restore's property-granularity rental-payment dedupe
+(specified v1 behavior), pre-grant-regime GRANT backfill (migration), UTC+12..+14 boundary cases
+(new tz suites cover ±11), `NEXT_PUBLIC_SITE_URL` (operator task), desktop's redundant mobile
+pipeline (perf-only refactor).
+
+### Verification after the fixes
+
+`npx tsc --noEmit` clean · full suite green (344 files / 3398 tests + 3 expected-fail markers) ·
+`npm run test:tz` green (29) ·
+13/13 golden vectors byte-identical · `npm run build` green. Still unrun (unchanged from §9): live
+signed-in E2E, real-device iOS safe-area, manual visual walk.

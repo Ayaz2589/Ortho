@@ -105,9 +105,9 @@ Full ledger: `PARITY.md`. The load-bearing facts:
   `ADMIN=1` works. The RPC enforces `sum(shares) = amount_cents` and immutability of id,
   household_id, created_by, created_at. Mid-import failure is per-row: earlier rows stay committed
   (`UPSERT_TX (N written)`); re-running is safe (RPC upserts by id, dedupe flags re-imports).
-- **`tx-add`/`tx-edit` are NOT.** `db/transactions.ts` still uses the pre-027 two-step insert +
-  client-side compensation (parent insert, then shares, rollback on failure) — a crash between the
-  writes can still orphan. Untouched since spec 013.
+- **`tx-add`/`tx-edit` now are too** (2026-08-24 review fix): `db/transactions.ts`
+  `createOne`/`updateOne` call the same `upsert_transaction` RPC, retiring the pre-027 two-step
+  insert + client-side compensation whose mid-sequence crash could orphan a parent row.
 - `txRecord` in `persist.ts` includes `paid_by` (required for settle-up) but has **no `notes`
   key** — force re-upserting an already-imported row through the CLI would null an app-added note.
   The CLI also never reads or writes tags: imports are untagged by design.

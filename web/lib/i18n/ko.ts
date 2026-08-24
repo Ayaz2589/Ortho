@@ -246,7 +246,7 @@ const catalog: Record<string, string> = {
   "Utilities": "공과금",
   "What kind of home is this? Choose one — we'll ask only the questions that fit.": "어떤 종류의 주택인가요? 하나 선택하세요 — 적합한 질문만 드립니다.",
   "Yesterday": "어제",
-  "You can change type later from the property's settings, but a few fields will reset (e.g. lease dates become closing date).": "나중에 부동산 설정에서 유형을 변경할 수 있지만 일부 필드는 재설정됩니다(예: 임대 날짜가 마감일로 변경됨).",
+  "A property's type can't be changed after it's added — to switch, remove it and add it again as the new type.": "부동산을 추가한 후에는 유형을 변경할 수 없어요 — 변경하려면 삭제한 뒤 새 유형으로 다시 추가하세요.",
   "You own where you live": "거주하는 집을 소유",
   "You rent your home": "집을 임차 중",
   "You're {0} over this month: {1} out vs {2} in.": "이번 달 {0} 초과: 지출 {1}, 수입 {2}.",
@@ -722,12 +722,13 @@ const catalog: Record<string, string> = {
   // spec 057 — widget panels: US9 goals
   "a month, in total, to keep every goal on time": "모든 목표를 제때 유지하기 위한 월 합계",
   "Projected to reach {0} around {1} at the current pace.": "현재 속도라면 {1}쯤 {0}에 도달할 것으로 예상됩니다.",
-  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US8 housing-costs
   "Properties": "부동산",
   "{0} of {1} units occupied": "{1}세대 중 {0}세대 입주",
   "Share of income": "소득 대비 비율",
   "Housing is {0}% of {1} income.": "주거비는 {1} 소득의 {0}%입니다.",
   "See all properties": "모든 부동산 보기",
+  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // review 2026-08-24 — i18n completeness sweep (categories, data, banks, scan, chrome, sign-in)
   "Alcohol": "주류",
   "Books": "도서",

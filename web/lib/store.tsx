@@ -1742,12 +1742,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       updated_at: now,
       ...patch,
     }
+    const previous = recognizedRoutineStates
     setRecognizedRoutineStates((prev) => [...prev.filter((s) => s.routine_key !== routineKey), row])
     const { id: _id, ...payload } = row
     const { error: e } = await supabase
       .from('recognized_routine_states')
       .upsert(payload, { onConflict: 'household_id,routine_key' })
-    if (e) setError(e.message)
+    if (e) {
+      // Mutation contract: optimistic → error → restore + banner. A phantom
+      // confirmed/dismissed/renamed state must not outlive the failed write
+      // (review 2026-08-24).
+      setRecognizedRoutineStates(previous)
+      setError(e.message)
+    }
   }
 
   const confirmRoutine = async (routineKey: string, personId?: string | null) =>
@@ -1775,10 +1782,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       created_at: locationConsent?.created_at ?? now,
       updated_at: now,
     }
+    const previousConsent = locationConsent
     setLocationConsentState(row)
     const { id: _id, ...payload } = row
     const { error: e } = await supabase.from('user_location_consent').upsert(payload, { onConflict: 'user_id' })
     if (e) {
+      // Same contract as routine states: no phantom consent level on failure.
+      setLocationConsentState(previousConsent)
       setError(e.message)
       return
     }

@@ -246,7 +246,7 @@ const catalog: Record<string, string> = {
   "Utilities": "公共料金",
   "What kind of home is this? Choose one — we'll ask only the questions that fit.": "これはどんな住宅ですか？1つ選んでください — 必要な質問だけお聞きします。",
   "Yesterday": "昨日",
-  "You can change type later from the property's settings, but a few fields will reset (e.g. lease dates become closing date).": "後で物件設定から種類を変更できますが、一部のフィールドはリセットされます（例: 賃貸日がクロージング日になる）。",
+  "A property's type can't be changed after it's added — to switch, remove it and add it again as the new type.": "追加後に物件の種類は変更できません。変更するには、削除して新しい種類として追加し直してください。",
   "You own where you live": "住んでいる家を所有",
   "You rent your home": "自宅を賃貸している",
   "You're {0} over this month: {1} out vs {2} in.": "今月{0}超過: 支出{1}に対して収入{2}。",
@@ -722,12 +722,13 @@ const catalog: Record<string, string> = {
   // spec 057 — widget panels: US9 goals
   "a month, in total, to keep every goal on time": "すべての目標を予定どおりに進めるための月々の合計",
   "Projected to reach {0} around {1} at the current pace.": "現在のペースでは{1}ごろに{0}に達する見込みです。",
-  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
+  // spec 057 — widget panels: US8 housing-costs
   "Properties": "物件",
   "{0} of {1} units occupied": "{1}戸中{0}戸が入居中",
   "Share of income": "収入に占める割合",
   "Housing is {0}% of {1} income.": "住居費は{1}の収入の{0}%です。",
   "See all properties": "すべての物件を見る",
+  // spec 057 — widget panels: US7 household-balances (reserved for a follow-up sandbox — see contracts/follow-up-brief.md)
   // review 2026-08-24 — i18n completeness sweep (categories, data, banks, scan, chrome, sign-in)
   "Alcohol": "お酒",
   "Books": "書籍",

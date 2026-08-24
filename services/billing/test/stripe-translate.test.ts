@@ -230,7 +230,8 @@ describe('customer.subscription.deleted / paused carry the full subscription obj
   })
 })
 
-// stripe@22 pins API version 2026-06-24.dahlia: current_period_end lives on the
+// stripe@22 is a dahlia-generation SDK (the deployed functions pin API version
+// 2026-07-29.dahlia — see docs/supabase.md): current_period_end lives on the
 // SUBSCRIPTION ITEM (not the subscription), invoices carry parent.subscription_details
 // (no top-level subscription_details/subscription), and lines price via
 // pricing.price_details.price (no line.price). The translator must parse BOTH

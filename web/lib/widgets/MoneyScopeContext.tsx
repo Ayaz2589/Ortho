@@ -59,11 +59,13 @@ export function useMoneyScope(): MoneyScope {
  * The ledger narrowed to the active scope — the one line a widget body needs to
  * join the people axis.
  *
- * Memoized here rather than in each body so the O(n) projection runs once per
- * scope change for all consumers instead of once per consumer. That only holds if
- * `scope` is referentially stable, which is why the dashboard page keeps a
- * `MoneyScope` in state (`personScope()` allocates) and re-resolves it with
- * `resolveScope`, which returns the same object rather than a copy.
+ * Memoized here so the hook, not each body, owns the caching rule. useMemo is
+ * per hook instance, so each consuming widget still runs its own O(n)
+ * projection on a scope change — what the memo prevents is re-projecting on
+ * unrelated re-renders. That only holds if `scope` is referentially stable,
+ * which is why the dashboard page keeps a `MoneyScope` in state
+ * (`personScope()` allocates) and re-resolves it with `resolveScope`, which
+ * returns the same object rather than a copy.
  */
 export function useScopedTransactions(transactions: Transaction[]): Transaction[] {
   const scope = useMoneyScope()
