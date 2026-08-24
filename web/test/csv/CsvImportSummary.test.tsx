@@ -6,7 +6,8 @@ import userEvent from '@testing-library/user-event'
 vi.mock('@/lib/store', () => ({
   useApp: () => ({
     formatMoney: (c: number) => `$${(c / 100).toFixed(2)}`,
-    t: (k: string) => k,
+    t: (k: string, ...a: Array<string | number>) =>
+      a.length ? k.replace(/\{(\d+)\}/g, (m, i) => String(a[Number(i)] ?? m)) : k,
   }),
 }))
 

@@ -7,6 +7,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import type { ReactNode } from 'react'
 
+vi.mock('@/lib/store', () => ({
+  useApp: () => ({
+    t: (k: string, ...a: Array<string | number>) =>
+      a.length ? k.replace(/\{(\d+)\}/g, (m, i) => String(a[Number(i)] ?? m)) : k,
+  }),
+}))
+
 // Stub the Drawer chrome. DrawerHeader must render an accessible close button
 // so the test can click it and trigger handleClose.
 vi.mock('@/components/web/Drawer', () => ({

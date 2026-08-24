@@ -92,7 +92,7 @@ export function TopMerchantsPanel() {
   const { push } = usePanelDetail()
 
   const subject = scope.kind === 'person' ? resolveUser(scope.personId).name : t('Household')
-  usePanelCaption({ subject, period: periodLabel })
+  usePanelCaption({ subject, period: t(periodLabel) })
   usePanelRouteOut({ label: t('See all transactions'), href: '/transactions' })
 
   const summary = useMemo(() => computeTopMerchants(transactions, interval, now), [transactions, interval, now])
@@ -128,7 +128,7 @@ export function TopMerchantsPanel() {
         entries={withUpcomingCharges(summary)}
         hasPriorPeriod={summary.hasPriorPeriod}
         subject={subject}
-        periodLabel={periodLabel}
+        periodLabel={t(periodLabel)}
         transactions={transactions}
         interval={interval}
         routineByKey={routineByKey}

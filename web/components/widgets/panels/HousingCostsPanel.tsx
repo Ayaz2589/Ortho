@@ -60,7 +60,7 @@ export function HousingCostsPanel() {
   const { properties, transactions, formatMoney, t } = useApp()
   const { referenceDate, periodLabel } = useDashboardScopeContext()
 
-  usePanelCaption({ period: periodLabel })
+  usePanelCaption({ period: t(periodLabel) })
   usePanelRouteOut({ label: t('See all properties'), href: '/housing' })
 
   const rows = useMemo(() => properties.map(buildRow), [properties])
@@ -104,7 +104,7 @@ export function HousingCostsPanel() {
         <div className="flex flex-col gap-1">
           <PanelSectionLabel>{t('Share of income')}</PanelSectionLabel>
           <p className="text-sm text-text-2">
-            {t('Housing is {0}% of {1} income.', incomeSharePercent, periodLabel)}
+            {t('Housing is {0}% of {1} income.', incomeSharePercent, t(periodLabel))}
           </p>
         </div>
       ) : null}

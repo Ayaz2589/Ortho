@@ -53,7 +53,7 @@ export function SpendingPacePanel() {
   const { push } = usePanelDetail()
 
   const subject = scope.kind === 'person' ? resolveUser(scope.personId).name : t('Household')
-  usePanelCaption({ subject, period: periodLabel })
+  usePanelCaption({ subject, period: t(periodLabel) })
 
   const summary = useMemo(() => computeSpendingPace(transactions, interval, now), [transactions, interval, now])
 
@@ -84,7 +84,7 @@ export function SpendingPacePanel() {
         categoryRows={summary.categoryRows}
         transactions={transactions}
         interval={interval}
-        periodLabel={periodLabel}
+        periodLabel={t(periodLabel)}
       />
     )
   }

@@ -170,7 +170,7 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
     // fills the tray body; the back button steps back to the list.
     <div
       role="group"
-      aria-label="Edit transaction"
+      aria-label={t('Edit transaction')}
       style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: 'var(--bg)' }}
     >
       {/* Header: back chip · title · Save — mirrors the shared DrawerHeader. */}
@@ -184,7 +184,7 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
           flexShrink: 0,
         }}
       >
-        <button className="ow-btn ow-chip-btn" aria-label="Back" onClick={onClose} style={{ width: 28, height: 28, zIndex: 1 }}>
+        <button className="ow-btn ow-chip-btn" aria-label={t('Back')} onClick={onClose} style={{ width: 28, height: 28, zIndex: 1 }}>
           <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
             <path d="M7.5 2L3.5 6l4 4" stroke="var(--text-2)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
           </svg>
@@ -202,7 +202,7 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
             pointerEvents: 'none',
           }}
         >
-          Review import
+          {t('Review import')}
         </div>
         <button
           className="ow-btn"
@@ -218,7 +218,7 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
             cursor: splitOk ? 'pointer' : 'default',
           }}
         >
-          Save
+          {t('Save')}
         </button>
       </div>
 
@@ -227,13 +227,13 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
         {/* Merchant — with autocomplete from the household's own merchant names
             and "you've used" chips to normalize a messy CSV descriptor. */}
         <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-          <Row label="Merchant" first>
+          <Row label={t('Merchant')} first>
             <input
               className="ow-row-input"
               value={merchant}
               onChange={(e) => setMerchant(e.target.value)}
-              placeholder="e.g. Whole Foods"
-              aria-label="Merchant"
+              placeholder={t('e.g. Whole Foods')}
+              aria-label={t('Merchant')}
               list="csv-merchant-suggestions"
               autoComplete="off"
             />
@@ -248,7 +248,7 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
                 padding: '0 20px 12px',
               }}
             >
-              <span style={{ fontSize: 12, color: 'var(--text-3)', marginRight: 2 }}>You’ve used</span>
+              <span style={{ fontSize: 12, color: 'var(--text-3)', marginRight: 2 }}>{t('You’ve used')}</span>
               {merchantSuggestions.map((s) => (
                 <button
                   key={s}
@@ -278,43 +278,43 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
         {/* Category · amount · date */}
         <div className="ow-card" style={{ margin: '0 20px 14px' }}>
           {isExpense && (
-            <Row label="Category" first>
+            <Row label={t('Category')} first>
               <CatTile category={category} size={22} />
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as TransactionCategory)}
-                aria-label="Category"
+                aria-label={t('Category')}
                 style={selectStyle}
               >
                 {SPEND_CATEGORIES.map((c) => (
                   <option key={c} value={c}>
-                    {categoryMeta(c).label}
+                    {t(categoryMeta(c).label)}
                   </option>
                 ))}
               </select>
             </Row>
           )}
-          <Row label="Amount" first={!isExpense}>
+          <Row label={t('Amount')} first={!isExpense}>
             <span style={{ color: 'var(--text-2)', fontVariantNumeric: 'tabular-nums' }}>
               {formatMoney(draft.amountCents)}
             </span>
           </Row>
-          <Row label="Date">
+          <Row label={t('Date')}>
             <span style={{ color: 'var(--text-2)' }}>{mediumDate(new Date(draft.dateISO))}</span>
           </Row>
           {/* Paid with — seeded from a card matching the imported bank; editable
               here, or "Not set" (flagged in the list until chosen). */}
-          <Row label="Paid with">
+          <Row label={t('Paid with')}>
             {cards.length === 0 ? (
-              <span style={{ color: 'var(--text-3)' }}>No cards yet</span>
+              <span style={{ color: 'var(--text-3)' }}>{t('No cards yet')}</span>
             ) : (
               <select
                 value={paymentSource}
                 onChange={(e) => setPaymentSource(e.target.value)}
-                aria-label="Paid with"
+                aria-label={t('Paid with')}
                 style={selectStyle}
               >
-                <option value="">Not set</option>
+                <option value="">{t('Not set')}</option>
                 {cards.map((c) => (
                   <option key={c.id} value={c.name}>
                     {c.name}
@@ -331,7 +331,7 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
         {/* Owners — tap to toggle; leave the split even (computed on commit). */}
         {showOwners && (
           <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-            <Row label="Owners" first>
+            <Row label={t('Owners')} first>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 {householdMembers.map((u) => {
                   const on = ownerIds.includes(u.id)
@@ -366,12 +366,12 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
             transaction form: even shares, percentage, or by-amount. */}
         {showSplit && (
           <div className="ow-card" style={{ margin: '0 20px 14px' }}>
-            <Row label="Split" first>
+            <Row label={t('Split')} first>
               <Seg
                 value={splitMethod}
                 onChange={chooseSplitMethod}
                 options={[
-                  { value: 'even', label: 'Even' },
+                  { value: 'even', label: t('Even') },
                   { value: 'percent', label: '%' },
                   { value: 'value', label: currencySymbol(currency) },
                 ]}
@@ -391,7 +391,7 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
                         className="ow-row-input"
                         style={{ textAlign: 'right', width: 56 }}
                         inputMode="decimal"
-                        aria-label={`${name} percent`}
+                        aria-label={t('{0} percent', name)}
                         value={splitText[id] ?? ''}
                         onChange={(e) => setSplitPercent(id, e.target.value.replace(/[^\d.]/g, ''))}
                       />
@@ -407,7 +407,7 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
                         className="ow-row-input"
                         style={{ textAlign: 'right', width: 78 }}
                         inputMode="decimal"
-                        aria-label={`${name} amount`}
+                        aria-label={t('{0} amount', name)}
                         value={splitText[id] ?? ''}
                         onChange={(e) => setSplitValue(id, e.target.value.replace(/[^\d.,]/g, ''))}
                       />
@@ -419,8 +419,8 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
             {!splitOk && (
               <div style={{ padding: '6px 20px 12px', fontSize: 12.5, lineHeight: 1.45, color: 'var(--text-2)' }}>
                 {splitReason === 'percent_sum'
-                  ? 'Percentages must total 100%.'
-                  : `Amounts must add up to ${formatMoney(draft.amountCents)}.`}
+                  ? t('Percentages must total 100%.')
+                  : t('Amounts must add up to {0}.', formatMoney(draft.amountCents))}
               </div>
             )}
           </div>
@@ -435,10 +435,10 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
           <div style={{ padding: '13px 20px' }}>
             <textarea
               className="ow-row-input"
-              aria-label="Notes"
+              aria-label={t('Notes')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add a note (optional)"
+              placeholder={t('Add a note (optional)')}
               rows={2}
               style={{ width: '100%', resize: 'vertical', textAlign: 'left', minHeight: 44 }}
             />
@@ -460,10 +460,10 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: 'var(--accent)', fontSize: '13px' }}>
                   <Copy size={12} strokeWidth={2.2} />
-                  Possible duplicate
+                  {t('Possible duplicate')}
                 </div>
                 <div style={{ color: 'var(--text-2)', fontSize: '12px', marginTop: 2 }}>
-                  A similar transaction may already be in your ledger
+                  {t('A similar transaction may already be in your ledger')}
                 </div>
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
@@ -471,9 +471,9 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
                   type="checkbox"
                   checked={includeAnyway}
                   onChange={(e) => setIncludeAnyway(e.target.checked)}
-                  aria-label="Include anyway"
+                  aria-label={t('Include anyway')}
                 />
-                <span style={{ fontSize: '13px', color: 'var(--text)' }}>Include anyway</span>
+                <span style={{ fontSize: '13px', color: 'var(--text)' }}>{t('Include anyway')}</span>
               </label>
             </div>
           </div>
@@ -493,7 +493,7 @@ export function CsvRowEditModal({ draft, onSave, onSkip, onClose }: Props) {
               fontSize: '15px',
             }}
           >
-            Skip this transaction
+            {t('Skip this transaction')}
           </button>
         </div>
       </div>

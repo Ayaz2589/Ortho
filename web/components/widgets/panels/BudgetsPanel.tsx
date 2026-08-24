@@ -51,7 +51,7 @@ export function BudgetsPanel() {
   const { referenceDate, periodLabel } = useDashboardScopeContext()
 
   const subject = scope.kind === 'person' ? resolveUser(scope.personId).name : t('Household')
-  usePanelCaption({ subject, period: periodLabel })
+  usePanelCaption({ subject, period: t(periodLabel) })
 
   const monthKey = currentMonthKey(referenceDate)
   const elapsedFraction = monthElapsedFraction(monthKey, new Date())

@@ -1219,7 +1219,7 @@ export function TxCopyList({ onPick, onBack }: { onPick: (tx: Transaction) => vo
                   style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', padding: '10px 20px 3px', textAlign: 'left', color: 'var(--text-2)', fontSize: 12, fontWeight: 500, letterSpacing: '-0.1px' }}
                 >
                   <Icon size={13} color={meta.tint} strokeWidth={2.2} />
-                  <span style={{ flex: 1 }}>{label}</span>
+                  <span style={{ flex: 1 }}>{t(label)}</span>
                   <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true" style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 120ms ease', flexShrink: 0 }}>
                     <path d="M2.5 4.5L6 8l3.5-3.5" stroke="var(--text-3)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>

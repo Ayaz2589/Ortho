@@ -61,7 +61,7 @@ export function SavingsTrendsPanel() {
   const { push, pop } = usePanelDetail()
 
   const subject = scope.kind === 'person' ? resolveUser(scope.personId).name : t('Household')
-  usePanelCaption({ subject, period: periodLabel })
+  usePanelCaption({ subject, period: t(periodLabel) })
 
   const summary = useMemo(() => computeSavingsTrends(transactions, interval), [transactions, interval])
   const hasActivity = summary.windowIncomeCents > 0 || summary.windowExpenseCents > 0

@@ -1,5 +1,6 @@
 'use client'
 
+import { useApp } from '@/lib/store'
 import { isBigDot, type CycleDot } from '@/lib/finance/topMerchants'
 
 const DOT_BASE_PX = 9
@@ -22,6 +23,7 @@ function dayLeftPct(day: number): number {
  * applies.
  */
 export function CycleStrip({ dots, todayDay }: { dots: CycleDot[]; todayDay: number | null }) {
+  const { t } = useApp()
   return (
     <div>
       <div className="relative mt-3.5" style={{ height: 56 }}>
@@ -42,7 +44,7 @@ export function CycleStrip({ dots, todayDay }: { dots: CycleDot[]; todayDay: num
               className="absolute whitespace-nowrap text-[10.5px] text-text-3"
               style={{ left: `${dayLeftPct(todayDay)}%`, bottom: -4, transform: 'translateX(-50%)' }}
             >
-              today
+              {t('today')}
             </span>
           </>
         ) : null}
