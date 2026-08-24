@@ -147,11 +147,17 @@ export function equityFraction(
   return Math.min(1, Math.max(0, equity / purchasePriceCents))
 }
 
-/** Loan maturity date = closing date + term months (local calendar). */
+/** Loan maturity date = closing date + term months (local calendar). The day
+ *  is CLAMPED to the target month's length — Date.setMonth would normalize a
+ *  Feb-29 closing to Mar 1 in a non-leap year, diverging from iOS's
+ *  Calendar.date(byAdding:) clamping (review 2026-08-24). */
 export function maturityDate(closingDate: string, termYears: number): Date {
   const d = parseLocalDate(closingDate)
-  d.setMonth(d.getMonth() + termYears * 12)
-  return d
+  const targetMonth = d.getMonth() + termYears * 12
+  const year = d.getFullYear() + Math.floor(targetMonth / 12)
+  const month = targetMonth % 12
+  const daysInTarget = new Date(year, month + 1, 0).getDate()
+  return new Date(year, month, Math.min(d.getDate(), daysInTarget))
 }
 
 /**

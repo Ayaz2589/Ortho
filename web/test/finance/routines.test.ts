@@ -244,3 +244,37 @@ describe('detectRoutines — behavioral_habit (FR-003)', () => {
     expect(routine?.kind).toBe('recurring_charge')
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Review 2026-08-24, B9: normalizeMerchantKey stripped every character outside
+// [a-z0-9\s], so ANY merchant name in a non-Latin script — four of the app's
+// five translated locales — collapsed to the EMPTY key: all such merchants
+// merged into one routine identity ('rc:'), breaking or misattributing
+// recurring detection for those households. Normalization must be
+// Unicode-aware, and an unnormalizable name must never form a group.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('non-Latin merchant identities (B9)', () => {
+  const NOW_B9 = new Date('2026-08-20T12:00:00.000Z')
+
+  it('two Japanese merchants keep distinct routine identities', () => {
+    const txns = [
+      ...monthly('セブンイレブン', ['2026-05-05', '2026-06-05', '2026-07-05', '2026-08-05'], 1200),
+      ...monthly('ローソン', ['2026-05-20', '2026-06-20', '2026-07-20', '2026-08-20'], 890),
+    ]
+    const routines = detectRoutines(txns, NOW_B9).filter((r) => r.kind === 'recurring_charge')
+    expect(routines).toHaveLength(2)
+    expect(new Set(routines.map((r) => r.merchantKey)).size).toBe(2)
+    expect(routines.every((r) => r.merchantKey !== '')).toBe(true)
+  })
+
+  it('normalizeMerchantKey keeps non-Latin letters and still strips store codes', () => {
+    expect(normalizeMerchantKey('세븐일레븐 1234')).toBe('세븐일레븐')
+    expect(normalizeMerchantKey('স্টারবাকস')).toBe('স্টারবাকস')
+    expect(normalizeMerchantKey('7-Eleven #1234')).toBe(normalizeMerchantKey('7 Eleven 1234'))
+  })
+
+  it('an all-punctuation merchant name never forms a routine group', () => {
+    const txns = monthly('###', ['2026-05-05', '2026-06-05', '2026-07-05', '2026-08-05'])
+    expect(detectRoutines(txns, NOW_B9)).toHaveLength(0)
+  })
+})

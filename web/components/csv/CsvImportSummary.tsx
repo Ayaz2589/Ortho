@@ -4,6 +4,7 @@ import { useApp } from '@/lib/store'
 
 interface Props {
   addedCount: number
+  failedCount: number
   totalSpendCents: number
   skippedCount: number
   excludedCount: number
@@ -13,13 +14,14 @@ interface Props {
 
 export function CsvImportSummary({
   addedCount,
+  failedCount,
   totalSpendCents,
   skippedCount,
   excludedCount,
   duplicatesCount,
   onDone,
 }: Props) {
-  const { formatMoney } = useApp()
+  const { formatMoney, t } = useApp()
 
   return (
     <div
@@ -36,7 +38,7 @@ export function CsvImportSummary({
 
       <div>
         <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text)' }}>
-          {addedCount} transaction{addedCount === 1 ? '' : 's'} added
+          {addedCount === 1 ? t('{0} transaction added', addedCount) : t('{0} transactions added', addedCount)}
         </div>
         <div style={{ fontSize: '18px', color: 'var(--text-2)', marginTop: '4px', fontVariantNumeric: 'tabular-nums' }}>
           {formatMoney(totalSpendCents)}
@@ -53,19 +55,24 @@ export function CsvImportSummary({
           gap: '8px',
         }}
       >
+        {failedCount > 0 && (
+          <div style={{ color: 'var(--text-2)', fontSize: '14px' }}>
+            {t('{0} could not be added — check your connection and try again', failedCount)}
+          </div>
+        )}
         {skippedCount > 0 && (
           <div style={{ color: 'var(--text-2)', fontSize: '14px' }}>
-            {skippedCount} skipped
+            {t('{0} skipped', skippedCount)}
           </div>
         )}
         {excludedCount > 0 && (
           <div style={{ color: 'var(--text-2)', fontSize: '14px' }}>
-            {excludedCount} payment rows excluded
+            {t('{0} payment rows excluded', excludedCount)}
           </div>
         )}
         {duplicatesCount > 0 && (
           <div style={{ color: 'var(--text-2)', fontSize: '14px' }}>
-            {duplicatesCount} duplicates left out
+            {t('{0} duplicates left out', duplicatesCount)}
           </div>
         )}
       </div>
@@ -84,7 +91,7 @@ export function CsvImportSummary({
           cursor: 'pointer',
         }}
       >
-        Done
+        {t('Done')}
       </button>
     </div>
   )

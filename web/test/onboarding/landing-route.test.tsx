@@ -97,7 +97,7 @@ describe('landing route — per-locale metadata (US4)', () => {
     expect(Object.keys(languages)).toHaveLength(landingSlugs().length + 1)
     expect(languages['x-default']).toBe(landingUrl('en'))
     for (const other of landingSlugs()) {
-      expect(languages[localeForSlug(other)!.locale]).toBe(landingUrl(other))
+      expect(languages[localeForSlug(other)!.hreflang]).toBe(landingUrl(other))
     }
   })
 

@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
@@ -173,26 +174,46 @@ export function WidgetPanel({
   const isExpanded = useIsExpanded()
   const [caption, setCaption] = useState<PanelCaption | undefined>(undefined)
   const [routeOut, setRouteOut] = useState<PanelRouteOut | undefined>(undefined)
-  const [detail, setDetail] = useState<{ title: string; content: ReactNode } | null>(null)
+  // A STACK, not a single slot: a panel may push from inside a pushed detail
+  // (SavingsTrendsPanel's month drill-in is three levels deep), and Back/
+  // Escape must unwind one level at a time, never skip a level the user
+  // navigated through (review 2026-08-24, C3).
+  const [details, setDetails] = useState<Array<{ title: string; content: ReactNode }>>([])
+  const frameRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const levelRef = useRef(0)
 
-  // A fresh open must never inherit the previous session's pushed detail.
+  // A fresh open must never inherit the previous session's pushed details.
   useEffect(() => {
-    if (!open) setDetail(null)
+    if (!open) setDetails([])
   }, [open])
+
+  // Pushing/popping unmounts the element that held keyboard focus, which
+  // would drop focus to <body> outside the trap; recapture it on the frame,
+  // and reset the shared scroll region so a new level never opens mid-scroll
+  // (review 2026-08-24). Skipped on open itself — the Drawer's focus trap
+  // places initial focus.
+  useEffect(() => {
+    if (levelRef.current === details.length) return
+    levelRef.current = details.length
+    frameRef.current?.focus()
+    if (scrollRef.current) scrollRef.current.scrollTop = 0
+  }, [details.length])
 
   const api = useMemo<PanelFrameApi>(
     () => ({
       setCaption,
       setRouteOut,
-      pushDetail: (detailTitle, content) => setDetail({ title: detailTitle, content }),
-      popDetail: () => setDetail(null),
+      pushDetail: (detailTitle, content) => setDetails((prev) => [...prev, { title: detailTitle, content }]),
+      popDetail: () => setDetails((prev) => prev.slice(0, -1)),
     }),
     []
   )
 
   if (!open) return null
 
-  const back = () => setDetail(null)
+  const detail = details.length > 0 ? details[details.length - 1] : null
+  const back = () => setDetails((prev) => prev.slice(0, -1))
   const headerTitle = detail ? detail.title : title
   const captionText = detail ? null : formatCaption(caption)
 
@@ -200,8 +221,10 @@ export function WidgetPanel({
     <Drawer open={open} onClose={onClose} onEscape={detail ? back : onClose} label={headerTitle} fullBleedOnMobile>
       <PanelFrameContext.Provider value={api}>
         <div
+          ref={frameRef}
+          tabIndex={-1}
           data-testid="panel-frame"
-          className="flex h-full flex-col"
+          className="flex h-full flex-col outline-none"
           style={isExpanded ? undefined : { paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
         >
           <PanelHeader title={headerTitle} mode={detail ? 'back' : 'close'} onAction={detail ? back : onClose} />
@@ -214,6 +237,7 @@ export function WidgetPanel({
             </div>
           ) : null}
           <div
+            ref={scrollRef}
             data-testid="panel-scroll-region"
             style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}
           >

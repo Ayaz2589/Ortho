@@ -20,6 +20,7 @@ import type {
 } from '../types'
 import type { RoutineWithState } from './routines'
 import { roundHalfAwayFromZero } from './money'
+import { parseTxDate } from '../format'
 import { budgetStatusForMonth } from './budgets'
 import { goalPacing } from './goals'
 import { savingsRate } from '../reports/savings'
@@ -160,7 +161,7 @@ export function monthSpendCents(transactions: readonly Transaction[], now: Date)
   let total = 0
   for (const tx of transactions) {
     if (tx.kind !== 'expense') continue
-    const d = new Date(tx.date)
+    const d = parseTxDate(tx.date)
     if (d.getFullYear() === y && d.getMonth() === m) total += tx.amount_cents
   }
   return total
@@ -271,7 +272,7 @@ function windowExpenseCents(transactions: readonly Transaction[], now: Date, mon
   let total = 0
   for (const t of transactions) {
     if (t.kind !== 'expense') continue
-    const d = new Date(t.date)
+    const d = parseTxDate(t.date)
     if (d >= start && d <= now) total += t.amount_cents
   }
   return total

@@ -392,7 +392,7 @@ export function TransactionsDesktop() {
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '22px 16px 8px' }}>
                         <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                           <span style={{ fontSize: 13, fontWeight: 400, letterSpacing: '0.6px', textTransform: 'uppercase', color: 'var(--text-2)' }}>
-                            {dayLabel(g.day, locale)}
+                            {t(dayLabel(g.day, locale))}
                           </span>
                           <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{shortDate(g.day, locale)}</span>
                         </span>

@@ -218,7 +218,7 @@ export default function TransactionsPage() {
                       <div className="flex items-baseline justify-between px-4 pb-1 pt-3">
                         <span className="flex items-baseline gap-2">
                           <span className="text-[13px] font-normal uppercase tracking-[0.6px] text-text-2">
-                            {dayLabel(g.day, locale)}
+                            {t(dayLabel(g.day, locale))}
                           </span>
                           <span className="text-[12px] text-text-3">{shortDate(g.day, locale)}</span>
                         </span>

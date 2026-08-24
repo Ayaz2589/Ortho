@@ -1,4 +1,5 @@
 import { savingsRate } from '@/lib/reports/savings'
+import { parseTxDate } from '@/lib/format'
 import type { Transaction } from '@/lib/types'
 
 export interface SavingsMonthPoint {
@@ -52,10 +53,18 @@ export function computeSavingsTrends(
   transactions: Transaction[],
   interval: { start: Date; end: Date }
 ): SavingsTrendsSummary {
+  // The interval arrives month-aligned in one of two frames: LOCAL boundaries
+  // (range mode) or UTC instants (a selected month, via monthBounds). Reading
+  // local getters straight off a UTC instant scaffolded a phantom prior month
+  // west of UTC (review 2026-08-24, B2). Reading the calendar month at NOON of
+  // each instant lands in the same month in both frames for every offset
+  // within ±11, so one scaffold serves both.
+  const HALF_DAY_MS = 12 * 60 * 60 * 1000
   const order: string[] = []
   const index = new Map<string, SavingsMonthPoint>()
-  let cursor = new Date(interval.start.getFullYear(), interval.start.getMonth(), 1)
-  while (cursor.getTime() < interval.end.getTime()) {
+  const anchor = new Date(interval.start.getTime() + HALF_DAY_MS)
+  let cursor = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
+  while (cursor.getTime() + HALF_DAY_MS < interval.end.getTime()) {
     const key = `${cursor.getFullYear()}-${pad2(cursor.getMonth() + 1)}`
     order.push(key)
     index.set(key, { yyyymm: key, incomeCents: 0, expenseCents: 0, savedCents: 0, rate: null })
@@ -65,7 +74,7 @@ export function computeSavingsTrends(
   const startMs = interval.start.getTime()
   const endMs = interval.end.getTime()
   for (const tx of transactions) {
-    const d = new Date(tx.date)
+    const d = parseTxDate(tx.date)
     const ms = d.getTime()
     if (ms < startMs || ms >= endMs) continue
     const bucket = index.get(`${d.getFullYear()}-${pad2(d.getMonth() + 1)}`)

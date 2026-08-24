@@ -20,7 +20,8 @@ vi.mock('@/lib/store', () => ({
     formatMoney: (c: number) => `$${(c / 100).toFixed(2)}`,
     currency: 'usd',
     rate: () => 1,
-    t: (k: string) => k,
+    t: (k: string, ...a: Array<string | number>) =>
+      a.length ? k.replace(/\{(\d+)\}/g, (m, i) => String(a[Number(i)] ?? m)) : k,
     householdMembers: mockMembers,
     transactions: [],
     cards: mockCards,

@@ -101,7 +101,7 @@ ever tracked between them, is in
 | Canonical leftover-cent order | ✅ | ✅ | `orderedOwnerIds` — leftover cent goes to canonically-first owner (ascending UUID string sort), a conscious documented policy (see comment in `lib/splits.ts` and `specs/027-finance-model-correctness/contracts/cli-ordering.md`). Verified 2026-07-18 (spec 027 / A4): CLI `toTransaction` calls `orderedOwnerIds` before `computeShares`; `sort_order` DB ordering does not affect the leftover cent. Test: `web/test/import/toTransaction.test.ts` "A4 — sort_order ≠ UUID order". |
 | Transaction + shares data contract | ✅ | ✅ | columns mirrored (incl. `paid_by`, `notes`) |
 | Member reimbursement / settle-up balance | ✅ | — | `lib/balances.ts` → `member-balance.json` (+ `paid_by`, `transfer` kind) |
-| Atomic parent+shares write | ✅ (RPC) | ✅ (RPC) | `upsert_transaction(p_tx, p_shares)` — a single-transaction Postgres RPC (`supabase/migrations/20260718120002_upsert_transaction_atomic.sql`, spec 027) with a DB-level guarantee that shares sum to the parent amount; execute granted only to `authenticated`/`service_role`. **Both** write paths call it: web `web/lib/store.tsx` and CLI `web/scripts/import/db/persist.ts` — the write path itself is now shared. Supersedes spec 023/B7's client-side compensation. The migration counts pre-existing share-less rows (NOTICE) but deliberately does not repair them. |
+| Atomic parent+shares write | ✅ (RPC) | ✅ (RPC) | `upsert_transaction(p_tx, p_shares)` — a single-transaction Postgres RPC (`supabase/migrations/20260718120002_upsert_transaction_atomic.sql`, spec 027) with a DB-level guarantee that shares sum to the parent amount; execute granted only to `authenticated`/`service_role`. **Both** write paths call it: web `web/lib/store.tsx` and the CLI — the ingest path (`web/scripts/import/db/persist.ts`) since spec 027, and `tx-add`/`tx-edit` (`db/transactions.ts` `createOne`/`updateOne`) since the 2026-08-24 review fix, which retired their pre-027 two-step insert + client-side compensation. Supersedes spec 023/B7's client-side compensation. The migration counts pre-existing share-less rows (NOTICE) but deliberately does not repair them. |
 | Category / kind / source taxonomy | ✅ | ✅ | Postgres `transaction_category` (40 values — 39 pickable + non-pickable `transfer`) / `transaction_kind` enums / `lib/types.ts` (`PICKABLE_CATEGORIES`); the two-level category → subcategory **display** taxonomy (29 expense + 10 income subcats, spec 031) lives in `lib/categories.ts` |
 | Date storage & timezone | ✅ | ✅ | noon-UTC transaction timestamps; date-only columns = local calendar day |
 | Full-UI localization (6 languages) | ✅ | — (English) | `web/lib/i18n/*` |
@@ -246,8 +246,14 @@ bundle (spec 021), the new behavior applies on all surfaces.
 - **CSV bank-statement import** — web UI ships in spec 029 (`web/lib/csv/`, `web/components/csv/`).
   Supports Chase, Amex, Citi, Capital One, BofA, Wells Fargo, and TD Bank CSV formats.
   CLI retains PDF import + `--admin` service-role mode; web adds the browser file-picker CSV path.
-- **CLI only (remaining):** PDF bank-statement import, statement reconciliation,
-  dedupe, merchant→category heuristics, exclusions, and `--admin` service-role mode.
+- **CLI only (remaining):** PDF bank-statement import, statement reconciliation, and `--admin`
+  service-role mode. (Dedupe, merchant→category heuristics, and card-payment exclusions are no
+  longer CLI-only: the spec-029 web CSV path has its own household-wide dedupe —
+  `web/lib/csv/duplicateMatch.ts`, deliberately broader than the CLI's `created_by`-scoped key —
+  runs the same `engine/categorize.ts` heuristics in the browser, and excludes card-payment rows.)
+- **Known payer divergence:** CLI `tx add` writes `paid_by` null for expenses (it never asks), while
+  the web form defaults `paid_by` to the entering person — so CLI-added expenses contribute nothing
+  to the spec-053 balance engine (null-payer rows are deliberately debt-neutral).
 - **On-device receipt & bank-statement scanning** — a native Capacitor plugin
   (`web/ios/App/App/Plugins/Scan/`, camera capture + Vision OCR + PDFKit + an optional
   FoundationModels refiner, iOS 26+ only, silently absent otherwise) invoked from the one web/React

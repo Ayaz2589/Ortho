@@ -34,6 +34,15 @@ export function parseLocalDate(s: string): Date {
   return new Date(s)
 }
 
+/** Parse a stored transaction `date` for calendar math: full ISO instants
+ *  (the noon-UTC convention) parse as-is; a bare `YYYY-MM-DD` (legacy/imported
+ *  rows) goes through `parseLocalDate` so it stays on its own calendar day
+ *  instead of shifting at UTC midnight — the spec-027 A2 guard the insights
+ *  engine carries, shared here so every engine buckets the same way. */
+export function parseTxDate(s: string): Date {
+  return s.includes('T') ? new Date(s) : parseLocalDate(s)
+}
+
 // Intl.DateTimeFormat construction is expensive and these run per row / day-header.
 // Cache one formatter per (locale, options) — the options are fixed literals, so
 // the key is stable and the formatted output byte-identical (spec 023 P2).
@@ -87,7 +96,7 @@ export interface TxDayGroup {
 export function groupByDay(txs: Transaction[]): TxDayGroup[] {
   const buckets = new Map<number, Transaction[]>()
   for (const t of txs) {
-    const key = startOfDay(new Date(t.date)).getTime()
+    const key = startOfDay(parseTxDate(t.date)).getTime()
     const arr = buckets.get(key) ?? []
     arr.push(t)
     buckets.set(key, arr)

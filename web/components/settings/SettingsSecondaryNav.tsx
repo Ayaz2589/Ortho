@@ -9,6 +9,10 @@ import { SUBSCRIPTION_ENABLED } from '@/lib/subscriptionGate'
 const ALL_SECTIONS = [
   { href: '/settings/household', label: 'Household' },
   { href: '/settings/cards', label: 'Cards' },
+  // review 2026-08-24, C1: the mobile hub linked here but the desktop nav did
+  // not — with /settings redirecting straight to household on desktop, the
+  // page (and the income form's only add-account path) was unreachable there.
+  { href: '/settings/deposit-accounts', label: 'Deposit Accounts' },
   { href: '/routines', label: 'Routines' },
   { href: '/settings/location', label: 'Location' },
   { href: '/settings/financial-profile', label: 'Financial profile' },

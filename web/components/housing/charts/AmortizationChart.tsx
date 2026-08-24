@@ -25,7 +25,9 @@ export function AmortizationChart({
         {/* Grouped (side-by-side) bars per month — matches iOS's
             `.position(by:)` chart semantics, not a stack. */}
         <Bar dataKey="principal" fill="var(--positive)" radius={[3, 3, 0, 0]} />
-        <Bar dataKey="interest" fill="rgba(26,24,21,0.18)" radius={[3, 3, 0, 0]} />
+        {/* Token-driven ink, not a light-mode rgba literal: the old color was
+            imperceptible on the dark theme's surface (review 2026-08-24). */}
+        <Bar dataKey="interest" fill="var(--text-3)" fillOpacity={0.45} radius={[3, 3, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )

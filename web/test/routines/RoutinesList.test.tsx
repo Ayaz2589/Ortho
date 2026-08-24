@@ -16,14 +16,24 @@ const h = vi.hoisted(() => ({
   locationConsent: null as LocationConsent | null,
   routineVisits: [] as RoutineVisit[],
   recognizedRoutineStates: [] as RecognizedRoutineState[],
-  loadRoutineVisits: vi.fn(() => Promise.resolve()),
+  loadRoutineVisits: vi.fn(() => Promise.resolve([] as RoutineVisit[])),
   recordRoutineVisit: vi.fn(() => Promise.resolve()),
+  getCurrentPosition: vi.fn(() =>
+    Promise.resolve({ coords: { latitude: 1, longitude: 2, accuracy: 5 } })
+  ),
   merchantGeocodes: [] as unknown[],
+}))
+
+vi.mock('@capacitor/geolocation', () => ({
+  Geolocation: {
+    getCurrentPosition: h.getCurrentPosition,
+  },
 }))
 
 vi.mock('@/lib/store', () => ({
   useApp: () => ({
     routines: h.routines,
+    currentPersonId: 'p-me',
     formatMoney: (c: number) => `${c < 0 ? '−' : ''}$${Math.abs(c / 100).toFixed(2)}`,
     confirmRoutine: h.confirmRoutine,
     dismissRoutine: h.dismissRoutine,
@@ -237,5 +247,47 @@ describe('RoutinesList — US4 location candidates', () => {
     const card = screen.getByText(/place you visit often/i).closest('div')!.parentElement!
     const buttons = within(card).getAllByRole('button')
     expect(buttons.map((b) => b.textContent)).toEqual(['Dismiss'])
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Review 2026-08-24 additions
+// ─────────────────────────────────────────────────────────────────────────────
+describe('RoutinesList — FR-016 personal-routine visibility', () => {
+  beforeEach(() => {
+    h.routines = []
+    h.locationConsent = null
+  })
+
+  it("another member's personal routine is not listed; own and household ones are", () => {
+    h.routines = [
+      routine({ routineKey: 'rc:yoga', merchantKey: 'yoga', merchantLabel: 'Yoga Studio', personId: 'p-other' }),
+      routine({ routineKey: 'rc:coffee', merchantKey: 'coffee', merchantLabel: 'Coffee Cart', personId: 'p-me' }),
+      routine({ routineKey: 'rc:netflix', merchantKey: 'netflix', merchantLabel: 'Netflix', personId: null }),
+    ]
+    render(<RoutinesList />)
+    expect(screen.queryByText('Yoga Studio')).toBeNull()
+    expect(screen.getByText('Coffee Cart')).toBeTruthy()
+    expect(screen.getByText('Netflix')).toBeTruthy()
+  })
+})
+
+describe('RoutinesList — visit-capture throttle (review 2026-08-24)', () => {
+  it('the persisted 30-minute throttle applies on the first mount of a session', async () => {
+    h.routines = []
+    h.locationConsent = { user_id: 'u1', level: 'foreground_capture', updated_at: '' } as LocationConsent
+    // The persisted ledger says a capture happened 2 minutes ago — but the
+    // component used to read the stale (empty) routineVisits closure and
+    // capture anyway.
+    h.loadRoutineVisits = vi.fn(() =>
+      Promise.resolve([
+        { id: 'v1', user_id: 'u1', latitude: 1, longitude: 2, accuracy_meters: 5, captured_at: new Date(Date.now() - 2 * 60_000).toISOString() } as RoutineVisit,
+      ])
+    )
+    h.getCurrentPosition.mockClear()
+    render(<RoutinesList />)
+    await new Promise((r) => setTimeout(r, 0))
+    await new Promise((r) => setTimeout(r, 0))
+    expect(h.getCurrentPosition).not.toHaveBeenCalled()
   })
 })

@@ -9,7 +9,9 @@ Ortho is a calm, money-first **household budgeting app** for two people sharing 
 transactions with per-person splits, tags, and notes; budgets with rollover bucket types
 (`fixed` / `flex` / `non_monthly`); savings and debt-payoff goals with pacing; member
 settle-up balances; insights (8 rules + a goal off-track rule); housing (mortgage / lease / multifamily rental);
-receipt/statement scan; connect-only Plaid bank linking; Stripe subscriptions behind a paywall
+receipt/statement scan (pipeline + UI built and tested but currently UNMOUNTED — no page offers the
+scan entry point since CSV import superseded it; see docs/web.md §10); connect-only Plaid bank
+linking; Stripe subscriptions behind a paywall
 (**currently disabled** — `web/lib/subscriptionGate.ts`);
 user-configurable deposit accounts (spec 033, replacing the old hardcoded `INCOME_SOURCES`) and
 PDF household data export/import under Settings → Data (`web/lib/dataFile/`);

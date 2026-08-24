@@ -96,7 +96,13 @@ export interface DashboardScope {
  */
 export function useDashboardScope(): DashboardScope {
   const { transactions, locale } = useApp()
-  const now = useMemo(() => new Date(), [])
+  // `now` is state, not a mount-time memo: a session left open across midnight
+  // (normal for an installed app) would otherwise keep yesterday's "This month"
+  // window and a stale "Day X of Y" until a full re-mount (review 2026-08-24).
+  // Refreshed below when the app returns to the foreground on a NEW local
+  // calendar day — same-day returns keep the reference stable so nothing
+  // downstream recomputes.
+  const [now, setNow] = useState(() => new Date())
   const [range, setRangeState] = useState<DashboardRange>('thisMonth')
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
 
@@ -104,6 +110,24 @@ export function useDashboardScope(): DashboardScope {
   useEffect(() => {
     const stored = readStoredRange()
     if (stored) setRangeState(stored)
+  }, [])
+
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'hidden') return
+      const d = new Date()
+      setNow((prev) =>
+        prev.getFullYear() === d.getFullYear() && prev.getMonth() === d.getMonth() && prev.getDate() === d.getDate()
+          ? prev
+          : d
+      )
+    }
+    document.addEventListener('visibilitychange', refresh)
+    window.addEventListener('focus', refresh)
+    return () => {
+      document.removeEventListener('visibilitychange', refresh)
+      window.removeEventListener('focus', refresh)
+    }
   }, [])
 
   const ranges = useMemo(() => availableRanges(transactions, now), [transactions, now])

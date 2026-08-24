@@ -63,45 +63,58 @@ describe('merchantsSimilar', () => {
 
 describe('findDuplicateId', () => {
   const existing: DuplicateCandidate[] = [
-    { id: 'tx-1', date: '2026-06-01', amountCents: 1632, merchant: 'Amazon' },
-    { id: 'tx-2', date: '2026-06-02', amountCents: 500, merchant: 'Starbucks' },
+    { id: 'tx-1', date: '2026-06-01', amountCents: 1632, merchant: 'Amazon', kind: 'expense' },
+    { id: 'tx-2', date: '2026-06-02', amountCents: 500, merchant: 'Starbucks', kind: 'expense' },
   ]
 
   it('flags a same-day, same-amount, similar-merchant row (manual entry case)', () => {
     // Hand-typed "Amazon" vs the CSV descriptor "Amazon Prime".
-    const row = { dateISO: '2026-06-01T12:00:00.000Z', amountCents: 1632, merchant: 'Amazon Prime' }
+    const row = { dateISO: '2026-06-01T12:00:00.000Z', amountCents: 1632, merchant: 'Amazon Prime', kind: 'expense' }
     expect(findDuplicateId(row, existing)).toBe('tx-1')
   })
 
   it('does not flag when the amount differs', () => {
-    const row = { dateISO: '2026-06-01T12:00:00.000Z', amountCents: 1700, merchant: 'Amazon Prime' }
+    const row = { dateISO: '2026-06-01T12:00:00.000Z', amountCents: 1700, merchant: 'Amazon Prime', kind: 'expense' }
     expect(findDuplicateId(row, existing)).toBeNull()
   })
 
   it('flags within the date window (transaction vs post date drift)', () => {
     // 2 days off — inside the default ±3 window.
-    const row = { dateISO: '2026-06-03T12:00:00.000Z', amountCents: 1632, merchant: 'Amazon Prime' }
+    const row = { dateISO: '2026-06-03T12:00:00.000Z', amountCents: 1632, merchant: 'Amazon Prime', kind: 'expense' }
     expect(findDuplicateId(row, existing)).toBe('tx-1')
   })
 
   it('does not flag when the day is outside the window', () => {
     // 9 days off — beyond the window (guards against monthly-subscription matches).
-    const row = { dateISO: '2026-06-10T12:00:00.000Z', amountCents: 1632, merchant: 'Amazon Prime' }
+    const row = { dateISO: '2026-06-10T12:00:00.000Z', amountCents: 1632, merchant: 'Amazon Prime', kind: 'expense' }
     expect(findDuplicateId(row, existing)).toBeNull()
   })
 
   it('honors a custom window of 0 (exact day only)', () => {
-    const row = { dateISO: '2026-06-03T12:00:00.000Z', amountCents: 1632, merchant: 'Amazon Prime' }
+    const row = { dateISO: '2026-06-03T12:00:00.000Z', amountCents: 1632, merchant: 'Amazon Prime', kind: 'expense' }
     expect(findDuplicateId(row, existing, 0)).toBeNull()
   })
 
   it('does not flag a different merchant at the same day + amount', () => {
-    const row = { dateISO: '2026-06-01T12:00:00.000Z', amountCents: 1632, merchant: 'Best Buy' }
+    const row = { dateISO: '2026-06-01T12:00:00.000Z', amountCents: 1632, merchant: 'Best Buy', kind: 'expense' }
     expect(findDuplicateId(row, existing)).toBeNull()
   })
 
   it('returns null against an empty ledger', () => {
-    const row = { dateISO: '2026-06-01T12:00:00.000Z', amountCents: 1632, merchant: 'Amazon' }
+    const row = { dateISO: '2026-06-01T12:00:00.000Z', amountCents: 1632, merchant: 'Amazon', kind: 'expense' }
     expect(findDuplicateId(row, [])).toBeNull()
+  })
+
+  // Review 2026-08-24: kinds never match across each other — a credit-card
+  // refund parses as income with the same absolute amount at the same merchant
+  // within days of the purchase, and used to be excluded as its "duplicate".
+  it('a refund (income) is not a duplicate of its own purchase (expense)', () => {
+    const row = { dateISO: '2026-06-01T12:00:00.000Z', amountCents: 1632, merchant: 'Amazon Prime', kind: 'income' }
+    expect(findDuplicateId(row, existing)).toBeNull()
+  })
+
+  it('same-kind rows still match', () => {
+    const row = { dateISO: '2026-06-01T12:00:00.000Z', amountCents: 1632, merchant: 'Amazon Prime', kind: 'expense' }
+    expect(findDuplicateId(row, existing)).toBe('tx-1')
   })
 })

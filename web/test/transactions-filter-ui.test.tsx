@@ -74,6 +74,8 @@ beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date(2026, 5, 15)) // June 15 2026, local
   TRANSACTIONS = ALL
+  // Criteria persist per-tab now (review 2026-08-24) — isolate each test.
+  window.sessionStorage.clear()
 })
 
 afterEach(() => {

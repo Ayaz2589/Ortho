@@ -21,6 +21,7 @@ import { LocationCandidateCard } from './LocationCandidateCard'
 export function RoutinesList() {
   const {
     routines,
+    currentPersonId,
     locationConsent,
     routineVisits,
     loadRoutineVisits,
@@ -34,9 +35,12 @@ export function RoutinesList() {
     if (locationConsent?.level !== 'foreground_capture') return
     let cancelled = false
     ;(async () => {
-      await loadRoutineVisits()
+      // Use the RETURNED rows — `routineVisits` here is the closure over the
+      // mount render's (empty) state, which defeated the persisted 30-minute
+      // throttle on every session's first mount (review 2026-08-24).
+      const freshVisits = await loadRoutineVisits()
       if (cancelled) return
-      const lastCaptureAt = routineVisits.reduce<Date | null>((latest, v) => {
+      const lastCaptureAt = freshVisits.reduce<Date | null>((latest, v) => {
         const at = new Date(v.captured_at)
         return !latest || at > latest ? at : latest
       }, null)
@@ -58,6 +62,11 @@ export function RoutinesList() {
 
   const visible = routines
     .filter((r) => r.status !== 'dismissed')
+    // FR-016: a routine derived from ONE member's personal-scope transactions
+    // is private to that member — a UI-layer filter by design (RLS is
+    // household-wide; data-model.md). Never implemented until now
+    // (review 2026-08-24). Household routines (personId null) show for all.
+    .filter((r) => r.personId == null || r.personId === currentPersonId)
     .sort((a, b) => {
       if (a.kind !== b.kind) return a.kind === 'recurring_charge' ? -1 : 1
       if ((a.status === 'lapsed') !== (b.status === 'lapsed')) return a.status === 'lapsed' ? 1 : -1

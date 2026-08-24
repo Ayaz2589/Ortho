@@ -109,8 +109,17 @@ function GoalPanelRow({ goal, progress, pacing, series, now }: GoalRowData & { n
     paceColor = 'var(--positive)'
   }
 
+  // Average over first contributing month → NOW, not just the contributing
+  // span — the series is bounded to the last contribution, so a dormant goal
+  // used to project an imminent arrival from stale months (review 2026-08-24).
+  const spanMonths = (() => {
+    if (series.length === 0) return 0
+    const [fy, fm] = series[0].monthKey.split('-').map(Number)
+    const span = (now.getFullYear() - fy) * 12 + (now.getMonth() + 1 - fm) + 1
+    return Math.max(span, series.length)
+  })()
   const monthlyRateCents =
-    series.length > 0 ? Math.round(series.reduce((sum, point) => sum + point.cents, 0) / series.length) : 0
+    spanMonths > 0 ? Math.round(series.reduce((sum, point) => sum + point.cents, 0) / spanMonths) : 0
   const monthsRemaining =
     !progress.reached && monthlyRateCents > 0 ? Math.ceil(progress.remaining_cents / monthlyRateCents) : null
   const projectedLabel = monthsRemaining !== null ? monthYearLong(addMonths(now, monthsRemaining), locale) : null

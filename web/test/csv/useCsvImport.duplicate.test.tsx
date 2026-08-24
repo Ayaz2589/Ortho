@@ -16,6 +16,7 @@ const manualTx = {
   date: '2026-06-01',
   amount_cents: 1632,
   merchant: 'Amazon',
+  kind: 'expense',
 }
 
 vi.mock('@/lib/store', () => ({

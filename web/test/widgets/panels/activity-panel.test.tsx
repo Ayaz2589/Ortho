@@ -122,4 +122,16 @@ describe('ActivityPanel', () => {
     renderPanel()
     expect(screen.getByText('No transactions yet.')).toBeTruthy()
   })
+
+  // Review 2026-08-24 (minor, FR-018): the panel used to render the ENTIRE
+  // ledger — 'a longer glance … not a second transactions screen'. The feed is
+  // bounded; the 'See all transactions' route-out carries the rest.
+  it('bounds the feed instead of reproducing the whole ledger', () => {
+    h.txns = Array.from({ length: 120 }, (_, i) =>
+      tx(`2026-0${(i % 5) + 1}-1${i % 3}T12:00:00.000Z`, 1000 + i)
+    )
+    renderPanel()
+    const rows = screen.getAllByRole('link').filter((a) => a.getAttribute('href')?.startsWith('/transactions/edit'))
+    expect(rows.length).toBeLessThanOrEqual(45)
+  })
 })

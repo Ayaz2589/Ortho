@@ -18,7 +18,7 @@ import { writeSkeletonCount } from './skeletonCounts'
 import { autoLoginEnabled, autoLoginCreds } from './auth/autoLogin'
 import { signInHref } from './nav'
 import { hapticConfirm, hapticDestructive } from './haptics'
-import { formatMoney as fmtMoney, type CurrencyKey } from './finance/money'
+import { CURRENCY_CONFIG, formatMoney as fmtMoney, type CurrencyKey } from './finance/money'
 import { FALLBACK_RATE_FROM_USD } from './finance/currency'
 import { applyRoutineStates, detectRoutines, type RoutineWithState } from './finance/routines'
 import { consentTransition, shouldDeleteVisitsOnTransition } from './location/consent'
@@ -149,7 +149,9 @@ interface AppStateValue {
   /** Lazily-loaded (spec 044 US4) — only fetched on demand, only meaningful once opted into
    *  'foreground_capture'. Empty until `loadRoutineVisits` is called. */
   routineVisits: RoutineVisit[]
-  loadRoutineVisits: () => Promise<void>
+  /** Resolves the freshly loaded rows so callers can act on them immediately
+   *  (a state read right after the await would be a stale closure). */
+  loadRoutineVisits: () => Promise<RoutineVisit[]>
   recordRoutineVisit: (latitude: number, longitude: number, accuracyMeters: number | null) => Promise<void>
   currency: CurrencyKey
   rates: Partial<Record<CurrencyKey, number>>
@@ -195,7 +197,8 @@ interface AppStateValue {
   spentBy: (personId: string, start: Date, end: Date) => number
 
   // mutations
-  addTransaction: (tx: Transaction) => void
+  /** Resolves true when the row persisted; bulk callers await it for honest counts. */
+  addTransaction: (tx: Transaction) => Promise<boolean>
   updateTransaction: (tx: Transaction) => void
   deleteTransaction: (id: string) => void
   /** Resolve a tag name to a household tag id, reusing an existing tag on a
@@ -398,8 +401,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   // ---- preferences (localStorage) ----
   useEffect(() => {
-    const c = localStorage.getItem('currency') as CurrencyKey | null
-    if (c) setCurrencyState(c)
+    // Validate on read like every sibling preference (asLanguage, readTextSize,
+    // readAppearance) — a corrupt stored key would crash formatMoney app-wide.
+    const c = localStorage.getItem('currency')
+    if (c && c in CURRENCY_CONFIG) setCurrencyState(c as CurrencyKey)
     const stored = asLanguage(localStorage.getItem('language'))
     setLanguage(stored)
     setLocale(localeForLanguage(stored))
@@ -722,8 +727,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     try {
       const legacy = JSON.parse(localStorage.getItem('localUsers') ?? '[]')
       if (Array.isArray(legacy) && legacy.length) {
+        // Clear the device-only backup ONLY when every insert succeeded — a
+        // failed fold used to wipe it anyway, permanently losing those people
+        // (review 2026-08-24).
+        let allOk = true
         for (const lu of legacy) {
-          await supabase.from('household_people').insert({
+          const { error: foldErr } = await supabase.from('household_people').insert({
             id: uuid(),
             household_id: householdId,
             name: lu.name,
@@ -732,8 +741,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             linked_user_id: null,
             sort_order: order++,
           })
+          if (foldErr) allOk = false
         }
-        localStorage.removeItem('localUsers')
+        if (allOk) localStorage.removeItem('localUsers')
       }
     } catch {}
   }
@@ -1146,10 +1156,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return tx.owner_ids.map((pid) => ({ person_id: pid, amount_cents: shares[pid] ?? 0 }))
   }
 
-  const addTransaction = (tx: Transaction) => {
+  // Returns whether the row actually persisted, so bulk callers (CSV import)
+  // can await and report honest counts (review 2026-08-24). Interactive
+  // callers may ignore the promise — the optimistic behavior is unchanged.
+  const addTransaction = (tx: Transaction): Promise<boolean> => {
     setTransactions((prev) => [tx, ...prev])
     hapticConfirm() // spec 021, FR-012 — optimistic, so it fires immediately on tap
-    ;(async () => {
+    return (async () => {
       const { error: e } = await supabase.rpc('upsert_transaction', {
         p_tx: txRecord(tx),
         p_shares: shareRows(tx),
@@ -1157,12 +1170,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (e) {
         setTransactions((prev) => prev.filter((t) => t.id !== tx.id))
         setError(e.message)
-        return
+        return false
       }
       // Tags are independent metadata (no sum invariant): write after shares,
       // and a failure surfaces without rolling back the saved transaction (spec 027).
       const tagRes = await writeTags(tx)
       if (!tagRes.ok) setError(tagRes.error ?? 'Could not save this transaction’s tags.')
+      return true
     })()
   }
 
@@ -1194,10 +1208,14 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     })
     hapticDestructive() // spec 021, FR-012
     ;(async () => {
-      const { error: e } = await supabase.from('transactions').delete().eq('id', id)
-      if (e && removed) {
+      // `.select('id')` returns the rows actually deleted. PostgREST reports
+      // SUCCESS with zero rows for an RLS-filtered delete (a non-owner member
+      // deleting a peer's row), which used to stand as deleted in the UI while
+      // silently surviving server-side (review 2026-08-24, A5).
+      const { data, error: e } = await supabase.from('transactions').delete().eq('id', id).select('id')
+      if ((e || !data || data.length === 0) && removed) {
         setTransactions((prev) => [removed!, ...prev])
-        setError(e.message)
+        setError(e ? e.message : t('Only the person who added a transaction (or the household owner) can delete it.'))
       }
     })()
   }
@@ -1401,9 +1419,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       return prevBudget ? prev.map((x) => (sameBudget(x) ? b : x)) : [...prev, b]
     })
     ;(async () => {
+      // No `id` in the payload: PostgREST's merge-duplicates upsert would
+      // DO UPDATE SET every supplied column — a second device saving the same
+      // (household, category, person) budget with a fresh uuid would churn the
+      // row's PK (review 2026-08-24). The conflict target keeps the stored id.
       const { error: e } = await supabase.from('budgets').upsert(
         {
-          id: b.id,
           household_id: b.household_id,
           category: b.category,
           monthly_limit_cents: b.monthly_limit_cents,
@@ -1616,16 +1637,25 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       kind: c.kind,
       created_at: now,
     }))
+    const prevRows = userFixedCosts
     setUserFixedCosts(rows)
-    // Replace-all: clear then re-insert the batch.
+    // Replace-all: clear then re-insert the batch. Both failure points roll the
+    // optimistic state back, and a failed insert best-effort restores the prior
+    // rows server-side — the UI must never keep showing costs the server lost
+    // (review 2026-08-24).
     const { error: delErr } = await supabase.from('user_fixed_costs').delete().eq('user_id', currentUserId)
     if (delErr) {
+      setUserFixedCosts(prevRows)
       setError(delErr.message)
       return
     }
     if (rows.length === 0) return
     const { error: insErr } = await supabase.from('user_fixed_costs').insert(rows)
-    if (insErr) setError(insErr.message)
+    if (insErr) {
+      if (prevRows.length > 0) await supabase.from('user_fixed_costs').insert(prevRows)
+      setUserFixedCosts(prevRows)
+      setError(insErr.message)
+    }
   }
 
   const saveDimensionWeights = async (weights: Array<Pick<DimensionWeight, 'dimension' | 'weight'>>) => {
@@ -1638,16 +1668,23 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       weight: w.weight,
       created_at: now,
     }))
+    const prevRows = userDimensionWeights
     setUserDimensionWeights(rows)
-    // Replace-all keeps it simple (there are only ~5 rows) and avoids upsert PK churn.
+    // Replace-all keeps it simple (there are only ~5 rows) and avoids upsert PK
+    // churn. Same rollback discipline as saveFixedCosts (review 2026-08-24).
     const { error: delErr } = await supabase.from('user_dimension_weights').delete().eq('user_id', currentUserId)
     if (delErr) {
+      setUserDimensionWeights(prevRows)
       setError(delErr.message)
       return
     }
     if (rows.length === 0) return
     const { error: insErr } = await supabase.from('user_dimension_weights').insert(rows)
-    if (insErr) setError(insErr.message)
+    if (insErr) {
+      if (prevRows.length > 0) await supabase.from('user_dimension_weights').insert(prevRows)
+      setUserDimensionWeights(prevRows)
+      setError(insErr.message)
+    }
   }
 
   const writeHealthSnapshot = async (score: number, band: HealthBand) => {
@@ -1705,12 +1742,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       updated_at: now,
       ...patch,
     }
+    const previous = recognizedRoutineStates
     setRecognizedRoutineStates((prev) => [...prev.filter((s) => s.routine_key !== routineKey), row])
     const { id: _id, ...payload } = row
     const { error: e } = await supabase
       .from('recognized_routine_states')
       .upsert(payload, { onConflict: 'household_id,routine_key' })
-    if (e) setError(e.message)
+    if (e) {
+      // Mutation contract: optimistic → error → restore + banner. A phantom
+      // confirmed/dismissed/renamed state must not outlive the failed write
+      // (review 2026-08-24).
+      setRecognizedRoutineStates(previous)
+      setError(e.message)
+    }
   }
 
   const confirmRoutine = async (routineKey: string, personId?: string | null) =>
@@ -1738,10 +1782,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       created_at: locationConsent?.created_at ?? now,
       updated_at: now,
     }
+    const previousConsent = locationConsent
     setLocationConsentState(row)
     const { id: _id, ...payload } = row
     const { error: e } = await supabase.from('user_location_consent').upsert(payload, { onConflict: 'user_id' })
     if (e) {
+      // Same contract as routine states: no phantom consent level on failure.
+      setLocationConsentState(previousConsent)
       setError(e.message)
       return
     }
@@ -1756,14 +1803,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // Lazy-loaded (not part of loadAll's boot Promise.all — data-model.md): only fetched when a
   // surface actually needs visit-cluster suggestions, and only meaningful once opted into
   // 'foreground_capture'.
-  const loadRoutineVisits = async () => {
-    if (!currentUserId) return
+  // Returns the loaded rows as well as setting state: the caller's throttle
+  // check needs the FRESH rows, not a stale closure over the previous render's
+  // state (review 2026-08-24).
+  const loadRoutineVisits = async (): Promise<UserRoutineVisitRow[]> => {
+    if (!currentUserId) return []
     const { data, error: e } = await supabase.from('user_routine_visits').select('*').eq('user_id', currentUserId)
     if (e) {
       setError(e.message)
-      return
+      return []
     }
-    setRoutineVisits((data ?? []) as UserRoutineVisitRow[])
+    const rows = (data ?? []) as UserRoutineVisitRow[]
+    setRoutineVisits(rows)
+    return rows
   }
 
   const recordRoutineVisit = async (latitude: number, longitude: number, accuracyMeters: number | null) => {

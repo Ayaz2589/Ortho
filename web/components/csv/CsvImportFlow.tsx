@@ -11,6 +11,7 @@
 // undetected → upload view with an "unrecognized format" note
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { FileSpreadsheet, Upload } from 'lucide-react'
+import { useApp } from '@/lib/store'
 import { useCsvImport } from '@/lib/csv/useCsvImport'
 import { clearCsvSession } from '@/lib/csv/csvImportPersistence'
 import { Drawer, DrawerHeader } from '@/components/web/Drawer'
@@ -37,6 +38,7 @@ interface Props {
 }
 
 export function CsvImportFlow({ onClose, initialFile }: Props) {
+  const { t } = useApp()
   const { phase, drafts, bankLabel, summary, loadFile, toggleChecked, updateDraft, skipDraft, startImport, reset } =
     useCsvImport()
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -57,19 +59,19 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
   if (phase === 'idle') {
     if (initialFile) {
       return (
-        <CsvDrawer label="Importing CSV" onClose={handleClose}>
-          <DrawerHeader title="Import CSV" onClose={handleClose} />
+        <CsvDrawer label={t('Importing CSV')} onClose={handleClose}>
+          <DrawerHeader title={t('Import CSV')} onClose={handleClose} />
           <TrayBody>
             <div role="status" aria-live="polite" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-2)' }}>
-              Reading file…
+              {t('Reading file…')}
             </div>
           </TrayBody>
         </CsvDrawer>
       )
     }
     return (
-      <CsvDrawer label="Import CSV" onClose={handleClose}>
-        <DrawerHeader title="Import CSV" onClose={handleClose} />
+      <CsvDrawer label={t('Import CSV')} onClose={handleClose}>
+        <DrawerHeader title={t('Import CSV')} onClose={handleClose} />
         <TrayBody>
           <CsvUploadView onFile={(f) => void loadFile(f)} />
         </TrayBody>
@@ -79,12 +81,12 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
 
   if (phase === 'undetected') {
     return (
-      <CsvDrawer label="Unsupported CSV format" onClose={handleClose}>
-        <DrawerHeader title="Import CSV" onClose={handleClose} />
+      <CsvDrawer label={t('Unsupported CSV format')} onClose={handleClose}>
+        <DrawerHeader title={t('Import CSV')} onClose={handleClose} />
         <TrayBody>
           <CsvUploadView
             onFile={(f) => void loadFile(f)}
-            error="We don’t recognise this bank’s CSV format yet. Try one of the supported banks below."
+            error={t('We don’t recognise this bank’s CSV format yet. Try one of the supported banks below.')}
           />
         </TrayBody>
       </CsvDrawer>
@@ -93,11 +95,11 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
 
   if (phase === 'importing') {
     return (
-      <CsvDrawer label="Importing CSV" onClose={handleClose}>
-        <DrawerHeader title="Import CSV" onClose={handleClose} />
+      <CsvDrawer label={t('Importing CSV')} onClose={handleClose}>
+        <DrawerHeader title={t('Import CSV')} onClose={handleClose} />
         <TrayBody>
           <div role="status" aria-live="polite" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-2)' }}>
-            Adding transactions…
+            {t('Adding transactions…')}
           </div>
         </TrayBody>
       </CsvDrawer>
@@ -106,11 +108,12 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
 
   if (phase === 'summary' && summary) {
     return (
-      <CsvDrawer label="Import complete" onClose={handleClose}>
-        <DrawerHeader title="Import complete" onClose={handleClose} />
+      <CsvDrawer label={t('Import complete')} onClose={handleClose}>
+        <DrawerHeader title={t('Import complete')} onClose={handleClose} />
         <TrayBody>
           <CsvImportSummary
             addedCount={summary.addedCount}
+            failedCount={summary.failedCount}
             totalSpendCents={summary.totalSpendCents}
             skippedCount={summary.skippedCount}
             excludedCount={summary.excludedCount}
@@ -129,7 +132,7 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
     // back button, rather than covering the screen. Esc steps back to the list.
     return (
       <CsvDrawer
-        label={editingDraft ? 'Edit transaction' : 'CSV import preview'}
+        label={editingDraft ? t('Edit transaction') : t('CSV import preview')}
         onClose={handleClose}
         onEscape={editingDraft ? () => setEditingId(null) : handleClose}
       >
@@ -174,6 +177,7 @@ export function CsvImportFlow({ onClose, initialFile }: Props) {
 /** The in-tray uploader: a click/drag dropzone plus the list of supported banks.
  *  Picking or dropping a .csv hands the File to `onFile` (→ parse → list view). */
 function CsvUploadView({ onFile, error }: { onFile: (file: File) => void; error?: string }) {
+  const { t } = useApp()
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
   const pick = () => inputRef.current?.click()
@@ -204,7 +208,7 @@ function CsvUploadView({ onFile, error }: { onFile: (file: File) => void; error?
       <div
         role="button"
         tabIndex={0}
-        aria-label="Upload a CSV file"
+        aria-label={t('Upload a CSV file')}
         onClick={pick}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -251,8 +255,8 @@ function CsvUploadView({ onFile, error }: { onFile: (file: File) => void; error?
         >
           <Upload size={20} />
         </span>
-        <div style={{ fontSize: 15, color: 'var(--text)' }}>Upload a CSV</div>
-        <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Drag a file here, or click to browse</div>
+        <div style={{ fontSize: 15, color: 'var(--text)' }}>{t('Upload a CSV')}</div>
+        <div style={{ fontSize: 13, color: 'var(--text-3)' }}>{t('Drag a file here, or click to browse')}</div>
       </div>
 
       <input
@@ -282,7 +286,7 @@ function CsvUploadView({ onFile, error }: { onFile: (file: File) => void; error?
           }}
         >
           <FileSpreadsheet size={14} />
-          Supported CSVs
+          {t('Supported CSVs')}
         </div>
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {SUPPORTED_BANKS.map((b) => (

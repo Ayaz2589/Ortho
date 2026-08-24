@@ -5,7 +5,7 @@
 // window (matching NetSummaryHero / SavingsTrendsBody bucketing).
 
 import type { Transaction } from '@/lib/types'
-import { effectiveShares } from '@/lib/format'
+import { effectiveShares, parseTxDate } from '@/lib/format'
 import { isTransfer, transferParties } from '@/lib/transaction'
 
 export interface PersonSummary {
@@ -39,7 +39,7 @@ export function personSummary(
   let transfersSent = 0
 
   for (const tx of transactions) {
-    const ms = new Date(tx.date).getTime()
+    const ms = parseTxDate(tx.date).getTime()
     if (ms < startMs || ms >= endMs) continue
 
     if (tx.kind === 'income') {

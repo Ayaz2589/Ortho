@@ -7,6 +7,7 @@
 import { useState } from 'react'
 import { Download } from 'lucide-react'
 import { useApp } from '@/lib/store'
+import { loadCatalog, makeT } from '@/lib/i18n'
 import { PrimaryButton, SectionLabel } from '@/components/ui'
 import { SectionCard } from '@/components/settings/rows'
 import { buildDataFile } from '@/lib/dataFile/export'
@@ -46,10 +47,15 @@ export function DataExportPanel() {
   const onDownload = async () => {
     setBusy(true)
     try {
+      // The PDF renders in the SELECTED export language — build its translate
+      // from that catalog rather than reusing the app-UI t, which is bound to
+      // the interface language (review 2026-08-24, C2). English resolves to
+      // the identity, exactly like the UI.
+      const pdfT = makeT(await loadCatalog(language))
       const { bytes, filename } = await buildDataFile(
         app,
         { language, currency, now: new Date().toISOString() },
-        t,
+        pdfT,
         app.rate
       )
       downloadBlob(bytes, filename)

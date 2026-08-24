@@ -203,6 +203,28 @@ describe('SpendingPacePanel', () => {
     expect(screen.getByText('$50.00')).toBeTruthy()
   })
 
+  // Review 2026-08-24, B3: budgetCents is by construction ONE month's
+  // effective limit; the verdict used to prorate it across a 3/6/12-month
+  // range, telling an exactly-on-budget household it was months of spend
+  // above plan. Multi-month scopes must fall back to the honest last-period
+  // comparison.
+  it("a multi-month range never prorates one month's budget", () => {
+    h.scopeState = {
+      interval: { start: new Date(2026, 5, 1), end: new Date(2026, 8, 1) }, // Jun–Aug
+      now: new Date(2026, 7, 23, 12),
+      periodLabel: 'Last 3 months',
+      referenceDate: new Date(2026, 7, 23, 12),
+    }
+    h.budgets = [budget('rent', 500000)]
+    h.txns = [
+      expense('rent', '2026-03-15T12:00:00.000Z', 31000), // prior 3-month window
+      expense('rent', '2026-07-05T12:00:00.000Z', 46000),
+    ]
+    renderPanel()
+    expect(screen.queryByText(/against a .* budget/)).toBeNull()
+    expect(screen.getByText(/than last period/)).toBeTruthy()
+  })
+
   it('shows a budget-aware verdict when a scoped budget exists, instead of the last-period comparison', () => {
     h.budgets = [budget('rent', 500000)] // $5000/mo fixed budget
     h.txns = [
@@ -213,6 +235,34 @@ describe('SpendingPacePanel', () => {
     expect(screen.getByText(/against a \$5000\.00 budget/)).toBeTruthy()
     expect(screen.queryByText(/· last period/)).toBeNull()
     expect(screen.queryByText('Last period')).toBeNull()
+  })
+
+  // Review 2026-08-24 (minor): the axis printed 'today' at the horizontal
+  // center regardless of where today falls — and even for fully-past months,
+  // where there is no 'today' inside the period at all.
+  it("the 'today' axis label sits at today's real position, and vanishes for a past period", () => {
+    h.txns = [expense('groceries', '2026-08-05T12:00:00.000Z', 20000)]
+    const current = renderPanel()
+    const today = screen.getByText('today')
+    // Day 23 of 31 → (23 − 0.5) / 31 ≈ 72.58% across, not the 50% center.
+    expect(today.getAttribute('style')).toContain('72.58')
+    current.unmount()
+
+    h.scopeState = {
+      ...h.scopeState,
+      now: new Date(2026, 9, 15, 12), // mid-October — August is fully past
+    }
+    renderPanel()
+    expect(screen.queryByText('today')).toBeNull()
+  })
+
+  it('renders no theme-fixed rgba literals', () => {
+    h.txns = [
+      expense('rent', '2026-07-15T12:00:00.000Z', 31000),
+      expense('rent', '2026-08-05T12:00:00.000Z', 46000),
+    ]
+    const { container } = renderPanel()
+    expect(container.innerHTML).not.toMatch(/rgba\(242,\s*239,\s*232/)
   })
 
   it('states the subject and period in the caption', () => {

@@ -4,7 +4,9 @@ import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { HomeEquityPanel } from '@/components/widgets/panels/HomeEquityPanel'
 import { WidgetPanel } from '@/components/widgets/WidgetPanel'
 import { maturityDate, yearsRemaining, upcomingAmortization } from '@/lib/finance/mortgage'
+import { housingSummary } from '@/lib/finance/housing-summary'
 import { monthYearLong } from '@/lib/format'
+import type { Property } from '@/lib/types'
 
 // Spec 057 US2 (home equity — the first reference panel): recovers
 // upcomingAmortization / maturityDate / yearsRemaining, all exported today
@@ -119,5 +121,48 @@ describe('HomeEquityPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
     expect(screen.getByText('Home base')).toBeTruthy()
     expect(screen.getByText('456 Elm St')).toBeTruthy()
+  })
+
+  // Review 2026-08-24, B4: the panel's figure used the purchase-price basis
+  // (includes the down payment, uncapped) while labeling it "principal paid
+  // down" — the exact label the CARD puts on housingSummary().equity
+  // (loan basis, paid-off-capped). The panel must show the card's own figure.
+  it("the single-mortgage headline equals the card's loan-basis figure", () => {
+    h.properties = [{ id: 'p1', nickname: 'Home base', address: '124 Oak Lane', mortgage: MORTGAGE_A }]
+    renderPanel()
+    const expected = housingSummary(h.properties as Property[]).equity
+    expect(screen.getByText(`$${(expected / 100).toFixed(2)}`)).toBeTruthy()
+  })
+
+  it('multi-mortgage rows are on the same basis as their own total', () => {
+    const pA = { id: 'p1', nickname: 'Home base', address: '124 Oak Lane', mortgage: MORTGAGE_A }
+    const pB = { id: 'p2', nickname: 'Rental', address: '456 Elm St', mortgage: MORTGAGE_B }
+    h.properties = [pA, pB]
+    renderPanel()
+    const total = housingSummary(h.properties as Property[]).equity
+    const rowA = housingSummary([pA] as Property[]).equity
+    const rowB = housingSummary([pB] as Property[]).equity
+    expect(rowA + rowB).toBe(total)
+    expect(screen.getByText(`$${(total / 100).toFixed(2)}`)).toBeTruthy()
+    expect(screen.getByText(`$${(rowA / 100).toFixed(2)}`)).toBeTruthy()
+    expect(screen.getByText(`$${(rowB / 100).toFixed(2)}`)).toBeTruthy()
+  })
+
+  // Review 2026-08-24 (minor): upcomingAmortization deliberately has no early
+  // break — once the balance hits 0 every later entry is a phantom full
+  // payment. The panel must stop the rendered schedule at payoff.
+  it('the schedule stops at payoff instead of marching on with phantom payments', () => {
+    // Matures 2026-09 (30y from 1996-09): ~3 payments left as of June 2026.
+    h.properties = [
+      {
+        id: 'p1',
+        nickname: 'Nearly done',
+        address: '9 Done St',
+        mortgage: { ...MORTGAGE_A, closing_date: '1996-09-01', loan_term_years: 30 },
+      },
+    ]
+    renderPanel()
+    const principalRows = screen.getAllByText(/ principal$/)
+    expect(principalRows.length).toBeLessThanOrEqual(4)
   })
 })

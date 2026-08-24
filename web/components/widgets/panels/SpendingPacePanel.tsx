@@ -53,7 +53,7 @@ export function SpendingPacePanel() {
   const { push } = usePanelDetail()
 
   const subject = scope.kind === 'person' ? resolveUser(scope.personId).name : t('Household')
-  usePanelCaption({ subject, period: periodLabel })
+  usePanelCaption({ subject, period: t(periodLabel) })
 
   const summary = useMemo(() => computeSpendingPace(transactions, interval, now), [transactions, interval, now])
 
@@ -63,11 +63,23 @@ export function SpendingPacePanel() {
   )
   const budgetCents = useMemo(() => {
     if (scopedBudgets.length === 0) return null
+    // budgetStatusForMonth is by construction ONE month's effective limit —
+    // prorating it across a 3/6/12-month range told an exactly-on-budget
+    // household it was months of spend above plan (review 2026-08-24, B3).
+    // The budget verdict applies only when the scope IS a single calendar
+    // month; reading months at noon of each bound is frame-proof for both the
+    // local (range) and UTC (selected month) interval frames.
+    const HALF_DAY_MS = 12 * 60 * 60 * 1000
+    const startAnchor = new Date(interval.start.getTime() + HALF_DAY_MS)
+    const endAnchor = new Date(interval.end.getTime() - HALF_DAY_MS)
+    const singleMonth =
+      startAnchor.getFullYear() === endAnchor.getFullYear() && startAnchor.getMonth() === endAnchor.getMonth()
+    if (!singleMonth) return null
     return scopedBudgets.reduce(
       (sum, b) => sum + budgetStatusForMonth(b, transactions, referenceDate).effectiveLimitCents,
       0
     )
-  }, [scopedBudgets, transactions, referenceDate])
+  }, [scopedBudgets, transactions, referenceDate, interval])
 
   if (summary.mtdCents <= 0) {
     return <PanelEmpty>{t('No expenses in this period yet.')}</PanelEmpty>
@@ -84,7 +96,7 @@ export function SpendingPacePanel() {
         categoryRows={summary.categoryRows}
         transactions={transactions}
         interval={interval}
-        periodLabel={periodLabel}
+        periodLabel={t(periodLabel)}
       />
     )
   }
@@ -92,7 +104,7 @@ export function SpendingPacePanel() {
   return (
     <div className="flex flex-col gap-[22px] pb-[22px] pl-[22px] pr-[22px] pt-[18px]">
       <VerdictZone summary={summary} budgetCents={budgetCents} interval={interval} />
-      <PaceRaceZone summary={summary} budgetCents={budgetCents} interval={interval} />
+      <PaceRaceZone summary={summary} budgetCents={budgetCents} interval={interval} now={now} />
       <div className="flex flex-col gap-1">
         <div className="mb-1 flex items-baseline justify-between">
           <PanelSectionLabel>{t("Where it's going")}</PanelSectionLabel>
@@ -202,7 +214,7 @@ function VerdictZone({
             {formatMoney(summary.mtdCents)}
           </span>
         </div>
-        <div className="relative h-2 rounded-full" style={{ background: 'rgba(255,255,255,.06)' }}>
+        <div className="relative h-2 rounded-full" style={{ background: 'var(--chip-bg)' }}>
           <div
             className="absolute inset-y-0 left-0 rounded-full"
             style={{ width: `${fillPct}%`, background: 'var(--positive)', opacity: 0.85 }}
@@ -210,7 +222,7 @@ function VerdictZone({
           {markerPct != null ? (
             <div
               className="absolute -top-1 -bottom-1 w-[1.5px]"
-              style={{ left: `${markerPct}%`, background: 'rgba(242,239,232,.5)' }}
+              style={{ left: `${markerPct}%`, background: 'color-mix(in srgb, var(--text) 45%, transparent)' }}
             />
           ) : null}
         </div>
@@ -233,10 +245,12 @@ function PaceRaceZone({
   summary,
   budgetCents,
   interval,
+  now,
 }: {
   summary: PaceSummary
   budgetCents: number | null
   interval: { start: Date; end: Date }
+  now: Date
 }) {
   const { t, locale } = useApp()
   const startLabel = shortDate(interval.start, locale)
@@ -266,15 +280,28 @@ function PaceRaceZone({
       <div className="mt-2.5 h-[132px]">
         <PaceRaceChart data={data} />
       </div>
-      <div className="mt-0.5 flex justify-between text-[11px] tabular-nums text-text-3">
+      <div className="relative mt-0.5 flex justify-between text-[11px] tabular-nums text-text-3">
         <span>{startLabel}</span>
-        <span>{t('today')}</span>
+        {/* 'today' sits at today's ACTUAL position on the axis, and only when
+            now falls inside the period — a fully past month has no 'today'
+            (review 2026-08-24). */}
+        {now.getTime() >= interval.start.getTime() && now.getTime() < interval.end.getTime() ? (
+          <span
+            className="absolute whitespace-nowrap"
+            style={{
+              left: `${((summary.daysElapsed - 0.5) / summary.daysInPeriod) * 100}%`,
+              transform: 'translateX(-50%)',
+            }}
+          >
+            {t('today')}
+          </span>
+        ) : null}
         <span>{endLabel}</span>
       </div>
       <div className="mt-2 flex gap-4 text-[11.5px] text-text-3">
         <Legend color="var(--positive)">{t('This period, cumulative')}</Legend>
         {showReference ? (
-          <Legend color="rgba(242,239,232,.38)">
+          <Legend color="color-mix(in srgb, var(--text) 38%, transparent)">
             {budgetCents != null ? t('Budget pace') : t('Last period')}
           </Legend>
         ) : null}

@@ -39,13 +39,19 @@ export function GoalForm({
   // Association value: '' | `cat:<category>` | `acct:<id>`.
   const [link, setLink] = useState('')
   const [confirmRemove, setConfirmRemove] = useState(false)
+  // Snapshot of the prefilled amount (spec 023 B1 pattern): an untouched
+  // target saves the stored cents verbatim, so a lossy display rate can't
+  // drift target_cents on a rename/date-only edit (review 2026-08-24).
+  const [prefillAmount, setPrefillAmount] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
     setConfirmRemove(false)
     setName(editing?.name ?? '')
     setKind(editing?.kind ?? 'savings')
-    setAmount(editing ? centsToDisplay(editing.target_cents, currency, rate(currency)) : '')
+    const amountText = editing ? centsToDisplay(editing.target_cents, currency, rate(currency)) : ''
+    setAmount(amountText)
+    setPrefillAmount(editing ? amountText : null)
     setDate(editing?.target_date ?? '')
     setLink(
       editing?.linked_category
@@ -69,7 +75,7 @@ export function GoalForm({
       household_id: currentHousehold.id,
       name: name.trim(),
       kind,
-      target_cents: parsed,
+      target_cents: editing && prefillAmount != null && amount === prefillAmount ? editing.target_cents : parsed,
       target_date: date || null,
       linked_account_id: linkedAccountId,
       linked_category: linkedCategory,

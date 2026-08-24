@@ -16,7 +16,8 @@ vi.mock('@/lib/store', () => ({
   useApp: () => ({
     formatMoney: (c: number) => `$${(c / 100).toFixed(2)}`,
     locale: 'en-US',
-    t: (k: string) => k,
+    t: (k: string, ...a: Array<string | number>) =>
+      a.length ? k.replace(/\{(\d+)\}/g, (m, i) => String(a[Number(i)] ?? m)) : k,
     householdMembers: mockMembers,
     resolveUser: (id: string) =>
       MEMBERS.find((m) => m.id === id) ?? { id: '', name: '—', initial: '—', color_key: 'sage', is_self: false },

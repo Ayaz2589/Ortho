@@ -1,5 +1,6 @@
 'use client'
 
+import { useApp } from '@/lib/store'
 import { isBigDot, type CycleDot } from '@/lib/finance/topMerchants'
 
 const DOT_BASE_PX = 9
@@ -22,6 +23,7 @@ function dayLeftPct(day: number): number {
  * applies.
  */
 export function CycleStrip({ dots, todayDay }: { dots: CycleDot[]; todayDay: number | null }) {
+  const { t } = useApp()
   return (
     <div>
       <div className="relative mt-3.5" style={{ height: 56 }}>
@@ -34,7 +36,7 @@ export function CycleStrip({ dots, todayDay }: { dots: CycleDot[]; todayDay: num
                 left: `${dayLeftPct(todayDay)}%`,
                 top: 2,
                 bottom: 10,
-                background: 'rgba(242,239,232,.42)',
+                background: 'color-mix(in srgb, var(--text) 35%, transparent)',
                 transform: 'translateX(-50%)',
               }}
             />
@@ -42,7 +44,7 @@ export function CycleStrip({ dots, todayDay }: { dots: CycleDot[]; todayDay: num
               className="absolute whitespace-nowrap text-[10.5px] text-text-3"
               style={{ left: `${dayLeftPct(todayDay)}%`, bottom: -4, transform: 'translateX(-50%)' }}
             >
-              today
+              {t('today')}
             </span>
           </>
         ) : null}
@@ -61,7 +63,7 @@ export function CycleStrip({ dots, todayDay }: { dots: CycleDot[]; todayDay: num
                 height: size,
                 transform: 'translateX(-50%)',
                 background: d.landed ? 'var(--positive)' : 'transparent',
-                border: d.landed ? undefined : '1.5px solid rgba(166,196,164,.75)',
+                border: d.landed ? undefined : '1.5px solid color-mix(in srgb, var(--positive) 75%, transparent)',
               }}
             />
           )

@@ -95,7 +95,11 @@ export function availableRanges(
   const monthsBack =
     (now.getFullYear() - earliestDate.getFullYear()) * 12 +
     (now.getMonth() - earliestDate.getMonth())
-  return DASHBOARD_RANGES.filter((r) => monthsBack >= monthCount(r) - 1)
+  const out = DASHBOARD_RANGES.filter((r) => monthsBack >= monthCount(r) - 1)
+  // An ALL-FUTURE ledger makes monthsBack negative and would empty the picker;
+  // the documented contract is that `thisMonth` is always available
+  // (review 2026-08-24).
+  return out.length > 0 ? out : ['thisMonth']
 }
 
 // ── Specific-month selection (parity-locked) ────────────────────────────────

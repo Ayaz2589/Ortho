@@ -187,13 +187,20 @@ deposit_accounts).
   `supabase.rpc('upsert_transaction', { p_tx, p_shares })` — parent + shares atomic server-side
   (migration `20260718120002`). The old two-step client write is gone for transactions. Failure
   rolls back the optimistic state.
+- **Concurrency is last-write-wins by design** (review 2026-08-24): the RPC updates
+  unconditionally — no `updated_at`/version predicate — so two devices editing the same
+  transaction resolve to whichever write lands last, with no conflict surfaced. Corollary: an
+  optimistic rollback restores the PRE-EDIT snapshot, which after a concurrent success from
+  another device can briefly resurrect stale data until the next `loadAll` reconciles. Acceptable
+  for a household app; revisit only with a version column + retry UX.
 - **Tags are written after, non-atomically** (`writeTags`: delete-all-then-insert on
   `transaction_tags`); a tag failure surfaces an error but never rolls back the saved transaction
   (no sum invariant; next `loadAll` reconciles). `addTag` reuses case-insensitive-trimmed matches
   and returns the tag synchronously for immediate attach.
 - **Properties remain two-step, non-atomic** (`writePropertySubtables`: delete mortgage/lease/units
   then re-insert, each `orThrow`'d; caller rolls back optimistic state).
-- Budgets upsert on `(household_id, category)`; people soft-delete via `removed_at`;
+- Budgets upsert on `(household_id, category, person_id)` (`NULLS NOT DISTINCT`, spec 054); people
+  soft-delete via `removed_at`;
   `hapticConfirm`/`hapticDestructive` fire on tap, before server ack (by design, spec 021 FR-012).
 - **Deposit accounts (spec 033)**: `depositAccounts` state + `addDepositAccount`/`deleteDepositAccount`
   writes to the household-scoped `deposit_accounts` table (mirrors `cards`) in `store.tsx`. The income

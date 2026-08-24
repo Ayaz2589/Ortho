@@ -57,12 +57,24 @@ function SignIn() {
 
   const validEmail = email.includes('@') && email.includes('.')
 
+  // Backend messages are English and technical; the whole funnel exists to
+  // deliver a non-English speaker here in their own language, so known GoTrue
+  // failures map to translated copy and everything else gets one calm generic
+  // line — e.message is never rendered raw (review 2026-08-24).
+  function sendErrorCopy(e: { message: string }): string {
+    const m = e.message.toLowerCase()
+    if (m.includes('rate') || m.includes('too many') || m.includes('seconds')) {
+      return t('Too many attempts — wait a moment and try again.')
+    }
+    return t('We couldn’t send the code. Check the email address and try again.')
+  }
+
   async function sendCode(target: string) {
     setLoading(true)
     setError(null)
     const { error: e } = await supabase.auth.signInWithOtp({ email: target.trim() })
     setLoading(false)
-    if (e) setError(e.message)
+    if (e) setError(sendErrorCopy(e))
     else setPendingEmail(target.trim())
   }
 
@@ -76,7 +88,12 @@ function SignIn() {
     })
     setLoading(false)
     if (e) {
-      setError(e.message)
+      const m = e.message.toLowerCase()
+      setError(
+        m.includes('rate') || m.includes('too many')
+          ? t('Too many attempts — wait a moment and try again.')
+          : t('That code didn’t work — check it and try again.')
+      )
       return
     }
     // spec 048: a visitor who travelled the onboarding funnel continues into the
@@ -89,7 +106,7 @@ function SignIn() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-bg px-6">
+    <div className="flex flex-col items-center justify-center bg-bg px-6" style={{ minHeight: 'calc(100dvh / var(--ui-zoom, 1))' }}>
       <div className="w-full max-w-sm">
         <div className="mb-10 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-text text-2xl font-light text-bg">

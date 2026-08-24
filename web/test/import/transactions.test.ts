@@ -192,37 +192,48 @@ describe('listTransactions (013/US5: household scope + rehydration + explicit ca
   })
 })
 
+// Review 2026-08-24, A7: tx-add/tx-edit write through the atomic
+// upsert_transaction RPC (parent + shares in ONE SQL transaction, with
+// NO_SHARES/SHARES_MISMATCH validation), exactly like the web store and the
+// ingest path — the old two-step write's compensation could persist a row
+// whose shares did not sum to its amount.
+function rpcMock(error: { message: string } | null = null) {
+  const rpcCalls: Array<[string, Record<string, unknown>]> = []
+  const supabase = {
+    rpc: (name: string, params: Record<string, unknown>) => {
+      rpcCalls.push([name, params])
+      return Promise.resolve({ data: null, error })
+    },
+  } as never
+  return { supabase, rpcCalls }
+}
+
 describe('createOne', () => {
-  it('inserts the txRecord and a materialized share for a single-owner transaction', async () => {
-    const { supabase, calls } = mock({ data: null, error: null })
-    await createOne(supabase, baseTx)
-    expect(calls).toContainEqual(['from', 'transactions'])
-    expect(calls).toContainEqual(['from', 'transaction_shares'])
-    expect(calls.filter((c) => c[0] === 'insert')).toHaveLength(2) // tx row + 1 share
-  })
-  it('inserts one share per owner for a multi-owner transaction', async () => {
-    const { supabase, calls } = mock({ data: null, error: null })
+  it('writes atomically via upsert_transaction (txRecord + one share per owner)', async () => {
+    const { supabase, rpcCalls } = rpcMock()
     await createOne(supabase, sharedTx)
-    expect(calls).toContainEqual(['from', 'transaction_shares'])
-    expect(calls.filter((c) => c[0] === 'insert')).toHaveLength(2) // tx row + share-rows array
+    expect(rpcCalls).toHaveLength(1)
+    const [name, params] = rpcCalls[0]
+    expect(name).toBe('upsert_transaction')
+    expect((params.p_tx as { id: string }).id).toBe(sharedTx.id)
+    expect(params.p_shares as unknown[]).toHaveLength(sharedTx.owner_ids.length)
+  })
+  it('throws on an RPC error', async () => {
+    const { supabase } = rpcMock({ message: 'SHARES_MISMATCH' })
+    await expect(createOne(supabase, baseTx)).rejects.toThrow(/CREATE_TX: SHARES_MISMATCH/)
   })
 })
 
 describe('updateOne', () => {
-  it('updates by id, then rewrites shares (delete + insert)', async () => {
-    const { supabase, calls } = mock({ data: null, error: null })
+  it('writes atomically via the same upsert_transaction RPC', async () => {
+    const { supabase, rpcCalls } = rpcMock()
     await updateOne(supabase, sharedTx)
-    expect(calls).toContainEqual(['update', expect.objectContaining({ id: 't1' })])
-    expect(calls).toContainEqual(['eq', 'id', 't1'])
-    expect(calls).toContainEqual(['delete'])
-    expect(calls).toContainEqual(['eq', 'transaction_id', 't1'])
-    expect(calls.filter((c) => c[0] === 'insert')).toHaveLength(1)
+    expect(rpcCalls).toHaveLength(1)
+    expect(rpcCalls[0][0]).toBe('upsert_transaction')
   })
-  it('a single-owner update deletes then re-inserts one share', async () => {
-    const { supabase, calls } = mock({ data: null, error: null })
-    await updateOne(supabase, baseTx)
-    expect(calls).toContainEqual(['delete'])
-    expect(calls.filter((c) => c[0] === 'insert')).toHaveLength(1)
+  it('throws on an RPC error', async () => {
+    const { supabase } = rpcMock({ message: 'NO_SHARES' })
+    await expect(updateOne(supabase, baseTx)).rejects.toThrow(/UPDATE_TX: NO_SHARES/)
   })
 })
 

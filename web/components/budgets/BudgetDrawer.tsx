@@ -53,17 +53,23 @@ export function BudgetDrawer({
   const [type, setType] = useState<BudgetType>('fixed')
   const [cap, setCap] = useState('')
   const [confirmRemove, setConfirmRemove] = useState(false)
+  // Snapshot of the prefilled display strings (spec 023 B1 pattern): saving an
+  // UNTOUCHED field writes the stored cents verbatim, so a lossy display rate
+  // can't drift the limit/cap by a cent on a no-op save (review 2026-08-24).
+  const [prefill, setPrefill] = useState<{ amount: string; cap: string } | null>(null)
 
   useEffect(() => {
     if (!category) return
     setConfirmRemove(false)
-    setAmount(existing ? centsToDisplay(existing.monthly_limit_cents, currency, rate(currency)) : '')
-    setType(existing?.budget_type ?? 'fixed')
-    setCap(
+    const amountText = existing ? centsToDisplay(existing.monthly_limit_cents, currency, rate(currency)) : ''
+    const capText =
       existing?.budget_type === 'flex' && existing.rollover_cap_cents != null
         ? centsToDisplay(existing.rollover_cap_cents, currency, rate(currency))
-        : '',
-    )
+        : ''
+    setAmount(amountText)
+    setType(existing?.budget_type ?? 'fixed')
+    setCap(capText)
+    setPrefill(existing ? { amount: amountText, cap: capText } : null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, currency, personId])
 
@@ -74,15 +80,22 @@ export function BudgetDrawer({
 
   const handleSave = () => {
     if (parsed == null || parsed < 0 || !currentHousehold || !category) return
+    const limitCents = existing && prefill && amount === prefill.amount ? existing.monthly_limit_cents : parsed
+    const capCents =
+      existing && prefill && cap === prefill.cap && existing.budget_type === 'flex'
+        ? existing.rollover_cap_cents
+        : parsedCap != null && parsedCap >= 0
+          ? parsedCap
+          : null
     const budget: Budget = {
       id: existing?.id ?? crypto.randomUUID(),
       household_id: currentHousehold.id,
       category,
-      monthly_limit_cents: parsed,
+      monthly_limit_cents: limitCents,
       person_id: personId,
       budget_type: type,
       // Cap is flex-only; the other types always store null.
-      rollover_cap_cents: type === 'flex' ? (parsedCap != null && parsedCap >= 0 ? parsedCap : null) : null,
+      rollover_cap_cents: type === 'flex' ? capCents : null,
     }
     addOrUpdateBudget(budget)
     onClose()

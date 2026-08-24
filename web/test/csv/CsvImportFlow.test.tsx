@@ -5,6 +5,13 @@ import type { ReactNode } from 'react'
 
 // Isolate the phase dispatcher: stub the Drawer chrome and drive the phase via a
 // mocked useCsvImport so we can assert the in-tray uploader (idle phase).
+vi.mock('@/lib/store', () => ({
+  useApp: () => ({
+    t: (k: string, ...a: Array<string | number>) =>
+      a.length ? k.replace(/\{(\d+)\}/g, (m, i) => String(a[Number(i)] ?? m)) : k,
+  }),
+}))
+
 vi.mock('@/components/web/Drawer', () => ({
   Drawer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DrawerHeader: ({ title }: { title: string }) => <div>{title}</div>,

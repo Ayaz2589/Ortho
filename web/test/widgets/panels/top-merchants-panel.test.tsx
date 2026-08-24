@@ -264,4 +264,59 @@ describe('TopMerchantsPanel — scope', () => {
     const routeOut = screen.getByRole('link', { name: 'See all transactions' })
     expect(routeOut.getAttribute('href')).toBe('/transactions')
   })
+
+  // Review 2026-08-24 (minor): the merchant drill-in for an upcoming
+  // (not-yet-billed) recurring charge used to claim its typical amount landed
+  // 'this period' and invent a '$0.00 last' comparison.
+  it('an upcoming charge never claims it landed this period', () => {
+    h.txns = [
+      ...monthlyCharge('Netflix', 25, 1599, ['2026-05', '2026-06', '2026-07']), // bills on the 25th; Aug not yet
+      expense('A', '2026-08-01T12:00:00.000Z', 700),
+      expense('B', '2026-08-02T12:00:00.000Z', 600),
+      expense('C', '2026-08-03T12:00:00.000Z', 500),
+      expense('D', '2026-08-04T12:00:00.000Z', 400),
+      expense('E', '2026-08-05T12:00:00.000Z', 300),
+      expense('F', '2026-08-06T12:00:00.000Z', 200),
+    ]
+    renderPanel()
+    // The full ranked list carries the upcoming Netflix row; open its drill-in.
+    fireEvent.click(screen.getByText(/\+ \d+ more →/))
+    fireEvent.click(screen.getAllByText('Netflix')[0])
+    expect(screen.queryByText(/\$15\.99 this period/)).toBeNull()
+    expect(screen.getByText(/Nothing landed this period/)).toBeTruthy()
+  })
+
+  // Review 2026-08-24 (minor): with exactly one ACTIVE charge, the
+  // single-charge line used to take dots[0] — which can be a LAPSED merchant
+  // that billed earlier in the window — and describe the wrong subscription.
+  it('the single-charge line names the active charge, not a lapsed one', () => {
+    h.scopeState = {
+      interval: { start: new Date(2026, 5, 1), end: new Date(2026, 6, 1) }, // viewing June
+      periodLabel: 'June 2026',
+      now: new Date(2026, 7, 15, 12), // today is mid-August
+    }
+    h.txns = [
+      // Spotify billed Feb–Jun on the 3rd, then stopped — lapsed by mid-August.
+      ...monthlyCharge('Spotify', 3, 999, ['2026-02', '2026-03', '2026-04', '2026-05', '2026-06']),
+      // Netflix is the one ACTIVE charge (day 25, still billing).
+      ...monthlyCharge('Netflix', 25, 1599, ['2026-05', '2026-06', '2026-07', '2026-08']),
+    ]
+    renderPanel()
+    expect(screen.getByText(/Netflix, on day 25/)).toBeTruthy()
+    expect(screen.queryByText(/Spotify, on day/)).toBeNull()
+  })
+
+  // Review 2026-08-24 (minor): hardcoded dark-theme rgba literals made the
+  // cycle strip's today line / rings and the landed-share track near-invisible
+  // in the light theme. Colors must come from tokens.
+  it('renders no theme-fixed rgba literals', () => {
+    h.txns = [
+      ...monthlyCharge('Netflix', 15, 1599, ['2026-05', '2026-06', '2026-07', '2026-08']),
+      ...monthlyCharge('Con Edison', 6, 21430, ['2026-05', '2026-06', '2026-07']),
+    ]
+    const { container } = renderPanel()
+    expect(container.innerHTML).not.toMatch(/rgba\(242,\s*239,\s*232/)
+    expect(container.innerHTML).not.toMatch(/rgba\(166,\s*196,\s*164/)
+    expect(container.innerHTML).not.toMatch(/rgba\(255,\s*255,\s*255/)
+  })
 })

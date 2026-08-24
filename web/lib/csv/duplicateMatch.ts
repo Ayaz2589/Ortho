@@ -20,6 +20,9 @@ export interface DuplicateCandidate {
   date: string // YYYY-MM-DD (local calendar day)
   amountCents: number
   merchant: string
+  /** Kinds never match across each other: a refund (income) is not a duplicate
+   *  of its own purchase (expense) — review 2026-08-24. */
+  kind: string
 }
 
 // Generic words that carry no merchant identity — ignored when comparing tokens
@@ -92,12 +95,13 @@ function dayDiff(a: string, b: string): number {
  * (any owner); the closest-dated match wins.
  */
 export function findDuplicateId(
-  row: { dateISO: string; amountCents: number; merchant: string },
+  row: { dateISO: string; amountCents: number; merchant: string; kind: string },
   existing: DuplicateCandidate[],
   windowDays: number = DEFAULT_DAY_WINDOW
 ): string | null {
   let best: { id: string; diff: number } | null = null
   for (const e of existing) {
+    if (e.kind !== row.kind) continue
     if (e.amountCents !== row.amountCents) continue
     const diff = dayDiff(e.date, row.dateISO)
     if (diff > windowDays) continue

@@ -40,9 +40,12 @@ export interface RoutineWithState extends DetectedRoutine {
  *  trailing POS/store-location numeric suffix, collapse whitespace/punctuation. Heuristic, tunable
  *  via routines-thresholds.ts without touching detection logic. */
 export function normalizeMerchantKey(merchant: string): string {
+  // Unicode-aware (review 2026-08-24, B9): the old [^a-z0-9\s] strip collapsed
+  // EVERY non-Latin merchant name — four of the app's five translated locales
+  // — to the empty key, merging unrelated merchants into one routine identity.
   const cleaned = merchant
     .toLowerCase()
-    .replace(/[^a-z0-9\s]+/g, ' ')
+    .replace(/[^\p{L}\p{M}\p{N}\s]+/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim()
   const storeCodePattern = new RegExp(
@@ -102,6 +105,9 @@ function groupByMerchant(transactions: readonly Transaction[]): MerchantGroup[] 
   const groups = new Map<string, Transaction[]>()
   for (const t of transactions) {
     const key = normalizeMerchantKey(t.merchant)
+    // An unnormalizable name (all punctuation/symbols) must never form a
+    // group — an empty key would merge unrelated merchants (review 2026-08-24).
+    if (!key) continue
     const arr = groups.get(key) ?? []
     arr.push(t)
     groups.set(key, arr)
@@ -196,6 +202,7 @@ function detectBehavioralHabits(transactions: readonly Transaction[], now: Date)
   const groups = new Map<string, { merchantKey: string; weekday: number; transactions: Transaction[] }>()
   for (const t of inWindow) {
     const merchantKey = normalizeMerchantKey(t.merchant)
+    if (!merchantKey) continue // see groupByMerchant — never group under ''
     const weekday = new Date(t.date).getUTCDay()
     const key = `${merchantKey}:${weekday}`
     const group = groups.get(key) ?? { merchantKey, weekday, transactions: [] }

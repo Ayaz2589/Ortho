@@ -38,7 +38,9 @@ export interface ProfileDraft {
 const DEFAULT_WEIGHTS = (): Record<HealthDimension, number> =>
   Object.fromEntries(T.DIMENSION_ORDER.map((d) => [d, T.DEFAULT_WEIGHT])) as Record<HealthDimension, number>
 
-/** Neutral defaults written when the user skips the questionnaire (FR-012). */
+/** The questionnaire's blank starting draft. (Historically these were also
+ *  WRITTEN when the user skipped — spec 042 retired that: Skip is dismiss-only
+ *  and no profile row is created until the flow is completed.) */
 export function neutralDraft(): ProfileDraft {
   return {
     incomeRaw: '',

@@ -50,7 +50,7 @@ function groupDraftsByDay(drafts: CsvDraftRow[]): DraftDayGroup[] {
 
 export function CsvImportList({ drafts, onEdit, onConfirm, onSetOwners, onSetPayer }: Props) {
   const app = useApp()
-  const { formatMoney } = app
+  const { formatMoney, t } = app
   // Owners only matter when the household has more than one person; a solo
   // household hides the picker (mirrors CsvRowEditModal's `showOwners`).
   const householdMembers: User[] = app.householdMembers ?? []
@@ -86,6 +86,7 @@ export function CsvImportList({ drafts, onEdit, onConfirm, onSetOwners, onSetPay
                 draft={draft}
                 onEdit={onEdit}
                 formatMoney={formatMoney}
+                t={t}
                 showOwners={showOwners}
                 householdMembers={householdMembers}
                 resolveUser={resolveUser}
@@ -113,7 +114,7 @@ export function CsvImportList({ drafts, onEdit, onConfirm, onSetOwners, onSetPay
               cursor: 'pointer',
             }}
           >
-            Add {toAdd.length} transaction{toAdd.length === 1 ? '' : 's'}
+            {toAdd.length === 1 ? t('Add {0} transaction', toAdd.length) : t('Add {0} transactions', toAdd.length)}
           </button>
         </div>
       )}
@@ -125,6 +126,7 @@ function DraftRow({
   draft,
   onEdit,
   formatMoney,
+  t,
   showOwners,
   householdMembers,
   resolveUser,
@@ -134,6 +136,7 @@ function DraftRow({
   draft: CsvDraftRow
   onEdit: (id: string) => void
   formatMoney: (cents: number) => string
+  t: (key: string, ...args: Array<string | number>) => string
   showOwners: boolean
   householdMembers: User[]
   resolveUser: (id: string) => User
@@ -147,7 +150,7 @@ function DraftRow({
   // gets a tappable owner avatar in the tile's corner (like the ledger row).
   const ownerControl = showOwners && !isPayment
 
-  const subtitle = isPayment ? "Payment — won't be added" : meta.label
+  const subtitle = isPayment ? t("Payment — won't be added") : t(meta.label)
 
   const className = [
     'cv-row',
@@ -235,7 +238,7 @@ function DraftRow({
             }}
           >
             <Copy size={11} strokeWidth={2.2} />
-            Possible duplicate
+            {t('Possible duplicate')}
           </span>
         ) : (
           <div style={{ marginTop: '2px', display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
@@ -258,7 +261,7 @@ function DraftRow({
                 }}
               >
                 <Pencil size={9.5} strokeWidth={2.2} />
-                Edited
+                {t('Edited')}
               </span>
             )}
             <span

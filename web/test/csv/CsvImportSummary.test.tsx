@@ -6,7 +6,8 @@ import userEvent from '@testing-library/user-event'
 vi.mock('@/lib/store', () => ({
   useApp: () => ({
     formatMoney: (c: number) => `$${(c / 100).toFixed(2)}`,
-    t: (k: string) => k,
+    t: (k: string, ...a: Array<string | number>) =>
+      a.length ? k.replace(/\{(\d+)\}/g, (m, i) => String(a[Number(i)] ?? m)) : k,
   }),
 }))
 
@@ -17,6 +18,7 @@ describe('CsvImportSummary', () => {
     render(
       <CsvImportSummary
         addedCount={35}
+        failedCount={0}
         totalSpendCents={261423}
         skippedCount={2}
         excludedCount={3}
@@ -31,6 +33,7 @@ describe('CsvImportSummary', () => {
     render(
       <CsvImportSummary
         addedCount={35}
+        failedCount={0}
         totalSpendCents={261423}
         skippedCount={2}
         excludedCount={3}
@@ -45,6 +48,7 @@ describe('CsvImportSummary', () => {
     render(
       <CsvImportSummary
         addedCount={35}
+        failedCount={0}
         totalSpendCents={261423}
         skippedCount={2}
         excludedCount={3}
@@ -61,6 +65,7 @@ describe('CsvImportSummary', () => {
     render(
       <CsvImportSummary
         addedCount={35}
+        failedCount={0}
         totalSpendCents={261423}
         skippedCount={2}
         excludedCount={3}

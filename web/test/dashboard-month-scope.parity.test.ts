@@ -55,3 +55,15 @@ describe('dashboard month-scope parity vs golden vectors', () => {
     }
   })
 })
+
+// Review 2026-08-24 (minor): availableRanges guarantees in its docstring that
+// 'thisMonth' is always available — but an ALL-FUTURE ledger (a brand-new
+// household whose first entry is next month's rent) made monthsBack negative
+// and filtered out every range, rendering an empty picker. Not vectored (the
+// vector's future-dated case includes a current-month row), so pinned here.
+describe('availableRanges all-future ledger', () => {
+  it("always offers 'thisMonth', even when every row is future-dated", () => {
+    const txs = [{ date: '2026-07-20T12:00:00.000Z' } as never]
+    expect(availableRanges(txs, new Date('2026-06-15T12:00:00.000Z'))).toEqual(['thisMonth'])
+  })
+})

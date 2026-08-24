@@ -187,7 +187,7 @@ describe('enrichCandidate', () => {
       const c = candidate({ merchantRaw: 'CVS', merchant: 'CVS' })
       const result = enrichCandidate(c, ctx, new Set())
       expect(result.merchant).toBe('CVS') // history spelling never adopted (too short to match)
-      expect(result.categoryGuess).toBe('health') // rule table still fires independently
+      expect(result.categoryGuess).toBe('pharmacy') // rule table still fires independently
       expect(result.ownersGuess).toBeNull()
     })
 
@@ -196,7 +196,7 @@ describe('enrichCandidate', () => {
       const c = candidate({ merchantRaw: 'CVS PHARMACY', merchant: 'CVS PHARMACY' })
       const result = enrichCandidate(c, ctx, new Set())
       // The rule table still matches "PHARMACY" independently of history.
-      expect(result.categoryGuess).toBe('health')
+      expect(result.categoryGuess).toBe('pharmacy')
       expect(result.merchant).toBe('CVS PHARMACY') // history spelling never adopted
     })
 

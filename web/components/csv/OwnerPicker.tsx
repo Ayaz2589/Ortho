@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check } from 'lucide-react'
+import { useApp } from '@/lib/store'
 import { Avatar, StackedAvatars } from '@/components/ui'
 import type { User } from '@/lib/types'
 
@@ -29,13 +30,14 @@ export function OwnerPicker({
   paidById?: string | null
   onChangePayer?: (personId: string) => void
 }) {
+  const { t } = useApp()
   const [open, setOpen] = useState(false)
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const popRef = useRef<HTMLDivElement>(null)
 
   const owners = useMemo(() => ownerIds.map(resolveUser), [ownerIds, resolveUser])
-  const label = owners.length > 0 ? owners.map((u) => u.name).join(', ') : 'Unassigned'
+  const label = owners.length > 0 ? owners.map((u) => u.name).join(', ') : t('Unassigned')
 
   // Anchor the popover to the trigger; track it through scroll/resize of the tray.
   useEffect(() => {
@@ -99,7 +101,7 @@ export function OwnerPicker({
       <button
         ref={triggerRef}
         type="button"
-        aria-label={`Owner: ${label}. Tap to change.`}
+        aria-label={t('Owner: {0}. Tap to change.', label)}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={(e) => {
@@ -130,7 +132,7 @@ export function OwnerPicker({
             <div
               ref={popRef}
               role="menu"
-              aria-label="Assign owners"
+              aria-label={t('Assign owners')}
               onClick={(e) => e.stopPropagation()}
               style={{
                 position: 'fixed',
@@ -155,7 +157,7 @@ export function OwnerPicker({
                   color: 'var(--text-3)',
                 }}
               >
-                Owners
+                {t('Owners')}
               </div>
               {members.map((u) => {
                 const on = ownerIds.includes(u.id)
@@ -203,7 +205,7 @@ export function OwnerPicker({
                       color: 'var(--text-3)',
                     }}
                   >
-                    Paid by
+                    {t('Paid by')}
                   </div>
                   {members.map((u) => {
                     const on = u.id === paidById
@@ -213,7 +215,7 @@ export function OwnerPicker({
                         type="button"
                         role="menuitemradio"
                         aria-checked={on}
-                        aria-label={`Paid by ${u.name}`}
+                        aria-label={t('Paid by {0}', u.name)}
                         className="ow-btn"
                         onClick={() => onChangePayer(u.id)}
                         style={{

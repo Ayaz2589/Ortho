@@ -116,6 +116,17 @@ export function PropertyForm({
   // multifamily
   const [units, setUnits] = useState<DraftUnit[]>([])
 
+  // Snapshot of the prefilled money strings (spec 023 B1 pattern): an
+  // untouched field saves the stored cents verbatim, so a lossy display rate
+  // can't rewrite stored money ±1¢ on a no-op edit (review 2026-08-24).
+  const [prefill, setPrefill] = useState<{
+    purchase: string
+    loan: string
+    rent: string
+    deposit: string
+    unitRents: Record<string, string>
+  } | null>(null)
+
   useEffect(() => {
     if (!open) return
     const r = rate(currency)
@@ -123,18 +134,32 @@ export function PropertyForm({
       setAddress(editing.address)
       setNickname(editing.nickname ?? '')
       const m = editing.mortgage
-      setPurchase(centsToDisplay(m?.purchase_price_cents ?? 0, currency, r))
-      setLoan(centsToDisplay(m?.original_loan_cents ?? 0, currency, r))
+      const purchaseText = centsToDisplay(m?.purchase_price_cents ?? 0, currency, r)
+      const loanText = centsToDisplay(m?.original_loan_cents ?? 0, currency, r)
+      setPurchase(purchaseText)
+      setLoan(loanText)
       setInterest(m ? rateToInput(m.annual_interest_rate_percent) : '')
       setTerm(m?.loan_term_years ?? 30)
       setClosing(m?.closing_date ?? todayISO())
       setAutoPay(m?.auto_pay_source ?? '')
       const l = editing.lease
-      setRent(centsToDisplay(l?.monthly_rent_cents ?? 0, currency, r))
+      const rentText = centsToDisplay(l?.monthly_rent_cents ?? 0, currency, r)
+      const depositText =
+        l?.security_deposit_cents != null ? centsToDisplay(l.security_deposit_cents, currency, r) : ''
+      setRent(rentText)
       setLeaseStart(l?.lease_start ?? todayISO())
       setLeaseEnd(l?.lease_end ?? plusOneYearISO())
-      setDeposit(l?.security_deposit_cents != null ? centsToDisplay(l.security_deposit_cents, currency, r) : '')
+      setDeposit(depositText)
       setPaidWith(l?.paid_with_source ?? '')
+      setPrefill({
+        purchase: purchaseText,
+        loan: loanText,
+        rent: rentText,
+        deposit: depositText,
+        unitRents: Object.fromEntries(
+          (editing.units ?? []).map((u) => [u.id, centsToDisplay(u.monthly_rent_cents, currency, r)])
+        ),
+      })
       setUnits(
         (editing.units ?? []).map((u) => ({
           id: u.id,
@@ -159,6 +184,7 @@ export function PropertyForm({
       setDeposit('')
       setPaidWith('')
       setUnits([])
+      setPrefill(null)
     }
     // Reset only when the form opens or the edit target changes — currency and
     // rate are read at run time so mid-edit re-renders keep user input.
@@ -182,12 +208,20 @@ export function PropertyForm({
     const id = editing?.id ?? crypto.randomUUID()
     const now = new Date().toISOString()
 
+    // Untouched money fields reuse the stored cents (spec 023 B1 pattern).
+    const keptCents = (text: string, prefillText: string | undefined, stored: number | null | undefined): number | null =>
+      prefill && prefillText != null && text === prefillText && stored != null ? stored : null
+
     let mortgage: MortgageInfo | undefined
     if (meta.hasMortgage) {
       mortgage = {
         property_id: id,
-        purchase_price_cents: parseMoney(purchase, currency, r) ?? 0,
-        original_loan_cents: parseMoney(loan, currency, r) ?? 0,
+        purchase_price_cents:
+          keptCents(purchase, prefill?.purchase, editing?.mortgage?.purchase_price_cents) ??
+          parseMoney(purchase, currency, r) ??
+          0,
+        original_loan_cents:
+          keptCents(loan, prefill?.loan, editing?.mortgage?.original_loan_cents) ?? parseMoney(loan, currency, r) ?? 0,
         annual_interest_rate_percent: parseRate(interest),
         loan_term_years: term,
         closing_date: closing,
@@ -199,10 +233,15 @@ export function PropertyForm({
 
     let lease: LeaseInfo | undefined
     if (kind === 'rental') {
-      const depCents = deposit.trim() === '' ? null : parseMoney(deposit, currency, r)
+      const depCents =
+        deposit.trim() === ''
+          ? null
+          : keptCents(deposit, prefill?.deposit, editing?.lease?.security_deposit_cents) ??
+            parseMoney(deposit, currency, r)
       lease = {
         property_id: id,
-        monthly_rent_cents: parseMoney(rent, currency, r) ?? 0,
+        monthly_rent_cents:
+          keptCents(rent, prefill?.rent, editing?.lease?.monthly_rent_cents) ?? parseMoney(rent, currency, r) ?? 0,
         lease_start: leaseStart,
         lease_end: leaseEnd,
         security_deposit_cents: depCents,
@@ -218,7 +257,14 @@ export function PropertyForm({
         id: u.id,
         property_id: id,
         name: u.name,
-        monthly_rent_cents: parseMoney(u.rent, currency, r) ?? 0,
+        monthly_rent_cents:
+          keptCents(
+            u.rent,
+            prefill?.unitRents[u.id],
+            editing?.units?.find((eu) => eu.id === u.id)?.monthly_rent_cents
+          ) ??
+          parseMoney(u.rent, currency, r) ??
+          0,
         tenant_name: u.tenant === '' ? null : u.tenant,
         tenant_email: null,
         sort_order: i,

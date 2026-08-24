@@ -196,18 +196,21 @@ export function severityColor(s: InsightSeverity): string {
 
 export interface PaletteOption {
   key: string
+  /** Human color name, passed through t() where a swatch needs an accessible
+   *  name — the raw key is a storage value, not copy (review 2026-08-24). */
+  label: string
   bg: string
   fg: string
 }
 
 /** Household member color palette — ported from iOS OrthoColorOption. */
 export const PALETTE: PaletteOption[] = [
-  { key: 'peach',     bg: rgb(0.949, 0.831, 0.741), fg: rgb(0.478, 0.29, 0.169) },
-  { key: 'slate',     bg: rgb(0.784, 0.831, 0.886), fg: rgb(0.231, 0.31, 0.416) },
-  { key: 'sage',      bg: rgb(0.812, 0.867, 0.816), fg: rgb(0.247, 0.353, 0.271) },
-  { key: 'terracotta',bg: rgb(0.91,  0.765, 0.675), fg: rgb(0.478, 0.29, 0.169) },
-  { key: 'mauve',     bg: rgb(0.851, 0.769, 0.808), fg: rgb(0.353, 0.247, 0.31) },
-  { key: 'sand',      bg: rgb(0.863, 0.816, 0.722), fg: rgb(0.361, 0.31, 0.208) },
+  { key: 'peach',     label: 'Peach',      bg: rgb(0.949, 0.831, 0.741), fg: rgb(0.478, 0.29, 0.169) },
+  { key: 'slate',     label: 'Slate',      bg: rgb(0.784, 0.831, 0.886), fg: rgb(0.231, 0.31, 0.416) },
+  { key: 'sage',      label: 'Sage',       bg: rgb(0.812, 0.867, 0.816), fg: rgb(0.247, 0.353, 0.271) },
+  { key: 'terracotta',label: 'Terracotta', bg: rgb(0.91,  0.765, 0.675), fg: rgb(0.478, 0.29, 0.169) },
+  { key: 'mauve',     label: 'Mauve',      bg: rgb(0.851, 0.769, 0.808), fg: rgb(0.353, 0.247, 0.31) },
+  { key: 'sand',      label: 'Sand',       bg: rgb(0.863, 0.816, 0.722), fg: rgb(0.361, 0.31, 0.208) },
 ]
 
 export function paletteFor(key: string): PaletteOption {

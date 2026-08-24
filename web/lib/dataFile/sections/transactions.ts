@@ -77,6 +77,7 @@ function dedupe(records: TxRecord[], store: DataStore): SectionDedupePlan<TxReco
     date: t.date,
     amountCents: t.amount_cents,
     merchant: t.merchant,
+    kind: t.kind,
   }))
   const plan: SectionDedupePlan<TxRecord> = { add: [], skipById: [], skipByContent: [] }
   for (const r of records) {
@@ -85,7 +86,7 @@ function dedupe(records: TxRecord[], store: DataStore): SectionDedupePlan<TxReco
       continue
     }
     const dup = findDuplicateId(
-      { dateISO: r.date, amountCents: r.amount_cents, merchant: r.merchant },
+      { dateISO: r.date, amountCents: r.amount_cents, merchant: r.merchant, kind: r.kind },
       candidates
     )
     if (dup) plan.skipByContent.push(r)

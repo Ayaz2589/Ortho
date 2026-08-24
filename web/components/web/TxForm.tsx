@@ -298,6 +298,12 @@ export function useTxForm({
       ? src.paid_by
       : defaultOwner
   )
+  // spec 053 FR-012: a legacy row's null payer must survive an unrelated edit —
+  // inventing a payer fabricates debts. These flags record whether the USER
+  // actually picked a payer/sender, so submit can preserve null otherwise
+  // (review 2026-08-24, A2).
+  const [paidByTouched, setPaidByTouched] = useState(false)
+  const [transferFromTouched, setTransferFromTouched] = useState(false)
   // Transfer parties: from = the ower/sender, to = the payer/recipient.
   const [transferFrom, setTransferFrom] = useState<string>(() => {
     if (src?.kind === 'transfer' && src.paid_by && (editing || isMember(src.paid_by))) return src.paid_by
@@ -383,15 +389,32 @@ export function useTxForm({
     owners.every((id) => (splitText[id] ?? '') === (originalSplitText[id] ?? ''))
   const reuseStoredShares = amountUntouched && splitUntouched
 
+  // Non-USD display: by-value fields each round to USD cents independently, so
+  // under a lossy rate their sum can miss `effectiveCents` by a cent even for
+  // the editor's own even seeds — false-blocking Save with values the user
+  // never touched (review 2026-08-24, B8). Absorb drift within the per-owner
+  // rounding bound into the largest share; USD stays exact-match (a real 1¢
+  // user error must still block).
+  const effectiveSplitInput: SplitInput = (() => {
+    if (splitInput.method !== 'value' || currency === 'usd' || !effectiveCents) return splitInput
+    const values = { ...splitInput.values }
+    const sum = owners.reduce((s, id) => s + (values[id] ?? 0), 0)
+    const diff = effectiveCents - sum
+    if (diff === 0 || Math.abs(diff) > owners.length) return splitInput
+    const largest = owners.reduce((a, b) => ((values[b] ?? 0) > (values[a] ?? 0) ? b : a))
+    values[largest] = (values[largest] ?? 0) + diff
+    return { method: 'value', values }
+  })()
+
   const shares = reuseStoredShares
     ? editing!.shares
     : effectiveCents
-      ? computeShares(effectiveCents, orderedOwnerIds(owners), splitInput)
+      ? computeShares(effectiveCents, orderedOwnerIds(owners), effectiveSplitInput)
       : {}
   const splitValidation = reuseStoredShares
     ? ({ ok: true } as const)
     : effectiveCents
-      ? validateSplit(effectiveCents, owners, splitInput)
+      ? validateSplit(effectiveCents, owners, effectiveSplitInput)
       : ({ ok: true } as const)
   const splitOk = owners.length < 2 || splitValidation.ok
   const splitReason = splitValidation.ok ? null : splitValidation.reason
@@ -513,7 +536,14 @@ export function useTxForm({
     const usdCents =
       candidate.currency === 'usd'
         ? candidate.amountCents
-        : toUSDCents(candidate.amountCents / 100, candidate.currency, rate(candidate.currency))
+        : // Scan minor units are per-currency (¥1,234 arrives as 1234 with 0
+          // fraction digits) — divide by 10^fractionDigits, never a hardcoded
+          // 100 (review 2026-08-24: JPY prefilled at 1/100 of the real amount).
+          toUSDCents(
+            candidate.amountCents / Math.pow(10, fractionDigits(candidate.currency)),
+            candidate.currency,
+            rate(candidate.currency)
+          )
     setAmount(centsToDisplay(usdCents, r, fd))
     setMerchant(candidate.merchant)
     if (candidate.categoryGuess) setCategory(candidate.categoryGuess)
@@ -566,7 +596,12 @@ export function useTxForm({
         category: 'transfer',
         kind: 'transfer',
         source: '',
-        paid_by: transferFrom,
+        // A legacy transfer with no recorded sender keeps null unless the user
+        // picked one (spec 053 FR-012 — see paidByTouched above).
+        paid_by:
+          editing && editing.kind === 'transfer' && editing.paid_by == null && !transferFromTouched
+            ? null
+            : transferFrom,
         owner_ids: [transferTo],
         shares: { [transferTo]: effectiveCents },
       }
@@ -577,7 +612,14 @@ export function useTxForm({
         category: isIncome ? incomeCategory : category,
         kind: direction,
         source,
-        paid_by: isIncome ? null : paidBy,
+        // Editing a legacy null-payer expense preserves null unless the user
+        // picked a payer — a default must not re-attribute recorded money
+        // (spec 053 FR-012; review 2026-08-24, A2).
+        paid_by: isIncome
+          ? null
+          : editing && editing.kind === 'expense' && editing.paid_by == null && !paidByTouched
+            ? null
+            : paidBy,
         owner_ids: owners,
         shares,
       }
@@ -607,9 +649,15 @@ export function useTxForm({
     ownJustMe,
     currentPersonId: resolveDefaultOwnerId(currentPersonId, householdMembers, currentUserId),
     paidBy,
-    setPaidBy,
+    setPaidBy: (id: string) => {
+      setPaidByTouched(true)
+      setPaidBy(id)
+    },
     transferFrom,
-    setTransferFrom,
+    setTransferFrom: (id: string) => {
+      setTransferFromTouched(true)
+      setTransferFrom(id)
+    },
     transferTo,
     setTransferTo,
     source,
@@ -1171,7 +1219,7 @@ export function TxCopyList({ onPick, onBack }: { onPick: (tx: Transaction) => vo
                   style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', padding: '10px 20px 3px', textAlign: 'left', color: 'var(--text-2)', fontSize: 12, fontWeight: 500, letterSpacing: '-0.1px' }}
                 >
                   <Icon size={13} color={meta.tint} strokeWidth={2.2} />
-                  <span style={{ flex: 1 }}>{label}</span>
+                  <span style={{ flex: 1 }}>{t(label)}</span>
                   <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true" style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 120ms ease', flexShrink: 0 }}>
                     <path d="M2.5 4.5L6 8l3.5-3.5" stroke="var(--text-3)" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>

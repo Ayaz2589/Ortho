@@ -298,8 +298,9 @@ not_household_member, provider_unreachable, session_not_found, session_not_owned
 - `simplefin-disconnect` — POST `{institutionId}` → mirrors `plaid-disconnect` (revoke/forget then
   mark disconnected locally; idempotent).
 
-Stripe API version pinned `'2026-06-24.dahlia'` in checkout/portal/plans/webhook, in lockstep with the
-webhook endpoint config and `services/billing/test` fixtures. SDKs: `npm:stripe@22`,
+Stripe API version pinned `'2026-07-29.dahlia'` in checkout/portal/plans/webhook, in lockstep with the
+webhook endpoint config and `services/billing/test` fixtures. (When bumping, change all four
+functions AND this line together — this pin has drifted from the docs once already.) SDKs: `npm:stripe@22`,
 `jsr:@supabase/supabase-js@2`. Plaid is raw `fetch` — no SDK.
 
 **Secrets** (`supabase secrets set`, never committed): billing — `STRIPE_SECRET_KEY`,

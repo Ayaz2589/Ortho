@@ -5,9 +5,12 @@ import Link from 'next/link'
 import { useApp } from '@/lib/store'
 import { useMoneyScope, useScopedTransactions } from '@/lib/widgets/MoneyScopeContext'
 import { categoryMeta } from '@/lib/categories'
-import { groupByDay, dayLabel } from '@/lib/format'
+import { groupByDay, dayLabel, parseTxDate } from '@/lib/format'
 import { usePanelCaption, usePanelRouteOut } from '@/components/widgets/WidgetPanel'
 import { PanelEmpty, PanelSectionLabel } from '@/components/widgets/panels/kit'
+
+/** Bounded feed length (FR-018): a longer glance, never the whole ledger. */
+const RECENT_LIMIT = 45
 
 /**
  * Recent-activity detail panel (spec 057, US10 — the third panel, built ON
@@ -30,7 +33,16 @@ export function ActivityPanel() {
   usePanelCaption({ subject })
   usePanelRouteOut({ label: t('See all transactions'), href: '/transactions' })
 
-  const groups = useMemo(() => groupByDay(transactions), [transactions])
+  // A longer GLANCE, not a second transactions screen (FR-018): the feed is
+  // bounded to the most recent rows and the 'See all transactions' route-out
+  // carries the rest — the panel used to render the entire ledger
+  // (review 2026-08-24).
+  const groups = useMemo(() => {
+    const recent = [...transactions]
+      .sort((a, b) => parseTxDate(b.date).getTime() - parseTxDate(a.date).getTime())
+      .slice(0, RECENT_LIMIT)
+    return groupByDay(recent)
+  }, [transactions])
 
   if (transactions.length === 0) {
     return <PanelEmpty>{t('No transactions yet.')}</PanelEmpty>

@@ -92,7 +92,7 @@ export function TopMerchantsPanel() {
   const { push } = usePanelDetail()
 
   const subject = scope.kind === 'person' ? resolveUser(scope.personId).name : t('Household')
-  usePanelCaption({ subject, period: periodLabel })
+  usePanelCaption({ subject, period: t(periodLabel) })
   usePanelRouteOut({ label: t('See all transactions'), href: '/transactions' })
 
   const summary = useMemo(() => computeTopMerchants(transactions, interval, now), [transactions, interval, now])
@@ -117,6 +117,7 @@ export function TopMerchantsPanel() {
         entry={entry}
         routine={routineByKey.get(entry.merchantKey)}
         history={merchantHistory(transactions, entry.merchantKey, interval)}
+        hasPriorPeriod={summary.hasPriorPeriod}
       />
     )
   }
@@ -128,7 +129,7 @@ export function TopMerchantsPanel() {
         entries={withUpcomingCharges(summary)}
         hasPriorPeriod={summary.hasPriorPeriod}
         subject={subject}
-        periodLabel={periodLabel}
+        periodLabel={t(periodLabel)}
         transactions={transactions}
         interval={interval}
         routineByKey={routineByKey}
@@ -209,7 +210,7 @@ function VerdictZone({ summary }: { summary: TopMerchantsSummary }) {
             {t('{0} of {1} · {2}%', formatMoney(summary.recurringInPeriodCents), formatMoney(summary.periodTotalCents), sharePct)}
           </span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full" style={{ background: 'rgba(255,255,255,.06)' }}>
+        <div className="h-2 overflow-hidden rounded-full" style={{ background: 'var(--chip-bg)' }}>
           <div
             className="h-full rounded-full"
             style={{ width: `${sharePct}%`, background: 'var(--positive)', opacity: 0.85 }}
@@ -223,7 +224,11 @@ function VerdictZone({ summary }: { summary: TopMerchantsSummary }) {
 
 function SingleChargeLine({ summary }: { summary: TopMerchantsSummary }) {
   const { t, locale } = useApp()
-  const dot = summary.dots[0]
+  // The one ACTIVE charge's dot — dots[0] is merely the earliest day-of-month
+  // and can belong to a LAPSED merchant that billed earlier in the window
+  // (review 2026-08-24).
+  const active = summary.routines.find((r) => r.derivedStatus !== 'lapsed')
+  const dot = active ? summary.dots.find((d) => d.merchantKey === active.merchantKey) ?? null : null
   if (!dot) return null
   const dayLine = t('{0}, on day {1}', dot.merchantLabel, dot.day)
   const suffix =
@@ -286,7 +291,7 @@ function Dot({ filled }: { filled: boolean }) {
       style={
         filled
           ? { background: 'var(--positive)' }
-          : { border: '1.5px solid rgba(166,196,164,.75)', background: 'transparent' }
+          : { border: '1.5px solid color-mix(in srgb, var(--positive) 75%, transparent)', background: 'transparent' }
       }
     />
   )
@@ -370,10 +375,12 @@ function MerchantView({
   entry,
   routine,
   history,
+  hasPriorPeriod,
 }: {
   entry: MerchantEntry
   routine: DetectedRoutine | undefined
   history: MerchantHistory
+  hasPriorPeriod: boolean
 }) {
   const { formatMoney, t, locale } = useApp()
   const previousCents = entry.cents - entry.deltaCents
@@ -392,7 +399,15 @@ function MerchantView({
               <br />
             </>
           ) : null}
-          {t('{0} this period · {1} last', formatMoney(entry.cents), formatMoney(previousCents))}
+          {/* An upcoming charge (count 0) has landed NOTHING this period — its
+              cents field carries the typical amount for ranking only; and with
+              no prior period there is no '{1} last' to invent
+              (review 2026-08-24). */}
+          {entry.count === 0 && entry.recurring
+            ? t('Nothing landed this period — expected at its usual amount.')
+            : hasPriorPeriod
+              ? t('{0} this period · {1} last', formatMoney(entry.cents), formatMoney(previousCents))
+              : t('{0} this period', formatMoney(entry.cents))}
         </p>
         {routine ? (
           <div
@@ -466,6 +481,7 @@ function AllMerchantsHost({
           entry={openEntry}
           routine={routineByKey.get(openEntry.merchantKey)}
           history={merchantHistory(transactions, openEntry.merchantKey, interval)}
+          hasPriorPeriod={hasPriorPeriod}
         />
       </div>
     )

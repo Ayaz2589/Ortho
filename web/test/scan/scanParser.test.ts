@@ -88,7 +88,7 @@ describe('parseScan', () => {
       expect(lyft.merchant).toBe('LYFT RIDE')
       expect(lyft.date).toEqual({ year: 2026, month: 6, day: 6 })
       expect(lyft.amountCents).toBe(1200)
-      expect(lyft.categoryGuess).toBe('transit')
+      expect(lyft.categoryGuess).toBe('rideshare')
 
       expect(payment.merchant).toBe('ONLINE PAYMENT - THANK YOU')
       expect(payment.date).toEqual({ year: 2026, month: 6, day: 7 })

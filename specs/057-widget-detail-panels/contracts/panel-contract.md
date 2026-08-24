@@ -35,7 +35,7 @@ must not rebuild any of it:
 
 | You get | Provided by |
 |---|---|
-| The widget's title in a header | `WidgetPanel` via `DrawerHeader` |
+| The widget's title in a header | `WidgetPanel`'s own `PanelHeader` (not `DrawerHeader` — the panel header also carries the detail-stack back control) |
 | A close control, scrim click, Escape | `Drawer` |
 | Focus trap; focus returns to the card on close | `Drawer` / `useFocusTrap` |
 | Dialog semantics (`role="dialog"`, `aria-modal`, label) | `Drawer` |

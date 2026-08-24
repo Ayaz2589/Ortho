@@ -83,5 +83,9 @@ export function checkedDrafts(drafts: CsvDraftRow[]): CsvDraftRow[] {
 }
 
 export function totalSpendCents(drafts: CsvDraftRow[]): number {
-  return checkedDrafts(drafts).reduce((sum, d) => sum + d.amountCents, 0)
+  // Spend only: deposits/refunds parse as kind 'income' and must not inflate
+  // the summary's single money figure (review 2026-08-24).
+  return checkedDrafts(drafts)
+    .filter((d) => d.source.kind === 'expense')
+    .reduce((sum, d) => sum + d.amountCents, 0)
 }
