@@ -269,6 +269,22 @@ for extensionless paths, which infinite-loops signed-out native launches.
   (`readSkeletonCount`/`writeSkeletonCount`, validated + capped at 24); the store records
   `transactions`/`goals`/`housing`/`tags` after `loadAll`.
 
+- **No horizontal scrolling, anywhere on mobile (spec 058):** `<main>` carries an **unprefixed**
+  `min-w-0` (as a `flex-1` flex item it defaults to `min-width: auto` and will not shrink below its
+  content — the old `sm:min-w-0` left mobile as the one uncovered tier) plus `overflow-x-hidden`
+  beside `overflow-y-auto`. That pairing matters everywhere: per CSS Overflow 3, setting ONE axis to
+  something other than `visible`/`clip` promotes the other from `visible` to **`auto`**, so an
+  element written as "scrolls vertically" silently scrolls sideways too. `html, body` carry
+  `overflow-x: clip` as a backstop — `clip`, never `hidden`, which would make the document a scroll
+  container and break `position: sticky`. Anything genuinely wider than the screen (the spend
+  heatmap's day grid) scrolls **inside its own container**, and that container needs a `min-w-0`
+  ancestor chain or it will not constrain. Markers placed at `left: <pct>%` must use
+  `lib/ui/edgeAnchor.ts` (`edgeAnchoredTransform`) rather than a blanket `translateX(-50%)`, which
+  overhangs both track edges. Guards: `test/appearance/no-horizontal-scroll-guard.test.ts` (shell,
+  `.ow-drawer`, the backstop, and an app-wide scan for the marker anti-pattern),
+  `test/widgets/panels/panel-overflow.test.tsx`, `test/dashboard/spend-heatmap-overflow.test.tsx`,
+  `test/ui/edge-anchor.test.ts`.
+
 ## 6. Responsive vs desktop composition
 
 - Tailwind `sm` flips TabBar→Sidebar; **≥1024px = "expanded"** via `useIsExpanded()`

@@ -165,6 +165,21 @@ body {
   font-synthesis: none;
 }
 
+/* ---- spec 058: no horizontal scrolling, anywhere on mobile ----
+   A document-level backstop behind the per-component fixes (the widget detail
+   panel frame, the panel kit, the spend heatmap). `clip` rather than `hidden`:
+   `hidden` would make the document a scroll container, silently breaking
+   `position: sticky` descendants and programmatic scrolling, whereas `clip`
+   only clips. It also leaves the vertical axis alone — per CSS Overflow 3 a
+   `visible` axis is forced to `auto` only when the OTHER axis is neither
+   `visible` nor `clip`, so `overflow-y` stays `visible` and the page scrolls
+   normally. This is a backstop, not the fix: anything that genuinely needs to
+   be wider than the screen scrolls inside its own container. */
+html,
+body {
+  overflow-x: clip;
+}
+
 /* ---- spec 021: native-feel (Capacitor iOS shell) ----
    env(safe-area-inset-*) resolves to 0 on any context without a notch/home
    indicator (desktop web, older devices), so these are safe unconditionally —
@@ -588,7 +603,12 @@ button,
   z-index: 80;
   display: flex;
   flex-direction: column;
-  overflow: auto;
+  /* spec 058: vertical only. The single `overflow` shorthand used here made
+     BOTH axes scrollable, so wide content panned the drawer sideways — it
+     renders at 90vw on a phone for every Drawer that does not opt into
+     fullBleedOnMobile. */
+  overflow-x: hidden;
+  overflow-y: auto;
   animation: owDrawerIn 160ms var(--ease-out);
 }
 @keyframes owDrawerIn {

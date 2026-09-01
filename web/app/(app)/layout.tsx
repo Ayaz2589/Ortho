@@ -119,7 +119,15 @@ function Shell({ children, active }: { children: ReactNode; active: boolean }) {
       <AnnouncementHost />
       <Sidebar />
       <main
-        className="relative flex-1 overflow-y-auto sm:min-w-0 sm:[scrollbar-gutter:stable]"
+        className="relative min-w-0 flex-1 overflow-y-auto overflow-x-hidden sm:[scrollbar-gutter:stable]"
+        // spec 058: `min-w-0` is unprefixed — as a `flex-1` flex item <main>
+        // defaults to `min-width: auto` and will not shrink below its content,
+        // so a wide descendant pushed it past the viewport on mobile (the only
+        // tier the old `sm:min-w-0` left uncovered). `overflow-x-hidden` is the
+        // matching backstop: with the vertical axis scrollable and the
+        // horizontal one left at `visible`, the horizontal axis computes to
+        // `auto` and <main> scrolls sideways. Anything that genuinely needs to
+        // be wider scrolls inside its own container.
         // spec 021: clears the status bar/notch/Dynamic Island on the
         // Capacitor iOS shell — resolves to 0 on any context without a safe
         // area (desktop browsers, older devices), so this is harmless there.

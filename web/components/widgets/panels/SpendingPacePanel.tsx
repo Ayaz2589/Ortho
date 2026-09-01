@@ -11,6 +11,7 @@ import { budgetStatusForMonth } from '@/lib/finance/budgets'
 import { computeSpendingPace, budgetPaceCents, type PaceCategoryRow, type PaceSummary } from '@/lib/finance/spendingPace'
 import { categoryMeta } from '@/lib/categories'
 import { shortDate } from '@/lib/format'
+import { edgeAnchoredTransform } from '@/lib/ui/edgeAnchor'
 import { usePanelCaption, usePanelDetail } from '@/components/widgets/WidgetPanel'
 import { PanelEmpty, PanelSectionLabel, PanelRow } from '@/components/widgets/panels/kit'
 import type { Transaction, TransactionCategory } from '@/lib/types'
@@ -210,7 +211,12 @@ function VerdictZone({
           {markerPct != null ? (
             <div
               className="absolute -top-1 -bottom-1 w-[1.5px]"
-              style={{ left: `${markerPct}%`, background: 'rgba(242,239,232,.5)' }}
+              style={{
+                left: `${markerPct}%`,
+                // spec 058: anchored, so the rule cannot spill past the track end.
+                transform: edgeAnchoredTransform(markerPct),
+                background: 'rgba(242,239,232,.5)',
+              }}
             />
           ) : null}
         </div>
@@ -218,7 +224,7 @@ function VerdictZone({
           <div className="relative h-4">
             <div
               className="absolute top-3 whitespace-nowrap text-[11px] tabular-nums text-text-3"
-              style={{ left: `${markerPct}%`, transform: 'translateX(-50%)' }}
+              style={{ left: `${markerPct}%`, transform: edgeAnchoredTransform(markerPct) }}
             >
               {markerCaption}
             </div>
