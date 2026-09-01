@@ -1,104 +1,211 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { ChevronLeft } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronLeft, Pencil, Plus } from 'lucide-react'
 import { useApp } from '@/lib/store'
-import { GoalCard } from '@/components/goals/GoalCard'
+import { goalProgress } from '@/lib/finance/goals'
+import { goalProjection, whatIfScenarios } from '@/lib/finance/goalProjection'
+import { monthYear } from '@/lib/format'
+import { ordinalDay } from '@/lib/ordinalDay'
 import { GoalForm } from '@/components/goals/GoalForm'
 import { ContributionForm } from '@/components/goals/ContributionForm'
-import { cumulativeSeries, monthlySeries } from '@/lib/finance/goalSeries'
+import { ContributionLedger } from '@/components/goals/ContributionLedger'
+import { DetailBlock } from '@/components/goals/detail/DetailBlock'
+import { ProjectedFinishBlock } from '@/components/goals/detail/ProjectedFinishBlock'
+import { ProgressTowardTargetBlock } from '@/components/goals/detail/ProgressTowardTargetBlock'
+import { PaceAgainstPlanBlock } from '@/components/goals/detail/PaceAgainstPlanBlock'
+import { ConsistencyBlock } from '@/components/goals/detail/ConsistencyBlock'
 import type { Goal, GoalContribution } from '@/lib/types'
 
-// recharts is the heaviest dependency in the app and may only be reached through
-// next/dynamic (spec 022, guarded by test/bundle/no-eager-recharts.test.ts).
-const GoalCumulativeChart = dynamic(
-  () => import('@/components/goals/charts/GoalCumulativeChart').then((m) => m.GoalCumulativeChart),
-  { ssr: false }
-)
-const GoalMonthlyChart = dynamic(
-  () => import('@/components/goals/charts/GoalMonthlyChart').then((m) => m.GoalMonthlyChart),
-  { ssr: false }
-)
-
 /**
- * One goal, in depth (spec 045 US2). The headline figures reuse `GoalCard` — the
- * same component the Planning hub renders — so the two surfaces can never state
- * different progress or a different pace for the same goal. Here it is given the
- * FULL ledger and the per-contribution edit/delete handlers; the hub's card gets a
- * capped ledger and neither handler.
+ * One savings target or debt, in depth (spec 059 US4 — rebuilt from spec 045).
  *
- * Below it, two charts derived from the pure `goalSeries`: how the total
- * accumulated against the steady pace the target implies, and what went in each
- * month. With no contributions there is nothing honest to plot, so both are
- * replaced by a calm invitation rather than an empty grid.
+ * The page this replaces repeated the card wholesale and then added two charts
+ * that carried no information: a near-straight cumulative line with no target,
+ * and a "by month" bar chart that was a picket fence of equal bars. Five blocks
+ * now each answer something that page didn't — when this finishes and what would
+ * move that date, how the balance is tracking toward the target, whether each
+ * payment matched the plan, whether any month was missed, and the full ledger.
+ *
+ * With fewer than three contributions there is nothing honest to project, so the
+ * four analysis blocks collapse to a single line saying exactly that — and the
+ * ledger still renders in full, because what has already happened is still true.
  */
 export function GoalDetail({ goal, contributions }: { goal: Goal; contributions: GoalContribution[] }) {
-  const { t, deleteGoal, deleteContribution } = useApp()
+  const { formatMoney, t, locale, deleteGoal, deleteContribution } = useApp()
   const [editingGoal, setEditingGoal] = useState(false)
   const [addingTo, setAddingTo] = useState<Goal | null>(null)
   const [editingContribution, setEditingContribution] = useState<GoalContribution | null>(null)
 
   const now = useMemo(() => new Date(), [])
-  const cumulative = useMemo(
-    () =>
-      cumulativeSeries(contributions, {
-        targetCents: goal.target_cents,
-        targetDate: goal.target_date,
-        createdAt: goal.created_at,
-        now,
-      }),
-    [contributions, goal.target_cents, goal.target_date, goal.created_at, now]
+  const isDebt = goal.kind === 'debt_payoff'
+
+  const progress = useMemo(() => goalProgress(goal.target_cents, contributions), [goal.target_cents, contributions])
+  const projection = useMemo(() => goalProjection(goal, contributions, now), [goal, contributions, now])
+  const scenarios = useMemo(
+    () => whatIfScenarios(projection, progress.remaining_cents, now),
+    [projection, progress.remaining_cents, now]
   )
-  const monthly = useMemo(() => monthlySeries(contributions), [contributions])
-  const hasHistory = cumulative.length > 0
+
+  const pct = Math.round(progress.fraction * 100)
+  const remainingPct = Math.max(0, 100 - pct)
+  const cadence = projection.cadence
+  const Icon = isDebt ? ArrowDown : ArrowUp
 
   return (
     <>
       <div className="pt-2">
-        <Link href="/planning" className="inline-flex items-center gap-1 text-[15px] text-accent">
-          <ChevronLeft size={18} />
+        <Link href="/planning" className="inline-flex items-center gap-1 text-[13.5px] text-text-2">
+          <ChevronLeft size={16} />
           {t('Planning')}
         </Link>
       </div>
 
-      <div className="mt-3 flex flex-col gap-5">
-        <GoalCard
-          goal={goal}
-          contributions={contributions}
-          now={now}
-          onAddContribution={setAddingTo}
-          onEdit={() => setEditingGoal(true)}
-          onEditContribution={setEditingContribution}
-          onDeleteContribution={(c) => deleteContribution(c.id)}
-        />
+      {/* Hero */}
+      <div className="mt-4 flex items-start gap-3.5">
+        <span
+          aria-hidden
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+          style={
+            isDebt
+              ? { background: 'var(--surface-2)', color: 'var(--text-2)' }
+              : {
+                  background: 'transparent',
+                  border: '0.5px solid color-mix(in srgb, var(--positive) 35%, transparent)',
+                  color: 'var(--positive)',
+                }
+          }
+        >
+          <Icon size={15} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-3">
+            <h1 className="min-w-0 truncate text-[22px] tracking-[-0.5px] text-text">{goal.name}</h1>
+            <button
+              type="button"
+              onClick={() => setEditingGoal(true)}
+              className="ortho-interactive -my-1 inline-flex shrink-0 items-center gap-1 rounded py-1 text-[12.5px] text-text-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            >
+              <Pencil size={12} />
+              {t('Edit')}
+            </button>
+          </div>
+          {cadence ? (
+            <p data-testid="detail-cadence" className="mt-1 text-[12.5px] tabular-nums text-text-3">
+              {t(
+                '{0} · {1} every {2} since {3}',
+                isDebt ? t('Debt') : t('Savings'),
+                formatMoney(cadence.amountCents),
+                ordinalDay(cadence.dayOfMonth, locale),
+                monthYear(monthStart(cadence.firstMonthKey), locale)
+              )}
+            </p>
+          ) : (
+            <p className="mt-1 text-[12.5px] text-text-3">{isDebt ? t('Debt') : t('Savings')}</p>
+          )}
+        </div>
+      </div>
 
-        {hasHistory ? (
+      <p
+        data-testid="detail-headline"
+        className="mb-0.5 mt-3.5 text-[34px] font-semibold tracking-[-1.1px] tabular-nums text-text"
+      >
+        {formatMoney(isDebt ? progress.remaining_cents : progress.saved_cents)}
+        <small className="ml-2 text-[14px] font-normal tracking-[-0.1px] text-text-3">
+          {isDebt
+            ? t('left of {0}', formatMoney(goal.target_cents))
+            : t('saved of {0}', formatMoney(goal.target_cents))}
+        </small>
+      </p>
+
+      <div
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuetext={t('{0}% complete', pct)}
+        className="relative mt-3 h-1.5 w-full overflow-hidden rounded-full"
+        style={{ background: 'color-mix(in srgb, var(--text) 6%, transparent)' }}
+      >
+        {isDebt ? (
           <>
-            <section aria-label={t('Saved over time')}>
-              <h2 className="mb-2 text-[11px] font-normal uppercase tracking-[0.6px] text-text-3">
-                {t('Saved over time')}
-              </h2>
-              <GoalCumulativeChart data={cumulative} />
-              {goal.target_date ? (
-                <p className="mt-1 text-[12px] text-text-3">{t('Dashed line: steady pace to your target date.')}</p>
-              ) : null}
-            </section>
-
-            <section aria-label={t('By month')}>
-              <h2 className="mb-2 text-[11px] font-normal uppercase tracking-[0.6px] text-text-3">
-                {t('By month')}
-              </h2>
-              <GoalMonthlyChart data={monthly} />
-            </section>
+            <span
+              className="absolute bottom-0 top-0 rounded-full"
+              style={{ left: 0, width: `${pct}%`, background: 'color-mix(in srgb, var(--positive) 22%, transparent)' }}
+            />
+            <span
+              className="absolute bottom-0 top-0 rounded-full"
+              style={{ right: 0, width: `${remainingPct}%`, background: 'var(--positive)' }}
+            />
           </>
         ) : (
-          <p data-testid="goal-charts-empty" className="text-sm text-text-2">
-            {t('Add your first contribution to see how this goal builds up over time.')}
-          </p>
+          <span
+            className="absolute bottom-0 top-0 rounded-full"
+            style={{ left: 0, width: `${pct}%`, background: 'var(--positive)' }}
+          />
         )}
       </div>
+
+      <div className="mt-2 flex justify-between gap-3 text-[12.5px] tabular-nums text-text-3">
+        <span className="min-w-0 truncate">
+          {isDebt
+            ? t('{0} paid · {1}%', formatMoney(progress.saved_cents), pct)
+            : t('{0} saved · {1}%', formatMoney(progress.saved_cents), pct)}
+        </span>
+        <span className="shrink-0">
+          {projection.available && projection.paymentsToGo !== null
+            ? isDebt
+              ? projection.paymentsToGo === 1
+                ? t('1 payment to go')
+                : t('{0} payments to go', projection.paymentsToGo)
+              : projection.paymentsToGo === 1
+                ? t('1 deposit to go')
+                : t('{0} deposits to go', projection.paymentsToGo)
+            : t('{0} to go', formatMoney(progress.remaining_cents))}
+        </span>
+      </div>
+
+      {projection.available ? (
+        <>
+          <ProjectedFinishBlock goal={goal} projection={projection} scenarios={scenarios} now={now} />
+          <ProgressTowardTargetBlock goal={goal} contributions={contributions} projection={projection} now={now} />
+          <PaceAgainstPlanBlock projection={projection} />
+          <ConsistencyBlock projection={projection} />
+        </>
+      ) : (
+        <section
+          data-testid="detail-no-projection"
+          className="mt-[26px] border-t pt-5"
+          style={{ borderColor: 'var(--hairline)' }}
+        >
+          <p className="text-[13px] text-text-2">
+            {projection.unavailableReason === 'reached'
+              ? t('Reached — nothing left to project.')
+              : t('Not enough history to project yet. Add a few more contributions and this fills in.')}
+          </p>
+        </section>
+      )}
+
+      <DetailBlock
+        label={t('Contributions')}
+        value={
+          <button
+            type="button"
+            onClick={() => setAddingTo(goal)}
+            className="ortho-interactive -my-1 rounded py-1 text-[13px] text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          >
+            <Plus size={12} className="mr-0.5 inline" aria-hidden />
+            {t('Add')}
+          </button>
+        }
+      >
+        <ContributionLedger
+          contributions={contributions}
+          onEdit={setEditingContribution}
+          onDelete={(c) => deleteContribution(c.id)}
+        />
+      </DetailBlock>
 
       <GoalForm
         open={editingGoal}
@@ -114,4 +221,9 @@ export function GoalDetail({ goal, contributions }: { goal: Goal; contributions:
       />
     </>
   )
+}
+
+function monthStart(monthKey: string): Date {
+  const [y, m] = monthKey.split('-').map(Number)
+  return new Date(y, m - 1, 1)
 }
