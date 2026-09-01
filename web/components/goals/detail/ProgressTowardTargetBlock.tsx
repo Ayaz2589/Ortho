@@ -64,13 +64,21 @@ export function ProgressTowardTargetBlock({
     >
       <GoalProgressChart data={series.points} targetCents={goal.target_cents} domainEnd={series.domainEnd} />
 
-      <div
-        data-testid="progress-axis"
-        className="mt-2 flex justify-between text-[11px] tabular-nums text-text-3"
-      >
-        <span>{monthYear(series.startDate, locale)}</span>
-        <span>{t('today')}</span>
-        <span>{t('{0} · target', monthYear(series.finishDate, locale))}</span>
+      {/* "today" is positioned at its ACTUAL share of the span, not at the
+          midpoint a three-child `justify-between` would give it. The x-domain
+          runs start → projected finish, so on a 24%-paid item the midpoint
+          would point the label at empty chart. Clamped away from both edges so
+          it never collides with the start or target label. */}
+      <div data-testid="progress-axis" className="relative mt-2 h-4 text-[11px] tabular-nums text-text-3">
+        <span className="absolute left-0">{monthYear(series.startDate, locale)}</span>
+        <span
+          data-testid="progress-axis-today"
+          className="absolute -translate-x-1/2 whitespace-nowrap"
+          style={{ left: `${series.todayPct}%` }}
+        >
+          {t('today')}
+        </span>
+        <span className="absolute right-0">{t('{0} · target', monthYear(series.finishDate, locale))}</span>
       </div>
 
       <div className="mt-2.5 flex gap-4 text-[11.5px] text-text-3">
@@ -101,6 +109,8 @@ export interface ProgressSeries {
   domainEnd: number
   startDate: Date
   finishDate: Date
+  /** Where today sits along the span, 0–100, for the axis label. */
+  todayPct: number
 }
 
 /**
@@ -158,7 +168,12 @@ export function progressChartSeries(
   points[points.length - 1].projected = running
   points.push({ x: domainEnd, projected: goal.target_cents })
 
-  return { points, domainEnd, startDate, finishDate }
+  // Kept inside [12, 88] so the label never overlaps the start or target labels
+  // at either end of the row.
+  const rawPct = (daysBetween(startDate, now) / domainEnd) * 100
+  const todayPct = Math.min(88, Math.max(12, rawPct))
+
+  return { points, domainEnd, startDate, finishDate, todayPct }
 }
 
 function startOfLocalDay(d: Date): Date {

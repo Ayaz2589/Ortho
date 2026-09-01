@@ -47,10 +47,21 @@ export function BlockValueStrong({ children }: { children: ReactNode }) {
   return <strong className="font-semibold text-text">{children}</strong>
 }
 
-/** The month strip that sits under the pace bars and the consistency cells. */
-export function MonthStrip({ labels }: { labels: string[] }) {
+/** How many months the pace and consistency strips show.
+ *
+ *  One column per month since the first contribution is unbounded: a three-year
+ *  payoff renders 36 columns in a reading column, most of which is gap. Both
+ *  strips show the most recent window instead, and say so when they truncate. */
+export const STRIP_MAX_MONTHS = 12
+
+/** The month strip that sits under the pace bars and the consistency cells.
+ *
+ *  `gapClassName` MUST match the gap of the row it labels. The columns are
+ *  `flex-1`, so a different gap gives different column centres and the labels
+ *  drift out from under the bar they annotate — worse toward the right edge. */
+export function MonthStrip({ labels, gapClassName }: { labels: string[]; gapClassName: string }) {
   return (
-    <div className="mt-2 flex gap-2.5">
+    <div className={`mt-2 flex ${gapClassName}`}>
       {labels.map((label, i) => (
         <span key={`${label}-${i}`} className="flex-1 text-center text-[11px] text-text-3">
           {label}

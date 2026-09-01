@@ -2,7 +2,7 @@
 
 import { useApp } from '@/lib/store'
 import type { GoalProjection } from '@/lib/finance/goalProjection'
-import { DetailBlock, BlockValueStrong, MonthStrip, BlockReading } from './DetailBlock'
+import { DetailBlock, BlockValueStrong, MonthStrip, BlockReading, STRIP_MAX_MONTHS } from './DetailBlock'
 import { shortMonth } from './PaceAgainstPlanBlock'
 
 /**
@@ -18,6 +18,7 @@ export function ConsistencyBlock({ projection }: { projection: GoalProjection })
 
   if (projection.months.length === 0) return null
 
+  const months = projection.months.slice(-STRIP_MAX_MONTHS)
   const missedCount = projection.missedMonthKeys.length
 
   return (
@@ -39,7 +40,7 @@ export function ConsistencyBlock({ projection }: { projection: GoalProjection })
       }
     >
       <div className="flex gap-[7px]">
-        {projection.months.map((m) => (
+        {months.map((m) => (
           <div
             key={m.monthKey}
             data-testid="consistency-cell"
@@ -60,7 +61,7 @@ export function ConsistencyBlock({ projection }: { projection: GoalProjection })
         ))}
       </div>
 
-      <MonthStrip labels={projection.months.map((m) => shortMonth(m.monthKey, locale))} />
+      <MonthStrip labels={months.map((m) => shortMonth(m.monthKey, locale))} gapClassName="gap-[7px]" />
 
       <BlockReading testId="consistency-reading" muted>
         {consistencySentence(projection, locale, t)}
@@ -74,8 +75,12 @@ function consistencySentence(
   locale: string,
   t: (k: string, ...a: Array<string | number>) => string
 ): string {
-  const missed = projection.missedMonthKeys.map((k) => shortMonth(k, locale))
-  const under = projection.months.filter((m) => m.status === 'under').map((m) => shortMonth(m.monthKey, locale))
+  const shown = projection.months.slice(-STRIP_MAX_MONTHS)
+  const shownKeys = new Set(shown.map((m) => m.monthKey))
+  // Read only the window that is actually drawn, so the sentence and the cells
+  // above it never describe different months.
+  const missed = projection.missedMonthKeys.filter((k) => shownKeys.has(k)).map((k) => shortMonth(k, locale))
+  const under = shown.filter((m) => m.status === 'under').map((m) => shortMonth(m.monthKey, locale))
 
   if (missed.length === 0 && under.length === 0) {
     return t('No missed months since this started.')

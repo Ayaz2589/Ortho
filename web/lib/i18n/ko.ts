@@ -793,6 +793,14 @@ const catalog: Record<string, string> = {
   "Under plan in {0}.": "{0}은 계획 미만.",
   "{0} and {1}": "{0} 및 {1}",
   "Edit item": "수정",
+  "1 more payment": "1회 더 납부",
+  "1 more deposit": "1회 더 입금",
+  "1 payment to go": "1회 남음",
+  "1 deposit to go": "1회 남음",
+  "1 month": "1개월",
+  "1 contribution · every {0}": "입금 1회 · 매월 {0}일",
+  "Every month has met the plan, and some went beyond it.": "모든 달이 계획을 채웠고, 일부는 그 이상이었습니다.",
+  "Every payment in the last {0} months has matched the plan exactly.": "최근 {0}개월의 모든 납입이 계획과 정확히 일치했습니다.",
 }
 
 export default catalog

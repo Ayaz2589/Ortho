@@ -18,6 +18,10 @@ import type { GoalContribution } from '@/lib/types'
  *
  * A total row closes the list so the ledger visibly reconciles against the
  * headline number above it.
+ *
+ * The row actions are drawn at the handoff's 26×34px but carry a 44×44px
+ * invisible `::after` hit area, so the compact layout does not cost the
+ * constitution's touch-target minimum.
  */
 export function ContributionLedger({
   contributions,
@@ -79,7 +83,7 @@ export function ContributionLedger({
                 type="button"
                 onClick={() => onEdit(c)}
                 aria-label={t('Edit contribution')}
-                className="ortho-interactive flex h-full items-center justify-center rounded text-text-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                className="ortho-interactive relative flex h-full items-center justify-center rounded text-text-3 after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               >
                 <Pencil size={12} />
               </button>
@@ -91,7 +95,7 @@ export function ContributionLedger({
                 type="button"
                 onClick={() => onDelete(c)}
                 aria-label={t('Delete contribution')}
-                className="ortho-interactive flex h-full items-center justify-center rounded text-text-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                className="ortho-interactive relative flex h-full items-center justify-center rounded text-text-3 after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               >
                 <Trash2 size={12} />
               </button>

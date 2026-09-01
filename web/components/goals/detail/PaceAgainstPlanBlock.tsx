@@ -3,10 +3,9 @@
 import { useApp } from '@/lib/store'
 import { monthYear } from '@/lib/format'
 import type { GoalProjection } from '@/lib/finance/goalProjection'
-import { DetailBlock, BlockValueStrong, MonthStrip, BlockReading } from './DetailBlock'
+import { DetailBlock, BlockValueStrong, MonthStrip, BlockReading, STRIP_MAX_MONTHS } from './DetailBlock'
 
-/** Plot height, and where the plan line sits within it. Leaving headroom above
- *  the line is what lets an over-plan month be drawn taller instead of clamped. */
+/** Plot height, and where a bar exactly at the plan sits within it. */
 const PLOT_PX = 104
 const PLAN_PX = 76
 
@@ -29,13 +28,21 @@ export function PaceAgainstPlanBlock({ projection }: { projection: GoalProjectio
   if (!cadence || projection.months.length === 0) return null
 
   const planCents = cadence.amountCents
-  // Scale so the plan line lands at PLAN_PX and the tallest bar still fits.
-  const tallest = Math.max(planCents, ...projection.months.map((m) => m.cents))
-  const scale = tallest > 0 ? Math.min(PLAN_PX / planCents, PLOT_PX / tallest) : 0
+  const months = projection.months.slice(-STRIP_MAX_MONTHS)
+  const truncated = projection.months.length > months.length
 
-  const allOnPlan = projection.onPlanCount === projection.monthCount
-  const shortMonths = projection.months.filter((m) => m.status === 'under').length
-  const missed = projection.missedMonthKeys.length
+  // Scale so a bar at the plan is PLAN_PX tall, compressing only if the tallest
+  // month would otherwise overflow the plot. The plan LINE is drawn at the same
+  // scale — pinning it to a fixed height while rescaling the bars is what made a
+  // perfect month appear to fall short of a plan it exactly met.
+  const tallest = Math.max(planCents, ...months.map((m) => m.cents))
+  const scale = tallest > 0 ? Math.min(PLAN_PX / planCents, PLOT_PX / tallest) : 0
+  const planPx = Math.round(planCents * scale)
+
+  const exactlyOnPlan = months.every((m) => m.status === 'on_plan')
+  const noShortfall = months.every((m) => m.status === 'on_plan' || m.status === 'over')
+  const shortMonths = months.filter((m) => m.status === 'under').length
+  const missed = months.filter((m) => m.status === 'missed').length
 
   return (
     <DetailBlock
@@ -55,19 +62,19 @@ export function PaceAgainstPlanBlock({ projection }: { projection: GoalProjectio
           data-testid="pace-plan-line"
           className="pointer-events-none absolute left-0 right-0"
           style={{
-            bottom: PLAN_PX,
+            bottom: planPx,
             borderTop: '1px dashed color-mix(in srgb, var(--text) 30%, transparent)',
           }}
         />
         {/* A panel-coloured chip so the dashes don't run through the caption. */}
         <span
           className="pointer-events-none absolute right-0 px-1 text-[11px] tabular-nums text-text-3"
-          style={{ bottom: PLAN_PX - 8, background: 'var(--surface)' }}
+          style={{ bottom: planPx - 8, background: 'var(--surface)' }}
         >
           {t('plan {0}', formatMoney(planCents))}
         </span>
 
-        {projection.months.map((m) => (
+        {months.map((m) => (
           <div key={m.monthKey} className="flex h-full flex-1 flex-col justify-end">
             <div
               data-testid="pace-bar"
@@ -85,12 +92,16 @@ export function PaceAgainstPlanBlock({ projection }: { projection: GoalProjectio
         ))}
       </div>
 
-      <MonthStrip labels={projection.months.map((m) => shortMonth(m.monthKey, locale))} />
+      <MonthStrip labels={months.map((m) => shortMonth(m.monthKey, locale))} gapClassName="gap-3.5" />
 
       <BlockReading testId="pace-reading">
-        {allOnPlan
-          ? t('Every payment has matched the plan exactly — the projection above is as reliable as it gets.')
-          : paceSentence({ shortMonths, missed, t })}
+        {exactlyOnPlan
+          ? truncated
+            ? t('Every payment in the last {0} months has matched the plan exactly.', months.length)
+            : t('Every payment has matched the plan exactly — the projection above is as reliable as it gets.')
+          : noShortfall
+            ? t('Every month has met the plan, and some went beyond it.')
+            : paceSentence({ shortMonths, missed, t })}
       </BlockReading>
     </DetailBlock>
   )

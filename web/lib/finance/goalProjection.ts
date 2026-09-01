@@ -154,9 +154,19 @@ function addMonths(d: Date, months: number, day: number): Date {
 // ── cadence ───────────────────────────────────────────────────────────────────
 
 /**
- * The observed rhythm of past contributions: the modal amount and day.
+ * The observed rhythm of past contributions: the modal MONTHLY amount, and the
+ * modal day within the month.
  *
- * Modal, not mean: one catch-up payment must not drag the figure away from the
+ * `amountCents` is the modal *monthly total*, not the modal individual payment —
+ * this is the whole reason the figure can be printed as "$600/mo" and then used
+ * as a per-month pace. Someone paying $300 on the 1st and $300 on the 15th is
+ * paying $600 a month; reading their modal PAYMENT would call it $300/mo, mark
+ * every month as "over" (which counts as on plan, so the recent-average fallback
+ * never fires), and ship a finish date nearly two years late under `basis:
+ * 'cadence'` — the engine's highest-confidence label. For a once-a-month payer
+ * the two definitions are identical.
+ *
+ * Modal, not mean: one catch-up month must not drag the figure away from the
  * amount actually paid every month, because that figure is printed on the card.
  * Amount ties break toward the LARGER amount and day ties toward the EARLIER day
  * — both the conservative direction, so a tie can never make a debt look like it
@@ -167,16 +177,23 @@ function addMonths(d: Date, months: number, day: number): Date {
 export function goalCadence(contributions: readonly GoalContribution[]): GoalCadence | null {
   if (contributions.length === 0) return null
 
-  const amountCounts = new Map<number, number>()
+  const monthTotals = new Map<string, number>()
   const dayCounts = new Map<number, number>()
   let firstMonthKey = monthKeyOf(contributions[0].date)
 
   for (const c of contributions) {
-    amountCounts.set(c.amount_cents, (amountCounts.get(c.amount_cents) ?? 0) + 1)
+    const key = monthKeyOf(c.date)
+    monthTotals.set(key, (monthTotals.get(key) ?? 0) + c.amount_cents)
     const day = dayOfMonthOf(c.date)
     dayCounts.set(day, (dayCounts.get(day) ?? 0) + 1)
-    const key = monthKeyOf(c.date)
     if (key < firstMonthKey) firstMonthKey = key
+  }
+
+  // Modal of the per-month totals. Months with no contribution are absent here
+  // by construction, so a skipped month can never become the cadence.
+  const amountCounts = new Map<number, number>()
+  for (const total of monthTotals.values()) {
+    amountCounts.set(total, (amountCounts.get(total) ?? 0) + 1)
   }
 
   let amountCents = 0
@@ -401,8 +418,14 @@ export function whatIfScenarios(
     return rows
   }
 
+  // Each increase must clear the one before it: rounding to a clean $50 figure
+  // collapses +25% and +67% of a small pace onto the same number (a $100 pace
+  // gives $150 twice), which would render one lever as two.
+  let floor = pace
   for (const step of T.increaseSteps) {
-    rows.push(row('increase', cleanAmount(pace * (1 + step), pace)))
+    const amount = cleanAmount(pace * (1 + step), floor)
+    rows.push(row('increase', amount))
+    floor = amount
   }
   rows.push({
     kind: 'skip',
@@ -440,8 +463,12 @@ export function savingsDebtsSummary(
     targetCents += goal.target_cents
     if (!progress.reached) activeCount++
 
+    // A reached item is excluded from the commitment for the same reason it is
+    // excluded from `activeCount`: you are not still putting money toward a loan
+    // you have finished paying. Counting it would render the incoherent
+    // "putting $600 a month toward 1 item" when $400 of it is already done.
     const cadence = goalCadence(contributions)
-    if (cadence) monthlyCommitmentCents += cadence.amountCents
+    if (cadence && !progress.reached) monthlyCommitmentCents += cadence.amountCents
 
     const projection = goalProjection(goal, contributions, now)
     if (!projection.available || !projection.finishDate) continue

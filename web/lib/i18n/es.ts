@@ -793,6 +793,14 @@ const catalog: Record<string, string> = {
   "Under plan in {0}.": "Por debajo del plan en {0}.",
   "{0} and {1}": "{0} y {1}",
   "Edit item": "Editar",
+  "1 more payment": "1 pago más",
+  "1 more deposit": "1 depósito más",
+  "1 payment to go": "falta 1 pago",
+  "1 deposit to go": "falta 1 depósito",
+  "1 month": "1 mes",
+  "1 contribution · every {0}": "1 aporte · cada día {0}",
+  "Every month has met the plan, and some went beyond it.": "Todos los meses han cumplido el plan, y algunos lo han superado.",
+  "Every payment in the last {0} months has matched the plan exactly.": "Cada pago de los últimos {0} meses ha coincidido exactamente con el plan.",
 }
 
 export default catalog

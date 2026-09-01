@@ -307,6 +307,40 @@ describe('goalProjection — the handoff worked example', () => {
   })
 })
 
+describe('goalProjection — cadence is a MONTHLY rate, not a per-payment amount', () => {
+  it('reads a semi-monthly payer at their true monthly rate', () => {
+    // $300 on the 1st and the 15th is $600/mo. Taking the modal PAYMENT would
+    // read it as $300/mo and put the finish date nearly two years too far out —
+    // and, because every month then reads as "over" (which counts as on plan),
+    // it would ship that wrong date under basis 'cadence', the engine's
+    // highest-confidence label, instead of falling back to the recent average.
+    const semi = ['2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08'].flatMap((m) => [
+      contribution(`${m}-01`, 30_000),
+      contribution(`${m}-15`, 30_000),
+    ])
+    const projection = goalProjection(goal(), semi, new Date(2026, 7, 20))
+
+    expect(projection.cadence?.amountCents).toBe(60_000)
+    expect(projection.months.every((m) => m.status === 'on_plan')).toBe(true)
+    expect(projection.paymentsToGo).toBe(23)
+    expect(projection.finishDate?.getFullYear()).toBe(2028)
+    expect(projection.finishDate?.getMonth()).toBe(6) // July
+  })
+
+  it('still counts every contribution for the disclosure', () => {
+    const semi = ['2026-02', '2026-03', '2026-04'].flatMap((m) => [
+      contribution(`${m}-01`, 30_000),
+      contribution(`${m}-15`, 30_000),
+    ])
+    expect(goalCadence(semi)?.contributionCount).toBe(6)
+    expect(goalCadence(semi)?.dayOfMonth).toBe(1)
+  })
+
+  it('is unchanged for a once-a-month payer', () => {
+    expect(goalCadence(steadySeven())?.amountCents).toBe(60_000)
+  })
+})
+
 describe('whatIfScenarios', () => {
   it('is empty when there is no projection to vary', () => {
     const projection = goalProjection(goal(), steadySeven().slice(0, 1), NOW)
@@ -351,6 +385,22 @@ describe('whatIfScenarios', () => {
     expect(rows.map((r) => r.kind)).toEqual(['current', 'planned', 'increase'])
     expect(rows[1].monthlyCents).toBe(142_800)
     expect(rows[1].deltaMonths).toBeLessThan(0)
+  })
+
+  it('never proposes two identical increase rows', () => {
+    // Rounding to a clean $50 figure collapses +25% and +67% of a small pace
+    // onto the same number ($100 → $150 and $150), which would render the same
+    // row twice with different-looking labels.
+    const contributions = [
+      contribution('2026-02-01', 10_000),
+      contribution('2026-03-01', 10_000),
+      contribution('2026-04-01', 10_000),
+    ]
+    const projection = goalProjection(goal({ target_cents: 500_000 }), contributions, new Date(2026, 3, 15))
+    const rows = whatIfScenarios(projection, 470_000, new Date(2026, 3, 15))
+    const increases = rows.filter((r) => r.kind === 'increase').map((r) => r.monthlyCents)
+    expect(new Set(increases).size).toBe(increases.length)
+    expect([...increases]).toEqual([...increases].sort((a, b) => a - b))
   })
 
   it('never proposes an increase at or below the current pace', () => {
@@ -408,6 +458,19 @@ describe('savingsDebtsSummary', () => {
     const summary = savingsDebtsSummary([debtB], { b: [contribution('2026-02-01', 60_000)] }, NOW)
     expect(summary.nextToFinish).toBeNull()
     expect(summary.lastToFinish).toBeNull()
+  })
+
+  it('excludes a reached item from the monthly commitment, as it does from the count', () => {
+    // "You're putting $600 a month toward 1 item" is incoherent when $400 of it
+    // is a loan that is already paid off.
+    const paidOff = goal({ id: 'p', name: 'Car loan', target_cents: 80_000 })
+    const summary = savingsDebtsSummary(
+      [paidOff],
+      { p: [contribution('2026-01-01', 40_000), contribution('2026-02-01', 40_000)].map((c) => ({ ...c, goal_id: 'p' })) },
+      NOW
+    )
+    expect(summary.activeCount).toBe(0)
+    expect(summary.monthlyCommitmentCents).toBe(0)
   })
 
   it('counts a reached item in the totals but not as active', () => {
