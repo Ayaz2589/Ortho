@@ -107,9 +107,12 @@ export const WIDGETS: readonly WidgetDefinition[] = [
     Panel: BudgetsPanel,
   },
   {
+    // The id stays 'goals' on purpose: it is the localStorage key for per-browser
+    // widget enablement, so renaming it to match the title would silently reset
+    // every existing user's dashboard layout (spec 059 research R5).
     id: 'goals',
-    title: 'Goals',
-    description: 'Progress toward your savings goals.',
+    title: 'Savings & Debts',
+    description: 'What you’re saving for and paying down.',
     defaultEnabled: true,
     Body: GoalsBody,
     Panel: GoalsPanel,

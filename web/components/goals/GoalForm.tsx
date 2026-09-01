@@ -86,7 +86,7 @@ export function GoalForm({
     <Modal
       open={open}
       onClose={onClose}
-      title={editing ? t('Edit goal') : t('New goal')}
+      title={editing ? t('Edit item') : t('New item')}
       right={
         <button
           type="button"
@@ -177,7 +177,7 @@ export function GoalForm({
               className="flex items-center justify-center gap-2 rounded-2xl bg-surface py-3 text-[15px] text-destructive"
             >
               <MinusCircle size={18} />
-              {t('Delete goal')}
+              {t('Delete')}
             </button>
           ) : (
             <button
@@ -185,7 +185,7 @@ export function GoalForm({
               onClick={() => setConfirmRemove(true)}
               className="py-2 text-center text-[15px] text-text-3"
             >
-              {t('Delete goal')}
+              {t('Delete')}
             </button>
           )
         ) : null}

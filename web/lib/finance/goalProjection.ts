@@ -95,7 +95,7 @@ export interface SavingsDebtsSummary {
 // ── date helpers (local calendar only) ────────────────────────────────────────
 
 /** `YYYY-MM` of a stored `YYYY-MM-DD`. Read off the string so no timezone is
- *  ever involved — the same reasoning as `goalSeries.ts`. */
+ *  ever involved — the rule `insights.ts` established for date-only strings. */
 function monthKeyOf(date: string): string {
   return date.slice(0, 7)
 }

@@ -90,7 +90,9 @@ afterEach(() => {
 // Always-rendered dashboard chrome keys: the page title and two default-enabled
 // widget titles (spec 034; the Overview/Reports mode switch was removed in spec
 // 036 when Reports became the savings-trends widget). All exist in every catalog.
-const DASH_KEYS = ['Dashboard', 'Budgets', 'Goals'] as const
+// The goals widget was renamed "Savings & Debts" by spec 059 — its registry id
+// is still 'goals', but nothing user-facing says so any more.
+const DASH_KEYS = ['Dashboard', 'Budgets', 'Savings & Debts'] as const
 
 for (const [language, catalog] of [
   ['Español', es],

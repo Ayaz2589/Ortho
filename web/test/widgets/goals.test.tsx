@@ -3,9 +3,11 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import { GoalsBody } from '@/components/widgets/bodies/GoalsBody'
 
-// Widget 4 (goals): saved-of-target progress per goal via goalProgress /
-// goalPacing / contributionsByGoal. Rows borrow the GoalCard vocabulary — sage
-// progress bar, "{0} to go" / "Reached", a calm pace line (never red).
+// Widget 4 (savings & debts): spec 059 US5 brings this cell onto the same
+// vocabulary as the Planning section — a headline chosen by kind, and a bar
+// whose DIRECTION carries the type. Deliberately nothing more: this is a fixed,
+// uniform grid cell, so no aggregate header, no ETA line, no disclosure and no
+// chart (spec 059 research R6). The depth lives in the panel behind it.
 
 const h = vi.hoisted(() => ({
   goals: [] as unknown[],
@@ -40,21 +42,52 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('GoalsBody', () => {
-  it('renders each goal with saved-of-target and a progress bar', () => {
+  it('leads a savings row with what has accumulated', () => {
     render(<GoalsBody />)
     expect(screen.getByText('Emergency fund')).toBeTruthy()
-    expect(screen.getByText('New laptop')).toBeTruthy()
-    expect(screen.getByText('$40000 to go')).toBeTruthy() // 100000 − 60000
-    expect(screen.getByText('Reached')).toBeTruthy() // laptop 50000/50000
+    expect(screen.getByText('$60000 saved')).toBeTruthy()
+  })
+
+  it('leads a debt row with what remains', () => {
+    h.goals = [
+      { id: 'g3', name: 'Credit card', kind: 'debt_payoff', target_cents: 100000, target_date: null, created_at: '2026-01-01T00:00:00.000Z' },
+    ]
+    h.contributions = [{ id: 'c3', goal_id: 'g3', amount_cents: 40000, date: '2026-02-01' }]
+    render(<GoalsBody />)
+    expect(screen.getByText('$60000 left')).toBeTruthy()
+  })
+
+  it('gives each kind its own direction of travel', () => {
+    h.goals = [
+      { id: 'g1', name: 'Emergency fund', kind: 'savings', target_cents: 100000, target_date: null, created_at: '2026-01-01T00:00:00.000Z' },
+      { id: 'g3', name: 'Credit card', kind: 'debt_payoff', target_cents: 100000, target_date: null, created_at: '2026-01-01T00:00:00.000Z' },
+    ]
+    h.contributions = [
+      { id: 'c1', goal_id: 'g1', amount_cents: 60000, date: '2026-02-01' },
+      { id: 'c3', goal_id: 'g3', amount_cents: 40000, date: '2026-02-01' },
+    ]
+    render(<GoalsBody />)
+    expect(screen.getByTestId('widget-fill-saved').style.left).toBe('0px')
+    expect(screen.getByTestId('widget-fill-remaining').style.right).toBe('0px')
+  })
+
+  it('keeps the progress bars accessible', () => {
+    render(<GoalsBody />)
     const bars = screen.getAllByRole('progressbar')
     expect(bars[0].getAttribute('aria-valuenow')).toBe('60')
     expect(bars[1].getAttribute('aria-valuenow')).toBe('100')
   })
 
-  it('renders a calm empty state when there are no goals', () => {
+  it('stays a glance — no ETA, no disclosure, no chart in the cell', () => {
+    render(<GoalsBody />)
+    expect(screen.queryByTestId('sd-disclosure')).toBeNull()
+    expect(screen.queryByText(/more payments|more deposits|Clear by|Funded by/)).toBeNull()
+  })
+
+  it('renders a calm empty state when there is nothing yet', () => {
     h.goals = []
     render(<GoalsBody />)
-    expect(screen.getByText('No goals yet.')).toBeTruthy()
+    expect(screen.getByText('Nothing here yet.')).toBeTruthy()
   })
 
   it('fills its cell (h-full)', () => {

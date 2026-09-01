@@ -87,9 +87,9 @@ describe('dashboard board — all widgets wired to one scope', () => {
     expect(screen.getByText('Groceries')).toBeTruthy()
     expect(screen.getByText('$80000 left')).toBeTruthy()
 
-    // goals: 100000 − 60000 = 40000 to go.
+    // savings & debts: a savings item leads with what has accumulated (spec 059).
     expect(screen.getByText('Emergency fund')).toBeTruthy()
-    expect(screen.getByText('$40000 to go')).toBeTruthy()
+    expect(screen.getByText('$60000 saved')).toBeTruthy()
 
     // top-merchants + activity both surface the merchant names.
     expect(screen.getAllByText('Costco').length).toBeGreaterThanOrEqual(1)
