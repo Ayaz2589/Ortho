@@ -52,7 +52,10 @@ export function ReconciledMonthCard({
           {formatRate(rate)}
         </div>
       </div>
-      <div className="mt-2.5 flex gap-[18px] border-t-[0.5px] border-hairline pt-2.5">
+      <div
+        data-testid="recon-metrics"
+        className="mt-2.5 flex flex-wrap gap-x-[18px] gap-y-2 border-t-[0.5px] border-hairline pt-2.5"
+      >
         <ReconColumn label={t('Income')} value={formatMoney(incomeCents)} />
         <ReconColumn label={t('Expenses')} value={formatMoney(expenseCents)} />
         <ReconColumn label={t('Amount saved')} value={formatMoney(savedCents)} />
@@ -63,7 +66,7 @@ export function ReconciledMonthCard({
 
 function ReconColumn({ label, value }: { label: ReactNode; value: ReactNode }) {
   return (
-    <div className="flex flex-col gap-[3px]">
+    <div data-testid="recon-column" className="flex min-w-0 flex-col gap-[3px]">
       <span className="text-[11px] text-text-3">{label}</span>
       <span className="text-[13.5px] font-semibold tabular-nums text-text" style={{ letterSpacing: '-0.2px' }}>
         {value}
