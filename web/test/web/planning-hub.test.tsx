@@ -239,17 +239,27 @@ describe('GoalsSummaryCard (US4)', () => {
     store.goalContributions = [contrib('g-on', 60000)]
   }
 
-  it('renders one card per goal, behind first, with a suggested monthly; undated goals neutral', () => {
+  it('renders one card per item, behind first', () => {
     threeGoals()
     render(<GoalsSummaryCard summary={summaryFor().goals} />)
 
-    const cards = screen.getAllByTestId('goal-card')
+    const cards = screen.getAllByTestId('savings-debt-card')
     expect(cards).toHaveLength(3)
     expect(within(cards[0]).getByText(/Behind Fund/)).toBeInTheDocument()
-    expect(within(cards[0]).getByText(/\/mo/)).toBeInTheDocument() // catch-up suggestion
+  })
 
-    const undated = cards.find((c) => within(c).queryByText('Someday'))!
-    expect(within(undated).queryByText(/\/mo/)).toBeNull()
+  it('no longer prescribes a catch-up monthly amount (spec 059 FR-035)', () => {
+    // The old card told you to "set aside $X/mo to reach it by ...". The
+    // redesign describes the cadence you ARE paying and offers levers on the
+    // detail page; it never recommends an amount or judges the pace.
+    threeGoals()
+    render(<GoalsSummaryCard summary={summaryFor().goals} />)
+
+    const behind = screen
+      .getAllByTestId('savings-debt-card')
+      .find((c) => within(c).queryByText(/Behind Fund/))!
+    expect(within(behind).queryByText(/set aside/i)).toBeNull()
+    expect(within(behind).queryByText(/behind pace/i)).toBeNull()
   })
 
   it('opens each goal at its own detail address', () => {
@@ -272,15 +282,15 @@ describe('GoalsSummaryCard (US4)', () => {
     expect(screen.queryByRole('link', { name: /view all goals/i })).toBeNull()
   })
 
-  it('offers goal creation, which the retired index page used to own', () => {
+  it('offers item creation, which the retired index page used to own', () => {
     render(<GoalsSummaryCard summary={summaryFor().goals} />)
-    expect(screen.getByRole('button', { name: /new goal/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /new item/i })).toBeInTheDocument()
   })
 
   it('shows a calm empty state when there are no goals', () => {
     render(<GoalsSummaryCard summary={summaryFor().goals} />)
     expect(screen.getByTestId('goals-empty')).toBeInTheDocument()
-    expect(screen.queryByTestId('goal-card')).toBeNull()
+    expect(screen.queryByTestId('savings-debt-card')).toBeNull()
   })
 })
 
@@ -322,13 +332,14 @@ describe('PlanningMonthBar (US1)', () => {
 })
 
 describe('Planning hub page (US1)', () => {
-  it('renders the Planning header, a month bar, the Budgets link and the Goals section', () => {
+  it('renders the Planning header, a month bar, the Budgets link and the Savings & Debts section', () => {
     render(<PlanningPage />)
     expect(screen.getByRole('heading', { name: 'Planning' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /view all budgets/i })).toHaveAttribute('href', '/planning/budget')
-    // Goals has no "view all" any more — the section itself is where goals live.
+    // Savings & Debts has no "view all" any more — the section itself is where
+    // the items live.
     expect(screen.queryByRole('link', { name: /view all goals/i })).toBeNull()
-    expect(screen.getByRole('button', { name: /new goal/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /new item/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /previous month/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /next month/i })).toBeInTheDocument()
   })
