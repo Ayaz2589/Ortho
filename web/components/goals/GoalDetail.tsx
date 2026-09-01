@@ -7,6 +7,7 @@ import { useApp } from '@/lib/store'
 import { goalProgress } from '@/lib/finance/goals'
 import { goalProjection, whatIfScenarios } from '@/lib/finance/goalProjection'
 import { monthYear } from '@/lib/format'
+import { ordinalDay } from '@/lib/ordinalDay'
 import { GoalForm } from '@/components/goals/GoalForm'
 import { ContributionForm } from '@/components/goals/ContributionForm'
 import { ContributionLedger } from '@/components/goals/ContributionLedger'
@@ -96,7 +97,7 @@ export function GoalDetail({ goal, contributions }: { goal: Goal; contributions:
                 '{0} · {1} every {2} since {3}',
                 isDebt ? t('Debt') : t('Savings'),
                 formatMoney(cadence.amountCents),
-                ordinal(cadence.dayOfMonth, locale),
+                ordinalDay(cadence.dayOfMonth, locale),
                 monthYear(monthStart(cadence.firstMonthKey), locale)
               )}
             </p>
@@ -155,8 +156,12 @@ export function GoalDetail({ goal, contributions }: { goal: Goal; contributions:
         <span className="shrink-0">
           {projection.available && projection.paymentsToGo !== null
             ? isDebt
-              ? t('{0} payments to go', projection.paymentsToGo)
-              : t('{0} deposits to go', projection.paymentsToGo)
+              ? projection.paymentsToGo === 1
+                ? t('1 payment to go')
+                : t('{0} payments to go', projection.paymentsToGo)
+              : projection.paymentsToGo === 1
+                ? t('1 deposit to go')
+                : t('{0} deposits to go', projection.paymentsToGo)
             : t('{0} to go', formatMoney(progress.remaining_cents))}
         </span>
       </div>
@@ -221,15 +226,4 @@ export function GoalDetail({ goal, contributions }: { goal: Goal; contributions:
 function monthStart(monthKey: string): Date {
   const [y, m] = monthKey.split('-').map(Number)
   return new Date(y, m - 1, 1)
-}
-
-function ordinal(day: number, locale: string): string {
-  try {
-    const pr = new Intl.PluralRules(locale, { type: 'ordinal' })
-    const suffixes: Record<string, string> = { one: 'st', two: 'nd', few: 'rd', other: 'th' }
-    const suffix = suffixes[pr.select(day)]
-    return suffix ? `${day}${suffix}` : String(day)
-  } catch {
-    return String(day)
-  }
 }

@@ -16,7 +16,11 @@ import type { SavingsDebtsSummary } from '@/lib/finance/goalProjection'
 export function SavingsDebtsHeader({ summary }: { summary: SavingsDebtsSummary }) {
   const { formatMoney, t, locale } = useApp()
 
-  const fundedPct = summary.targetCents > 0 ? (summary.contributedCents / summary.targetCents) * 100 : 0
+  // Clamped: `saved_cents` is the raw unclamped sum, so an over-funded item
+  // pushes this past 100 and the remaining segment gets a NEGATIVE width, which
+  // the browser silently drops.
+  const rawPct = summary.targetCents > 0 ? (summary.contributedCents / summary.targetCents) * 100 : 0
+  const fundedPct = Math.min(100, Math.max(0, rawPct))
   const next = summary.nextToFinish
   const last = summary.lastToFinish
   const showsBoth = next && last && next.goalId !== last.goalId

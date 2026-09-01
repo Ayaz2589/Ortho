@@ -171,6 +171,69 @@ describe('PaceAgainstPlanBlock', () => {
   })
 })
 
+describe('PaceAgainstPlanBlock — the plan line is a real reference', () => {
+  it('keeps an on-plan bar level with the plan line even when one month towers over it', () => {
+    // The plan line used to be pinned at a fixed height while the bars were
+    // rescaled to fit the tallest month. One $1,800 catch-up against a $600 plan
+    // pushed every perfect month to under half the line's height — while the
+    // reading beside it still said "on plan".
+    const contributions = [
+      contrib('2026-02-01', 60_000),
+      contrib('2026-03-01', 60_000),
+      contrib('2026-04-01', 180_000), // catch-up
+      contrib('2026-05-01', 60_000),
+      contrib('2026-06-01', 60_000),
+    ]
+    const { projection } = project(goal(), contributions)
+    render(<PaceAgainstPlanBlock projection={projection} />)
+
+    const bars = screen.getAllByTestId('pace-bar')
+    const planBottom = parseFloat(screen.getByTestId('pace-plan-line').style.bottom)
+    const onPlanHeight = parseFloat(bars[0].style.height)
+
+    expect(onPlanHeight).toBeCloseTo(planBottom, 0)
+    expect(parseFloat(bars[2].style.height)).toBeGreaterThan(planBottom)
+  })
+
+  it('does not claim every payment matched exactly when some months went over', () => {
+    // "Over" counts as on plan for the COUNT, but it is not "matched the plan
+    // exactly" — the bars visibly differ in height.
+    // Runs right up to the reference month, so nothing reads as missed — the
+    // only deviation is the one month that went OVER.
+    const contributions = [
+      contrib('2026-02-01', 60_000),
+      contrib('2026-03-01', 90_000),
+      contrib('2026-04-01', 60_000),
+      contrib('2026-05-01', 60_000),
+      contrib('2026-06-01', 60_000),
+      contrib('2026-07-01', 60_000),
+      contrib('2026-08-01', 60_000),
+    ]
+    const { projection } = project(goal(), contributions)
+    expect(projection.months.some((m) => m.status === 'over')).toBe(true)
+    expect(projection.months.some((m) => m.status === 'missed')).toBe(false)
+    render(<PaceAgainstPlanBlock projection={projection} />)
+
+    const reading = screen.getByTestId('pace-reading').textContent ?? ''
+    expect(reading).not.toMatch(/matched the plan exactly/)
+    expect(reading).not.toMatch(/0 months came in short/)
+    expect(reading).toMatch(/beyond|more than|above/i)
+  })
+
+  it('bounds the strip so a long-running item stays legible', () => {
+    // One cell per month since the first contribution is unbounded: a three-year
+    // payoff renders 36 columns in a reading column, most of it gaps.
+    const many = Array.from({ length: 30 }, (_, i) => {
+      const year = 2024 + Math.floor(i / 12)
+      const month = String((i % 12) + 1).padStart(2, '0')
+      return contrib(`${year}-${month}-01`, 60_000)
+    })
+    const { projection } = project(goal({ target_cents: 10_000_000 }), many)
+    render(<PaceAgainstPlanBlock projection={projection} />)
+    expect(screen.getAllByTestId('pace-bar').length).toBeLessThanOrEqual(12)
+  })
+})
+
 describe('ConsistencyBlock', () => {
   it('shows one cell per month and states the streak', () => {
     const { projection } = project(goal(), steady)
@@ -205,6 +268,17 @@ describe('ConsistencyBlock', () => {
     const reading = screen.getByTestId('consistency-reading').textContent ?? ''
     expect(reading).toMatch(/Missed/)
     expect(reading).toMatch(/May/)
+  })
+
+  it('bounds the strip so a long-running item stays legible', () => {
+    const many = Array.from({ length: 30 }, (_, i) => {
+      const year = 2024 + Math.floor(i / 12)
+      const month = String((i % 12) + 1).padStart(2, '0')
+      return contrib(`${year}-${month}-01`, 60_000)
+    })
+    const { projection } = project(goal({ target_cents: 10_000_000 }), many)
+    render(<ConsistencyBlock projection={projection} />)
+    expect(screen.getAllByTestId('consistency-cell').length).toBeLessThanOrEqual(12)
   })
 
   it('says so plainly when nothing has been missed', () => {

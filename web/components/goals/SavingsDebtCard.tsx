@@ -7,6 +7,7 @@ import { useApp } from '@/lib/store'
 import { goalProgress } from '@/lib/finance/goals'
 import { goalProjection } from '@/lib/finance/goalProjection'
 import { monthYear, monthYearLong } from '@/lib/format'
+import { ordinalDay } from '@/lib/ordinalDay'
 import type { Goal, GoalContribution } from '@/lib/types'
 
 /**
@@ -177,11 +178,13 @@ export function SavingsDebtCard({
                 style={{ color: expanded ? 'var(--text)' : 'var(--text-2)' }}
               >
                 <span className="truncate">
-                  {t(
-                    '{0} contributions · every {1}',
-                    cadence.contributionCount,
-                    ordinalDay(cadence.dayOfMonth, locale)
-                  )}
+                  {cadence.contributionCount === 1
+                    ? t('1 contribution · every {0}', ordinalDay(cadence.dayOfMonth, locale))
+                    : t(
+                        '{0} contributions · every {1}',
+                        cadence.contributionCount,
+                        ordinalDay(cadence.dayOfMonth, locale)
+                      )}
                 </span>
                 <ChevronDown
                   size={13}
@@ -295,11 +298,13 @@ function EtaText({
 
   return isDebt ? (
     <>
-      {t('Clear by')} {when} — {t('{0} more payments', projection.paymentsToGo)}
+      {t('Clear by')} {when} —{' '}
+      {projection.paymentsToGo === 1 ? t('1 more payment') : t('{0} more payments', projection.paymentsToGo)}
     </>
   ) : (
     <>
-      {t('Funded by')} {when} — {t('{0} more deposits', projection.paymentsToGo)}
+      {t('Funded by')} {when} —{' '}
+      {projection.paymentsToGo === 1 ? t('1 more deposit') : t('{0} more deposits', projection.paymentsToGo)}
     </>
   )
 }
@@ -308,17 +313,4 @@ function EtaText({
 function monthStart(monthKey: string): Date {
   const [y, m] = monthKey.split('-').map(Number)
   return new Date(y, m - 1, 1)
-}
-
-/** "1st", "2nd", … for the cadence day. Falls back to the plain number in
- *  locales where `Intl.PluralRules` has no ordinal categories to map. */
-function ordinalDay(day: number, locale: string): string {
-  try {
-    const pr = new Intl.PluralRules(locale, { type: 'ordinal' })
-    const suffixes: Record<string, string> = { one: 'st', two: 'nd', few: 'rd', other: 'th' }
-    const suffix = suffixes[pr.select(day)]
-    return suffix ? `${day}${suffix}` : String(day)
-  } catch {
-    return String(day)
-  }
 }

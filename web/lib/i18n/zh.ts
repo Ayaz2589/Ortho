@@ -793,6 +793,14 @@ const catalog: Record<string, string> = {
   "Under plan in {0}.": "{0}低于计划。",
   "{0} and {1}": "{0}和{1}",
   "Edit item": "编辑",
+  "1 more payment": "还需 1 次还款",
+  "1 more deposit": "还需 1 次存入",
+  "1 payment to go": "还剩 1 次还款",
+  "1 deposit to go": "还剩 1 次存入",
+  "1 month": "1 个月",
+  "1 contribution · every {0}": "1 笔记录 · 每月 {0} 日",
+  "Every month has met the plan, and some went beyond it.": "每个月都达成了计划，有些还超出了。",
+  "Every payment in the last {0} months has matched the plan exactly.": "最近 {0} 个月的每一笔都与计划完全一致。",
 }
 
 export default catalog

@@ -793,6 +793,14 @@ const catalog: Record<string, string> = {
   "Under plan in {0}.": "{0}-এ পরিকল্পনার কম।",
   "{0} and {1}": "{0} ও {1}",
   "Edit item": "সম্পাদনা করুন",
+  "1 more payment": "আরও ১টি কিস্তি",
+  "1 more deposit": "আরও ১টি জমা",
+  "1 payment to go": "আরও ১টি কিস্তি বাকি",
+  "1 deposit to go": "আরও ১টি জমা বাকি",
+  "1 month": "১ মাস",
+  "1 contribution · every {0}": "১টি অবদান · প্রতি {0} তারিখে",
+  "Every month has met the plan, and some went beyond it.": "প্রতিটি মাস পরিকল্পনা পূরণ করেছে, কিছু মাসে আরও বেশি।",
+  "Every payment in the last {0} months has matched the plan exactly.": "গত {0} মাসের প্রতিটি কিস্তি ঠিক পরিকল্পনামতো হয়েছে।",
 }
 
 export default catalog

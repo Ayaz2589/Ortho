@@ -150,12 +150,12 @@ function GoalPanelRow({
           isDebt ? (
             <>
               {t('Clear by')} <span className="text-text">{monthYearLong(projection.finishDate, locale)}</span> —{' '}
-              {t('{0} more payments', projection.paymentsToGo)}
+              {projection.paymentsToGo === 1 ? t('1 more payment') : t('{0} more payments', projection.paymentsToGo)}
             </>
           ) : (
             <>
               {t('Funded by')} <span className="text-text">{monthYearLong(projection.finishDate, locale)}</span> —{' '}
-              {t('{0} more deposits', projection.paymentsToGo)}
+              {projection.paymentsToGo === 1 ? t('1 more deposit') : t('{0} more deposits', projection.paymentsToGo)}
             </>
           )
         ) : projection.unavailableReason === 'reached' ? (

@@ -45,7 +45,7 @@ export function ProjectedFinishBlock({
         <>
           <BlockValueStrong>{monthYearLong(projection.finishDate, locale)}</BlockValueStrong>
           {' · '}
-          {t('{0} months', projection.paymentsToGo)}
+          {projection.paymentsToGo === 1 ? t('1 month') : t('{0} months', projection.paymentsToGo)}
         </>
       }
     >
