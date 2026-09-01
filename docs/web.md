@@ -68,11 +68,42 @@ web/app/
 - **Five destinations** (Dashboard/Transactions/Planning/Housing/Settings) — identical TABS arrays
   duplicated in `components/Sidebar.tsx` and `components/TabBar.tsx`. **Planning (spec 038)** is a
   top-level month-scoped hub (`app/(app)/planning/page.tsx`): a "Left to plan" health hero, a
-  pace-aware budget summary, a goals summary (behind-first), and a non-monthly sinking-funds panel,
-  all derived by the pure `lib/planning/planSummary.ts` engine (reuses `budgetStatusForMonth` +
-  `goalPacing`; no new data). `/budgets` and `/goals` are the detail pages the hub links to (the old
+  pace-aware budget summary, a **Savings & Debts** section (behind-first), and a non-monthly
+  sinking-funds panel, all derived by the pure `lib/planning/planSummary.ts` engine (reuses
+  `budgetStatusForMonth` + `goalPacing`; no new data). `/budgets` and `/goals` are the detail pages the hub links to (the old
   Settings › Planning route now client-redirects to `/planning`). `/plaid-oauth` is the web
   bank-OAuth return route.
+- **Savings & Debts (spec 059)** — what used to be the "Goals" section. The stored model was
+  already right: `Goal.kind` has been `'savings' | 'debt_payoff'` since spec 027, and the old UI
+  simply rendered both identically. So this was a derivation + presentation change with **no
+  migration**. Four things to know before touching it:
+  1. **`lib/finance/goalProjection.ts` is a SIBLING of `lib/finance/goals.ts`, not a replacement.**
+     `goals.ts` is pinned by `shared/test-vectors/goals.json` and models pace against the *target
+     date* a member set; `goalProjection.ts` models pace against the *cadence* they have actually
+     been paying (modal amount + modal day, inferred from contributions). Both ship. Do not merge
+     them — editing `goals.ts` is vector drift on a contract three other surfaces consume. Money
+     arithmetic in the new engine still comes from `goalProgress`, so the two cannot disagree about
+     how much is left (property-pinned in `test/finance/goalProjection.test.ts`).
+  2. **The refusal to project is a returned value, not a caller's rule.** `goalProjection` returns
+     `{ available: false, unavailableReason }` with every date-shaped field `null` when there are
+     fewer than three contributions, when the derived pace is zero, or when the target is reached.
+     Four surfaces read it (Planning card, detail page, dashboard widget body, detail panel) and
+     **none of them may compute a fallback date** — that single enforcement point is what makes
+     "no projected date anywhere" checkable rather than conventional.
+  3. **Direction of travel carries the kind, not colour.** Savings fills from the left and grows;
+     debt is anchored right and depletes toward zero with the paid share behind it at 22% opacity.
+     One hue (`--positive`) throughout; nothing is ever red, including a missed month (drawn as an
+     absence with a dashed outline) and a later projection (plain `--text-3`, never marked).
+  4. **The widget registry `id` is still `'goals'`** even though its title now reads
+     "Savings & Debts". The id is the localStorage key for per-browser widget enablement, so
+     renaming it would silently reset every existing user's dashboard layout. Pinned by a test in
+     `test/widgets/panels/goals-panel.test.tsx`.
+
+  Deleted with this change: `GoalCard.tsx` (its always-visible three-row ledger is now a
+  collapsible in-place disclosure), `charts/GoalCumulativeChart.tsx` and `charts/GoalMonthlyChart.tsx`
+  (a flat line with no target, and a picket fence of equal bars — neither carried information), and
+  `lib/finance/goalSeries.ts`, which had no consumer left once both charts went.
+
 - **Onboarding funnel foundation (spec 045)** — the app's first *pre-auth* surface, and the first
   thing here that is not a signed-in screen. Four things are easy to get wrong:
   1. **`/` is also the installed iOS app's entry point** (Capacitor wraps this same bundle). The

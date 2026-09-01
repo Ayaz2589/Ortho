@@ -39,13 +39,10 @@ interface StoreView {
 let store: StoreView
 vi.mock('@/lib/store', () => ({ useApp: () => store }))
 
-// Keep this suite on the route contract — the chart leaves have their own concerns
-// and are loaded dynamically in the real page.
-vi.mock('@/components/goals/charts/GoalCumulativeChart', () => ({
-  GoalCumulativeChart: () => <div data-testid="cumulative-chart" />,
-}))
-vi.mock('@/components/goals/charts/GoalMonthlyChart', () => ({
-  GoalMonthlyChart: () => <div data-testid="monthly-chart" />,
+// Keep this suite on the route contract and the block structure — the chart leaf
+// has its own concerns and is loaded dynamically in the real page.
+vi.mock('@/components/goals/charts/GoalProgressChart', () => ({
+  GoalProgressChart: () => <div data-testid="progress-chart" />,
 }))
 
 import GoalDetailPage from '@/app/(app)/planning/goals/page'
@@ -105,20 +102,30 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('goal detail page — resolving the goal', () => {
-  it('renders the named goal', async () => {
+  it('renders the named item', async () => {
     setSearch('?id=g1')
     render(<GoalDetailPage />)
     await waitFor(() => expect(screen.getByText('Emergency fund')).toBeTruthy())
     expect(replaceSpy).not.toHaveBeenCalled()
   })
 
-  it('shows that goal’s money figures and progress', async () => {
+  it('leads with the type-appropriate headline and the target as a qualifier', async () => {
     setSearch('?id=g1')
     render(<GoalDetailPage />)
-    await waitFor(() => expect(screen.getByTestId('goal-headline')).toBeTruthy())
-    expect(screen.getByTestId('goal-headline')).toHaveTextContent('$250.00')
-    expect(screen.getByTestId('goal-headline')).toHaveTextContent('$1000.00')
+    await waitFor(() => expect(screen.getByTestId('detail-headline')).toBeTruthy())
+    // A savings item is measured by what has accumulated.
+    expect(screen.getByTestId('detail-headline')).toHaveTextContent('$250.00')
+    expect(screen.getByTestId('detail-headline')).toHaveTextContent('saved of $1000.00')
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '25')
+  })
+
+  it('leads a debt with what remains instead', async () => {
+    store.goals = [{ ...GOAL, kind: 'debt_payoff' } as Goal]
+    setSearch('?id=g1')
+    render(<GoalDetailPage />)
+    await waitFor(() => expect(screen.getByTestId('detail-headline')).toBeTruthy())
+    expect(screen.getByTestId('detail-headline')).toHaveTextContent('$750.00')
+    expect(screen.getByTestId('detail-headline')).toHaveTextContent('left of $1000.00')
   })
 
   it('shows the whole ledger, not a capped preview', async () => {
@@ -129,24 +136,56 @@ describe('goal detail page — resolving the goal', () => {
     }))
     setSearch('?id=g1')
     render(<GoalDetailPage />)
-    await waitFor(() => expect(screen.getByTestId('contribution-list')).toBeTruthy())
-    expect(screen.getAllByRole('listitem')).toHaveLength(6)
+    await waitFor(() => expect(screen.getAllByTestId('ledger-row').length).toBe(6))
+    expect(screen.queryByText('See all in detail')).toBeNull()
   })
 
-  it('renders both charts when there are contributions', async () => {
+  it('renders all five blocks when there is enough history', async () => {
+    store.goalContributions = Array.from({ length: 6 }, (_, i) => ({
+      ...CONTRIB,
+      id: `c${i}`,
+      amount_cents: 10000,
+      date: `2026-0${i + 1}-01`,
+    }))
     setSearch('?id=g1')
     render(<GoalDetailPage />)
-    await waitFor(() => expect(screen.getByTestId('cumulative-chart')).toBeTruthy())
-    expect(screen.getByTestId('monthly-chart')).toBeTruthy()
+
+    await waitFor(() => expect(screen.getByTestId('block-projected-finish-value')).toBeTruthy())
+    expect(screen.getByTestId('block-progress-value')).toBeTruthy()
+    expect(screen.getByTestId('block-pace-value')).toBeTruthy()
+    expect(screen.getByTestId('block-consistency-value')).toBeTruthy()
+    expect(screen.getByTestId('ledger-total')).toBeTruthy()
+    expect(screen.queryByTestId('detail-no-projection')).toBeNull()
   })
 
-  it('replaces the charts with a calm empty state when there are none', async () => {
+  it('collapses the four analysis blocks to one honest line without enough history', async () => {
+    // One contribution. The ledger still renders in full — what already
+    // happened is still true; only the FUTURE is unknowable.
+    setSearch('?id=g1')
+    render(<GoalDetailPage />)
+
+    await waitFor(() => expect(screen.getByTestId('detail-no-projection')).toBeTruthy())
+    expect(screen.getByTestId('detail-no-projection')).toHaveTextContent('Not enough history to project yet')
+    expect(screen.queryByTestId('block-projected-finish-value')).toBeNull()
+    expect(screen.queryByTestId('block-progress-value')).toBeNull()
+    expect(screen.queryByTestId('block-pace-value')).toBeNull()
+    expect(screen.queryByTestId('block-consistency-value')).toBeNull()
+    expect(screen.getAllByTestId('ledger-row')).toHaveLength(1)
+  })
+
+  it('names no date anywhere when the projection was refused', async () => {
+    setSearch('?id=g1')
+    const { container } = render(<GoalDetailPage />)
+    await waitFor(() => expect(screen.getByTestId('detail-no-projection')).toBeTruthy())
+    expect(container.textContent ?? '').not.toMatch(/payments to go|deposits to go/)
+  })
+
+  it('says so calmly when there are no contributions at all', async () => {
     store.goalContributions = []
     setSearch('?id=g1')
     render(<GoalDetailPage />)
-    await waitFor(() => expect(screen.getByTestId('goal-charts-empty')).toBeTruthy())
-    expect(screen.queryByTestId('cumulative-chart')).toBeNull()
-    expect(screen.queryByTestId('monthly-chart')).toBeNull()
+    await waitFor(() => expect(screen.getByText('No contributions yet')).toBeTruthy())
+    expect(screen.queryByTestId('progress-chart')).toBeNull()
   })
 })
 

@@ -2,17 +2,21 @@
 
 import { useApp } from '@/lib/store'
 import { useDashboardScopeContext } from '@/lib/widgets/DashboardScopeContext'
-import { goalProgress, goalPacing, contributionsByGoal } from '@/lib/finance/goals'
-import { parseLocalDate } from '@/lib/format'
+import { goalProgress, contributionsByGoal } from '@/lib/finance/goals'
 import type { Goal } from '@/lib/types'
 
 /**
- * Goals widget body (spec 039 — Section 4). Savings/debt-payoff progress per goal,
- * borrowing the GoalCard vocabulary: saved-of-target money headline, a hairline
- * sage `--positive` progress bar, and a calm pace line for dated goals — the sand
- * `--accent` when behind, NEVER red. Reads PROPLESS from `useApp()` +
- * `useDashboardScopeContext()` (only `now`, for pacing — goals span their whole
- * lifetime, not the scope window).
+ * Savings & Debts widget body (spec 039 → reworked by spec 059 US5).
+ *
+ * Adopts the Planning section's vocabulary — a headline chosen by kind, and a bar
+ * whose DIRECTION carries the type — and deliberately nothing else. This is a
+ * fixed, uniform grid cell: the card is a glance, one number per row. No
+ * aggregate header, no projected finish, no disclosure, no chart (spec 059
+ * research R6); the depth belongs to the panel this cell opens, and putting it
+ * here would overflow the cell.
+ *
+ * Reads PROPLESS from `useApp()` + `useDashboardScopeContext()` (only `now` —
+ * an item spans its whole lifetime, not the scope window).
  */
 export function GoalsBody() {
   const { goals, goalContributions, t } = useApp()
@@ -21,7 +25,7 @@ export function GoalsBody() {
   if (goals.length === 0) {
     return (
       <div className="flex h-full flex-col">
-        <p className="flex flex-1 items-center text-[13px] text-text-3">{t('No goals yet.')}</p>
+        <p className="flex flex-1 items-center text-[13px] text-text-3">{t('Nothing here yet.')}</p>
       </div>
     )
   }
@@ -40,44 +44,25 @@ export function GoalsBody() {
 function GoalRow({
   goal,
   contributions,
-  now,
 }: {
   goal: Goal
   contributions: { amount_cents: number }[]
   now: Date
 }) {
-  const { formatMoney, t, locale } = useApp()
+  const { formatMoney, t } = useApp()
+  const isDebt = goal.kind === 'debt_payoff'
   const progress = goalProgress(goal.target_cents, contributions)
   const pct = Math.round(progress.fraction * 100)
-  const pacing = goalPacing(goal.target_cents, goal.target_date, goal.created_at, progress.saved_cents, now)
-
-  const dueLabel = goal.target_date
-    ? new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', year: 'numeric' }).format(
-        parseLocalDate(goal.target_date)
-      )
-    : null
-
-  // Pace line — behind is calm accent (never red); reached is sage.
-  let paceText: string | null = null
-  let paceColor = 'var(--text-2)'
-  if (goal.target_date && !progress.reached) {
-    if (pacing.off_track) {
-      paceText = t('Behind pace — set aside {0}/mo to reach it by {1}.', formatMoney(pacing.suggested_monthly_cents), dueLabel ?? '')
-      paceColor = 'var(--accent)'
-    } else {
-      paceText = t('On pace · due {0}', dueLabel ?? '')
-    }
-  } else if (goal.target_date && progress.reached) {
-    paceText = t('Reached · by {0}', dueLabel ?? '')
-    paceColor = 'var(--positive)'
-  }
+  const remainingPct = Math.max(0, 100 - pct)
 
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="truncate text-sm text-text">{goal.name}</span>
+        <span className="min-w-0 truncate text-sm text-text">{goal.name}</span>
         <span className="shrink-0 text-xs tabular-nums text-text-2">
-          {formatMoney(progress.saved_cents)} {t('of')} {formatMoney(goal.target_cents)}
+          {isDebt
+            ? t('{0} left', formatMoney(progress.remaining_cents))
+            : t('{0} saved', formatMoney(progress.saved_cents))}
         </span>
       </div>
       <div
@@ -86,19 +71,36 @@ function GoalRow({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuetext={t('{0}% complete', pct)}
-        className="h-1.5 w-full overflow-hidden rounded-full"
+        className="relative h-1.5 w-full overflow-hidden rounded-full"
         style={{ background: 'var(--hairline)' }}
       >
-        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: 'var(--positive)' }} />
+        {isDebt ? (
+          <>
+            <span
+              className="absolute bottom-0 top-0 rounded-full"
+              style={{ left: 0, width: `${pct}%`, background: 'color-mix(in srgb, var(--positive) 22%, transparent)' }}
+            />
+            <span
+              data-testid="widget-fill-remaining"
+              className="absolute bottom-0 top-0 rounded-full"
+              style={{ right: 0, width: `${remainingPct}%`, background: 'var(--positive)' }}
+            />
+          </>
+        ) : (
+          <span
+            data-testid="widget-fill-saved"
+            className="absolute bottom-0 top-0 rounded-full"
+            style={{ left: 0, width: `${pct}%`, background: 'var(--positive)' }}
+          />
+        )}
       </div>
-      <span className="text-xs text-text-3">
-        {progress.reached ? t('Reached') : t('{0} to go', formatMoney(progress.remaining_cents))}
+      <span className="text-xs tabular-nums text-text-3">
+        {progress.reached
+          ? t('Reached')
+          : isDebt
+            ? t('{0}% paid', pct)
+            : t('{0}% funded', pct)}
       </span>
-      {paceText ? (
-        <span className="text-xs" style={{ color: paceColor }}>
-          {paceText}
-        </span>
-      ) : null}
     </div>
   )
 }

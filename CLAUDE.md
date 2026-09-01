@@ -1,5 +1,39 @@
-Active feature: **spec 057 — widget detail panels**, base branch BUILT (US1 + US2 + US3 + US10 +
-collision-proofing; US4–US9 not started). Plan: `specs/057-widget-detail-panels/plan.md`
+Active feature: **spec 059 — Savings & Debts (replaces the Goals section)**. Plan:
+`specs/059-savings-debts-redesign/plan.md` (spec/research/data-model/quickstart/contracts alongside
+it), built from a design handoff (README + `Goals Redesign.html`). Every goal now reads as either
+savings or a debt payoff, and the two **travel in opposite directions**. The stored model was already
+right — `Goal.kind` has been `'savings' | 'debt_payoff'` since spec 027 and the old UI simply
+rendered both identically — so this is derivation + presentation with **no migration, no new table,
+no new column, no new dependency**. The old card put a ledger of three identical rows ($600, $600,
+$600) on its front, so the tallest element carried the least information, and nothing answered the
+only question a debt has: *when is this done?* Now: an **aggregate header** (monthly commitment across
+everything, combined progress, next/last to finish), **projection-first cards** (headline by kind —
+`$11,576 left` for debt, `$300 saved` for savings; cadence stated once as a sub-line instead of
+repeated as rows; `Clear by May 2027 — 9 more payments`), a **collapsible in-place ledger** (at most
+one open at a time, capped at 12, closed by a total that reconciles against the headline), and a
+**rebuilt detail page** of five blocks — projected finish + a derived what-if table, progress toward
+target (cumulative + target line + dashed projection), pace against plan, consistency, contributions.
+The new engine `web/lib/finance/goalProjection.ts` is a **SIBLING of the vectored `goals.ts`, never a
+replacement** (the `spendingPace.ts` move from spec 057 US4): `goals.ts` models pace against the
+*target date* a member set and is pinned by `shared/test-vectors/goals.json`; the new one models pace
+against the *cadence* actually being paid (modal amount + modal day). Both ship — do not merge them.
+Its **refusal is a returned value** (`available: false` with every date field null, for <3
+contributions / zero pace / reached), because four surfaces read it and one forgetting the floor
+would put an invented date on screen. Reach is all four surfaces: the Planning section, the detail
+page, and — adapted, not transcribed — the dashboard widget body (vocabulary and bar direction only;
+it is a fixed grid cell, so no ETA, no disclosure, no chart) and the spec-057 US9 panel, which now
+reads the shared engine instead of deriving its own months-remaining figure that could disagree with
+the card it links to. ⚠️ The widget registry **`id` stays `'goals'`** despite the title now reading
+"Savings & Debts" — it is the localStorage key for widget enablement, and renaming it would silently
+reset every user's dashboard layout (pinned by test). Copy renamed across all 6 languages; routes,
+tables, and component names keep `goal`. Deleted: `GoalCard.tsx`, `GoalCumulativeChart`,
+`GoalMonthlyChart`, and `lib/finance/goalSeries.ts` (no consumer left once both charts went). Never
+red anywhere — a missed month is an absence with a dashed outline, a later projection is plain. Fully
+TDD; `gen:vectors` byte-identical throughout. Unverified: the manual browser walk (quickstart §3) and
+the real-iOS safe-area check (§4, no device available) — reported as unrun, not assumed.
+
+Prior shipped: **spec 057 — widget detail panels**, base + US4–US9 + three redesigns (PRs #119–#128).
+Plan: `specs/057-widget-detail-panels/plan.md`
 (spec/research/data-model/quickstart/contracts alongside it). Since spec 037 every widget card has
 been clickable and every click has opened a panel reading **"Details coming soon."** — a real
 affordance over an unkept promise. The card is a GLANCE (one number on a uniform grid cell); the

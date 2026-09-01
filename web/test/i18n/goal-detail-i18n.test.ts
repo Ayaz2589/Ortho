@@ -12,13 +12,10 @@ import ko from '@/lib/i18n/ko'
 // re-listed here.
 
 const FEATURE_KEYS = [
-  'Saved over time',
-  'By month',
-  'Dashed line: steady pace to your target date.',
-  'Add your first contribution to see how this goal builds up over time.',
+  // What survived spec 059: the ledger's per-row actions, which moved from the
+  // detail page onto the card's inline list but kept their wording.
   'Edit contribution',
   'Delete contribution',
-  '{0} more',
 ]
 
 // Retired with the goals index page. `catalog-reachability` fails on any key with
@@ -36,6 +33,16 @@ const REMOVED_KEYS = [
   'No goals yet',
   'Name something you’re saving toward or paying off, set a target, and track your progress.',
   'On track · due {0}',
+  // Retired by spec 059, which rebuilt this page as five blocks. The two charts
+  // these labelled carried no information — a flat cumulative line with no
+  // target, and a picket fence of equal bars — and were deleted with them.
+  // "{0} more" was the old card's hidden-contribution count, which the
+  // collapsible ledger replaces.
+  'Saved over time',
+  'By month',
+  'Dashed line: steady pace to your target date.',
+  'Add your first contribution to see how this goal builds up over time.',
+  '{0} more',
 ]
 
 const catalogs = { bn, es, ja, zh, ko } as Record<string, Record<string, string>>
