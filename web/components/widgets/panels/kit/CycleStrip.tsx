@@ -1,6 +1,7 @@
 'use client'
 
 import { isBigDot, type CycleDot } from '@/lib/finance/topMerchants'
+import { edgeAnchoredTransform } from '@/lib/ui/edgeAnchor'
 
 const DOT_BASE_PX = 9
 const DOT_BIG_PX = 12
@@ -20,6 +21,11 @@ function dayLeftPct(day: number): number {
  * same hue, never a second colour. Pure/presentational — `computeTopMerchants`
  * already resolved which dots exist, their stacking, and whether "today"
  * applies.
+ *
+ * Spec 058: everything on the track is edge-anchored rather than centred with a
+ * blanket `translateX(-50%)`. Centring hung the day-1 dot half off the left edge
+ * and the day-31 dot half off the right, widening the strip past its panel and
+ * making the whole panel pan sideways on a phone.
  */
 export function CycleStrip({ dots, todayDay }: { dots: CycleDot[]; todayDay: number | null }) {
   return (
@@ -29,18 +35,24 @@ export function CycleStrip({ dots, todayDay }: { dots: CycleDot[]; todayDay: num
         {todayDay !== null ? (
           <>
             <div
+              data-testid="cycle-today-line"
               className="absolute w-px"
               style={{
                 left: `${dayLeftPct(todayDay)}%`,
                 top: 2,
                 bottom: 10,
                 background: 'rgba(242,239,232,.42)',
-                transform: 'translateX(-50%)',
+                transform: edgeAnchoredTransform(dayLeftPct(todayDay)),
               }}
             />
             <span
+              data-testid="cycle-today-label"
               className="absolute whitespace-nowrap text-[10.5px] text-text-3"
-              style={{ left: `${dayLeftPct(todayDay)}%`, bottom: -4, transform: 'translateX(-50%)' }}
+              style={{
+                left: `${dayLeftPct(todayDay)}%`,
+                bottom: -4,
+                transform: edgeAnchoredTransform(dayLeftPct(todayDay)),
+              }}
             >
               today
             </span>
@@ -53,13 +65,14 @@ export function CycleStrip({ dots, todayDay }: { dots: CycleDot[]; todayDay: num
           return (
             <div
               key={d.key}
+              data-testid="cycle-dot"
               className="absolute rounded-full"
               style={{
                 left: `${dayLeftPct(d.day)}%`,
                 bottom,
                 width: size,
                 height: size,
-                transform: 'translateX(-50%)',
+                transform: edgeAnchoredTransform(dayLeftPct(d.day)),
                 background: d.landed ? 'var(--positive)' : 'transparent',
                 border: d.landed ? undefined : '1.5px solid rgba(166,196,164,.75)',
               }}
@@ -71,8 +84,9 @@ export function CycleStrip({ dots, todayDay }: { dots: CycleDot[]; todayDay: num
         {[1, 15, 31].map((day) => (
           <span
             key={day}
+            data-testid="cycle-tick"
             className="absolute tabular-nums text-[10.5px] text-text-3"
-            style={{ left: `${dayLeftPct(day)}%`, transform: 'translateX(-50%)' }}
+            style={{ left: `${dayLeftPct(day)}%`, transform: edgeAnchoredTransform(dayLeftPct(day)) }}
           >
             {day}
           </span>

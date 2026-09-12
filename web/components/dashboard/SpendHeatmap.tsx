@@ -81,7 +81,7 @@ export function SpendHeatmap({
   const active = hovered ?? selected
 
   return (
-    <div ref={ref} className="relative inline-flex flex-col gap-1 pt-7">
+    <div ref={ref} className="relative flex max-w-full flex-col gap-1 pt-7">
       {/* Tooltip — pinned by click, previewed on hover. Sits above the grid and
           outside the horizontal scroll area so it is never clipped. */}
       {active ? (
@@ -112,7 +112,7 @@ export function SpendHeatmap({
         </div>
 
         {/* The day grid — weeks as columns. Scrolls horizontally for long ranges. */}
-        <div className="no-scrollbar overflow-x-auto pb-1">
+        <div className="no-scrollbar min-w-0 overflow-x-auto pb-1">
           <div
             role="group"
             aria-label={t('Daily spending')}

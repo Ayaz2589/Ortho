@@ -215,7 +215,7 @@ export function WidgetPanel({
           ) : null}
           <div
             data-testid="panel-scroll-region"
-            style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}
+            style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}
           >
             {detail ? detail.content : children}
           </div>
